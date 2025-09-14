@@ -1,0 +1,15 @@
+{
+  "name": "tinsflash-backend",
+  "version": "1.0.0",
+  "description": "Backend API for TINSFLASH (forecast, alerts, podcasts, subscriptions)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "TINSFLASH Team",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
