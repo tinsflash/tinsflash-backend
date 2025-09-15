@@ -1,27 +1,26 @@
 const express = require("express");
-const { getWeather } = require("../utils/weather");
-const { getMeteomatics } = require("../utils/meteomatics");
+const { getWeather, getWeatherPro } = require("../utils/weather");
 const router = express.Router();
 
-// OpenWeather (standard)
+// Route météo standard (OpenWeather)
 router.get("/", async (req, res) => {
   try {
     const { lat, lon } = req.query;
     const data = await getWeather(lat, lon);
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: "Erreur météo OpenWeather" });
+    res.status(500).json({ error: "Erreur météo standard" });
   }
 });
 
-// Meteomatics (Pro)
+// Route météo Pro (Meteomatics)
 router.get("/pro", async (req, res) => {
   try {
     const { lat, lon } = req.query;
-    const data = await getMeteomatics(lat, lon);
+    const data = await getWeatherPro(lat, lon);
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: "Erreur météo Meteomatics" });
+    res.status(500).json({ error: "Erreur météo Pro" });
   }
 });
 
