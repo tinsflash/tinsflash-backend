@@ -8,6 +8,7 @@ app.use(express.json());
 
 // Import des routes
 const forecastRoute = require("./routes/forecast");
+app.use("/forecast", forecastRoute);
 
 // Test API (page d’accueil backend)
 app.get("/", (req, res) => {
