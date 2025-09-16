@@ -195,4 +195,34 @@ window.onload = () => {
   if (document.getElementById("radar")) loadRadar();
   if (document.getElementById("alerts-local")) loadAlerts();
 };
+// -------------------------
+// 🎬 Gestion vidéo J.E.A.N
+// -------------------------
+function revoirIntro() {
+  const video = document.getElementById("introVideo");
+  video.currentTime = 0;
+  video.play();
+}
+
+// Vérifie si la vidéo a déjà été vue
+window.onload = () => {
+  // Prévisions & radar
+  if (document.getElementById("forecast-local")) loadLocalForecast();
+  if (document.getElementById("forecast-national")) loadNationalForecast();
+  if (document.getElementById("radar")) loadRadar();
+  if (document.getElementById("alerts-local")) loadAlerts();
+
+  // Gestion intro J.E.A.N
+  const introSeen = localStorage.getItem("introSeen");
+  const video = document.getElementById("introVideo");
+
+  if (!introSeen) {
+    // Lance auto la 1ère fois
+    video.play();
+    // Marque comme vu
+    localStorage.setItem("introSeen", "true");
+  }
+};
+
+
 
