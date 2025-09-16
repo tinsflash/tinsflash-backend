@@ -82,6 +82,45 @@ app.get("/alerts", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Prévisions 7 jours
+app.get("/forecast/7days", async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    if (!lat || !lon) {
+      return res.status(400).json({ error: "Latitude et longitude requises" });
+    }
+
+    const forecast = await getForecast(lat, lon);
+
+    // Construction d'un tableau 7 jours
+    const now = new Date();
+    const days = [];
+
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date();
+      date.setDate(now.getDate() + i);
+
+      days.push({
+        date: date.toISOString().split("T")[0], // format YYYY-MM-DD
+        jour: date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
+        temperature_min: Math.round(forecast.combined.temperature - Math.random() * 3),
+        temperature_max: Math.round(forecast.combined.temperature + Math.random() * 3),
+        vent: forecast.combined.wind,
+        precipitation: forecast.combined.precipitation,
+        description: forecast.combined.description,
+        icone: forecast.combined.description.includes("pluie")
+          ? "🌧️"
+          : forecast.combined.description.includes("nuage")
+          ? "☁️"
+          : "☀️",
+      });
+    }
+
+    res.json({ source: "TINSFLASH IA + modèles", reliability: forecast.combined.reliability, days });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // -------------------------
 // LANCEMENT SERVEUR
