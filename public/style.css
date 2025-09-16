@@ -1,0 +1,57 @@
+body {
+  margin: 0;
+  font-family: "Orbitron", sans-serif;
+  background: #0a0f1c;
+  color: #f0f0f0;
+  text-align: center;
+}
+
+header {
+  background: linear-gradient(90deg, #0a1f44, #1a3f7a);
+  padding: 20px;
+  color: #fff;
+}
+
+h1 {
+  font-size: 2.5rem;
+}
+
+section {
+  margin: 40px auto;
+  padding: 20px;
+  width: 90%;
+  max-width: 900px;
+  background: rgba(20, 30, 50, 0.8);
+  border-radius: 15px;
+  box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.2);
+}
+
+button {
+  background: #00aaff;
+  border: none;
+  padding: 12px 20px;
+  margin: 10px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #fff;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #0088cc;
+}
+
+.ad-banner {
+  margin: 15px auto;
+  padding: 20px;
+  background: #222;
+  color: #aaa;
+  border: 1px dashed #555;
+}
+
+footer {
+  background: #111;
+  padding: 20px;
+  margin-top: 40px;
+}
