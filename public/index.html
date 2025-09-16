@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TINSFLASH - Météo en avance sur son temps</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <h1>🌍 TINSFLASH</h1>
+    <p>La météo la plus fiable et la plus avancée au monde</p>
+  </header>
+
+  <!-- SECTION PREVISIONS -->
+  <section class="forecast">
+    <h2>Prévisions locales et nationales</h2>
+    <form id="forecast-form">
+      <input type="text" id="city" placeholder="Entrez votre ville..." required />
+      <button type="submit">Voir la météo</button>
+    </form>
+    <div id="forecast-result"></div>
+    <p class="upgrade">🔒 Pour plus d’outils et modèles → <a href="/premium.html">Passez Premium</a></p>
+  </section>
+
+  <!-- PODCASTS -->
+  <section class="podcasts">
+    <h2>🎙️ Podcasts météo</h2>
+    <button onclick="generatePodcast('free-morning')">Podcast du matin</button>
+    <button onclick="generatePodcast('free-evening')">Podcast du soir</button>
+    <div id="podcast-result"></div>
+    <p class="upgrade">🔒 Podcasts détaillés Premium, Pro et Pro+ disponibles dans vos abonnements.</p>
+  </section>
+
+  <!-- ALERTES -->
+  <section class="alerts">
+    <h2>⚠️ Alertes météo</h2>
+    <div id="alerts-result">Chargement des alertes...</div>
+    <p class="upgrade">🔒 Alertes locales + Tocsin → accessibles Premium & Pro+</p>
+  </section>
+
+  <!-- PUBLICITES -->
+  <section class="ads">
+    <h2>Publicité</h2>
+    <div class="ad-banner">[Bannière pub - remplace par AdMob/AdSense]</div>
+    <div class="ad-banner">[Pub interstitielle - remplace par ton code AdMob]</div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p>© 2025 TINSFLASH - Innovation météo</p>
+    <nav>
+      <a href="/premium.html">Premium</a> |
+      <a href="/pro.html">Pro</a> |
+      <a href="/proplus.html">Pro+</a> |
+      <a href="/alerts.html">Alertes</a> |
+      <a href="/podcasts.html">Podcasts</a>
+    </nav>
+  </footer>
+
+  <!-- SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
