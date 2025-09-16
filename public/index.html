@@ -3,56 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH 🌍 Radar météo</title>
+  <title>TINSFLASH 🌍 - La météo du futur</title>
   <link rel="stylesheet" href="style.css">
-
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-  <header>
-    <h1>🌍 TINSFLASH - Prévisions & Radar</h1>
-  </header>
 
-  <main>
-    <section id="forecast">
-      <h2>Prévisions météo</h2>
-      <div id="forecast-local"></div>
-      <div id="forecast-national"></div>
-    </section>
+  <!-- 🎥 Intro vidéo J.E.A.N -->
+  <section id="intro-jean" class="intro-jean">
+    <video autoplay muted loop id="bg-video">
+      <source src="/videos/clouds.mp4" type="video/mp4">
+      Votre navigateur ne supporte pas la vidéo.
+    </video>
 
-    <section id="radar" class="card">
-      <h2>Radar pluie / neige / vent</h2>
-      <div id="radar-map"></div>
+    <div class="intro-content">
+      <h2>👨‍🚀 J.E.A.N vous accueille</h2>
 
-      <div id="radar-controls">
-        <button onclick="playRadar()">▶️ Lecture</button>
-        <button onclick="pauseRadar()">⏸️ Pause</button>
-        <input type="range" id="radar-slider" min="0" max="6" step="1" value="0">
-        <span id="radar-time">Maintenant</span>
+      <!-- Avatar animé -->
+      <div id="jean-avatar">
+        <img src="/images/jean-astronaut.svg" alt="Avatar J.E.A.N" class="avatar-bounce">
       </div>
-    </section>
 
-    <section id="podcasts">
-      <h2>🎙️ Podcasts météo</h2>
-      <button onclick="generatePodcast('free-morning')">Podcast matin</button>
-      <button onclick="generatePodcast('free-evening')">Podcast soir</button>
-      <div id="podcast-status"></div>
-    </section>
+      <p id="jean-subtitles">Chargement de l’introduction...</p>
+      <audio id="jean-audio" controls></audio>
+      <br>
+      <button id="replay-jean">▶️ Réécouter J.E.A.N.</button>
+    </div>
+  </section>
 
-    <section id="alerts">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-local"></div>
-      <div id="alerts-world"></div>
-    </section>
-  </main>
+  <!-- 🌦️ Prévisions -->
+  <section id="forecast">
+    <h2>Prévisions locales</h2>
+    <div id="forecast-local">Chargement...</div>
 
-  <footer>
-    <p>&copy; 2025 TINSFLASH. Donne des frissons à la NASA 🚀</p>
-  </footer>
+    <h2>Prévisions nationales</h2>
+    <div id="forecast-national">Chargement...</div>
+  </section>
 
-  <script src="app.js"></script>
+  <!-- 🌍 Radar -->
+  <section id="radar-section">
+    <h2>Radar pluie/neige</h2>
+    <div id="radar">Chargement...</div>
+  </section>
+
+  <!-- 🔔 Alertes -->
+  <section id="alerts">
+    <h2>Alertes locales et nationales</h2>
+    <div id="alerts-local">Chargement...</div>
+
+    <h2>Alertes mondiales</h2>
+    <div id="alerts-world">Chargement...</div>
+  </section>
+
+  <!-- 🎙️ Podcasts -->
+  <section id="podcasts">
+    <h2>🎧 Podcasts météo</h2>
+    <button onclick="generatePodcast('free-morning')">Podcast matin (gratuit)</button>
+    <button onclick="generatePodcast('free-evening')">Podcast soir (gratuit)</button>
+    <div id="podcast-status"></div>
+  </section>
+
 </body>
 </html>
 
