@@ -1,93 +1,90 @@
-/* Style global */
+/* Style général */
 body {
-  font-family: Arial, sans-serif;
   margin: 0;
-  padding: 0;
-  background: #f4f8fb;
-  color: #222;
+  font-family: Arial, sans-serif;
+  background: #f4f7fa;
+  color: #333;
+  line-height: 1.6;
 }
 
 header {
-  background: linear-gradient(135deg, #0066cc, #0099ff);
-  color: white;
   text-align: center;
   padding: 20px;
+  background: linear-gradient(to right, #0077ff, #00c6ff);
+  color: white;
 }
 
-header h1 {
+h1 {
   margin: 0;
-  font-size: 2.5em;
-}
-
-main {
-  padding: 20px;
+  font-size: 2.5rem;
 }
 
 h2 {
   margin-top: 30px;
-  color: #0066cc;
+  color: #0077ff;
 }
 
-/* Prévisions */
-.forecast-box {
-  background: white;
+main {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* Cartes de prévisions */
+.forecast-card {
   padding: 15px;
   margin: 10px 0;
-  border-radius: 10px;
+  background: white;
+  border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .forecast-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 15px;
+  gap: 10px;
 }
 
-.day-card {
-  background: #fff;
-  border-radius: 10px;
+.forecast-day {
+  background: white;
+  border-radius: 8px;
   padding: 10px;
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.day-card img {
+.forecast-day img {
   width: 50px;
   height: 50px;
 }
 
-.radar-box {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  text-align: center;
-  padding: 10px;
-}
-
-.radar-box img {
-  max-width: 100%;
-  border-radius: 10px;
-}
-
-button {
-  background: #0066cc;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  margin: 5px;
+/* Radar */
+#radar img {
+  width: 100%;
   border-radius: 8px;
-  cursor: pointer;
-  transition: 0.3s;
+  border: 1px solid #ddd;
 }
 
-button:hover {
-  background: #004a99;
+/* CTA */
+.cta {
+  margin: 30px 0;
+  text-align: center;
+  background: #e3f2fd;
+  padding: 15px;
+  border-radius: 8px;
 }
 
+.cta a {
+  color: #0077ff;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+/* Footer */
 footer {
   text-align: center;
-  padding: 20px;
-  background: #eee;
-  margin-top: 30px;
+  padding: 15px;
+  background: #0077ff;
+  color: white;
+  margin-top: 20px;
 }
-
