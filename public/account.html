@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr" class="normal">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH - Mon Compte</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>👤 Mon compte</h1>
+    <p>Gérez votre abonnement, vos podcasts et vos codes promos.</p>
+  </header>
+
+  <nav>
+    <a href="/index.html">Accueil</a>
+    <a href="/premium.html">Premium</a>
+    <a href="/pro.html">Pro</a>
+    <a href="/proplus.html">Pro+</a>
+    <a href="/alerts.html">Alertes</a>
+    <a href="/account.html" class="active">Compte</a>
+  </nav>
+
+  <main class="container">
+    <!-- Infos utilisateur -->
+    <section class="card">
+      <h2>📋 Informations</h2>
+      <div id="user-info">
+        Chargement de vos informations...
+      </div>
+    </section>
+
+    <!-- Abonnement -->
+    <section class="card">
+      <h2>🎟️ Mon abonnement</h2>
+      <div id="subscription-info">
+        Chargement de l’abonnement...
+      </div>
+      <div class="actions">
+        <button onclick="upgradePlan('premium')">Passer Premium</button>
+        <button onclick="upgradePlan('pro')">Passer Pro</button>
+        <button onclick="upgradePlan('proplus')">Passer Pro+</button>
+      </div>
+    </section>
+
+    <!-- Podcasts -->
+    <section class="card">
+      <h2>🎙️ Mes podcasts</h2>
+      <p>Générez vos podcasts personnalisés selon votre abonnement.</p>
+      <button onclick="generatePodcast('free-morning')">Podcast Gratuit Matin</button>
+      <button onclick="generatePodcast('free-evening')">Podcast Gratuit Soir</button>
+      <div id="my-podcasts"></div>
+    </section>
+
+    <!-- Codes promos -->
+    <section class="card">
+      <h2>🎁 Codes promos</h2>
+      <p>Si vous avez un code promo, entrez-le ci-dessous :</p>
+      <input type="text" id="promo-code" placeholder="Votre code promo">
+      <button onclick="applyPromo()">Valider</button>
+      <div id="promo-result"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 TINSFLASH - Propulsé par IA & satellites</p>
+  </footer>
+</body>
+</html>
