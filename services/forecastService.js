@@ -11,28 +11,35 @@ export async function getForecast(lat, lon) {
     // -------------------------
     // 1. Meteomatics
     // -------------------------
-    try {
-      const meteoUser = process.env.METEOMATICS_USER;
-      const meteoPass = process.env.METEOMATICS_PASS;
+   import fetch from "node-fetch";
 
-      if (!meteoUser || !meteoPass) throw new Error("Meteomatics credentials manquants");
+export async function getForecast(lat, lon) {
+  const user = process.env.METEOMATICS_USER;
+  const pass = process.env.METEOMATICS_PASS;
 
-      const now = new Date().toISOString().split(":")[0] + ":00:00Z";
-      const url = `https://api.meteomatics.com/${now}--${now}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:ms/${lat},${lon}/json`;
+  if (!user || !pass) {
+    throw new Error("Identifiants Meteomatics manquants !");
+  }
 
-      const res = await fetch(url, {
-        headers: {
-          Authorization: "Basic " + Buffer.from(`${meteoUser}:${meteoPass}`).toString("base64")
-        }
-      });
+  // Format ISO 8601 (UTC)
+  const now = new Date().toISOString().split(".")[0] + "Z";
+  const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split(".")[0] + "Z";
 
-      if (!res.ok) throw new Error("Erreur Meteomatics");
+  const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh,weather_symbol_1h:idx/${lat},${lon}/json`;
 
-      const data = await res.json();
-      results.sources.meteomatics = data;
-    } catch (err) {
-      results.sources.meteomatics = { status: "indisponible", error: err.message };
+  const res = await fetch(url, {
+    headers: {
+      "Authorization": "Basic " + Buffer.from(`${user}:${pass}`).toString("base64")
     }
+  });
+
+  if (!res.ok) {
+    throw new Error(`Erreur Meteomatics: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data;
+}
 
     // -------------------------
     // 2. OpenWeather
