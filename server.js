@@ -1,33 +1,38 @@
-import express from "express";
-import fetch from "node-fetch";
-import dotenv from "dotenv";
-import adminRoutes from "./routes/admin.js";
-import path from "path";
-import { fileURLToPath } from "url";
+// -------------------------
+// 🌍 server.js
+// Backend Express pour TINSFLASH
+// -------------------------
 
-// Import services
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
 import { getForecast } from "./services/forecastService.js";
-import { getAlerts } from "./services/alertsService.js";
-import { generatePodcast } from "./services/podcastService.js";
-import { generateCode } from "./services/codesService.js";
-import { chatWithJean } from "./services/chatService.js";
 
 dotenv.config();
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
-// ----------------------
-// Middleware
-// ----------------------
+app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // Pour tes fichiers publics (style.css, app.js, etc.)
 
-app.get("/forecast", async (req, res) => {
-  const { lat, lon } = req.query;
+// -------------------------
+// ROUTES API
+// -------------------------
+
+// Test route
+app.get("/", (req, res) => {
+  res.send("🌍 TINSFLASH Backend opérationnel !");
+});
+
+// Prévisions locales (position utilisateur)
+app.get("/forecast/local", async (req, res) => {
   try {
+    const { lat, lon } = req.query;
     if (!lat || !lon) {
-      return res.status(400).json({ error: "Paramètres lat/lon requis" });
+      return res.status(400).json({ error: "Latitude et longitude requises" });
     }
+
     const forecast = await getForecast(lat, lon);
     res.json(forecast);
   } catch (err) {
@@ -35,64 +40,52 @@ app.get("/forecast", async (req, res) => {
   }
 });
 
+// Prévisions nationales (exemple : Belgique par défaut)
+app.get("/forecast/national", async (req, res) => {
+  try {
+    // ⚠️ tu peux remplacer par une logique pays dynamique
+    const { country } = req.query;
+    let lat = 50.8503; // Bruxelles par défaut
+    let lon = 4.3517;
+
+    if (country === "FR") {
+      lat = 48.8566;
+      lon = 2.3522; // Paris
+    }
+    if (country === "US") {
+      lat = 38.9072;
+      lon = -77.0369; // Washington
+    }
+
+    const forecast = await getForecast(lat, lon);
+    res.json(forecast);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Alertes météo (placeholder à connecter plus tard)
 app.get("/alerts", async (req, res) => {
   try {
-    const alerts = await getAlerts();
-    res.json(alerts);
+    res.json({
+      alerts: [
+        {
+          region: "Europe",
+          type: "orage violent",
+          level: "orange",
+          reliability: 88,
+          source: "IA.J.E.A.N",
+        },
+      ],
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ----------------------
-// ROUTE RADAR (simple redirection)
-// ----------------------
-app.get("/radar", (req, res) => {
-  const radarUrl = `https://tile.openweathermap.org/map/precipitation_new/2/2/1.png?appid=${process.env.OPENWEATHER_KEY}`;
-  res.json({ radarUrl });
-});
-
-// ----------------------
-// ROUTES PODCASTS
-// ----------------------
-app.get("/podcast/generate", async (req, res) => {
-  const { type } = req.query;
-  try {
-    if (!type) return res.status(400).json({ error: "Type de podcast requis" });
-    const podcast = await generatePodcast(type);
-    res.json(podcast);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ----------------------
-// ROUTES CODES PROMO
-// ----------------------
-app.get("/codes/generate", (req, res) => {
-  const { type } = req.query;
-  if (!type) return res.status(400).json({ error: "Type d’abonnement requis" });
-
-  const code = generateCode(type);
-  res.json(code);
-});
-
-// ----------------------
-// ROUTE CHAT J.E.A.N
-// ----------------------
-app.post("/chat", async (req, res) => {
-  const { message } = req.body;
-  try {
-    const reply = await chatWithJean(message);
-    res.json(reply);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ----------------------
+// -------------------------
 // LANCEMENT SERVEUR
-// ----------------------
+// -------------------------
 app.listen(PORT, () => {
-  console.log(`🚀 TINSFLASH backend en ligne sur http://localhost:${PORT}`);
+  console.log(`🚀 Serveur TINSFLASH en ligne sur http://localhost:${PORT}`);
 });
