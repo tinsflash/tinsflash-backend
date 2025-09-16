@@ -1,7 +1,9 @@
 {
   "name": "tinsflash",
   "version": "1.0.0",
+  "description": "TINSFLASH - Machine de guerre météo",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
@@ -13,7 +15,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "node-fetch": "^2.6.7",
+    "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
     "stripe": "^14.0.0",
     "cheerio": "^1.0.0-rc.12"
