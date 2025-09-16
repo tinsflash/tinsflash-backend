@@ -1,69 +1,81 @@
+/* Style général */
 body {
-  font-family: Arial, sans-serif;
   margin: 0;
-  padding: 0;
-  background: linear-gradient(to bottom, #e3f2fd, #ffffff);
-  color: #222;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+  color: #333;
 }
 
 header {
   text-align: center;
   padding: 20px;
-  background: #1976d2;
+  background: #0288d1;
   color: white;
-  border-bottom: 4px solid #0d47a1;
-}
-
-h1, h2 {
-  margin: 10px 0;
 }
 
 main {
-  max-width: 900px;
-  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
   padding: 20px;
 }
 
-section {
+.card {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-  padding: 15px;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-#intro-video {
-  width: 60%; /* réduit la taille à 60% */
-  border-radius: 8px;
-  margin: 15px auto;
-  display: block;
-}
-
-#radar {
-  height: 400px; /* radar réduit */
-  border: 2px solid #1976d2;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-button {
-  background: #1976d2;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  margin: 5px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #0d47a1;
+h1, h2 {
+  margin-top: 0;
 }
 
 footer {
   text-align: center;
-  padding: 10px;
-  background: #f5f5f5;
-  font-size: 14px;
+  padding: 15px;
+  background: #0288d1;
+  color: white;
 }
+
+/* Prévisions 7 jours */
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.day-card {
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+.day-card strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.day-card .icon {
+  font-size: 28px;
+  margin: 5px 0;
+}
+
+button {
+  margin: 5px;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  background: #0288d1;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0277bd;
+}
+
 
