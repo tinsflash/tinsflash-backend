@@ -1,73 +1,112 @@
+/* -------------------------
+   🌍 TINSFLASH Styles
+   Design clair, moderne, responsive
+-------------------------- */
+
 body {
-  font-family: Arial, sans-serif;
   margin: 0;
-  padding: 0;
-  background: #f0f4f8;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(to bottom, #eaf6ff, #d1e8ff);
   color: #222;
+  text-align: center;
+}
+
+header {
+  background: linear-gradient(120deg, #0077b6, #0096c7);
+  color: white;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+h1 {
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
 }
 
 h2 {
-  text-align: center;
-  margin-top: 30px;
+  margin-top: 2rem;
+  font-size: 1.5rem;
+  color: #023e8a;
+  border-bottom: 2px solid #0077b6;
+  display: inline-block;
+  padding-bottom: 0.3rem;
 }
 
-/* 🎥 Section J.E.A.N */
-#intro-jean {
-  position: relative;
-  text-align: center;
-  color: white;
-  overflow: hidden;
+section {
+  margin: 2rem auto;
+  padding: 1rem;
+  max-width: 900px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-#bg-video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  min-width: 100%;
-  min-height: 100%;
-  z-index: -1;
+#forecast-local, #forecast-national, #forecast-seven {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+}
+
+.forecast-day {
+  display: inline-block;
+  width: 110px;
+  margin: 0.5rem;
+  padding: 0.8rem;
+  background: #f1f9ff;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.forecast-day img {
+  width: 50px;
+  height: 50px;
+}
+
+#radar img {
+  width: 100%;
+  max-height: 450px;
+  border-radius: 10px;
+  border: 2px solid #0077b6;
   object-fit: cover;
 }
 
-.intro-content {
-  background: rgba(0, 0, 0, 0.6);
-  padding: 20px;
-  border-radius: 12px;
-  display: inline-block;
-  margin-top: 80px;
+button {
+  margin: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  background: #0077b6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
 }
 
-#jean-avatar {
-  margin: 20px auto;
-  text-align: center;
-}
-#jean-avatar img {
-  width: 120px;
-  height: auto;
-  animation: float 3s ease-in-out infinite;
-}
-@keyframes float {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0); }
+button:hover {
+  background: #023e8a;
 }
 
-/* 🔔 Alertes */
-.alert {
-  margin: 10px;
-  padding: 10px;
-  border-radius: 6px;
+#alerts .alert {
+  margin: 0.5rem;
+  padding: 0.8rem;
+  border-radius: 8px;
+  color: white;
+}
+
+.alert.orange { background: #ff8800; }
+.alert.red { background: #d00000; }
+.alert.green { background: #38b000; }
+
+footer {
+  margin-top: 3rem;
+  padding: 1rem;
+  background: #023e8a;
+  color: white;
+}
+
+footer a {
+  color: #ffd60a;
+  text-decoration: none;
   font-weight: bold;
-}
-.alert.orange { background: #fff3cd; color: #856404; }
-.alert.red { background: #f8d7da; color: #721c24; }
-
-/* 🌦️ Forecast + Radar */
-#forecast, #radar-section, #alerts, #podcasts {
-  margin: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
