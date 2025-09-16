@@ -2,7 +2,7 @@
 // 🌍 forecastService.js
 // Fusion des modèles Meteomatics + OpenWeather + fallback
 // -------------------------
-import fetch from "node-fetch";
+// Node 18+
 
 export async function getForecast(lat, lon) {
   try {
