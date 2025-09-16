@@ -1,9 +1,8 @@
 // -------------------------
 // 🌍 TINSFLASH Frontend JS
-// Connecte le site aux APIs backend
+// Connecte le site aux APIs backend (Render)
 // -------------------------
-
-const API_BASE = "https://tinsflash-backend.onrender.com"; // change si tu utilises un autre nom de domaine
+const API_BASE = "https://tinsflash-backend.onrender.com";
 
 // -------------------------
 // Prévisions locales
@@ -11,47 +10,54 @@ const API_BASE = "https://tinsflash-backend.onrender.com"; // change si tu utili
 async function loadLocalForecast() {
   const container = document.getElementById("forecast-local");
   container.innerHTML = "Chargement...";
-  try {
-    // Géolocalisation
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
-      const res = await fetch(`${API_BASE}/forecast?lat=${lat}&lon=${lon}`);
-      const data = await res.json();
 
-      if (data && data.data) {
-        const city = data.data.city?.name || "Votre position";
-        const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
-        const temp = data.data.list?.[0]?.main?.temp || "N/A";
-        container.innerHTML = `
-          <strong>${city}</strong><br>
-          ${desc}, ${temp}°C
-        `;
-      } else {
-        container.innerHTML = "❌ Erreur données locales";
+  try {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const res = await fetch(`${API_BASE}/forecast?lat=${lat}&lon=${lon}`);
+        const data = await res.json();
+
+        if (data && data.data) {
+          const city = data.data.city?.name || "Votre position";
+          const desc =
+            data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
+          const temp = data.data.list?.[0]?.main?.temp || "N/A";
+          container.innerHTML = `
+            <strong>${city}</strong><br>
+            ${desc}, ${temp}°C
+          `;
+        } else {
+          container.innerHTML = "❌ Erreur données locales";
+        }
+      },
+      () => {
+        container.innerHTML =
+          "❌ Géolocalisation refusée. Impossible de charger les prévisions locales.";
       }
-    });
+    );
   } catch (err) {
     container.innerHTML = "❌ Erreur prévisions locales";
   }
 }
 
 // -------------------------
-// Prévisions nationales (par défaut = Belgique)
+// Prévisions nationales (Belgique par défaut)
 // -------------------------
 async function loadNationalForecast() {
   const container = document.getElementById("forecast-national");
   container.innerHTML = "Chargement...";
+
   try {
     const res = await fetch(`${API_BASE}/forecast?lat=50.5&lon=4.5`);
     const data = await res.json();
 
     if (data && data.data) {
-      const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
+      const desc =
+        data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
       const temp = data.data.list?.[0]?.main?.temp || "N/A";
-      container.innerHTML = `
-        Prévisions Belgique : ${desc}, ${temp}°C
-      `;
+      container.innerHTML = `Prévisions Belgique : ${desc}, ${temp}°C`;
     } else {
       container.innerHTML = "❌ Erreur données nationales";
     }
@@ -66,11 +72,15 @@ async function loadNationalForecast() {
 async function loadRadar() {
   const container = document.getElementById("radar");
   container.innerHTML = "Chargement radar...";
+
   try {
     const res = await fetch(`${API_BASE}/radar`);
     const data = await res.json();
+
     if (data && data.radarUrl) {
-      container.innerHTML = `<img src="${data.radarUrl}" alt="Radar météo" style="max-width:100%">`;
+      container.innerHTML = `
+        <img src="${data.radarUrl}" alt="Radar météo" style="max-width:100%">
+      `;
     } else {
       container.innerHTML = "❌ Erreur radar";
     }
@@ -85,9 +95,11 @@ async function loadRadar() {
 async function generatePodcast(type) {
   const status = document.getElementById("podcast-status");
   status.innerHTML = "⏳ Génération...";
+
   try {
     const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
     const data = await res.json();
+
     if (data && data.forecast) {
       status.innerHTML = `
         ✅ ${data.forecast}<br>
@@ -120,7 +132,7 @@ async function loadAlerts() {
 
     if (data && data.alerts) {
       local.innerHTML = "";
-      data.alerts.forEach(alert => {
+      data.alerts.forEach((alert) => {
         local.innerHTML += `
           <div class="alert ${alert.level}">
             ⚠️ [${alert.level.toUpperCase()}] ${alert.type} 
@@ -133,7 +145,9 @@ async function loadAlerts() {
 
     if (data && data.external) {
       world.innerHTML = `
-        🌍 Source externe : ${data.external.weather?.[0]?.description || "n/a"}
+        🌍 Source externe : ${
+          data.external.weather?.[0]?.description || "n/a"
+        }
       `;
     }
   } catch (err) {
