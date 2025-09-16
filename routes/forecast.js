@@ -1,28 +1,15 @@
 const express = require("express");
-const { getWeather, getWeatherPro } = require("../utils/weather");
 const router = express.Router();
+const { getForecast } = require("../services/models");
+const { processAlerts } = require("../services/alertsEngine");
 
-// Route météo standard (OpenWeather)
 router.get("/", async (req, res) => {
-  try {
-    const { lat, lon } = req.query;
-    const data = await getWeather(lat, lon);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Erreur météo standard" });
-  }
-});
-
-// Route météo Pro (Meteomatics)
-router.get("/pro", async (req, res) => {
-  try {
-    const { lat, lon } = req.query;
-    const data = await getWeatherPro(lat, lon);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Erreur météo Pro" });
-  }
+  const { lat, lon } = req.query;
+  const forecast = await getForecast(lat, lon);
+  const alerts = processAlerts(forecast);
+  res.json({ forecast, alerts });
 });
 
 module.exports = router;
+
 
