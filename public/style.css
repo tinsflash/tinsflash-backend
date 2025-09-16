@@ -1,57 +1,126 @@
-body {
+/* ---------------------------
+   🌍 TINSFLASH - Styles multi-thèmes
+   --------------------------- */
+
+/* ==== Thème NORMAL ==== */
+body.normal {
+  font-family: "Roboto", Arial, sans-serif;
   margin: 0;
-  font-family: "Orbitron", sans-serif;
-  background: #0a0f1c;
-  color: #f0f0f0;
+  padding: 0;
+  background: #f4f7fb;
+  color: #222;
+  line-height: 1.6;
+}
+
+body.normal header {
+  background: linear-gradient(90deg, #0078d7, #00bfff);
+  padding: 15px;
   text-align: center;
-}
-
-header {
-  background: linear-gradient(90deg, #0a1f44, #1a3f7a);
-  padding: 20px;
   color: #fff;
+  font-size: 1.4em;
+  font-weight: bold;
+  text-transform: uppercase;
+  box-shadow: 0px 3px 6px rgba(0,0,0,0.2);
 }
 
-h1 {
-  font-size: 2.5rem;
+body.normal nav {
+  display: flex;
+  justify-content: center;
+  background: #fff;
+  border-bottom: 2px solid #ddd;
+  padding: 10px;
+}
+body.normal nav a {
+  color: #0078d7;
+  text-decoration: none;
+  margin: 0 15px;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+body.normal nav a:hover {
+  color: #ff6f00;
 }
 
-section {
-  margin: 40px auto;
+body.normal .card {
+  background: #fff;
   padding: 20px;
-  width: 90%;
-  max-width: 900px;
-  background: rgba(20, 30, 50, 0.8);
-  border-radius: 15px;
-  box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.2);
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
+/* ==== Thème COCKPIT ==== */
+body.cockpit {
+  background: #0a0f1f;
+  color: #e0e6f0;
+}
+
+body.cockpit header {
+  background: linear-gradient(90deg, #001f3f, #005f8f);
+  padding: 15px;
+  text-align: center;
+  color: #fff;
+  font-size: 1.4em;
+  text-transform: uppercase;
+  box-shadow: 0px 3px 6px rgba(0,0,0,0.5);
+}
+
+body.cockpit nav {
+  display: flex;
+  justify-content: center;
+  background: #0d152b;
+  padding: 10px;
+}
+body.cockpit nav a {
+  color: #00baff;
+}
+body.cockpit nav a:hover {
+  color: #ffae00;
+}
+
+body.cockpit .card {
+  background: #121a2b;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 186, 255, 0.2);
+}
+
+/* ==== Boutons ==== */
 button {
-  background: #00aaff;
+  background: #00baff;
   border: none;
-  padding: 12px 20px;
-  margin: 10px;
-  border-radius: 8px;
-  font-size: 1rem;
+  color: white;
+  padding: 10px 18px;
+  margin-top: 10px;
+  border-radius: 6px;
   cursor: pointer;
-  color: #fff;
-  transition: 0.3s;
+  font-weight: bold;
+  transition: background 0.3s, transform 0.2s;
 }
-
 button:hover {
-  background: #0088cc;
+  background: #008fcc;
+  transform: scale(1.05);
+}
+button:active {
+  transform: scale(0.95);
 }
 
-.ad-banner {
-  margin: 15px auto;
-  padding: 20px;
-  background: #222;
-  color: #aaa;
-  border: 1px dashed #555;
-}
+/* 🔔 Alertes */
+.alert.green { background: #dfffd6; color: #006400; }
+.alert.orange { background: #ffe0b2; color: #e65100; }
+.alert.red { background: #ffcccc; color: #b71c1c; }
 
-footer {
-  background: #111;
-  padding: 20px;
-  margin-top: 40px;
+body.cockpit .alert.green { background: #004d40; color: #00ffcc; }
+body.cockpit .alert.orange { background: #e65100; color: #fff; }
+body.cockpit .alert.red { background: #b71c1c; color: #fff; }
+
+/* 📱 Responsive */
+@media (max-width: 768px) {
+  nav {
+    flex-direction: column;
+  }
+  .container {
+    padding: 10px;
+  }
 }
