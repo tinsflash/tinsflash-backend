@@ -1,137 +1,100 @@
-/* -------------------------
-🌍 TINSFLASH - Design global
-Inspiré de meteolux.lu et meteofrance.com
-Clair, pro, responsive
-------------------------- */
-
 /* Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
 
 body {
-  background: #f4f7fb;
+  background: #f5f9ff;
   color: #222;
   line-height: 1.6;
 }
 
 header {
-  background: linear-gradient(135deg, #0072ff, #00c6ff);
-  color: #fff;
-  padding: 1rem;
-  text-align: center;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-header h1 {
-  font-size: 2rem;
-  margin-bottom: .5rem;
-}
-
-nav {
+  background: linear-gradient(90deg, #0077ff, #00c3ff);
+  color: white;
+  padding: 15px;
   display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
 }
+
+header h1 { font-size: 1.5em; }
 
 nav a {
-  color: #fff;
+  color: white;
+  margin: 0 10px;
   text-decoration: none;
-  padding: .5rem 1rem;
-  border-radius: 20px;
-  transition: background .3s;
+  font-weight: bold;
 }
 
-nav a:hover {
-  background: rgba(255,255,255,0.2);
-}
-
-main {
-  padding: 2rem;
-  max-width: 1000px;
-  margin: auto;
-}
+main { padding: 20px; }
 
 section {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: #fff;
+  margin-bottom: 30px;
+}
+
+h2 {
+  color: #0077ff;
+  margin-bottom: 10px;
+}
+
+.card, .info {
+  background: white;
+  padding: 15px;
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-bottom: 10px;
 }
 
-section h2 {
-  margin-bottom: 1rem;
-  color: #0072ff;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
 }
 
-.cta {
-  background: #e9f5ff;
-  border-left: 5px solid #0072ff;
-  font-weight: bold;
+.grid .day {
+  background: white;
+  border-radius: 10px;
   text-align: center;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-button {
-  background: #0072ff;
-  color: #fff;
+.radar-container img {
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+.podcast-container button {
+  background: #0077ff;
+  color: white;
   border: none;
-  padding: .6rem 1.2rem;
-  margin: .3rem;
-  border-radius: 6px;
+  padding: 10px 15px;
+  margin: 5px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: 1rem;
-  transition: all .2s;
 }
 
-button:hover {
-  background: #005fcc;
+.podcast-container button:hover {
+  background: #005bb5;
 }
 
-footer {
+.ads {
   text-align: center;
-  padding: 1rem;
-  background: #0072ff;
-  color: #fff;
-  margin-top: 2rem;
-  border-radius: 10px 10px 0 0;
-}
-
-/* Alertes météo */
-.alert {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: .8rem;
-  font-weight: bold;
-}
-
-.alert.orange { background: #fff3cd; color: #856404; }
-.alert.red { background: #f8d7da; color: #721c24; }
-
-/* Radar responsive */
-#radar img {
-  width: 100%;
+  background: #eee;
+  padding: 15px;
   border-radius: 10px;
 }
 
-/* Cockpit (Premium/Pro/Pro+) */
-.cockpit {
-  background: #0d1117;
-  color: #00ffea;
-  font-family: "Courier New", monospace;
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 0 20px #00ffea;
+/* Mode cockpit NASA */
+body.cockpit {
+  background: black;
+  color: #0ff;
 }
 
-.cockpit h2 {
-  color: #ff007c;
+body.cockpit header {
+  background: #111;
+  color: #0ff;
 }
 
-.cockpit button {
-  background: #ff007c;
+body.cockpit nav a {
+  color: #0ff;
 }
