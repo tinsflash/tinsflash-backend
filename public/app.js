@@ -1,4 +1,4 @@
-const API_BASE = "https://tinsflash-backend.onrender.com";
+const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
 // Prévisions locales
 async function loadLocalForecast() {
