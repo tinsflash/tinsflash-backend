@@ -1,7 +1,7 @@
 {
   "name": "tinsflash",
   "version": "1.0.0",
-  "description": "TINSFLASH - La meilleure plateforme météo au monde, prévisions hyper précises et podcasts automatisés.",
+  "description": "TINSFLASH - La meilleure plateforme météo au monde, prévisions hyper précises",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -24,17 +24,5 @@
   },
   "engines": {
     "node": ">=18.x"
-  },
-  "keywords": [
-    "meteo",
-    "weather",
-    "ai",
-    "forecast",
-    "alertes",
-    "podcast",
-    "tinsflash"
-  ],
-  "author": "TINSFLASH Project",
-  "license": "MIT"
+  }
 }
-
