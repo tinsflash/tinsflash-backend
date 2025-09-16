@@ -15,22 +15,29 @@ async function loadLocalForecast() {
       const lon = pos.coords.longitude;
       const res = await fetch(`${API_BASE}/forecast?lat=${lat}&lon=${lon}`);
       const data = await res.json();
-      if (data && data.data) {
+
+      if (data?.data) {
+        const now = new Date();
         const city = data.data.city?.name || "Votre position";
         const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
         const temp = data.data.list?.[0]?.main?.temp || "N/A";
-        container.innerHTML = `<strong>${city}</strong><br>${desc}, ${temp}°C`;
+
+        container.innerHTML = `
+          <strong>${city}</strong><br>
+          Il est ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.<br>
+          ${desc}, ${temp}°C
+        `;
       } else {
         container.innerHTML = "❌ Erreur données locales";
       }
     });
-  } catch (err) {
+  } catch {
     container.innerHTML = "❌ Erreur prévisions locales";
   }
 }
 
 // -------------------------
-// Prévisions nationales (Belgique par défaut)
+// Prévisions nationales (Belgique)
 // -------------------------
 async function loadNationalForecast() {
   const container = document.getElementById("forecast-national");
@@ -38,14 +45,15 @@ async function loadNationalForecast() {
   try {
     const res = await fetch(`${API_BASE}/forecast?lat=50.5&lon=4.5`);
     const data = await res.json();
-    if (data && data.data) {
+
+    if (data?.data) {
       const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
       const temp = data.data.list?.[0]?.main?.temp || "N/A";
       container.innerHTML = `Prévisions Belgique : ${desc}, ${temp}°C`;
     } else {
       container.innerHTML = "❌ Erreur données nationales";
     }
-  } catch (err) {
+  } catch {
     container.innerHTML = "❌ Erreur prévisions nationales";
   }
 }
@@ -53,70 +61,68 @@ async function loadNationalForecast() {
 // -------------------------
 // Prévisions 7 jours
 // -------------------------
-async function loadWeeklyForecast() {
-  const container = document.getElementById("forecast-week");
+async function load7DaysForecast() {
+  const container = document.getElementById("forecast-7days");
   container.innerHTML = "Chargement...";
   try {
     const res = await fetch(`${API_BASE}/forecast?lat=50.5&lon=4.5`);
     const data = await res.json();
-    if (data && data.data) {
+
+    if (data?.data?.list) {
       container.innerHTML = "";
-      const list = data.data.list.slice(0, 7);
-      list.forEach((day, i) => {
-        const desc = day.weather?.[0]?.description || "n/a";
-        const temp = day.main?.temp || "N/A";
+      const days = {};
+
+      data.data.list.forEach((item) => {
+        const date = new Date(item.dt_txt);
+        const day = date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+        if (!days[day]) {
+          days[day] = item;
+        }
+      });
+
+      Object.entries(days).forEach(([day, item]) => {
+        const temp = item.main.temp;
+        const icon = item.weather[0].icon;
+        const desc = item.weather[0].description;
+
         container.innerHTML += `
-          <div class="day">
-            <h3>Jour ${i + 1}</h3>
+          <div class="day-card">
+            <h3>${day}</h3>
+            <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}">
             <p>${desc}</p>
             <p>${temp}°C</p>
           </div>
         `;
       });
+    } else {
+      container.innerHTML = "❌ Pas de données 7 jours";
     }
-  } catch (err) {
-    container.innerHTML = "❌ Erreur prévisions 7 jours";
+  } catch {
+    container.innerHTML = "❌ Erreur 7 jours";
   }
 }
 
 // -------------------------
-// Radar pluie/neige
+// Radar
 // -------------------------
 async function loadRadar() {
   const container = document.getElementById("radar");
+  container.innerHTML = "Chargement radar...";
   try {
     const res = await fetch(`${API_BASE}/radar`);
     const data = await res.json();
-    if (data && data.radarUrl) {
+    if (data?.radarUrl) {
       container.innerHTML = `<img src="${data.radarUrl}" alt="Radar météo">`;
+    } else {
+      container.innerHTML = "❌ Erreur radar";
     }
-  } catch (err) {
+  } catch {
     container.innerHTML = "❌ Radar indisponible";
   }
 }
 
 // -------------------------
-// Buienalarm++ maison
-// -------------------------
-function loadBuienalarm() {
-  const ctx = document.getElementById("buienalarmChart").getContext("2d");
-  new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: ["Maintenant", "+15min", "+30min", "+45min", "+1h"],
-      datasets: [
-        { label: "Pluie (mm)", data: [0, 1, 3, 2, 0], borderColor: "blue", fill: false },
-        { label: "Neige (cm)", data: [0, 0, 1, 1, 0], borderColor: "gray", fill: false },
-        { label: "Vent (km/h)", data: [10, 20, 30, 25, 15], borderColor: "green", fill: false }
-      ]
-    }
-  });
-  document.getElementById("buienalarm-text").innerHTML =
-    "🌧️ Prévision : Pluie modérée attendue dans la prochaine heure, vent en hausse.";
-}
-
-// -------------------------
-// Podcasts météo
+// Podcasts
 // -------------------------
 async function generatePodcast(type) {
   const status = document.getElementById("podcast-status");
@@ -124,7 +130,7 @@ async function generatePodcast(type) {
   try {
     const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
     const data = await res.json();
-    if (data && data.forecast) {
+    if (data?.forecast) {
       status.innerHTML = `
         ✅ ${data.forecast}<br>
         <audio controls>
@@ -133,20 +139,20 @@ async function generatePodcast(type) {
         </audio>
       `;
     } else {
-      status.innerHTML = "❌ Erreur podcast";
+      status.innerHTML = "❌ Erreur génération podcast";
     }
-  } catch (err) {
+  } catch {
     status.innerHTML = "❌ Erreur podcast";
   }
 }
 
 // -------------------------
-// Auto load
+// Lancement auto
 // -------------------------
 window.onload = () => {
   if (document.getElementById("forecast-local")) loadLocalForecast();
   if (document.getElementById("forecast-national")) loadNationalForecast();
-  if (document.getElementById("forecast-week")) loadWeeklyForecast();
+  if (document.getElementById("forecast-7days")) load7DaysForecast();
   if (document.getElementById("radar")) loadRadar();
-  if (document.getElementById("buienalarmChart")) loadBuienalarm();
 };
+
