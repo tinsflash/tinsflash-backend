@@ -1,17 +1,24 @@
 import fetch from "node-fetch";
 
 export async function getForecast(lat, lon) {
-  try {
-    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_KEY}`;
-    const reply = await fetch(url);
-    const data = await reply.json();
+  const apiKey = process.env.OPENWEATHER_KEY;
 
-    return {
-      source: "OpenWeather",
-      reliability: 92, // Ex : calcul basé sur les modèles croisés
-      data
-    };
-  } catch (err) {
-    throw new Error("Erreur service prévisions météo : " + err.message);
+  if (!apiKey) {
+    throw new Error("OPENWEATHER_KEY manquant dans les variables d'environnement");
   }
+
+  const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
+
+  const reply = await fetch(url);
+  const data = await reply.json();
+
+  if (data.cod !== "200") {
+    throw new Error(data.message || "Erreur API OpenWeather");
+  }
+
+  return {
+    source: "OpenWeather",
+    reliability: 92,
+    data
+  };
 }
