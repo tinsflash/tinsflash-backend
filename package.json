@@ -26,7 +26,4 @@
   "engines": {
     "node": ">=18.x"
   },
-  "scripts": {
-  "start": "node server.js",
-},
 }
