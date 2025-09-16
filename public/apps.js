@@ -2,7 +2,25 @@
 // TINSFLASH - app.js
 // Gestion frontend des appels API
 // ------------------------------
+// Switch cockpit
+function toggleCockpit() {
+  const body = document.body;
+  if (body.classList.contains("normal")) {
+    body.classList.remove("normal");
+    body.classList.add("cockpit");
+  } else {
+    body.classList.remove("cockpit");
+    body.classList.add("normal");
+  }
+}
 
+// Exemple: appel du bouton cockpit
+document.addEventListener("DOMContentLoaded", () => {
+  const cockpitBtn = document.getElementById("cockpit-btn");
+  if (cockpitBtn) {
+    cockpitBtn.addEventListener("click", toggleCockpit);
+  }
+});
 // 🌍 Prévisions météo (Gratuit, Premium, Pro, Pro+)
 async function getForecast(city, targetDiv) {
   try {
