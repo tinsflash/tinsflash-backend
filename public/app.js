@@ -1,119 +1,72 @@
-// ------------------------------
-// Gestion des alertes
-// ------------------------------
-async function loadAlerts() {
-  try {
-    const res = await fetch("/alerts");
-    const data = await res.json();
+// ==============================
+// APP.JS GLOBAL
+// ==============================
 
-    const localDiv = document.getElementById("alerts-local");
-    const worldDiv = document.getElementById("alerts-world");
+// Transition entre pages
+function transitionTo(url) {
+  const body = document.body;
+  body.classList.add("fade-exit");
+  setTimeout(() => {
+    window.location.href = url;
+  }, 600);
+}
 
-    if (data.alerts && Array.isArray(data.alerts)) {
-      localDiv.innerHTML = data.alerts
-        .map(a => `<p>⚠️ [${a.level}] ${a.type} (${a.reliability}%) - ${a.description}</p>`)
-        .join("");
+// ==============================
+// Bouton cockpit
+// ==============================
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.createElement("button");
+  btn.id = "cockpitToggle";
+  btn.innerText = "Cockpit";
+  document.body.appendChild(btn);
+
+  btn.addEventListener("click", () => {
+    document.body.classList.toggle("cockpit");
+    if (document.body.classList.contains("cockpit")) {
+      btn.innerText = "Quitter Cockpit";
     } else {
-      localDiv.innerHTML = "<p>Aucune alerte locale/nationale.</p>";
+      btn.innerText = "Cockpit";
     }
+  });
+});
 
-    if (data.external) {
-      worldDiv.innerHTML = `<p>🌍 Données externes : ${data.external.weather?.[0]?.description || "Aucune info."}</p>`;
-    } else {
-      worldDiv.innerHTML = "<p>Aucune alerte mondiale.</p>";
-    }
-  } catch (err) {
-    console.error("Erreur alertes :", err);
-    document.getElementById("alerts-local").innerHTML = "<p>Erreur chargement alertes.</p>";
-    document.getElementById("alerts-world").innerHTML = "<p>Erreur chargement alertes.</p>";
-  }
-}
-
-// ------------------------------
-// Gestion utilisateur (Account)
-// ------------------------------
-async function loadUserInfo() {
-  const userDiv = document.getElementById("user-info");
-  if (userDiv) {
-    userDiv.innerHTML = `
-      <p><strong>Nom :</strong> Jean Dupont</p>
-      <p><strong>Email :</strong> jean@example.com</p>
-      <p><strong>Statut :</strong> Connecté ✅</p>
-    `;
-  }
-}
-
-async function upgradePlan(plan) {
-  const subDiv = document.getElementById("subscription-info");
-  if (subDiv) {
-    subDiv.innerHTML = `🚀 Passage à l’abonnement ${plan.toUpperCase()} en cours...`;
-    setTimeout(() => {
-      subDiv.innerHTML = `✅ Abonnement mis à jour vers ${plan.toUpperCase()}`;
-    }, 1500);
-  }
-}
-
-// ------------------------------
-// Podcasts
-// ------------------------------
+// ==============================
+// Gestion podcasts
+// ==============================
 async function generatePodcast(type) {
   try {
     const res = await fetch(`/podcast/generate?type=${type}`);
     const data = await res.json();
-
-    const container = document.getElementById("my-podcasts");
-    if (container) {
-      const div = document.createElement("div");
-      div.classList.add("podcast-item");
-      div.innerHTML = `<p><strong>${type}</strong> → ${data.forecast}</p>`;
-      container.appendChild(div);
+    const player = document.getElementById("podcast-player");
+    if (player) {
+      player.innerHTML = `
+        <h3>🎙️ Podcast généré (${type})</h3>
+        <p>${data.forecast}</p>
+        <audio controls src="${data.audioUrl}"></audio>
+      `;
     }
   } catch (err) {
-    console.error("Erreur podcast :", err);
-    alert("Erreur génération podcast.");
+    console.error("Erreur podcast:", err);
   }
 }
 
-// ------------------------------
-// Codes promos
-// ------------------------------
-function applyPromo() {
-  const input = document.getElementById("promo-code");
-  const result = document.getElementById("promo-result");
-  if (input && result) {
-    const code = input.value.trim();
-    if (!code) {
-      alert("Veuillez entrer un code promo.");
-      return;
-    }
-    result.innerText = `✅ Code "${code}" appliqué avec succès !`;
-  }
-}
-
-// ------------------------------
-// Chat IA (console admin / cockpit futur)
-// ------------------------------
-async function sendToAI(message) {
+// ==============================
+// Gestion alertes
+// ==============================
+async function loadAlerts() {
   try {
-    const res = await fetch("/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message })
-    });
+    const res = await fetch("/alerts");
     const data = await res.json();
-    return data.reply || "Réponse indisponible.";
+    const list = document.getElementById("alerts-list");
+    if (list) {
+      list.innerHTML = "";
+      data.alerts.forEach(alert => {
+        const li = document.createElement("li");
+        li.innerText = `[${alert.level.toUpperCase()}] ${alert.type} (${alert.reliability}% fiabilité) - ${alert.description}`;
+        list.appendChild(li);
+      });
+    }
   } catch (err) {
-    console.error("Erreur chat IA :", err);
-    return "Erreur IA.";
+    console.error("Erreur alertes:", err);
   }
 }
-
-// ------------------------------
-// DOMContentLoaded → auto-init
-// ------------------------------
-document.addEventListener("DOMContentLoaded", () => {
-  // Alerts
-  if (document.getElementById("alerts-local")) loadAlerts();
-  // Account
-  if (document.getElementById("user-info")) loadUserInfo();
-});
