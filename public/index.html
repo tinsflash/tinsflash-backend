@@ -4,65 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TINSFLASH 🌍 - La météo du futur</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-
-  <!-- 🎥 Intro vidéo J.E.A.N -->
-  <section id="intro-jean" class="intro-jean">
-    <video autoplay muted loop id="bg-video">
-      <source src="/videos/clouds.mp4" type="video/mp4">
+  <!-- Intro vidéo J.E.A.N -->
+  <section class="intro-jean" id="intro-section">
+    <h1>Bienvenue sur TINSFLASH 🌍</h1>
+    <p>Découvrez l’intro de J.E.A.N, votre IA météo.</p>
+    <video id="introVideo" controls>
+      <source src="/intro-jean.mp4" type="video/mp4">
       Votre navigateur ne supporte pas la vidéo.
     </video>
-
-    <div class="intro-content">
-      <h2>👨‍🚀 J.E.A.N vous accueille</h2>
-
-      <!-- Avatar animé -->
-      <div id="jean-avatar">
-        <img src="/images/jean-astronaut.svg" alt="Avatar J.E.A.N" class="avatar-bounce">
-      </div>
-
-      <p id="jean-subtitles">Chargement de l’introduction...</p>
-      <audio id="jean-audio" controls></audio>
-      <br>
-      <button id="replay-jean">▶️ Réécouter J.E.A.N.</button>
-    </div>
+    <button onclick="revoirIntro()">▶️ Revoir l’intro</button>
   </section>
 
-  <!-- 🌦️ Prévisions -->
-  <section id="forecast">
-    <h2>Prévisions locales</h2>
-    <div id="forecast-local">Chargement...</div>
-
-    <h2>Prévisions nationales</h2>
-    <div id="forecast-national">Chargement...</div>
+  <!-- Prévisions locales -->
+  <section id="local">
+    <h2>🌤 Prévisions locales</h2>
+    <div id="forecast-local"></div>
   </section>
 
-  <!-- 🌍 Radar -->
+  <!-- Prévisions nationales -->
+  <section id="national">
+    <h2>🌍 Prévisions nationales</h2>
+    <div id="forecast-national"></div>
+  </section>
+
+  <!-- Radar pluie / neige -->
   <section id="radar-section">
-    <h2>Radar pluie/neige</h2>
-    <div id="radar">Chargement...</div>
+    <h2>🌧 Radar interactif</h2>
+    <div id="radar"></div>
   </section>
 
-  <!-- 🔔 Alertes -->
-  <section id="alerts">
-    <h2>Alertes locales et nationales</h2>
-    <div id="alerts-local">Chargement...</div>
-
-    <h2>Alertes mondiales</h2>
-    <div id="alerts-world">Chargement...</div>
-  </section>
-
-  <!-- 🎙️ Podcasts -->
+  <!-- Podcasts -->
   <section id="podcasts">
-    <h2>🎧 Podcasts météo</h2>
-    <button onclick="generatePodcast('free-morning')">Podcast matin (gratuit)</button>
-    <button onclick="generatePodcast('free-evening')">Podcast soir (gratuit)</button>
+    <h2>🎙 Podcasts météo</h2>
+    <p>Écoutez votre bulletin météo en direct.</p>
+    <button onclick="generatePodcast('free-morning')">Podcast matin</button>
+    <button onclick="generatePodcast('free-evening')">Podcast soir</button>
     <div id="podcast-status"></div>
   </section>
 
+  <!-- Alertes -->
+  <section id="alertes">
+    <h2>⚠️ Alertes météo</h2>
+    <div id="alerts-local"></div>
+    <div id="alerts-world"></div>
+  </section>
+
+  <script src="/app.js"></script>
 </body>
 </html>
 
