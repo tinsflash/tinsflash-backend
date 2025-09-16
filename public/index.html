@@ -2,69 +2,60 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH 🌍 - La météo du futur</title>
+  <title>TINSFLASH 🌍</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
   <header>
-    <h1>Bienvenue sur TINSFLASH 🌍</h1>
-    <p>Découvrez l’intro de J.E.A.N, votre IA météo.</p>
-    <video id="intro-video" controls>
-      <source src="intro.mp4" type="video/mp4">
-      Votre navigateur ne supporte pas la vidéo.
-    </video>
+    <h1>🌍 TINSFLASH – La météo du futur</h1>
+    <p>Prévisions locales, nationales et mondiales. 100% fiables.</p>
   </header>
 
   <main>
     <!-- Prévisions locales -->
-    <section>
+    <section id="forecast-local" class="card">
       <h2>📍 Prévisions locales</h2>
-      <div id="forecast-local">Chargement...</div>
+      <div id="local-content">Chargement...</div>
     </section>
 
     <!-- Prévisions nationales -->
-    <section>
-      <h2>🌐 Prévisions nationales</h2>
-      <div id="forecast-national">Chargement...</div>
+    <section id="forecast-national" class="card">
+      <h2>🇧🇪 Prévisions nationales</h2>
+      <div id="national-content">Chargement...</div>
     </section>
 
     <!-- Prévisions 7 jours -->
-    <section>
+    <section id="forecast-7days" class="card">
       <h2>📅 Prévisions 7 jours</h2>
-      <div id="forecast-7days">Chargement...</div>
+      <div id="days-container" class="days-grid">Chargement...</div>
     </section>
 
-    <!-- Radar interactif -->
-    <section>
-      <h2>🛰 Radar interactif</h2>
-      <div id="radar"></div>
+    <!-- Radar -->
+    <section id="radar" class="card">
+      <h2>🌧️ Radar pluie / neige / vent</h2>
+      <div id="radar-content">Chargement radar...</div>
     </section>
 
     <!-- Podcasts -->
-    <section>
-      <h2>🎙 Podcasts météo</h2>
-      <p>Écoutez votre bulletin météo en direct.</p>
-      <button onclick="generatePodcast('morning')">Podcast matin</button>
-      <button onclick="generatePodcast('evening')">Podcast soir</button>
+    <section id="podcasts" class="card">
+      <h2>🎙️ Podcasts météo</h2>
+      <button onclick="generatePodcast('free-morning')">Podcast Matin</button>
+      <button onclick="generatePodcast('free-evening')">Podcast Soir</button>
       <div id="podcast-status"></div>
     </section>
 
     <!-- Alertes -->
-    <section>
+    <section id="alerts" class="card">
       <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-local">Chargement...</div>
-      <div id="alerts-world"></div>
+      <div id="alerts-local">Chargement alertes locales...</div>
+      <div id="alerts-world">Chargement alertes mondiales...</div>
     </section>
   </main>
 
   <footer>
-    <p>© 2025 TINSFLASH — Powered by IA J.E.A.N</p>
+    <p>© 2025 TINSFLASH – La météo la plus fiable au monde.</p>
   </footer>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-
