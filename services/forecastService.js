@@ -47,17 +47,23 @@ export async function getForecast(lat, lon) {
   }
 
   // -------------------------
-  // 4. Meteomatics Free (via clé gratuite)
-  // -------------------------
-  try {
-    const mmUrl = `https://api.meteomatics.com/now/t_2m:C/${lat},${lon}/json`;
-    const mmRes = await fetch(mmUrl, {
-      headers: { Authorization: `Basic ${process.env.METEOMATICS_KEY}` }
-    });
-    results.sources.meteomatics = await mmRes.json();
-  } catch (err) {
-    results.sources.meteomatics = { error: err.message };
-  }
+// 4. Meteomatics Free (via clé gratuite)
+// -------------------------
+try {
+  const mmUrl = `https://api.meteomatics.com/now/t_2m:C/${lat},${lon}/json`;
+
+  const auth = Buffer.from(
+    `${process.env.METEOMATICS_USER}:${process.env.METEOMATICS_PASS}`
+  ).toString("base64");
+
+  const mmRes = await fetch(mmUrl, {
+    headers: { Authorization: `Basic ${auth}` }
+  });
+
+  results.sources.meteomatics = await mmRes.json();
+} catch (err) {
+  results.sources.meteomatics = { error: err.message };
+}
 
   // -------------------------
   // 5. Wetterzentrale (scraping)
