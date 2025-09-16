@@ -1,52 +1,42 @@
 <!DOCTYPE html>
-<html lang="fr" class="normal">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TINSFLASH - Pro+</title>
-  <link rel="stylesheet" href="/style.css">
-  <script defer src="/app.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
 </head>
-<body class="normal">
+<body>
   <header>
-    <h1>TINSFLASH - Espace Pro+</h1>
-    <button id="cockpit-btn" style="float:right;">🚀 Activer Cockpit</button>
+    <h1>🌍 TINSFLASH Pro+</h1>
+    <button onclick="toggleCockpit()">🛰️ Mode Cockpit</button>
   </header>
 
-  <nav>
-    <a href="/index.html">Accueil</a>
-    <a href="/premium.html">Premium</a>
-    <a href="/pro.html">Pro</a>
-    <a href="/proplus.html">Pro+</a>
-    <a href="/alerts.html">Alertes</a>
-    <a href="/account.html">Compte</a>
-  </nav>
-
-  <main class="container">
-    <section class="card">
-      <h2>🚀 Prévisions Pro+</h2>
-      <p>Analyse météo ultra complète, adaptée pour :</p>
-      <ul>
-        <li>🌍 Météorologues experts</li>
-        <li>🛰️ NASA & Aviation</li>
-        <li>📡 Services météos nationaux</li>
-      </ul>
-      <div id="forecast-container">Chargement...</div>
+  <main>
+    <section>
+      <h2>📡 Prévisions Pro+</h2>
+      <p>Ultra détaillées : niveau scientifique, adaptées aux besoins NASA, aviation et météorologues experts.</p>
+      <div id="forecast-proplus"></div>
     </section>
 
-    <section class="card">
+    <section>
       <h2>🎙️ Podcasts Pro+</h2>
       <button onclick="generatePodcast('proplus-morning')">▶️ Podcast Matin</button>
       <button onclick="generatePodcast('proplus-evening')">▶️ Podcast Soir</button>
-      <div id="podcast-output"></div>
+      <div id="podcast-proplus"></div>
     </section>
 
-    <section class="card">
-      <h2>🧠 IA J.E.A.N</h2>
-      <textarea id="jean-input" placeholder="Posez votre question météo scientifique..."></textarea><br>
-      <button onclick="chatWithJean()">Envoyer</button>
-      <div id="jean-output"></div>
+    <section>
+      <h2>🚨 Mode Tocsin</h2>
+      <p>Surveillance mondiale + capteurs connectés pour zones stratégiques critiques.</p>
+      <button onclick="activateTocsin()">Activer le Tocsin</button>
+      <p><a href="https://www.amazon.fr/shop/patrick_papa_fun/list/1KIVQFN1GNFJK" target="_blank">🛒 Boutique TINSFLASH</a></p>
     </section>
   </main>
+
+  <footer>
+    <p>© 2025 TINSFLASH Pro+</p>
+  </footer>
 </body>
 </html>
