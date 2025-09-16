@@ -48,7 +48,7 @@ app.get("/alerts", async (req, res) => {
 // ROUTE RADAR (simple redirection)
 // ----------------------
 app.get("/radar", (req, res) => {
-  const radarUrl = `https://tile.openweathermap.org/map/precipitation_new/2/2/1.png?appid=${process.env.SATELLITE_API}`;
+  const radarUrl = `https://tile.openweathermap.org/map/precipitation_new/2/2/1.png?appid=${process.env.OPENWEATHER_KEY}`;
   res.json({ radarUrl });
 });
 
