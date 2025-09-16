@@ -1,159 +1,69 @@
-/* -------------------------
-   🌍 TINSFLASH Styles
-   Design clair, moderne, responsive
--------------------------- */
-
 body {
+  font-family: Arial, sans-serif;
   margin: 0;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(to bottom, #eaf6ff, #d1e8ff);
+  padding: 0;
+  background: linear-gradient(to bottom, #e3f2fd, #ffffff);
   color: #222;
-  text-align: center;
 }
 
 header {
-  background: linear-gradient(120deg, #0077b6, #0096c7);
+  text-align: center;
+  padding: 20px;
+  background: #1976d2;
   color: white;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  border-bottom: 4px solid #0d47a1;
 }
 
-h1 {
-  font-size: 2.2rem;
-  margin-bottom: 0.5rem;
+h1, h2 {
+  margin: 10px 0;
 }
 
-h2 {
-  margin-top: 2rem;
-  font-size: 1.5rem;
-  color: #023e8a;
-  border-bottom: 2px solid #0077b6;
-  display: inline-block;
-  padding-bottom: 0.3rem;
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 section {
-  margin: 2rem auto;
-  padding: 1rem;
-  max-width: 900px;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  padding: 15px;
 }
 
-#forecast-local, #forecast-national, #forecast-seven {
-  margin-top: 1rem;
-  font-size: 1.1rem;
+#intro-video {
+  width: 60%; /* réduit la taille à 60% */
+  border-radius: 8px;
+  margin: 15px auto;
+  display: block;
 }
 
-.forecast-day {
-  display: inline-block;
-  width: 110px;
-  margin: 0.5rem;
-  padding: 0.8rem;
-  background: #f1f9ff;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  text-align: center;
-}
-
-.forecast-day img {
-  width: 50px;
-  height: 50px;
-}
-
-#radar img {
-  width: 100%;
-  max-height: 450px;
-  border-radius: 10px;
-  border: 2px solid #0077b6;
-  object-fit: cover;
+#radar {
+  height: 400px; /* radar réduit */
+  border: 2px solid #1976d2;
+  border-radius: 8px;
+  margin-top: 10px;
 }
 
 button {
-  margin: 0.5rem;
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  background: #0077b6;
+  background: #1976d2;
   color: white;
   border: none;
-  border-radius: 8px;
+  padding: 10px 15px;
+  margin: 5px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: 0.3s;
 }
 
 button:hover {
-  background: #023e8a;
+  background: #0d47a1;
 }
-
-#alerts .alert {
-  margin: 0.5rem;
-  padding: 0.8rem;
-  border-radius: 8px;
-  color: white;
-}
-
-.alert.orange { background: #ff8800; }
-.alert.red { background: #d00000; }
-.alert.green { background: #38b000; }
 
 footer {
-  margin-top: 3rem;
-  padding: 1rem;
-  background: #023e8a;
-  color: white;
-}
-
-footer a {
-  color: #ffd60a;
-  text-decoration: none;
-  font-weight: bold;
-}
-/* 🎬 Intro vidéo J.E.A.N */
-.intro-container {
-  width: 100%;
-  max-width: 900px;
-  margin: 30px auto;
   text-align: center;
-  background: linear-gradient(135deg, #0b132b, #1c2541);
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  color: #fff;
+  padding: 10px;
+  background: #f5f5f5;
+  font-size: 14px;
 }
-
-.intro-container h2 {
-  font-size: 1.6rem;
-  margin-bottom: 15px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-#intro-jean {
-  width: 50%;
-  max-height: 480px;
-  border-radius: 12px;
-  outline: none;
-}
-
-#intro-controls {
-  margin-top: 15px;
-}
-
-#intro-controls button {
-  padding: 10px 20px;
-  font-size: 1rem;
-  background: #ffcc00;
-  color: #000;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-#intro-controls button:hover {
-  background: #ff9900;
-}
-
 
