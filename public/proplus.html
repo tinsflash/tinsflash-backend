@@ -1,36 +1,52 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="normal">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH Pro+</title>
-  <link rel="stylesheet" href="style.css">
+  <title>TINSFLASH - Pro+</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
 </head>
-<body>
+<body class="normal">
   <header>
-    <h1>🚀 Pro+</h1>
-    <p>Le niveau scientifique ultime, utilisé par la NASA</p>
+    <h1>TINSFLASH - Espace Pro+</h1>
+    <button id="cockpit-btn" style="float:right;">🚀 Activer Cockpit</button>
   </header>
 
-  <section>
-    <form id="proplus-form">
-      <input type="text" id="zones" placeholder="Zones surveillées (séparées par virgule)" required>
-      <button type="submit">Voir prévisions Pro+</button>
-    </form>
-    <div id="proplus-result"></div>
-  </section>
+  <nav>
+    <a href="/index.html">Accueil</a>
+    <a href="/premium.html">Premium</a>
+    <a href="/pro.html">Pro</a>
+    <a href="/proplus.html">Pro+</a>
+    <a href="/alerts.html">Alertes</a>
+    <a href="/account.html">Compte</a>
+  </nav>
 
-  <section class="podcasts">
-    <h2>🎙️ Podcasts Pro+</h2>
-    <button onclick="generatePodcast('proplus-morning')">Podcast matin Pro+</button>
-    <button onclick="generatePodcast('proplus-evening')">Podcast soir Pro+</button>
-    <div id="podcast-result"></div>
-  </section>
+  <main class="container">
+    <section class="card">
+      <h2>🚀 Prévisions Pro+</h2>
+      <p>Analyse météo ultra complète, adaptée pour :</p>
+      <ul>
+        <li>🌍 Météorologues experts</li>
+        <li>🛰️ NASA & Aviation</li>
+        <li>📡 Services météos nationaux</li>
+      </ul>
+      <div id="forecast-container">Chargement...</div>
+    </section>
 
-  <footer>
-    <a href="index.html">⬅ Retour à l’accueil</a>
-  </footer>
+    <section class="card">
+      <h2>🎙️ Podcasts Pro+</h2>
+      <button onclick="generatePodcast('proplus-morning')">▶️ Podcast Matin</button>
+      <button onclick="generatePodcast('proplus-evening')">▶️ Podcast Soir</button>
+      <div id="podcast-output"></div>
+    </section>
 
-  <script src="app.js"></script>
+    <section class="card">
+      <h2>🧠 IA J.E.A.N</h2>
+      <textarea id="jean-input" placeholder="Posez votre question météo scientifique..."></textarea><br>
+      <button onclick="chatWithJean()">Envoyer</button>
+      <div id="jean-output"></div>
+    </section>
+  </main>
 </body>
 </html>
