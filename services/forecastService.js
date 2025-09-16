@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 
 export async function getForecast(lat, lon) {
   try {
-    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.SATELLITE_API}`;
+    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_KEY}`;
     const reply = await fetch(url);
     const data = await reply.json();
 
