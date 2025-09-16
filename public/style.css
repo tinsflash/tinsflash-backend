@@ -1,160 +1,82 @@
-/* ===========================
-   GLOBAL STYLES
-=========================== */
+/* GLOBAL */
 body {
+  font-family: Arial, sans-serif;
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(180deg, #0f2027, #203a43, #2c5364);
-  color: #fff;
-  line-height: 1.6;
-  transition: background 0.4s, color 0.4s;
+  background: #f5f5f5;
+  color: #222;
+  transition: background 0.5s, color 0.5s;
 }
 
-h1, h2, h3 {
-  margin-bottom: 0.5em;
-  text-align: center;
-  font-weight: 700;
-}
-
-a {
-  text-decoration: none;
-  color: #1e90ff;
-  transition: color 0.3s;
-}
-
-a:hover {
-  color: #63c3ff;
-}
-
-/* ===========================
-   NAVBAR
-=========================== */
-nav {
-  background: rgba(0, 0, 0, 0.8);
-  padding: 1em;
-  display: flex;
-  justify-content: center;
-  gap: 2em;
-  position: sticky;
-  top: 0;
-  z-index: 999;
-}
-
-nav a {
-  color: #fff;
-  font-weight: bold;
-  padding: 0.5em 1em;
-  border-radius: 8px;
-}
-
-nav a:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* ===========================
-   CONTAINERS
-=========================== */
-.container {
-  max-width: 1200px;
-  margin: 2em auto;
-  padding: 1.5em;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
-}
-
-/* ===========================
-   BUTTONS
-=========================== */
-button {
-  background: #1e90ff;
-  border: none;
+header {
+  background: #004aad;
   color: white;
-  padding: 0.75em 1.5em;
-  font-size: 1em;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.3s, transform 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
 }
 
-button:hover {
-  background: #63c3ff;
-  transform: scale(1.05);
-}
-
-button.cockpit-toggle {
-  background: #ff6600;
-  margin-top: 1em;
-}
-
-button.cockpit-toggle:hover {
-  background: #ffa366;
-}
-
-/* ===========================
-   PODCAST BLOCKS
-=========================== */
-.podcast {
-  margin: 1.5em 0;
-  padding: 1.5em;
-  background: rgba(0, 0, 0, 0.3);
-  border-left: 6px solid #1e90ff;
-  border-radius: 10px;
-}
-
-.podcast h3 {
-  margin-top: 0;
-}
-
-/* ===========================
-   ALERTS
-=========================== */
-.alert {
-  margin: 1em 0;
-  padding: 1em;
-  border-radius: 8px;
+header .logo {
   font-weight: bold;
+  font-size: 1.5em;
 }
 
-.alert.orange {
-  background: rgba(255, 165, 0, 0.2);
-  border-left: 6px solid orange;
+header nav a {
+  color: white;
+  margin: 0 10px;
+  text-decoration: none;
 }
 
-.alert.red {
-  background: rgba(255, 0, 0, 0.2);
-  border-left: 6px solid red;
+header button {
+  background: orange;
+  border: none;
+  padding: 8px 15px;
+  cursor: pointer;
+  border-radius: 5px;
 }
 
-/* ===========================
-   FOOTER
-=========================== */
-footer {
-  text-align: center;
-  padding: 1em;
-  margin-top: 3em;
-  background: rgba(0, 0, 0, 0.8);
+main {
+  padding: 20px;
 }
 
-/* ===========================
-   COCKPIT MODE
-=========================== */
+section {
+  margin-bottom: 30px;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+h2 {
+  color: #004aad;
+}
+
+.btn {
+  display: inline-block;
+  margin: 10px;
+  padding: 10px 20px;
+  background: #004aad;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+/* COCKPIT MODE */
 body.cockpit {
-  background: #000;
-  color: #0f0;
-  font-family: 'Courier New', monospace;
+  background: #0d1117;
+  color: #eee;
 }
 
-body.cockpit nav {
+body.cockpit header {
   background: #111;
 }
 
-body.cockpit button {
-  background: #0f0;
-  color: #000;
+body.cockpit section {
+  background: #1e1e2f;
+  border: 1px solid #333;
 }
 
-body.cockpit button:hover {
-  background: #5f5;
+body.cockpit h2 {
+  color: #0dcaf0;
 }
 
