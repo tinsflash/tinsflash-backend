@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH - Accueil</title>
+  <title>TINSFLASH - Prévisions météo</title>
   <link rel="stylesheet" href="style.css">
-  <script defer src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
@@ -16,54 +16,57 @@
       <a href="pro.html">Pro</a>
       <a href="proplus.html">Pro+</a>
       <a href="alerts.html">Alertes</a>
-      <a href="account.html">Mon compte</a>
+      <a href="account.html">Compte</a>
     </nav>
   </header>
 
   <main>
     <section>
       <h2>Prévisions locales</h2>
-      <div id="forecast-local">Chargement...</div>
+      <div id="forecast-local" class="card">Chargement...</div>
     </section>
 
     <section>
       <h2>Prévisions nationales</h2>
-      <div id="forecast-national">Chargement...</div>
+      <div id="forecast-national" class="card">Chargement...</div>
     </section>
 
     <section>
       <h2>Prévisions 7 jours</h2>
-      <div id="forecast-week">Chargement...</div>
+      <div id="forecast-week" class="grid"></div>
     </section>
 
     <section>
-      <h2>Radar pluie/neige</h2>
-      <div id="radar">Chargement...</div>
+      <h2>Radar pluie / neige</h2>
+      <div id="radar" class="radar-container">Chargement radar...</div>
+      <input type="range" id="radar-slider" min="0" max="4" value="0">
     </section>
 
     <section>
-      <h2>Podcasts météo</h2>
-      <button onclick="generatePodcast('free-morning')">🎙️ Podcast matin</button>
-      <button onclick="generatePodcast('free-evening')">🎙️ Podcast soir</button>
+      <h2>Bulletin pluie / neige / vent (Buienalarm++)</h2>
+      <canvas id="buienalarmChart" height="120"></canvas>
+      <div id="buienalarm-text" class="info"></div>
+    </section>
+
+    <section>
+      <h2>🎧 Podcasts météo</h2>
+      <div class="podcast-container">
+        <button onclick="generatePodcast('free-morning')">Podcast Matin</button>
+        <button onclick="generatePodcast('free-evening')">Podcast Soir</button>
+      </div>
       <div id="podcast-status"></div>
     </section>
 
-    <section>
-      <h2>Bulletin pluie (Buienalarm)</h2>
-      <iframe 
-        src="https://www.buienalarm.nl/widget/forecast?lat=50.5&lon=4.5" 
-        width="100%" height="200" frameborder="0"></iframe>
-    </section>
-
-    <section class="cta">
-      <p>📈 Pour des prévisions plus complètes, passez Premium.</p>
-      <p>🏗️ Pour vos métiers (agriculture, communes, événements, construction), passez Pro.</p>
-      <p>🚀 Pour une météo au niveau NASA, passez Pro+.</p>
+    <section class="ads">
+      <h2>Publicité</h2>
+      <p>[Google Ads - Bannière]</p>
     </section>
   </main>
 
   <footer>
-    <p>&copy; 2025 TINSFLASH – Powered by IA J.E.A.N</p>
+    <p>© 2025 TINSFLASH – Powered by IA J.E.A.N 🚀</p>
   </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>
