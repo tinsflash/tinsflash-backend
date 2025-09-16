@@ -1,62 +1,63 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TINSFLASH - Prévisions météo mondiales</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <h1>🌍 TINSFLASH</h1>
-    <p>La météo mondiale la plus fiable et la plus précise</p>
+    <p>Prévisions météo hyper-précises, propulsées par IA & modèles mondiaux</p>
   </header>
 
   <main>
     <!-- Prévisions locales -->
-    <section>
-      <h2>📍 Prévisions locales</h2>
-      <div id="forecast-local" class="forecast-card">Chargement...</div>
+    <section id="forecast-local" class="card">
+      <h2>Prévisions locales</h2>
+      <div>Chargement...</div>
     </section>
 
     <!-- Prévisions nationales -->
-    <section>
-      <h2>🏳️ Prévisions nationales</h2>
-      <div id="forecast-national" class="forecast-card">Chargement...</div>
+    <section id="forecast-national" class="card">
+      <h2>Prévisions nationales</h2>
+      <div>Chargement...</div>
     </section>
 
     <!-- Prévisions 7 jours -->
-    <section>
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="forecast-7days" class="forecast-grid">Chargement...</div>
+    <section id="forecast-7days" class="card">
+      <h2>Prévisions 7 jours</h2>
+      <div>Chargement...</div>
     </section>
 
     <!-- Radar -->
-    <section>
-      <h2>🌧️ Radar pluie / neige / vent</h2>
-      <div id="radar">Chargement radar...</div>
+    <section id="radar" class="card">
+      <h2>Radar pluie / neige / vent</h2>
+      <div>Chargement radar...</div>
     </section>
 
-    <!-- Podcast national -->
-    <section>
-      <h2>🎙️ Votre podcast météo national</h2>
-      <button onclick="generatePodcast('free-morning')">▶️ Écouter le podcast national</button>
+    <!-- Podcasts -->
+    <section id="podcasts" class="card">
+      <h2>Podcasts météo</h2>
+      <button onclick="generatePodcast('matin')">🎙️ Écouter le podcast du matin</button>
+      <button onclick="generatePodcast('soir')">🎙️ Écouter le podcast du soir</button>
       <div id="podcast-status"></div>
     </section>
 
-    <!-- CTA vers Premium -->
-    <section class="cta">
-      <p>💡 Obtenez plus de détails et des outils exclusifs → 
-        <a href="premium.html">Passez Premium</a>
-      </p>
+    <!-- Alertes -->
+    <section id="alerts" class="card">
+      <h2>Alertes météo</h2>
+      <div id="alerts-local">Chargement alertes locales...</div>
+      <div id="alerts-world">Chargement alertes mondiales...</div>
     </section>
   </main>
 
   <footer>
-    <p>© 2025 TINSFLASH - Prévisions météo mondiales fiables</p>
+    <p>© 2025 TINSFLASH - Powered by IA J.E.A.N</p>
   </footer>
 
   <script src="app.js"></script>
 </body>
 </html>
-
 
