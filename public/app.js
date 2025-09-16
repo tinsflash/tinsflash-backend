@@ -1,38 +1,7 @@
 // -------------------------
 // 🌍 TINSFLASH Frontend JS
 // -------------------------
-const API_BASE = "https://tinsflash-backend.onrender.com";
-
-// 🎥 Intro J.E.A.N (texte + voix)
-const jeanText = `Bienvenue sur TINSFLASH 🌍, la météo du futur.
-Ici, vous accédez aux prévisions les plus fiables au monde :
-locales, nationales et mondiales, vérifiées par intelligence artificielle
-et avec la participation d'experts météorologues de grande renommée.
-Nos abonnements Premium, Pro et Pro+ ouvrent l’accès à des outils avancés,
-du cockpit météo façon NASA, et des alertes exclusives avant tout le monde.
-Rejoignez la révolution météo, et laissez TINSFLASH éclairer votre ciel.`;
-
-window.onload = async () => {
-  // Sous-titres
-  const sub = document.getElementById("jean-subtitles");
-  sub.innerText = jeanText;
-
-  // Audio IA (utilise un endpoint backend TTS ou fichier pré-enregistré)
-  const audio = document.getElementById("jean-audio");
-  audio.src = "/audio/intro-jean.mp3"; // ⚡ Mets un fichier réel ici
-
-  // Replay
-  document.getElementById("replay-jean").onclick = () => {
-    audio.currentTime = 0;
-    audio.play();
-  };
-
-  // Lancer les modules météo
-  if (document.getElementById("forecast-local")) loadLocalForecast();
-  if (document.getElementById("forecast-national")) loadNationalForecast();
-  if (document.getElementById("radar")) loadRadar();
-  if (document.getElementById("alerts-local")) loadAlerts();
-};
+const API_BASE = "https://tinsflash-backend.onrender.com"; // ⚡ ton backend Render
 
 // -------------------------
 // Prévisions locales
@@ -46,22 +15,30 @@ async function loadLocalForecast() {
       const lon = pos.coords.longitude;
       const res = await fetch(`${API_BASE}/forecast?lat=${lat}&lon=${lon}`);
       const data = await res.json();
+
       if (data && data.data) {
         const city = data.data.city?.name || "Votre position";
-        const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
-        const temp = data.data.list?.[0]?.main?.temp || "N/A";
-        container.innerHTML = `<strong>${city}</strong><br>${desc}, ${temp}°C`;
+        const forecast = data.data.list?.[0];
+        const desc = forecast?.weather?.[0]?.description || "Pas de données";
+        const temp = forecast?.main?.temp || "N/A";
+        const icon = forecast?.weather?.[0]?.icon || "01d";
+
+        container.innerHTML = `
+          <strong>${city}</strong><br>
+          <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="icon">
+          ${desc}, ${temp}°C
+        `;
       } else {
         container.innerHTML = "❌ Erreur données locales";
       }
     });
-  } catch {
+  } catch (err) {
     container.innerHTML = "❌ Erreur prévisions locales";
   }
 }
 
 // -------------------------
-// Prévisions nationales (🇧🇪 Belgique par défaut)
+// Prévisions nationales
 // -------------------------
 async function loadNationalForecast() {
   const container = document.getElementById("forecast-national");
@@ -69,20 +46,66 @@ async function loadNationalForecast() {
   try {
     const res = await fetch(`${API_BASE}/forecast?lat=50.5&lon=4.5`);
     const data = await res.json();
+
     if (data && data.data) {
-      const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
-      const temp = data.data.list?.[0]?.main?.temp || "N/A";
-      container.innerHTML = `Prévisions nationales : ${desc}, ${temp}°C`;
+      const forecast = data.data.list?.[0];
+      const desc = forecast?.weather?.[0]?.description || "Pas de données";
+      const temp = forecast?.main?.temp || "N/A";
+      const icon = forecast?.weather?.[0]?.icon || "01d";
+
+      container.innerHTML = `
+        🇧🇪 Prévisions nationales : <br>
+        <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="icon">
+        ${desc}, ${temp}°C
+      `;
     } else {
       container.innerHTML = "❌ Erreur données nationales";
     }
-  } catch {
+  } catch (err) {
     container.innerHTML = "❌ Erreur prévisions nationales";
   }
 }
 
 // -------------------------
-// Radar pluie/neige
+// Prévisions 7 jours
+// -------------------------
+async function load7DayForecast() {
+  const container = document.getElementById("forecast-seven");
+  container.innerHTML = "Chargement...";
+  try {
+    const res = await fetch(`${API_BASE}/forecast?lat=50.5&lon=4.5`);
+    const data = await res.json();
+
+    if (data && data.data && data.data.list) {
+      container.innerHTML = "";
+      const today = new Date();
+
+      for (let i = 0; i < 7; i++) {
+        const f = data.data.list[i * 8]; // 1 point par jour
+        if (!f) continue;
+
+        const date = new Date(today);
+        date.setDate(today.getDate() + i + 1);
+        const dayName = date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+        const temp = f.main?.temp || "N/A";
+        const icon = f.weather?.[0]?.icon || "01d";
+
+        container.innerHTML += `
+          <div class="forecast-day">
+            <strong>${dayName}</strong><br>
+            <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="icon">
+            ${temp}°C
+          </div>
+        `;
+      }
+    }
+  } catch (err) {
+    container.innerHTML = "❌ Erreur 7 jours";
+  }
+}
+
+// -------------------------
+// Radar pluie/neige/vent
 // -------------------------
 async function loadRadar() {
   const container = document.getElementById("radar");
@@ -91,11 +114,11 @@ async function loadRadar() {
     const res = await fetch(`${API_BASE}/radar`);
     const data = await res.json();
     if (data && data.radarUrl) {
-      container.innerHTML = `<img src="${data.radarUrl}" alt="Radar météo" style="max-width:100%">`;
+      container.innerHTML = `<img src="${data.radarUrl}" alt="Radar météo">`;
     } else {
       container.innerHTML = "❌ Erreur radar";
     }
-  } catch {
+  } catch (err) {
     container.innerHTML = "❌ Radar indisponible";
   }
 }
@@ -120,7 +143,7 @@ async function generatePodcast(type) {
     } else {
       status.innerHTML = "❌ Erreur génération podcast";
     }
-  } catch {
+  } catch (err) {
     status.innerHTML = "❌ Erreur podcast";
   }
 }
@@ -133,14 +156,17 @@ async function loadAlerts() {
   const world = document.getElementById("alerts-world");
   local.innerHTML = "Chargement...";
   world.innerHTML = "Chargement...";
+
   try {
     const res = await fetch(`${API_BASE}/alerts`);
     const data = await res.json();
+
     if (data && data.alerts) {
       local.innerHTML = "";
       data.alerts.forEach(alert => {
+        const color = alert.level === "rouge" ? "red" : (alert.level === "orange" ? "orange" : "green");
         local.innerHTML += `
-          <div class="alert ${alert.level}">
+          <div class="alert ${color}">
             ⚠️ [${alert.level.toUpperCase()}] ${alert.type} 
             (fiabilité ${alert.reliability}%)<br>
             ${alert.description}
@@ -149,10 +175,24 @@ async function loadAlerts() {
       });
     }
     if (data && data.external) {
-      world.innerHTML = `🌍 Source externe : ${data.external.weather?.[0]?.description || "n/a"}`;
+      world.innerHTML = `
+        🌍 Source externe : ${data.external.weather?.[0]?.description || "n/a"}
+      `;
     }
-  } catch {
+  } catch (err) {
     local.innerHTML = "❌ Erreur alertes locales/nationales";
     world.innerHTML = "❌ Erreur alertes mondiales";
   }
 }
+
+// -------------------------
+// Lancement auto
+// -------------------------
+window.onload = () => {
+  if (document.getElementById("forecast-local")) loadLocalForecast();
+  if (document.getElementById("forecast-national")) loadNationalForecast();
+  if (document.getElementById("forecast-seven")) load7DayForecast();
+  if (document.getElementById("radar")) loadRadar();
+  if (document.getElementById("alerts-local")) loadAlerts();
+};
+
