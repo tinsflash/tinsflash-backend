@@ -1,61 +1,38 @@
 // -------------------------
 // 🌍 TINSFLASH Frontend JS
 // -------------------------
-const API_BASE = "https://tinsflash-backend.onrender.com"; 
-const API_KEY = "caa7e7cf852152448c239c001a1cf98f"; // OpenWeather
+const API_BASE = "https://tinsflash-backend.onrender.com";
 
-// -------------------------
-// Radar interactif avec timeline
-// -------------------------
-let radarMap, radarLayers = [], radarInterval, currentFrame = 0;
+// 🎥 Intro J.E.A.N (texte + voix)
+const jeanText = `Bienvenue sur TINSFLASH 🌍, la météo du futur.
+Ici, vous accédez aux prévisions les plus fiables au monde :
+locales, nationales et mondiales, vérifiées par intelligence artificielle
+et avec la participation d'experts météorologues de grande renommée.
+Nos abonnements Premium, Pro et Pro+ ouvrent l’accès à des outils avancés,
+du cockpit météo façon NASA, et des alertes exclusives avant tout le monde.
+Rejoignez la révolution météo, et laissez TINSFLASH éclairer votre ciel.`;
 
-function initRadar() {
-  radarMap = L.map("radar-map").setView([20, 0], 2); // Vue monde
+window.onload = async () => {
+  // Sous-titres
+  const sub = document.getElementById("jean-subtitles");
+  sub.innerText = jeanText;
 
-  // Fond carte sombre
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: "&copy; OSM",
-    subdomains: "abcd",
-    maxZoom: 19
-  }).addTo(radarMap);
+  // Audio IA (utilise un endpoint backend TTS ou fichier pré-enregistré)
+  const audio = document.getElementById("jean-audio");
+  audio.src = "/audio/intro-jean.mp3"; // ⚡ Mets un fichier réel ici
 
-  // Génère 7 frames (maintenant + 6 heures futures)
-  for (let i = 0; i <= 6; i++) {
-    const timestamp = Math.floor(Date.now() / 1000) + i * 3600;
-    const layer = L.tileLayer(
-      `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}&ts=${timestamp}`,
-      { opacity: 0 }
-    ).addTo(radarMap);
-    radarLayers.push(layer);
-  }
+  // Replay
+  document.getElementById("replay-jean").onclick = () => {
+    audio.currentTime = 0;
+    audio.play();
+  };
 
-  updateRadarFrame(0);
-}
-
-// Met à jour frame affichée
-function updateRadarFrame(frame) {
-  radarLayers.forEach((layer, i) => layer.setOpacity(i === frame ? 0.7 : 0));
-  currentFrame = frame;
-  document.getElementById("radar-slider").value = frame;
-  document.getElementById("radar-time").innerText =
-    frame === 0 ? "Maintenant" : `+${frame}h`;
-}
-
-function playRadar() {
-  clearInterval(radarInterval);
-  radarInterval = setInterval(() => {
-    let nextFrame = (currentFrame + 1) % radarLayers.length;
-    updateRadarFrame(nextFrame);
-  }, 1000);
-}
-
-function pauseRadar() {
-  clearInterval(radarInterval);
-}
-
-document.getElementById("radar-slider").addEventListener("input", (e) => {
-  updateRadarFrame(parseInt(e.target.value));
-});
+  // Lancer les modules météo
+  if (document.getElementById("forecast-local")) loadLocalForecast();
+  if (document.getElementById("forecast-national")) loadNationalForecast();
+  if (document.getElementById("radar")) loadRadar();
+  if (document.getElementById("alerts-local")) loadAlerts();
+};
 
 // -------------------------
 // Prévisions locales
@@ -69,29 +46,22 @@ async function loadLocalForecast() {
       const lon = pos.coords.longitude;
       const res = await fetch(`${API_BASE}/forecast?lat=${lat}&lon=${lon}`);
       const data = await res.json();
-
       if (data && data.data) {
         const city = data.data.city?.name || "Votre position";
-        const list = data.data.list?.slice(0, 7) || [];
-        container.innerHTML = `<h3>${city}</h3>`;
-        list.forEach((f, i) => {
-          const date = new Date(f.dt * 1000);
-          const day = date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
-          const desc = f.weather?.[0]?.description || "n/a";
-          const temp = f.main?.temp || "N/A";
-          container.innerHTML += `<div>📅 ${day} → ${desc}, ${temp}°C</div>`;
-        });
+        const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
+        const temp = data.data.list?.[0]?.main?.temp || "N/A";
+        container.innerHTML = `<strong>${city}</strong><br>${desc}, ${temp}°C`;
       } else {
         container.innerHTML = "❌ Erreur données locales";
       }
     });
-  } catch (err) {
+  } catch {
     container.innerHTML = "❌ Erreur prévisions locales";
   }
 }
 
 // -------------------------
-// Prévisions nationales (Belgique défaut)
+// Prévisions nationales (🇧🇪 Belgique par défaut)
 // -------------------------
 async function loadNationalForecast() {
   const container = document.getElementById("forecast-national");
@@ -99,16 +69,34 @@ async function loadNationalForecast() {
   try {
     const res = await fetch(`${API_BASE}/forecast?lat=50.5&lon=4.5`);
     const data = await res.json();
-
     if (data && data.data) {
       const desc = data.data.list?.[0]?.weather?.[0]?.description || "Pas de données";
       const temp = data.data.list?.[0]?.main?.temp || "N/A";
-      container.innerHTML = `Prévisions nationales 🇧🇪 : ${desc}, ${temp}°C`;
+      container.innerHTML = `Prévisions nationales : ${desc}, ${temp}°C`;
     } else {
       container.innerHTML = "❌ Erreur données nationales";
     }
-  } catch (err) {
+  } catch {
     container.innerHTML = "❌ Erreur prévisions nationales";
+  }
+}
+
+// -------------------------
+// Radar pluie/neige
+// -------------------------
+async function loadRadar() {
+  const container = document.getElementById("radar");
+  container.innerHTML = "Chargement radar...";
+  try {
+    const res = await fetch(`${API_BASE}/radar`);
+    const data = await res.json();
+    if (data && data.radarUrl) {
+      container.innerHTML = `<img src="${data.radarUrl}" alt="Radar météo" style="max-width:100%">`;
+    } else {
+      container.innerHTML = "❌ Erreur radar";
+    }
+  } catch {
+    container.innerHTML = "❌ Radar indisponible";
   }
 }
 
@@ -126,12 +114,13 @@ async function generatePodcast(type) {
         ✅ ${data.forecast}<br>
         <audio controls>
           <source src="${data.audioUrl}" type="audio/mpeg">
+          Votre navigateur ne supporte pas l'audio.
         </audio>
       `;
     } else {
       status.innerHTML = "❌ Erreur génération podcast";
     }
-  } catch (err) {
+  } catch {
     status.innerHTML = "❌ Erreur podcast";
   }
 }
@@ -160,22 +149,10 @@ async function loadAlerts() {
       });
     }
     if (data && data.external) {
-      world.innerHTML = `
-        🌍 Source externe : ${data.external.weather?.[0]?.description || "n/a"}
-      `;
+      world.innerHTML = `🌍 Source externe : ${data.external.weather?.[0]?.description || "n/a"}`;
     }
-  } catch (err) {
+  } catch {
     local.innerHTML = "❌ Erreur alertes locales/nationales";
     world.innerHTML = "❌ Erreur alertes mondiales";
   }
 }
-
-// -------------------------
-// Auto lancement
-// -------------------------
-window.onload = () => {
-  if (document.getElementById("radar-map")) initRadar();
-  if (document.getElementById("forecast-local")) loadLocalForecast();
-  if (document.getElementById("forecast-national")) loadNationalForecast();
-  if (document.getElementById("alerts-local")) loadAlerts();
-};
