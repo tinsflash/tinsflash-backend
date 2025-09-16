@@ -3,72 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH - Prévisions météo</title>
+  <title>TINSFLASH - Accueil</title>
   <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
 </head>
 <body>
-  <!-- HEADER -->
   <header>
-    <div class="logo">🌍 TINSFLASH</div>
+    <h1>🌍 TINSFLASH</h1>
     <nav>
-      <a href="/index.html">Accueil</a>
-      <a href="/premium.html">Premium</a>
-      <a href="/pro.html">Pro</a>
-      <a href="/proplus.html">Pro+</a>
-      <a href="/alertes.html">Alertes</a>
-      <a href="/account.html">Compte</a>
+      <a href="index.html">Accueil</a>
+      <a href="premium.html">Premium</a>
+      <a href="pro.html">Pro</a>
+      <a href="proplus.html">Pro+</a>
+      <a href="alerts.html">Alertes</a>
+      <a href="account.html">Mon compte</a>
     </nav>
-    <button id="cockpit-toggle">Mode Cockpit</button>
   </header>
 
-  <!-- SECTION PREVISIONS -->
   <main>
-    <section class="forecast">
+    <section>
       <h2>Prévisions locales</h2>
-      <div id="forecast-container">Chargement des prévisions...</div>
+      <div id="forecast-local">Chargement...</div>
     </section>
 
-    <section class="national">
+    <section>
       <h2>Prévisions nationales</h2>
       <div id="forecast-national">Chargement...</div>
     </section>
 
-    <section class="radar">
+    <section>
+      <h2>Prévisions 7 jours</h2>
+      <div id="forecast-week">Chargement...</div>
+    </section>
+
+    <section>
       <h2>Radar pluie/neige</h2>
-      <img id="radar-map" src="" alt="Radar météo en temps réel">
+      <div id="radar">Chargement...</div>
     </section>
 
-    <!-- PODCASTS -->
-    <section class="podcasts">
-      <h2>🎙️ Podcasts météo</h2>
-      <div>
-        <button onclick="generatePodcast('free-morning')">Podcast Matin</button>
-        <button onclick="generatePodcast('free-evening')">Podcast Soir</button>
-      </div>
-      <audio id="podcast-player" controls></audio>
+    <section>
+      <h2>Podcasts météo</h2>
+      <button onclick="generatePodcast('free-morning')">🎙️ Podcast matin</button>
+      <button onclick="generatePodcast('free-evening')">🎙️ Podcast soir</button>
+      <div id="podcast-status"></div>
     </section>
 
-    <!-- PUBS -->
-    <section class="ads">
-      <h2>Publicité</h2>
-      <div class="ad-slot">[Google Ads - Bannière]</div>
+    <section>
+      <h2>Bulletin pluie (Buienalarm)</h2>
+      <iframe 
+        src="https://www.buienalarm.nl/widget/forecast?lat=50.5&lon=4.5" 
+        width="100%" height="200" frameborder="0"></iframe>
     </section>
 
-    <!-- UPGRADE -->
-    <section class="upgrade">
-      <h2>Pour des prévisions encore plus complètes</h2>
-      <p>Passez à Premium, Pro ou Pro+ pour débloquer toutes les fonctionnalités.</p>
-      <a class="btn" href="/premium.html">Découvrir Premium</a>
-      <a class="btn" href="/pro.html">Découvrir Pro</a>
-      <a class="btn" href="/proplus.html">Découvrir Pro+</a>
+    <section class="cta">
+      <p>📈 Pour des prévisions plus complètes, passez Premium.</p>
+      <p>🏗️ Pour vos métiers (agriculture, communes, événements, construction), passez Pro.</p>
+      <p>🚀 Pour une météo au niveau NASA, passez Pro+.</p>
     </section>
   </main>
 
-  <!-- FOOTER -->
   <footer>
-    <p>&copy; 2025 TINSFLASH - Les prévisions les plus fiables au monde 🌍</p>
+    <p>&copy; 2025 TINSFLASH – Powered by IA J.E.A.N</p>
   </footer>
-
-  <script src="app.js"></script>
 </body>
 </html>
