@@ -16,7 +16,7 @@
     "morgan": "^1.10.0",
     "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
-    "stripe": "^14.0.0"
+    "stripe": "^14.0.0",
     "cheerio":"^1.0.0-rc.12"
   },
   "devDependencies": {
