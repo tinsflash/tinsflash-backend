@@ -1,126 +1,111 @@
-/* ---------------------------
-   🌍 TINSFLASH - Styles multi-thèmes
-   --------------------------- */
-
-/* ==== Thème NORMAL ==== */
-body.normal {
-  font-family: "Roboto", Arial, sans-serif;
+/* ==============================
+   STYLE GLOBAL
+   ============================== */
+body {
   margin: 0;
-  padding: 0;
-  background: #f4f7fb;
+  font-family: Arial, sans-serif;
+  background: #f0f2f5;
   color: #222;
-  line-height: 1.6;
+  transition: background 0.4s, color 0.4s;
 }
 
-body.normal header {
-  background: linear-gradient(90deg, #0078d7, #00bfff);
+header, footer {
+  background: #003366;
+  color: #fff;
   padding: 15px;
   text-align: center;
-  color: #fff;
-  font-size: 1.4em;
-  font-weight: bold;
-  text-transform: uppercase;
-  box-shadow: 0px 3px 6px rgba(0,0,0,0.2);
 }
 
-body.normal nav {
-  display: flex;
-  justify-content: center;
-  background: #fff;
-  border-bottom: 2px solid #ddd;
-  padding: 10px;
-}
-body.normal nav a {
-  color: #0078d7;
-  text-decoration: none;
-  margin: 0 15px;
-  font-weight: bold;
-  transition: color 0.3s;
-}
-body.normal nav a:hover {
-  color: #ff6f00;
-}
-
-body.normal .card {
-  background: #fff;
+main {
   padding: 20px;
-  margin-bottom: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-/* ==== Thème COCKPIT ==== */
-body.cockpit {
-  background: #0a0f1f;
-  color: #e0e6f0;
+h1, h2, h3 {
+  color: #003366;
 }
 
-body.cockpit header {
-  background: linear-gradient(90deg, #001f3f, #005f8f);
-  padding: 15px;
-  text-align: center;
-  color: #fff;
-  font-size: 1.4em;
-  text-transform: uppercase;
-  box-shadow: 0px 3px 6px rgba(0,0,0,0.5);
-}
-
-body.cockpit nav {
-  display: flex;
-  justify-content: center;
-  background: #0d152b;
-  padding: 10px;
-}
-body.cockpit nav a {
-  color: #00baff;
-}
-body.cockpit nav a:hover {
-  color: #ffae00;
-}
-
-body.cockpit .card {
-  background: #121a2b;
-  padding: 20px;
-  margin-bottom: 20px;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0, 186, 255, 0.2);
-}
-
-/* ==== Boutons ==== */
 button {
-  background: #00baff;
-  border: none;
-  color: white;
+  background: #003366;
+  color: #fff;
   padding: 10px 18px;
-  margin-top: 10px;
-  border-radius: 6px;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
-  transition: background 0.3s, transform 0.2s;
+  transition: background 0.3s;
 }
 button:hover {
-  background: #008fcc;
-  transform: scale(1.05);
-}
-button:active {
-  transform: scale(0.95);
+  background: #0055aa;
 }
 
-/* 🔔 Alertes */
-.alert.green { background: #dfffd6; color: #006400; }
-.alert.orange { background: #ffe0b2; color: #e65100; }
-.alert.red { background: #ffcccc; color: #b71c1c; }
-
-body.cockpit .alert.green { background: #004d40; color: #00ffcc; }
-body.cockpit .alert.orange { background: #e65100; color: #fff; }
-body.cockpit .alert.red { background: #b71c1c; color: #fff; }
-
-/* 📱 Responsive */
-@media (max-width: 768px) {
-  nav {
-    flex-direction: column;
-  }
-  .container {
-    padding: 10px;
-  }
+/* ==============================
+   MODE COCKPIT
+   ============================== */
+body.cockpit {
+  background: #000;
+  color: #0ff;
+  font-family: "Courier New", monospace;
 }
+
+body.cockpit header,
+body.cockpit footer {
+  background: #111;
+  color: #0ff;
+}
+
+body.cockpit h1, 
+body.cockpit h2, 
+body.cockpit h3 {
+  color: #0ff;
+}
+
+body.cockpit button {
+  background: #0ff;
+  color: #000;
+}
+body.cockpit button:hover {
+  background: #00ccaa;
+}
+
+/* ==============================
+   BOUTON MODE COCKPIT
+   ============================== */
+#cockpitToggle {
+  position: fixed;
+  top: 15px;
+  right: 20px;
+  background: #ffcc00;
+  color: #000;
+  padding: 10px 18px;
+  border-radius: 30px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
+  transition: 0.3s;
+  z-index: 9999;
+}
+#cockpitToggle:hover {
+  background: #fff;
+  color: #000;
+}
+body.cockpit #cockpitToggle {
+  background: #00ffea;
+  color: #000;
+}
+
+/* ==============================
+   PODCAST PLAYER
+   ============================== */
+.podcast-player {
+  margin: 15px 0;
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+}
+body.cockpit .podcast-player {
+  background: #111;
+  border: 1px solid #0ff;
+}
+
+
