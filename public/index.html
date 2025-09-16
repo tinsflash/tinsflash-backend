@@ -2,61 +2,155 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH – La météo du futur</title>
+  <title>TINSFLASH - Prévisions météo mondiales</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <h1>🌍 TINSFLASH</h1>
-    <p>La météo qui fait grincer des dents les pros et frissonner la NASA</p>
+    <p>La météo mondiale la plus fiable et la plus précise</p>
   </header>
 
   <main>
     <!-- Prévisions locales -->
-    <section id="local">
+    <section>
       <h2>📍 Prévisions locales</h2>
-      <div id="forecast-local" class="forecast-box">Chargement...</div>
+      <div id="forecast-local" class="forecast-card">Chargement...</div>
     </section>
 
     <!-- Prévisions nationales -->
-    <section id="national">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="forecast-national" class="forecast-box">Chargement...</div>
+    <section>
+      <h2>🏳️ Prévisions nationales</h2>
+      <div id="forecast-national" class="forecast-card">Chargement...</div>
     </section>
 
     <!-- Prévisions 7 jours -->
-    <section id="seven-days">
+    <section>
       <h2>📅 Prévisions 7 jours</h2>
       <div id="forecast-7days" class="forecast-grid">Chargement...</div>
     </section>
 
-    <!-- Radar pluie/neige/vent -->
-    <section id="radar-section">
-      <h2>🌧️ Radar avancé pluie/neige/vent</h2>
-      <div id="radar" class="radar-box">Chargement radar...</div>
+    <!-- Radar -->
+    <section>
+      <h2>🌧️ Radar pluie / neige / vent</h2>
+      <div id="radar">Chargement radar...</div>
     </section>
 
-    <!-- Bulletin heure par heure -->
-    <section id="hourly">
-      <h2>⏱️ Bulletin heure par heure</h2>
-      <div id="hourly-forecast" class="forecast-box">Chargement...</div>
-    </section>
-
-    <!-- Podcasts -->
-    <section id="podcasts">
-      <h2>🎧 Podcasts météo</h2>
-      <button onclick="generatePodcast('free-morning')">Podcast du matin</button>
-      <button onclick="generatePodcast('free-evening')">Podcast du soir</button>
+    <!-- Podcast national -->
+    <section>
+      <h2>🎙️ Votre podcast météo national</h2>
+      <button onclick="generatePodcast('free-morning')">▶️ Écouter le podcast national</button>
       <div id="podcast-status"></div>
+    </section>
+
+    <!-- CTA vers Premium -->
+    <section class="cta">
+      <p>💡 Obtenez plus de détails et des outils exclusifs → 
+        <a href="premium.html">Passez Premium</a>
+      </p>
     </section>
   </main>
 
   <footer>
-    <p>© 2025 TINSFLASH – Powered by IA J.E.A.N</p>
-    <p><a href="/premium.html">Premium</a> | <a href="/pro.html">Pro</a> | <a href="/proplus.html">Pro+</a></p>
+    <p>© 2025 TINSFLASH - Prévisions météo mondiales fiables</p>
   </footer>
 
   <script src="app.js"></script>
 </body>
 </html>
+
+
+---
+
+📂 style.css
+
+/* Style général */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f7fa;
+  color: #333;
+  line-height: 1.6;
+}
+
+header {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(to right, #0077ff, #00c6ff);
+  color: white;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.5rem;
+}
+
+h2 {
+  margin-top: 30px;
+  color: #0077ff;
+}
+
+main {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* Cartes de prévisions */
+.forecast-card {
+  padding: 15px;
+  margin: 10px 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.forecast-day {
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.forecast-day img {
+  width: 50px;
+  height: 50px;
+}
+
+/* Radar */
+#radar img {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+/* CTA */
+.cta {
+  margin: 30px 0;
+  text-align: center;
+  background: #e3f2fd;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.cta a {
+  color: #0077ff;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 15px;
+  background: #0077ff;
+  color: white;
+  margin-top: 20px;
+}
