@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH Podcasts</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🎙️ Podcasts météo</h1>
+    <p>Retrouvez vos bulletins audio générés par IA</p>
+  </header>
+
+  <section>
+    <h2>Gratuits</h2>
+    <button onclick="generatePodcast('free-morning')">Podcast matin</button>
+    <button onclick="generatePodcast('free-evening')">Podcast soir</button>
+  </section>
+
+  <section>
+    <h2>Premium</h2>
+    <button onclick="generatePodcast('premium-morning')">Podcast matin Premium</button>
+    <button onclick="generatePodcast('premium-evening')">Podcast soir Premium</button>
+  </section>
+
+  <section>
+    <h2>Pro</h2>
+    <button onclick="generatePodcast('pro-morning')">Podcast matin Pro</button>
+    <button onclick="generatePodcast('pro-evening')">Podcast soir Pro</button>
+  </section>
+
+  <section>
+    <h2>Pro+</h2>
+    <button onclick="generatePodcast('proplus-morning')">Podcast matin Pro+</button>
+    <button onclick="generatePodcast('proplus-evening')">Podcast soir Pro+</button>
+  </section>
+
+  <footer>
+    <a href="index.html">⬅ Retour à l’accueil</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
