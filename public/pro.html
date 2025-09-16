@@ -1,37 +1,53 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="normal">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH Pro</title>
-  <link rel="stylesheet" href="style.css">
+  <title>TINSFLASH - Pro</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
 </head>
-<body>
+<body class="normal">
   <header>
-    <h1>⚒️ Prévisions Pro</h1>
-    <p>Prévisions pour votre activité (salage, culture, événementiel, etc.)</p>
+    <h1>TINSFLASH - Espace Pro</h1>
+    <button id="cockpit-btn" style="float:right;">🚀 Activer Cockpit</button>
   </header>
 
-  <section>
-    <form id="pro-form">
-      <input type="text" id="city" placeholder="Votre ville / commune" required>
-      <button type="submit">Voir prévisions Pro</button>
-    </form>
-    <div id="pro-result"></div>
-  </section>
+  <nav>
+    <a href="/index.html">Accueil</a>
+    <a href="/premium.html">Premium</a>
+    <a href="/pro.html">Pro</a>
+    <a href="/proplus.html">Pro+</a>
+    <a href="/alerts.html">Alertes</a>
+    <a href="/account.html">Compte</a>
+  </nav>
 
-  <section class="podcasts">
-    <h2>🎙️ Podcasts Pro</h2>
-    <button onclick="generatePodcast('pro-morning')">Podcast matin Pro</button>
-    <button onclick="generatePodcast('pro-evening')">Podcast soir Pro</button>
-    <div id="podcast-result"></div>
-  </section>
+  <main class="container">
+    <section class="card">
+      <h2>⚒️ Prévisions adaptées Pro</h2>
+      <p>Prévisions ciblées selon votre activité :</p>
+      <ul>
+        <li>🌾 Agriculture : calendrier des cultures, risques météo.</li>
+        <li>🚧 Construction : météo adaptée au chantier.</li>
+        <li>❄️ Communes : verglas, salage, routes.</li>
+      </ul>
+      <div id="forecast-container">Chargement...</div>
+    </section>
 
-  <footer>
-    <a href="index.html">⬅ Retour à l’accueil</a>
-  </footer>
+    <section class="card">
+      <h2>🎙️ Podcasts Pro</h2>
+      <button onclick="generatePodcast('pro-morning')">▶️ Podcast Matin</button>
+      <button onclick="generatePodcast('pro-evening')">▶️ Podcast Soir</button>
+      <div id="podcast-output"></div>
+    </section>
 
-  <script src="app.js"></script>
+    <section class="card">
+      <h2>🧠 IA J.E.A.N</h2>
+      <textarea id="jean-input" placeholder="Posez votre question météo..."></textarea><br>
+      <button onclick="chatWithJean()">Envoyer</button>
+      <div id="jean-output"></div>
+    </section>
+  </main>
 </body>
 </html>
 
