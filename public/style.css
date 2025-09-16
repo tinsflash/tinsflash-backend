@@ -1,111 +1,160 @@
-/* ==============================
-   STYLE GLOBAL
-   ============================== */
+/* ===========================
+   GLOBAL STYLES
+=========================== */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f0f2f5;
-  color: #222;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(180deg, #0f2027, #203a43, #2c5364);
+  color: #fff;
+  line-height: 1.6;
   transition: background 0.4s, color 0.4s;
 }
 
-header, footer {
-  background: #003366;
-  color: #fff;
-  padding: 15px;
-  text-align: center;
-}
-
-main {
-  padding: 20px;
-}
-
 h1, h2, h3 {
-  color: #003366;
+  margin-bottom: 0.5em;
+  text-align: center;
+  font-weight: 700;
 }
 
-button {
-  background: #003366;
+a {
+  text-decoration: none;
+  color: #1e90ff;
+  transition: color 0.3s;
+}
+
+a:hover {
+  color: #63c3ff;
+}
+
+/* ===========================
+   NAVBAR
+=========================== */
+nav {
+  background: rgba(0, 0, 0, 0.8);
+  padding: 1em;
+  display: flex;
+  justify-content: center;
+  gap: 2em;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+nav a {
   color: #fff;
-  padding: 10px 18px;
-  border: none;
+  font-weight: bold;
+  padding: 0.5em 1em;
   border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-button:hover {
-  background: #0055aa;
 }
 
-/* ==============================
-   MODE COCKPIT
-   ============================== */
+nav a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ===========================
+   CONTAINERS
+=========================== */
+.container {
+  max-width: 1200px;
+  margin: 2em auto;
+  padding: 1.5em;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* ===========================
+   BUTTONS
+=========================== */
+button {
+  background: #1e90ff;
+  border: none;
+  color: white;
+  padding: 0.75em 1.5em;
+  font-size: 1em;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+button:hover {
+  background: #63c3ff;
+  transform: scale(1.05);
+}
+
+button.cockpit-toggle {
+  background: #ff6600;
+  margin-top: 1em;
+}
+
+button.cockpit-toggle:hover {
+  background: #ffa366;
+}
+
+/* ===========================
+   PODCAST BLOCKS
+=========================== */
+.podcast {
+  margin: 1.5em 0;
+  padding: 1.5em;
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 6px solid #1e90ff;
+  border-radius: 10px;
+}
+
+.podcast h3 {
+  margin-top: 0;
+}
+
+/* ===========================
+   ALERTS
+=========================== */
+.alert {
+  margin: 1em 0;
+  padding: 1em;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.alert.orange {
+  background: rgba(255, 165, 0, 0.2);
+  border-left: 6px solid orange;
+}
+
+.alert.red {
+  background: rgba(255, 0, 0, 0.2);
+  border-left: 6px solid red;
+}
+
+/* ===========================
+   FOOTER
+=========================== */
+footer {
+  text-align: center;
+  padding: 1em;
+  margin-top: 3em;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* ===========================
+   COCKPIT MODE
+=========================== */
 body.cockpit {
   background: #000;
-  color: #0ff;
-  font-family: "Courier New", monospace;
+  color: #0f0;
+  font-family: 'Courier New', monospace;
 }
 
-body.cockpit header,
-body.cockpit footer {
+body.cockpit nav {
   background: #111;
-  color: #0ff;
-}
-
-body.cockpit h1, 
-body.cockpit h2, 
-body.cockpit h3 {
-  color: #0ff;
 }
 
 body.cockpit button {
-  background: #0ff;
+  background: #0f0;
   color: #000;
 }
+
 body.cockpit button:hover {
-  background: #00ccaa;
+  background: #5f5;
 }
-
-/* ==============================
-   BOUTON MODE COCKPIT
-   ============================== */
-#cockpitToggle {
-  position: fixed;
-  top: 15px;
-  right: 20px;
-  background: #ffcc00;
-  color: #000;
-  padding: 10px 18px;
-  border-radius: 30px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
-  transition: 0.3s;
-  z-index: 9999;
-}
-#cockpitToggle:hover {
-  background: #fff;
-  color: #000;
-}
-body.cockpit #cockpitToggle {
-  background: #00ffea;
-  color: #000;
-}
-
-/* ==============================
-   PODCAST PLAYER
-   ============================== */
-.podcast-player {
-  margin: 15px 0;
-  padding: 10px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
-}
-body.cockpit .podcast-player {
-  background: #111;
-  border: 1px solid #0ff;
-}
-
 
