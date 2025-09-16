@@ -1,8 +1,8 @@
 // -------------------------
 // 🌍 forecastService.js
-// Fusion des modèles Meteomatics + OpenWeather + fallback
+// Fusion Meteomatics + OpenWeather + fallback
+// Compatible Node.js 18+ (fetch natif)
 // -------------------------
-// Node 18+
 
 export async function getForecast(lat, lon) {
   try {
@@ -11,35 +11,36 @@ export async function getForecast(lat, lon) {
     // -------------------------
     // 1. Meteomatics
     // -------------------------
-   import fetch from "node-fetch";
+    try {
+      const user = process.env.METEOMATICS_USER;
+      const pass = process.env.METEOMATICS_PASS;
+      if (!user || !pass) throw new Error("Identifiants Meteomatics manquants !");
 
-export async function getForecast(lat, lon) {
-  const user = process.env.METEOMATICS_USER;
-  const pass = process.env.METEOMATICS_PASS;
+      // Prévisions heure par heure sur 7 jours
+      const now = new Date().toISOString().split(".")[0] + "Z";
+      const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split(".")[0] + "Z";
 
-  if (!user || !pass) {
-    throw new Error("Identifiants Meteomatics manquants !");
-  }
+      const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh,weather_symbol_1h:idx/${lat},${lon}/json`;
 
-  // Format ISO 8601 (UTC)
-  const now = new Date().toISOString().split(".")[0] + "Z";
-  const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split(".")[0] + "Z";
+      const res = await fetch(url, {
+        headers: {
+          Authorization:
+            "Basic " + Buffer.from(`${user}:${pass}`).toString("base64"),
+        },
+      });
 
-  const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh,weather_symbol_1h:idx/${lat},${lon}/json`;
+      if (!res.ok) throw new Error(`Erreur Meteomatics: ${res.statusText}`);
 
-  const res = await fetch(url, {
-    headers: {
-      "Authorization": "Basic " + Buffer.from(`${user}:${pass}`).toString("base64")
+      const data = await res.json();
+      results.sources.meteomatics = data;
+    } catch (err) {
+      results.sources.meteomatics = {
+        status: "indisponible",
+        error: err.message,
+      };
     }
-  });
-
-  if (!res.ok) {
-    throw new Error(`Erreur Meteomatics: ${res.statusText}`);
-  }
-
-  const data = await res.json();
-  return data;
-}
 
     // -------------------------
     // 2. OpenWeather
@@ -50,34 +51,39 @@ export async function getForecast(lat, lon) {
 
       const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
       const res = await fetch(url);
-
       if (!res.ok) throw new Error("Erreur OpenWeather");
 
       const data = await res.json();
       results.sources.openweather = data;
     } catch (err) {
-      results.sources.openweather = { status: "indisponible", error: err.message };
+      results.sources.openweather = {
+        status: "indisponible",
+        error: err.message,
+      };
     }
 
     // -------------------------
-    // 3. Fusion & IA simplifiée
+    // 3. Fusion IA simplifiée
     // -------------------------
     results.combined = {
       temperature:
-        results.sources.meteomatics?.data?.[0]?.coordinates?.[0]?.dates?.[0]?.value ||
+        results.sources.meteomatics?.data?.[0]?.coordinates?.[0]?.dates?.[0]
+          ?.value ||
         results.sources.openweather?.main?.temp ||
         "N/A",
       description:
         results.sources.openweather?.weather?.[0]?.description ||
         "Prévision indisponible",
       wind:
-        results.sources.meteomatics?.data?.[2]?.coordinates?.[0]?.dates?.[0]?.value ||
+        results.sources.meteomatics?.data?.[2]?.coordinates?.[0]?.dates?.[0]
+          ?.value ||
         results.sources.openweather?.wind?.speed ||
         "N/A",
       precipitation:
-        results.sources.meteomatics?.data?.[1]?.coordinates?.[0]?.dates?.[0]?.value || "0",
-      reliability: 95, // À ajuster selon pondération IA
-      sources: Object.keys(results.sources)
+        results.sources.meteomatics?.data?.[1]?.coordinates?.[0]?.dates?.[0]
+          ?.value || "0",
+      reliability: 95, // pondération IA ajustable
+      sources: Object.keys(results.sources),
     };
 
     return results;
