@@ -1,7 +1,7 @@
 {
   "name": "tinsflash",
   "version": "1.0.0",
-  "description": "TINSFLASH - Machine de guerre météo",
+  "description": "TINSFLASH",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -25,7 +25,7 @@
   },
   "engines": {
     "node": ">=18.x"
-  }
+  },
   "scripts": {
   "start": "node server.js",
   "postinstall": "node scripts/generateAudio.js"
