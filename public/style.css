@@ -1,80 +1,93 @@
 /* -------------------------
-   🌍 TINSFLASH STYLE
-   Style pro, moderne, NASA vibes
+   GLOBAL
 ------------------------- */
-
-/* Global reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
-}
-
 body {
-  background: linear-gradient(to bottom, #0a1f44, #182952);
-  color: #fff;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #0b0f19;
+  color: #e0f7fa;
   line-height: 1.6;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
-/* -------------------------
-   HEADER
-------------------------- */
 header {
+  background: linear-gradient(90deg, #004d80, #00c6ff);
+  color: white;
+  padding: 1rem;
   text-align: center;
-  padding: 2rem 1rem;
-  background: linear-gradient(135deg, #1c3a63, #0f203f);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  font-size: 1.5rem;
 }
 
-header h1 {
-  font-size: 2.5rem;
-  color: #00c6ff;
-  text-shadow: 0 0 15px rgba(0,198,255,0.7);
-}
-
-header p {
-  font-size: 1rem;
-  color: #a9d6ff;
-  margin-top: 0.5rem;
-}
-
-/* -------------------------
-   MAIN CONTENT
-------------------------- */
 main {
-  flex: 1;
-  padding: 2rem 1rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
+  padding: 1rem;
+}
+
+h2 {
+  border-bottom: 2px solid #00c6ff;
+  padding-bottom: 5px;
+  margin-bottom: 10px;
 }
 
 .card {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,198,255,0.4);
+}
+
+/* -------------------------
+   RADAR INTERACTIF
+------------------------- */
+#radar-map {
+  width: 100%;
+  height: 400px;
   border-radius: 15px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-  transition: transform 0.3s ease, background 0.3s ease;
+  border: 2px solid #4dd0e1;
+  box-shadow: 0 0 25px rgba(0,198,255,0.6);
+  margin-top: 1rem;
 }
 
-.card:hover {
-  transform: translateY(-5px);
-  background: rgba(255,255,255,0.1);
+#radar-controls {
+  margin-top: 0.5rem;
+  text-align: center;
 }
 
-.card h2 {
-  margin-bottom: 1rem;
-  color: #4dd0e1;
-  border-bottom: 2px solid #4dd0e1;
-  display: inline-block;
-  padding-bottom: 0.2rem;
+#radar-controls button {
+  margin: 0.2rem;
+  padding: 0.5rem 1rem;
+  background: #00c6ff;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#radar-controls input[type="range"] {
+  width: 200px;
+}
+
+#radar-time {
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+/* -------------------------
+   ALERTES
+------------------------- */
+.alert {
+  padding: 0.5rem;
+  border-radius: 5px;
+  margin: 0.5rem 0;
+}
+
+.alert.orange {
+  background: rgba(255, 165, 0, 0.2);
+  border-left: 5px solid orange;
+}
+
+.alert.red {
+  background: rgba(255, 0, 0, 0.2);
+  border-left: 5px solid red;
 }
 
 /* -------------------------
@@ -82,154 +95,9 @@ main {
 ------------------------- */
 footer {
   text-align: center;
+  background: #002b40;
   padding: 1rem;
-  background: #0a1f44;
-  color: #9fc9ff;
   font-size: 0.9rem;
-  border-top: 1px solid #123;
-}
-
-/* -------------------------
-   PODCASTS
-------------------------- */
-#podcasts button {
-  background: linear-gradient(135deg, #00c6ff, #0072ff);
-  border: none;
-  padding: 0.8rem 1.5rem;
-  margin: 0.3rem;
-  border-radius: 25px;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-#podcasts button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 15px rgba(0,198,255,0.7);
-}
-
-/* -------------------------
-   ALERTS
-------------------------- */
-.alert {
-  padding: 0.8rem;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  font-size: 0.95rem;
-}
-
-.alert.HIGH {
-  background: rgba(255, 0, 0, 0.3);
-  border-left: 5px solid red;
-}
-.alert.MEDIUM {
-  background: rgba(255, 165, 0, 0.3);
-  border-left: 5px solid orange;
-}
-.alert.LOW {
-  background: rgba(255, 255, 0, 0.2);
-  border-left: 5px solid yellow;
-}
-
-/* -------------------------
-   RADAR
-------------------------- */
-#radar img {
-  width: 100%;
-  max-height: 400px;
-  border-radius: 12px;
-  border: 2px solid #4dd0e1;
-  object-fit: cover;
-  box-shadow: 0 0 20px rgba(0,198,255,0.5);
-}
-
-/* Légende radar */
-#radar::after {
-  content: "🌧️ Pluie (bleu) | ❄️ Neige (violet) | 💨 Vent fort (rouge)";
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #a9d6ff;
-  text-align: center;
-}
-
-/* -------------------------
-   ANIMATED WEATHER ICONS
-------------------------- */
-.weather-icon {
-  display: inline-block;
-  width: 50px;
-  height: 50px;
-  margin-right: 0.5rem;
-  vertical-align: middle;
-}
-
-.sun {
-  background: radial-gradient(circle, #FFD700 40%, #FFA500 80%);
-  border-radius: 50%;
-  box-shadow: 0 0 20px rgba(255,215,0,0.9);
-  animation: spin 8s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg);}
-  100% { transform: rotate(360deg);}
-}
-
-.cloud {
-  background: #ddd;
-  border-radius: 50%;
-  width: 60px;
-  height: 40px;
-  position: relative;
-}
-.cloud::before, .cloud::after {
-  content: '';
-  position: absolute;
-  background: #ddd;
-  border-radius: 50%;
-}
-.cloud::before {
-  width: 40px;
-  height: 40px;
-  left: -20px;
-  top: -10px;
-}
-.cloud::after {
-  width: 40px;
-  height: 40px;
-  left: 20px;
-  top: -10px;
-}
-
-.rain {
-  background: linear-gradient(to bottom, transparent 20%, #00c6ff 80%);
-  width: 3px;
-  height: 15px;
-  border-radius: 3px;
-  display: inline-block;
-  margin: 0 2px;
-  animation: drop 0.6s infinite linear;
-}
-@keyframes drop {
-  0% { transform: translateY(0);}
-  100% { transform: translateY(15px);}
-}
-
-/* -------------------------
-   RESPONSIVE
-------------------------- */
-@media (min-width: 768px) {
-  main {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1200px) {
-  main {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  color: #80deea;
 }
 
