@@ -3,41 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH - Premium</title>
+  <title>TINSFLASH Premium</title>
   <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
   <header>
-    <h1>🌍 TINSFLASH Premium</h1>
-    <button onclick="toggleCockpit()">🛰️ Mode Cockpit</button>
+    <h1>🌟 TINSFLASH Premium</h1>
+    <button id="cockpit-toggle">🛰️ Mode Cockpit</button>
   </header>
 
   <main>
-    <section>
-      <h2>📡 Prévisions Premium</h2>
-      <p>Deux localisations surveillées, avec IA J.E.A.N et modèles avancés.</p>
-      <div id="forecast-premium"></div>
+    <section class="forecast-section">
+      <h2>Prévisions Premium</h2>
+      <div id="forecast-premium">Chargement...</div>
     </section>
 
-    <section>
-      <h2>🎙️ Podcasts Premium</h2>
-      <button onclick="generatePodcast('premium-morning')">▶️ Podcast Matin</button>
-      <button onclick="generatePodcast('premium-evening')">▶️ Podcast Soir</button>
-      <div id="podcast-premium"></div>
+    <section class="tools">
+      <h2>Outils météo</h2>
+      <p>Prévisions pour deux localisations, vents détaillés, météo affinée.</p>
     </section>
 
-    <section>
-      <h2>🚨 Mode Tocsin</h2>
-      <p>Surveillance météo en temps réel avec alarmes normales et fortes (capteurs connectés).</p>
-      <button onclick="activateTocsin()">Activer le Tocsin</button>
-      <p><a href="https://www.amazon.fr/shop/patrick_papa_fun/list/1KIVQFN1GNFJK" target="_blank">🛒 Boutique TINSFLASH</a></p>
+    <section class="podcast">
+      <h2>🎙️ Podcast Premium</h2>
+      <div id="podcast-premium">Chargement...</div>
     </section>
   </main>
-
-  <footer>
-    <p>© 2025 TINSFLASH Premium</p>
-  </footer>
 </body>
 </html>
-
