@@ -3,40 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH - Pro+</title>
+  <title>TINSFLASH Pro+</title>
   <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
   <header>
-    <h1>🌍 TINSFLASH Pro+</h1>
-    <button onclick="toggleCockpit()">🛰️ Mode Cockpit</button>
+    <h1>🚀 TINSFLASH Pro+</h1>
+    <button id="cockpit-toggle">🛰️ Mode Cockpit NASA</button>
   </header>
 
   <main>
-    <section>
-      <h2>📡 Prévisions Pro+</h2>
-      <p>Ultra détaillées : niveau scientifique, adaptées aux besoins NASA, aviation et météorologues experts.</p>
-      <div id="forecast-proplus"></div>
+    <section class="forecast-section">
+      <h2>Prévisions Pro+ NASA</h2>
+      <div id="forecast-proplus">Chargement...</div>
     </section>
 
-    <section>
-      <h2>🎙️ Podcasts Pro+</h2>
-      <button onclick="generatePodcast('proplus-morning')">▶️ Podcast Matin</button>
-      <button onclick="generatePodcast('proplus-evening')">▶️ Podcast Soir</button>
-      <div id="podcast-proplus"></div>
+    <section class="tools">
+      <h2>Outils avancés</h2>
+      <ul>
+        <li>🌍 Prévisions mondiales haute précision</li>
+        <li>✈️ Aviation & spatial</li>
+        <li>📡 TV, radio & services météo internationaux</li>
+        <li>🧠 IA J.E.A.N scientifique dédiée</li>
+      </ul>
     </section>
 
-    <section>
-      <h2>🚨 Mode Tocsin</h2>
-      <p>Surveillance mondiale + capteurs connectés pour zones stratégiques critiques.</p>
-      <button onclick="activateTocsin()">Activer le Tocsin</button>
-      <p><a href="https://www.amazon.fr/shop/patrick_papa_fun/list/1KIVQFN1GNFJK" target="_blank">🛒 Boutique TINSFLASH</a></p>
+    <section class="podcast">
+      <h2>🎙️ Podcast Pro+</h2>
+      <div id="podcast-proplus">Chargement...</div>
     </section>
   </main>
-
-  <footer>
-    <p>© 2025 TINSFLASH Pro+</p>
-  </footer>
 </body>
 </html>
