@@ -3,37 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH | Mon Compte</title>
+  <title>TINSFLASH - Mon Compte</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <h1>👤 Mon Compte</h1>
-    <p>Gérez vos abonnements et accès TINSFLASH</p>
+    <nav>
+      <a href="index.html">Accueil</a>
+      <a href="account.html">Mon compte</a>
+    </nav>
   </header>
 
-  <main class="account-container">
-    <section>
-      <h2>🔑 Connexion</h2>
-      <input type="email" id="email" placeholder="Votre email">
-      <input type="password" id="password" placeholder="Mot de passe">
-      <button onclick="login()">Se connecter</button>
-      <p id="login-status"></p>
-    </section>
-
-    <section>
-      <h2>💎 Mes abonnements</h2>
-      <div id="subscription-status">Chargement...</div>
-    </section>
-
-    <section>
-      <h2>🎟️ Code Promo</h2>
-      <input type="text" id="promo-code" placeholder="Entrez votre code promo">
-      <button onclick="applyPromo()">Activer</button>
-      <p id="promo-status"></p>
-    </section>
-  </main>
-
-  <script src="account.js"></script>
+  <section>
+    <h2>Gestion abonnement</h2>
+    <p>
+      Gérez ici votre abonnement : Gratuit, Premium, Pro, Pro+.
+    </p>
+    <button>Changer d’abonnement</button>
+  </section>
 </body>
 </html>
