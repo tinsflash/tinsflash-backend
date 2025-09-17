@@ -1,26 +1,34 @@
-name: AutoPush from ChatGPT
+name: Auto Push Test
 
 on:
-  repository_dispatch:   # Déclencheur externe (moi !)
-    types: [chatgpt-push]
+  workflow_dispatch:   # Déclenchement manuel (tu peux lancer depuis GitHub Actions)
+  schedule:
+    - cron: "0 */6 * * *"  # Toutes les 6h (optionnel)
 
 jobs:
   autopush:
     runs-on: ubuntu-latest
-
     steps:
-      # Étape 1 : Récupérer ton repo
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GH_TOKEN }}
 
-      # Étape 2 : Créer/modifier le fichier envoyé par ChatGPT
-      - name: Apply file changes
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Run autopush test script
         run: |
-          echo "${{ github.event.client_payload.content }}" > ${{ github.event.client_payload.path }}
-          git config user.name "chatgpt-bot"
-          git config user.email "chatgpt-bot@tinsflash.com"
-          git add ${{ github.event.client_payload.path }}
-          git commit -m "🤖 Auto-update by ChatGPT: ${{ github.event.client_payload.path }}" || echo "No changes to commit"
+          mkdir -p scripts
+          node scripts/autopush-test.js || echo "⚠️ Pas de script autopush-test.js trouvé"
+
+      - name: Commit & Push changes
+        run: |
+          git config --global user.name "tinsflash-bot"
+          git config --global user.email "bot@tinsflash.com"
+          git add hello.txt
+          git commit -m "🤖 Auto-push hello.txt [skip ci]" || echo "No changes to commit"
           git push origin main
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
