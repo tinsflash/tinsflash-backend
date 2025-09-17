@@ -3,40 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH - Pro</title>
+  <title>TINSFLASH Pro</title>
   <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
   <header>
-    <h1>🌍 TINSFLASH Pro</h1>
-    <button onclick="toggleCockpit()">🛰️ Mode Cockpit</button>
+    <h1>⚡ TINSFLASH Pro</h1>
+    <button id="cockpit-toggle">🛰️ Mode Cockpit</button>
   </header>
 
   <main>
-    <section>
-      <h2>📡 Prévisions Pro</h2>
-      <p>Prévisions locales adaptées à votre activité : salage, cultures, événements, météo pro.</p>
-      <div id="forecast-pro"></div>
+    <section class="forecast-section">
+      <h2>Prévisions Pro</h2>
+      <div id="forecast-pro">Chargement...</div>
     </section>
 
-    <section>
-      <h2>🎙️ Podcasts Pro</h2>
-      <button onclick="generatePodcast('pro-morning')">▶️ Podcast Matin</button>
-      <button onclick="generatePodcast('pro-evening')">▶️ Podcast Soir</button>
-      <div id="podcast-pro"></div>
+    <section class="tools">
+      <h2>Outils métiers</h2>
+      <ul>
+        <li>🧊 Salage routes & verglas</li>
+        <li>🌾 Calendrier cultures & conseils météo</li>
+        <li>🏗️ Planification BTP</li>
+      </ul>
     </section>
 
-    <section>
-      <h2>🚨 Mode Tocsin</h2>
-      <p>Alarmes météo avancées pour entreprises, communes et infrastructures critiques.</p>
-      <button onclick="activateTocsin()">Activer le Tocsin</button>
-      <p><a href="https://www.amazon.fr/shop/patrick_papa_fun/list/1KIVQFN1GNFJK" target="_blank">🛒 Boutique TINSFLASH</a></p>
+    <section class="podcast">
+      <h2>🎙️ Podcast Pro</h2>
+      <div id="podcast-pro">Chargement...</div>
     </section>
   </main>
-
-  <footer>
-    <p>© 2025 TINSFLASH Pro</p>
-  </footer>
 </body>
 </html>
