@@ -1,0 +1,28 @@
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Récupérer ton dépôt
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 2. Configurer Git avec mon token secret
+      - name: Setup Git
+        run: |
+          git config user.name "TINSFLASH Bot"
+          git config user.email "bot@tinsflash.com"
+
+      # 3. Push si je fais des changements
+      - name: Push changes
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
+          git add .
+          git commit -m "🚀 Auto-update depuis ChatGPT"
+          git push origin main
+        continue-on-error: true
+
