@@ -1,32 +1,46 @@
-name: Auto Commit to GitHub
+name: Auto Organize Files
 
 on:
-  workflow_dispatch:   # lancement manuel
   push:
     branches:
-      - main           # facultatif : peut aussi se déclencher quand tu pushes
+      - main   # déclenche quand tu ajoutes un fichier dans main
 
 permissions:
-  contents: write      # indispensable pour autoriser le push
+  contents: write
 
 jobs:
-  autopush:
+  organize:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Exemple : mettre un fichier HTML corrigé dans public/
-      - name: Copy generated files
+      - name: Organize files
         run: |
-          mkdir -p public
-          echo "<h1>Nouvelle version</h1>" > public/index.html
-          # Ici tu remplaces par la copie réelle des fichiers générés par GPTCode
+          mkdir -p public services routes utils
+          for f in $(ls -p | grep -v / | grep -vE '^(.gitignore|README.md)$'); do
+            ext="${f##*.}"
+            lower=$(echo "$f" | tr '[:upper:]' '[:lower:]')
+
+            if [ "$ext" = "html" ] || [ "$ext" = "css" ]; then
+              mv "$f" public/ || true
+            elif [ "$ext" = "js" ]; then
+              if [[ "$lower" == *service* || "$lower" == *engine* ]]; then
+                mv "$f" services/ || true
+              elif [[ "$lower" == *route* ]]; then
+                mv "$f" routes/ || true
+              else
+                mv "$f" utils/ || true
+              fi
+            fi
+          done
 
       - name: Commit & Push changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "autopush-bot"
+          git config user.email "autopush-bot@users.noreply.github.com"
           git add .
-          git commit -m "Auto update via GPTCode" || echo "No changes to commit"
-          git push
+          git commit -m "Auto organize files" || echo "No changes"
+          git push origin main
