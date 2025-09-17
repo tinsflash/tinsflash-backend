@@ -1,43 +1,35 @@
 <!DOCTYPE html>
-<html lang="fr" class="normal">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH - Alertes</title>
-  <link rel="stylesheet" href="/style.css">
-  <script defer src="/app.js"></script>
+  <title>TINSFLASH Alertes</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
 </head>
 <body>
   <header>
-    <h1>⚠️ Alertes météo TINSFLASH</h1>
-    <p>Locales, nationales et mondiales, en temps réel.</p>
+    <h1>⚠️ Alertes TINSFLASH</h1>
+    <nav>
+      <a href="index.html">Accueil</a>
+      <a href="alerts.html">Alertes</a>
+      <a href="account.html">Mon compte</a>
+    </nav>
   </header>
 
-  <nav>
-    <a href="/index.html">Accueil</a>
-    <a href="/premium.html">Premium</a>
-    <a href="/pro.html">Pro</a>
-    <a href="/proplus.html">Pro+</a>
-    <a href="/alerts.html" class="active">Alertes</a>
-    <a href="/account.html">Compte</a>
-  </nav>
+  <section>
+    <h2>Alertes locales</h2>
+    <div id="alerts-local">⏳ Chargement...</div>
+  </section>
 
-  <main class="container">
-    <section class="card">
-      <h2>📍 Alertes locales & nationales</h2>
-      <div id="alerts-local">Chargement des alertes locales...</div>
-    </section>
+  <section>
+    <h2>Alertes nationales</h2>
+    <div id="alerts-national">⏳ Chargement...</div>
+  </section>
 
-    <section class="card">
-      <h2>🌍 Alertes mondiales</h2>
-      <div id="alerts-world">Chargement des alertes mondiales...</div>
-    </section>
-  </main>
-
-  <footer>
-    <p>© 2025 TINSFLASH - La météo la plus fiable du monde</p>
-  </footer>
+  <section>
+    <h2>Alertes mondiales</h2>
+    <div id="alerts-world">⏳ Chargement...</div>
+  </section>
 </body>
 </html>
-
-
