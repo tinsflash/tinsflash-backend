@@ -1,55 +1,102 @@
+/* 🌍 TINSFLASH Design */
+/* Global */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f7fb;
-  color: #222;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: linear-gradient(to bottom, #0b1e39, #1a2f50);
+  color: #f1f1f1;
+  text-align: center;
 }
 
 header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  background: #0d213a;
   padding: 1rem;
-  background: #005bea;
-  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
 }
 
 header h1 {
   margin: 0;
+  font-size: 1.8rem;
 }
 
-button#cockpit-toggle {
-  background: #ffcc00;
-  border: none;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  border-radius: 6px;
+nav {
+  margin-top: 0.5rem;
 }
 
-/* Sections */
-main {
-  padding: 1rem;
+nav a {
+  margin: 0 10px;
+  color: #f1f1f1;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+nav a:hover {
+  color: #ffd700;
 }
 
 section {
-  margin-bottom: 2rem;
-  padding: 1rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  max-width: 900px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+h2 {
+  margin-bottom: 1rem;
+  color: #ffd700;
+}
+
+/* Cards */
+.day-card {
+  display: inline-block;
+  width: 120px;
+  padding: 10px;
+  margin: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+
+.day-card strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 1rem;
+}
+
+/* Radar */
+#radar-content img {
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Alertes */
+.alert {
+  margin: 10px auto;
+  padding: 10px;
   border-radius: 8px;
-  background: white;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  text-align: left;
+}
+.alert.orange { background: rgba(255,165,0,0.2); border-left: 4px solid orange; }
+.alert.red { background: rgba(255,0,0,0.2); border-left: 4px solid red; }
+.alert.green { background: rgba(0,255,0,0.2); border-left: 4px solid green; }
+
+/* Cockpit mode */
+.cockpit-active {
+  background: black !important;
+  color: #0f0 !important;
+  font-family: monospace;
 }
 
-/* Cockpit NASA mode */
-body.cockpit {
-  background: #0b0c10;
-  color: #66fcf1;
-}
-
-body.cockpit header {
-  background: #1f2833;
-}
-
-body.cockpit section {
-  background: #1c1c1c;
-  border: 1px solid #45a29e;
+/* Footer */
+footer {
+  padding: 1rem;
+  margin-top: 2rem;
+  background: #0d213a;
 }
