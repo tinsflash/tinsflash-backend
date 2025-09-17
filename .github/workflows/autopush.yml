@@ -1,13 +1,14 @@
-name: Auto Push Test
+name: Auto Push Full Repo
 
 on:
-  workflow_dispatch:   # Déclenchement manuel (tu peux lancer depuis GitHub Actions)
   schedule:
-    - cron: "0 */6 * * *"  # Toutes les 6h (optionnel)
+    - cron: "*/5 * * * *" # toutes les 5 minutes
+  workflow_dispatch: # déclenchement manuel possible
 
 jobs:
   autopush:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -17,18 +18,13 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Run autopush test script
-        run: |
-          mkdir -p scripts
-          node scripts/autopush-test.js || echo "⚠️ Pas de script autopush-test.js trouvé"
-
-      - name: Commit & Push changes
+      - name: Commit & Push all changes
         run: |
           git config --global user.name "tinsflash-bot"
           git config --global user.email "bot@tinsflash.com"
-          git add hello.txt
-          git commit -m "🤖 Auto-push hello.txt [skip ci]" || echo "No changes to commit"
+
+          git add -A
+          git commit -m "🔄 Auto-sync full repo (backend + frontend)" || echo "No changes to commit"
           git push origin main
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
