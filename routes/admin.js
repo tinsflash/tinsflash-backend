@@ -1,20 +1,23 @@
-// routes/admin.js
-// Route admin pour affichage comparateur
-
+// -------------------------
+// 🌍 Admin Routes
+// -------------------------
 import express from "express";
-import { compareSources } from "../hiddensources/comparator.js";
-
 const router = express.Router();
 
-router.get("/compare", async (req, res) => {
-  const { lat, lon } = req.query;
+// Exemple console admin
+router.get("/stats", (req, res) => {
+  res.json({
+    system: "OK",
+    users: 2500,
+    activeAlerts: 12,
+    podcasts: 56,
+  });
+});
 
-  // Exemple : remplacer par nos prévisions internes (ici forcé à "pluie, vent fort")
-  const ourForecast = "pluie, vent fort";
-
-  const results = await compareSources(ourForecast, lat || 50.5, lon || 4.5);
-  res.json(results);
+// Validation d’alertes (70%–90%)
+router.post("/validate-alert", (req, res) => {
+  const { id, action } = req.body; // action = accept/refuse/escalate
+  res.json({ success: true, id, action });
 });
 
 export default router;
-
