@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH Pro</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>⚡ TINSFLASH Pro</h1>
+    <button id="cockpit-toggle">🛰️ Mode Cockpit</button>
+  </header>
+
+  <main>
+    <section class="forecast-section">
+      <h2>Prévisions Pro</h2>
+      <div id="forecast-pro">Chargement...</div>
+    </section>
+
+    <section class="tools">
+      <h2>Outils métiers</h2>
+      <ul>
+        <li>🧊 Salage routes & verglas</li>
+        <li>🌾 Calendrier cultures & conseils météo</li>
+        <li>🏗️ Planification BTP</li>
+      </ul>
+    </section>
+
+    <section class="podcast">
+      <h2>🎙️ Podcast Pro</h2>
+      <div id="podcast-pro">Chargement...</div>
+    </section>
+  </main>
+</body>
+</html>
