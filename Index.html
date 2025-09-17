@@ -1,0 +1,59 @@
+!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH 🌍</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>🌍 Bienvenue sur TINSFLASH</h1>
+    <video id="intro-video" controls autoplay muted>
+      <source src="intro-jean.mp4" type="video/mp4">
+      Votre navigateur ne supporte pas la vidéo.
+    </video>
+  </header>
+
+  <main>
+    <section id="today">
+      <h2>Prévisions locales</h2>
+      <div id="forecast-local"></div>
+    </section>
+
+    <section>
+      <h2>Prévisions nationales</h2>
+      <div id="forecast-national"></div>
+    </section>
+
+    <section>
+      <h2>Prévisions 7 jours</h2>
+      <div id="forecast-7days"></div>
+    </section>
+
+    <section>
+      <h2>Radar pluie/neige/vent</h2>
+      <div id="radar"></div>
+    </section>
+
+    <section>
+      <h2>Alertes météo</h2>
+      <div id="alerts-local"></div>
+      <div id="alerts-world"></div>
+    </section>
+
+    <section>
+      <h2>Podcasts météo gratuits</h2>
+      <p>Écoutez vos bulletins météo auto-générés 🎙️</p>
+      <button onclick="generatePodcast('free-morning')">Podcast Matin</button>
+      <button onclick="generatePodcast('free-evening')">Podcast Soir</button>
+      <div id="podcast-status"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 TINSFLASH – Contact : <a href="mailto:u1221332868@gmail.com">u1221332868@gmail.com</a></p>
+  </footer>
+</body>
+</html>
