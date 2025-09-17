@@ -2,58 +2,68 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH 🌍</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH 🌍 - La météo du futur</title>
   <link rel="stylesheet" href="style.css">
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2019497631952723"
+     crossorigin="anonymous"></script>
+  <!-- Fin Google AdSense -->
 </head>
 <body>
   <header>
-    <h1>🌍 TINSFLASH – La météo du futur</h1>
-    <p>Prévisions locales, nationales et mondiales. 100% fiables.</p>
+    <h1>🌍 TINSFLASH</h1>
+    <p>Prévisions locales, nationales et mondiales. 100% réelles et précises.</p>
   </header>
 
   <main>
-    <!-- Prévisions locales -->
-    <section id="forecast-local" class="card">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-content">Chargement...</div>
+    <section id="intro-video">
+      <h2>Bienvenue sur TINSFLASH 🌍</h2>
+      <p>Découvrez l'intro de J.E.A.N., votre IA météo.</p>
+      <video width="60%" controls>
+        <source src="intro-jean.mp4" type="video/mp4">
+        Votre navigateur ne supporte pas la vidéo.
+      </video>
     </section>
 
-    <!-- Prévisions nationales -->
-    <section id="forecast-national" class="card">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-content">Chargement...</div>
+    <section id="forecast-local">
+      <h2>Prévisions locales</h2>
+      <div id="local-data">Chargement...</div>
     </section>
 
-    <!-- Prévisions 7 jours -->
-    <section id="forecast-7days" class="card">
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="days-container" class="days-grid">Chargement...</div>
+    <section id="forecast-national">
+      <h2>Prévisions nationales</h2>
+      <div id="national-data">Chargement...</div>
     </section>
 
-    <!-- Radar -->
-    <section id="radar" class="card">
-      <h2>🌧️ Radar pluie / neige / vent</h2>
-      <div id="radar-content">Chargement radar...</div>
+    <section id="forecast-7days">
+      <h2>Prévisions 7 jours</h2>
+      <div id="seven-days-data">Chargement...</div>
     </section>
 
-    <!-- Podcasts -->
-    <section id="podcasts" class="card">
-      <h2>🎙️ Podcasts météo</h2>
-      <button onclick="generatePodcast('free-morning')">Podcast Matin</button>
-      <button onclick="generatePodcast('free-evening')">Podcast Soir</button>
+    <section id="radar">
+      <h2>Radar pluie / neige / vent</h2>
+      <div id="radar-map">Chargement radar...</div>
+    </section>
+
+    <section id="podcasts">
+      <h2>Podcasts météo</h2>
+      <p>Écoutez votre bulletin météo en direct :</p>
+      <button onclick="generatePodcast('morning')">Podcast matin</button>
+      <button onclick="generatePodcast('evening')">Podcast soir</button>
       <div id="podcast-status"></div>
     </section>
 
-    <!-- Alertes -->
-    <section id="alerts" class="card">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-local">Chargement alertes locales...</div>
-      <div id="alerts-world">Chargement alertes mondiales...</div>
+    <section id="alerts">
+      <h2>Alertes météo</h2>
+      <div id="alerts-local">Chargement...</div>
+      <div id="alerts-world">Chargement...</div>
     </section>
   </main>
 
   <footer>
-    <p>© 2025 TINSFLASH – La météo la plus fiable au monde.</p>
+    <p>© 2025 TINSFLASH - Powered by IA J.E.A.N.</p>
   </footer>
 
   <script src="app.js"></script>
