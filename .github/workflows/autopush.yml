@@ -1,9 +1,9 @@
-name: Auto Organize Files
+name: Auto Organize Files from depot/
 
 on:
   push:
     branches:
-      - main   # déclenche quand tu ajoutes un fichier dans main
+      - main
 
 permissions:
   contents: write
@@ -17,30 +17,41 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Organize files
+      - name: Organize files from depot/
         run: |
           mkdir -p public services routes utils
-          for f in $(ls -p | grep -v / | grep -vE '^(.gitignore|README.md)$'); do
-            ext="${f##*.}"
-            lower=$(echo "$f" | tr '[:upper:]' '[:lower:]')
 
-            if [ "$ext" = "html" ] || [ "$ext" = "css" ]; then
-              mv "$f" public/ || true
-            elif [ "$ext" = "js" ]; then
-              if [[ "$lower" == *service* || "$lower" == *engine* ]]; then
-                mv "$f" services/ || true
-              elif [[ "$lower" == *route* ]]; then
-                mv "$f" routes/ || true
-              else
-                mv "$f" utils/ || true
+          if [ -d "depot" ]; then
+            for f in depot/*; do
+              [ -f "$f" ] || continue
+              file=$(basename "$f")
+              ext="${file##*.}"
+              lower=$(echo "$file" | tr '[:upper:]' '[:lower:]')
+
+              if [ "$ext" = "html" ] || [ "$ext" = "css" ]; then
+                echo "➡️ Déplacement $file → public/"
+                mv -f "$f" public/   # -f = écrase s'il existe déjà
+              elif [ "$ext" = "js" ]; then
+                if [[ "$lower" == *service* || "$lower" == *engine* ]]; then
+                  echo "➡️ Déplacement $file → services/"
+                  mv -f "$f" services/
+                elif [[ "$lower" == *route* ]]; then
+                  echo "➡️ Déplacement $file → routes/"
+                  mv -f "$f" routes/
+                else
+                  echo "➡️ Déplacement $file → utils/"
+                  mv -f "$f" utils/
+                fi
               fi
-            fi
-          done
+            done
+          else
+            echo "⚠️ Aucun dossier depot/ trouvé, rien à organiser."
+          fi
 
       - name: Commit & Push changes
         run: |
           git config user.name "autopush-bot"
           git config user.email "autopush-bot@users.noreply.github.com"
           git add .
-          git commit -m "Auto organize files" || echo "No changes"
+          git commit -m "Auto organize files from depot/" || echo "No changes"
           git push origin main
