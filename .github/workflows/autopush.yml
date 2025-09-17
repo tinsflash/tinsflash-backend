@@ -1,12 +1,13 @@
-name: Auto Push Full Repo
+name: Deploy to Render
 
 on:
-  schedule:
-    - cron: "*/5 * * * *" # toutes les 5 minutes
-  workflow_dispatch: # déclenchement manuel possible
+  push:
+    branches:
+      - main   # Déclenche à chaque push sur main
+  workflow_dispatch:   # Permet aussi un déclenchement manuel
 
 jobs:
-  autopush:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,15 +17,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
-      - name: Commit & Push all changes
-        run: |
-          git config --global user.name "tinsflash-bot"
-          git config --global user.email "bot@tinsflash.com"
+      - name: Install dependencies
+        run: npm install
 
-          git add -A
-          git commit -m "🔄 Auto-sync full repo (backend + frontend)" || echo "No changes to commit"
-          git push origin main
+      - name: Build project
+        run: npm run build --if-present
+
+      - name: Deploy to Render
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -s -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+          -H "Authorization: Bearer $RENDER_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d '{}'
