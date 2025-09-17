@@ -3,136 +3,62 @@
 // -------------------------
 const API_BASE = "https://tinsflash-backend.onrender.com"; 
 
-// -------------------------
-// Prévisions locales
-// -------------------------
-async function loadLocalForecast() {
-  const container = document.getElementById("forecast-local");
-  container.innerHTML = "Chargement...";
+// Toggle cockpit mode
+document.addEventListener("DOMContentLoaded", () => {
+  const cockpitToggle = document.getElementById("cockpit-toggle");
+  if (cockpitToggle) {
+    cockpitToggle.addEventListener("click", () => {
+      document.body.classList.toggle("cockpit");
+    });
+  }
+
+  // Charger selon la page
+  if (document.getElementById("forecast-premium")) loadForecast("premium");
+  if (document.getElementById("forecast-pro")) loadForecast("pro");
+  if (document.getElementById("forecast-proplus")) loadForecast("proplus");
+});
+
+// Charger prévisions
+async function loadForecast(type) {
+  const el = document.getElementById(`forecast-${type}`);
+  el.innerHTML = "Chargement...";
   try {
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
-      const res = await fetch(`${API_BASE}/forecast/local?lat=${lat}&lon=${lon}`);
-      const data = await res.json();
-      container.innerHTML = `
-        <strong>Votre position</strong><br>
+    const res = await fetch(`${API_BASE}/forecast/national?type=${type}`);
+    const data = await res.json();
+    if (data?.combined) {
+      el.innerHTML = `
         🌡️ ${data.combined.temperature}°C<br>
         ${data.combined.description}<br>
         💨 Vent: ${data.combined.wind} km/h<br>
-        ☔ Précipitations: ${data.combined.precipitation} mm
+        ☔ Précipitation: ${data.combined.precipitation} mm<br>
+        🔒 Fiabilité: ${data.combined.reliability}%
       `;
-    });
+    } else {
+      el.innerHTML = "❌ Erreur données météo";
+    }
   } catch (err) {
-    container.innerHTML = "❌ Erreur prévisions locales";
+    el.innerHTML = "❌ Erreur prévisions";
   }
 }
 
-// -------------------------
-// Prévisions nationales
-// -------------------------
-async function loadNationalForecast() {
-  const container = document.getElementById("forecast-national");
-  container.innerHTML = "Chargement...";
+// Charger podcast
+async function loadPodcast(type) {
+  const el = document.getElementById(`podcast-${type}`);
+  el.innerHTML = "⏳ Génération podcast...";
   try {
-    const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
+    const res = await fetch(`${API_BASE}/podcast/generate?type=${type}-evening`);
     const data = await res.json();
-    container.innerHTML = `
-      🌍 National: ${data.combined.description}<br>
-      🌡️ ${data.combined.temperature}°C
-    `;
+    if (data?.forecast) {
+      el.innerHTML = `
+        ✅ ${data.forecast}<br>
+        <audio controls>
+          <source src="${data.audioUrl}" type="audio/mpeg">
+        </audio>
+      `;
+    } else {
+      el.innerHTML = "❌ Erreur podcast";
+    }
   } catch (err) {
-    container.innerHTML = "❌ Erreur prévisions nationales";
+    el.innerHTML = "❌ Podcast indisponible";
   }
 }
-
-// -------------------------
-// Prévisions 7 jours
-// -------------------------
-async function load7DaysForecast() {
-  const container = document.getElementById("forecast-7days");
-  container.innerHTML = "Chargement...";
-  try {
-    const res = await fetch(`${API_BASE}/forecast/7days?lat=50.5&lon=4.5`);
-    const data = await res.json();
-    container.innerHTML = data.days.map(day => `
-      <div>
-        📅 ${day.jour}: ${day.temperature_min}°C → ${day.temperature_max}°C
-        (${day.description}) ${day.icone}
-      </div>
-    `).join("");
-  } catch (err) {
-    container.innerHTML = "❌ Erreur prévisions 7 jours";
-  }
-}
-
-// -------------------------
-// Radar
-// -------------------------
-async function loadRadar() {
-  const container = document.getElementById("radar");
-  container.innerHTML = "Chargement radar...";
-  try {
-    const res = await fetch(`${API_BASE}/radar`);
-    const data = await res.json();
-    container.innerHTML = `<img src="${data.radarUrl}" alt="Radar météo">`;
-  } catch (err) {
-    container.innerHTML = "❌ Radar indisponible";
-  }
-}
-
-// -------------------------
-// Podcasts météo
-// -------------------------
-async function generatePodcast(type) {
-  const status = document.getElementById("podcast-status");
-  status.innerHTML = "⏳ Génération...";
-  try {
-    const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
-    const data = await res.json();
-    status.innerHTML = `
-      ✅ ${data.forecast}<br>
-      <audio controls>
-        <source src="${data.audioUrl}" type="audio/mpeg">
-      </audio>
-    `;
-  } catch (err) {
-    status.innerHTML = "❌ Erreur podcast";
-  }
-}
-
-// -------------------------
-// Alertes
-// -------------------------
-async function loadAlerts() {
-  const local = document.getElementById("alerts-local");
-  const world = document.getElementById("alerts-world");
-  local.innerHTML = "Chargement...";
-  world.innerHTML = "Chargement...";
-  try {
-    const res = await fetch(`${API_BASE}/alerts`);
-    const data = await res.json();
-    local.innerHTML = data.alerts.map(a => `
-      <div class="alert ${a.level}">
-        ⚠️ [${a.level.toUpperCase()}] ${a.type} 
-        (fiabilité ${a.reliability}%)<br>
-        Région: ${a.region}
-      </div>
-    `).join("");
-    world.innerHTML = "🌍 Sources externes analysées...";
-  } catch (err) {
-    local.innerHTML = "❌ Erreur alertes locales";
-    world.innerHTML = "❌ Erreur alertes mondiales";
-  }
-}
-
-// -------------------------
-// Auto-load
-// -------------------------
-window.onload = () => {
-  loadLocalForecast();
-  loadNationalForecast();
-  load7DaysForecast();
-  loadRadar();
-  loadAlerts();
-};
