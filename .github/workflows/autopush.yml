@@ -1,0 +1,31 @@
+name: Auto Push from ChatGPT
+
+on:
+  workflow_dispatch: # déclenchable manuellement
+  push:
+    branches:
+      - main
+
+jobs:
+  autopush:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Commit generated files
+        run: |
+          git config --global user.name "ChatGPT Auto"
+          git config --global user.email "bot@openai.com"
+          git add .
+          git commit -m "🤖 Auto-update from ChatGPT" || echo "No changes"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
