@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH | Cockpit NASA</title>
+  <link rel="stylesheet" href="cockpit.css">
+</head>
+<body>
+  <div id="cockpit-container">
+    <header>
+      <h1>🛰️ Cockpit TINSFLASH</h1>
+      <p>Mode NASA activé – Prévisions mondiales, radar & IA J.E.A.N.</p>
+    </header>
+
+    <!-- Globe météo -->
+    <section id="globe-section">
+      <canvas id="globe"></canvas>
+    </section>
+
+    <!-- Radars -->
+    <section id="radar-section">
+      <h2>🌍 Radars en direct</h2>
+      <div class="radars">
+        <iframe src="/radar" title="Radar pluie/neige"></iframe>
+      </div>
+    </section>
+
+    <!-- Alertes -->
+    <section id="alerts-section">
+      <h2>⚠️ Alertes Météo Mondiales</h2>
+      <div id="alerts"></div>
+    </section>
+
+    <!-- Chat IA -->
+    <section id="chat-section">
+      <h2>🤖 IA J.E.A.N.</h2>
+      <div id="chat-box"></div>
+      <input type="text" id="chat-input" placeholder="Posez une question météo...">
+      <button onclick="sendMessage()">Envoyer</button>
+    </section>
+  </div>
+
+  <!-- Ronds navigation futuriste -->
+  <nav id="hud-nav">
+    <a href="/index.html" class="hud-circle">🏠</a>
+    <a href="/premium.html" class="hud-circle">💎</a>
+    <a href="/pro.html" class="hud-circle">⚙️</a>
+    <a href="/proplus.html" class="hud-circle">🚀</a>
+    <a href="/alerts.html" class="hud-circle">⚡</a>
+  </nav>
+
+  <script src="cockpit.js"></script>
+</body>
+</html>
