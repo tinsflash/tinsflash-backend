@@ -3,50 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH | Console Admin</title>
+  <title>TINSFLASH Console Admin</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1>🛠️ Console Admin</h1>
-    <p>Outils internes – réservé au staff</p>
+    <h1>🔐 Console Admin TINSFLASH</h1>
   </header>
 
-  <main class="admin-container">
-    <section>
-      <h2>🎙️ Générer Podcasts</h2>
-      <button onclick="generatePodcast('free-morning')">Gratuit – Matin</button>
-      <button onclick="generatePodcast('free-evening')">Gratuit – Soir</button>
-      <button onclick="generatePodcast('premium-morning')">Premium – Matin</button>
-      <button onclick="generatePodcast('premium-evening')">Premium – Soir</button>
-      <button onclick="generatePodcast('pro-morning')">Pro – Matin</button>
-      <button onclick="generatePodcast('pro-evening')">Pro – Soir</button>
-      <button onclick="generatePodcast('proplus-morning')">Pro+ – Matin</button>
-      <button onclick="generatePodcast('proplus-evening')">Pro+ – Soir</button>
-      <p id="podcast-status"></p>
-    </section>
+  <section>
+    <h2>Gestion Podcasts</h2>
+    <button>Générer Podcast matin</button>
+    <button>Générer Podcast soir</button>
+  </section>
 
-    <section>
-      <h2>⚠️ Validation Alertes (70-90%)</h2>
-      <div id="alerts-pending">Chargement...</div>
-    </section>
+  <section>
+    <h2>Validation Alertes (70–90%)</h2>
+    <div id="alerts-admin">⏳ Chargement alertes...</div>
+  </section>
 
-    <section>
-      <h2>🎟️ Générer Codes Promo</h2>
-      <button onclick="generateCode('premium')">Premium (10j)</button>
-      <button onclick="generateCode('pro')">Pro (10j)</button>
-      <button onclick="generateCode('proplus')">Pro+ (30j)</button>
-      <p id="code-status"></p>
-    </section>
-
-    <section>
-      <h2>🤖 Chat avec IA J.E.A.N</h2>
-      <div id="chat-box"></div>
-      <input type="text" id="chat-input" placeholder="Envoyer à J.E.A.N...">
-      <button onclick="sendMessage()">Envoyer</button>
-    </section>
-  </main>
-
-  <script src="admin-pp.js"></script>
+  <section>
+    <h2>Codes promo</h2>
+    <button>Créer code Premium 10j</button>
+    <button>Créer code Pro+ 30j</button>
+  </section>
 </body>
 </html>
