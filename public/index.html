@@ -1,87 +1,68 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TinsFlash Météo</title>
-  <link rel="stylesheet" href="style.css">
-  <script defer src="app.js"></script>
-</head>
-<body>
-  <!-- 🌌 Hero NASA -->
-  <section class="hero">
-    <div class="hero-overlay"></div>
-    <header class="navbar">
-      <div class="logo">🌩️ TinsFlash</div>
-      <nav>
-        <a href="index.html" class="active">Accueil</a>
-        <a href="premium.html">Premium</a>
-        <a href="pro.html">Pro</a>
-        <a href="proplus.html">Pro+</a>
-        <a href="cockpit.html">Cockpit</a>
-        <a href="account.html">Mon Compte</a>
-        <a href="admin-pp.html" class="admin-link">Admin</a>
-      </nav>
-    </header>
-    <div class="hero-content">
-      <h1>🚀 TinsFlash Météo</h1>
-      <p>Les prévisions les plus pointues au monde – prêtes pour les pros, les communes, et la NASA.</p>
-      <div id="local-content" class="hero-weather">⏳ Prévisions locales...</div>
-      <a href="premium.html" class="cta-btn">Débloquer le mode Premium</a>
+<main class="container">
+  <!-- 📍 Prévisions locales -->
+  <section class="card weather-card">
+    <h2>📍 Prévisions locales</h2>
+    <div id="local-widget" class="weather-widget">
+      <div class="weather-icon">⏳</div>
+      <div class="weather-info">
+        <div class="weather-temp">--°C</div>
+        <div class="weather-desc">Chargement...</div>
+      </div>
     </div>
   </section>
 
-  <!-- 🌐 Contenu principal -->
-  <main class="container">
-    <section class="card">
-      <h2>🇧🇪 Prévisions Nationales</h2>
-      <div id="national-content">⏳ Chargement...</div>
-    </section>
+  <!-- 🇧🇪 Prévisions nationales -->
+  <section class="card">
+    <h2>🇧🇪 Prévisions nationales</h2>
+    <div id="national-content">⏳ Chargement...</div>
+  </section>
 
-    <section class="card wide">
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="days-container" class="days-grid">⏳ Chargement...</div>
-    </section>
+  <!-- 📅 Prévisions 7 jours -->
+  <section class="card wide">
+    <h2>📅 Prévisions 7 jours</h2>
+    <div id="days-container" class="days-grid">⏳ Chargement...</div>
+  </section>
 
-    <section class="card">
-      <h2>🛰️ Radar en temps réel</h2>
-      <div id="radar-content">⏳ Chargement radar...</div>
-    </section>
+  <!-- 🛰️ Radar Buienalarm++ maison -->
+  <section class="card">
+    <h2>🛰️ Radar en temps réel (Buienalarm++)</h2>
+    <div id="radar-content" class="radar-box">
+      ⏳ Chargement radar...
+    </div>
+    <p class="note">Radar maison TinsFlash – plus précis que Buienalarm.</p>
+  </section>
 
-    <section class="card">
-      <h2>⚠️ Alertes Météo Mondiales</h2>
-      <div id="alerts-local"></div>
-      <div id="alerts-world"></div>
-    </section>
+  <!-- ⚠️ Alertes -->
+  <section class="card alerts-card">
+    <h2>⚠️ Alertes Météo</h2>
+    <div id="alerts-local">⏳ Chargement alertes locales...</div>
+    <div id="alerts-world">⏳ Chargement alertes mondiales...</div>
+  </section>
 
-    <section class="card ai-card">
-      <h2>🤖 IA J.E.A.N.</h2>
-      <div id="ai-chat">
-        <textarea id="ai-input" placeholder="Posez une question météo..."></textarea>
-        <button id="ai-send">Envoyer</button>
-      </div>
-      <div id="ai-response"></div>
-    </section>
+  <!-- 🤖 IA J.E.A.N. -->
+  <section class="card ai-card">
+    <h2>🤖 IA J.E.A.N. (version gratuite)</h2>
+    <p class="note">Conseils rapides – passez Premium pour l’analyse complète</p>
+    <div id="ai-chat">
+      <textarea id="ai-input" placeholder="Posez une question météo..."></textarea>
+      <button id="ai-send">Envoyer</button>
+    </div>
+    <div id="ai-response"></div>
+  </section>
 
-    <!-- 📢 Publicités -->
-    <section class="card ad-card">
-      <h2>🔔 Publicité</h2>
-      <div class="ad-slot">
-        <!-- Google Ads script sera injecté ici par Render -->
-        <p>⏳ Chargement publicité...</p>
-      </div>
-    </section>
+  <!-- 📢 Publicités -->
+  <section class="card ad-card">
+    <h2>🔔 Publicité</h2>
+    <div class="ad-slot">
+      <!-- Google Ads script injecté par Render -->
+      <p>⏳ Chargement publicité...</p>
+    </div>
+  </section>
 
-    <!-- 🚀 Teasing cockpit -->
-    <section class="card cockpit-preview">
-      <h2>🛰️ Mode Cockpit NASA</h2>
-      <p>Accédez au tableau de bord futuriste réservé aux pros et à la NASA.</p>
-      <a href="cockpit.html" class="cta-btn">Explorer le Cockpit</a>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <p>© 2025 TinsFlash – La météo qui fait grincer la NASA 🚀</p>
-  </footer>
-</body>
-</html>
+  <!-- 🚀 Teasing cockpit -->
+  <section class="card cockpit-preview">
+    <h2>🛰️ Mode Cockpit NASA</h2>
+    <p>Découvrez le tableau de bord futuriste réservé aux Premium, Pro et Pro+.</p>
+    <a href="premium.html" class="cta-btn">Débloquer le mode Premium</a>
+  </section>
+</main>
