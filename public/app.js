@@ -1,191 +1,173 @@
-// -------------------------
-// 🌍 app.js
-// Frontend universel TINSFLASH
-// Connecte toutes les pages au backend Render
-// -------------------------
+// ===============================
+// 🌍 TINSFLASH FRONTEND APP
+// ===============================
 
-const API_BASE = "https://tinsflash-backend.onrender.com/api"; // adapte si besoin
+// API Base URL (Render backend)
+const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
-document.addEventListener("DOMContentLoaded", () => {
-  const path = window.location.pathname;
+// ===============================
+// GEOLOCALISATION → Prévisions locales
+// ===============================
+async function loadLocalForecast() {
+  if (!navigator.geolocation) {
+    document.getElementById("local-forecast").innerHTML = "⚠️ Géolocalisation non supportée";
+    return;
+  }
 
-  if (path.includes("index.html") || path === "/") loadIndex();
-  if (path.includes("premium.html")) loadPremium();
-  if (path.includes("pro.html")) loadPro();
-  if (path.includes("proplus.html")) loadProPlus();
-  if (path.includes("alerts.html")) loadAlerts();
-  if (path.includes("account.html")) loadAccount();
-  if (path.includes("admin-pp.html")) loadAdmin();
-});
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
 
-// -------------------------
-// 🏠 Index (Gratuit)
-// -------------------------
-async function loadIndex() {
-  try {
-    // Prévisions locales
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const res = await fetch(`${API_BASE}/forecast/local?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+    try {
+      const res = await fetch(`${API_BASE}/forecast/local?lat=${lat}&lon=${lon}`);
       const data = await res.json();
 
-      document.querySelector("#local-widget .weather-temp").textContent = `${data.combined.temperature}°C`;
-      document.querySelector("#local-widget .weather-desc").textContent = data.combined.description;
-      document.querySelector("#local-widget .weather-icon").textContent = data.combined.icone;
-    });
-
-    // Prévisions nationales (Belgique par défaut)
-    const resNat = await fetch(`${API_BASE}/forecast/national?country=BE`);
-    const nat = await resNat.json();
-    document.getElementById("national-content").innerHTML =
-      `${nat.combined.description}, ${nat.combined.temperature}°C`;
-
-    // Prévisions 7 jours
-    const res7 = await fetch(`${API_BASE}/forecast/7days?lat=50.5&lon=4.5`);
-    const data7 = await res7.json();
-    document.getElementById("days-container").innerHTML = data7.days.map(d => `
-      <div class="day-card">
-        <div class="weather-icon">${d.icone}</div>
-        <strong>${d.jour}</strong><br>
-        ${d.temperature_min}°C / ${d.temperature_max}°C
-      </div>
-    `).join("");
-
-    // Radar
-    const resRadar = await fetch(`${API_BASE}/radar`);
-    const radarData = await resRadar.json();
-    document.getElementById("radar-content").innerHTML =
-      `<img src="${radarData.radarUrl}" alt="Radar" />`;
-
-    // Alertes
-    const resAlerts = await fetch(`${API_BASE}/alerts`);
-    const alertData = await resAlerts.json();
-    document.getElementById("alerts-local").innerHTML =
-      alertData.local?.map(a => `⚠️ ${a.type} (${a.reliability}%)`).join("<br>") || "Aucune alerte";
-    document.getElementById("alerts-world").innerHTML =
-      alertData.world?.map(a => `🌍 ${a.type} (${a.reliability}%)`).join("<br>") || "Aucune alerte";
-
-    // Podcasts gratuits
-    document.getElementById("podcast-free").textContent =
-      "🎧 Podcasts gratuits matin & soir – auto-générés.";
-
-    // IA J.E.A.N gratuite
-    document.getElementById("ai-send")?.addEventListener("click", async () => {
-      const input = document.getElementById("ai-input").value;
-      const res = await fetch(`${API_BASE}/chat`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input })
-      });
-      const reply = await res.json();
-      document.getElementById("ai-response").textContent = reply.text;
-    });
-
-  } catch (err) {
-    console.error("Erreur index:", err);
-  }
+      document.getElementById("local-forecast").innerHTML = `
+        <div class="card weather-card">
+          <span>📍 ${data.city || "Localisation détectée"}</span>
+          <span>🌡️ ${data.combined.temperature}°C</span>
+          <span>💨 ${data.combined.wind} km/h</span>
+          <span>${data.combined.description}</span>
+        </div>`;
+    } catch (err) {
+      console.error("Erreur forecast local:", err);
+    }
+  });
 }
 
-// -------------------------
-// 🌟 Premium
-// -------------------------
-async function loadPremium() {
+// ===============================
+// PRÉVISIONS NATIONALES
+// ===============================
+async function loadNationalForecast(country = "BE") {
   try {
-    const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
+    const res = await fetch(`${API_BASE}/forecast/national?country=${country}`);
     const data = await res.json();
-    document.getElementById("premium-forecast").textContent =
-      `${data.combined.description}, ${data.combined.temperature}°C`;
 
-    // Podcasts Premium
-    const resPod = await fetch(`${API_BASE}/podcast/generate?type=premium`);
-    const pod = await resPod.json();
-    document.getElementById("podcast-premium").textContent = `🎧 ${pod.title}`;
-
-    // IA Premium
-    document.getElementById("ai-send-premium")?.addEventListener("click", async () => {
-      const input = document.getElementById("ai-input-premium").value;
-      const res = await fetch(`${API_BASE}/chat`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `[Premium] ${input}` })
-      });
-      const reply = await res.json();
-      document.getElementById("ai-response-premium").textContent = reply.text;
-    });
+    document.getElementById("national-forecast").innerHTML = `
+      <div class="card weather-card">
+        <span>🏳️ ${country}</span>
+        <span>🌡️ ${data.combined.temperature}°C</span>
+        <span>${data.combined.description}</span>
+      </div>`;
   } catch (err) {
-    console.error("Erreur premium:", err);
+    console.error("Erreur forecast national:", err);
   }
 }
 
-// -------------------------
-// 💼 Pro
-// -------------------------
-async function loadPro() {
+// ===============================
+// PRÉVISIONS 7 JOURS
+// ===============================
+async function loadSevenDays(lat = 50.85, lon = 4.35) {
   try {
-    document.getElementById("salage-data").textContent = "Prévisions verglas disponibles";
-    document.getElementById("agri-data").textContent = "Agenda cultures en cours...";
-    document.getElementById("flood-data").textContent = "Risque inondation calculé...";
-    document.getElementById("heat-data").textContent = "Canicule surveillée...";
+    const res = await fetch(`${API_BASE}/forecast/7days?lat=${lat}&lon=${lon}`);
+    const data = await res.json();
+
+    const daysHTML = data.days
+      .map(
+        (d) => `
+        <div>
+          <h4>${d.jour}</h4>
+          <p>${d.temperature_min}°C - ${d.temperature_max}°C</p>
+          <p>${d.icone} ${d.description}</p>
+        </div>`
+      )
+      .join("");
+
+    document.getElementById("forecast-7days").innerHTML = `
+      <div class="forecast-grid">${daysHTML}</div>`;
   } catch (err) {
-    console.error("Erreur pro:", err);
+    console.error("Erreur forecast 7j:", err);
   }
 }
 
-// -------------------------
-// 🚀 Pro+
-// -------------------------
-async function loadProPlus() {
+// ===============================
+// RADAR
+// ===============================
+async function loadRadar() {
   try {
-    document.getElementById("models-data").textContent = "Fusion multi-modèles IA + satellites";
-    document.getElementById("aero-data").textContent = "Prévisions aviation & spatial actives";
-    document.getElementById("ai-scientific").textContent = "IA scientifique prête";
+    const res = await fetch(`${API_BASE}/radar`);
+    const data = await res.json();
+
+    document.getElementById("radar").innerHTML = `
+      <div class="card radar-card">
+        <img src="${data.radarUrl}" alt="Radar précipitations">
+      </div>`;
   } catch (err) {
-    console.error("Erreur pro+:", err);
+    console.error("Erreur radar:", err);
   }
 }
 
-// -------------------------
-// ⚠️ Alertes
-// -------------------------
+// ===============================
+// ALERTES
+// ===============================
 async function loadAlerts() {
   try {
-    const resAlerts = await fetch(`${API_BASE}/alerts`);
-    const alertData = await resAlerts.json();
+    const res = await fetch(`${API_BASE}/alerts`);
+    const data = await res.json();
 
-    document.getElementById("alerts-local").innerHTML =
-      alertData.local?.map(a => `⚠️ ${a.type} (${a.reliability}%)`).join("<br>") || "Aucune alerte locale";
-    document.getElementById("alerts-national").innerHTML =
-      alertData.national?.map(a => `🇧🇪 ${a.type} (${a.reliability}%)`).join("<br>") || "Aucune alerte nationale";
-    document.getElementById("alerts-world").innerHTML =
-      alertData.world?.map(a => `🌍 ${a.type} (${a.reliability}%)`).join("<br>") || "Aucune alerte mondiale";
+    const alertsHTML = data
+      .map(
+        (a) => `<div>⚠️ ${a.level.toUpperCase()} - ${a.message} (Fiabilité: ${a.reliability}%)</div>`
+      )
+      .join("");
+
+    document.getElementById("alerts").innerHTML = `
+      <div class="alerts-container">${alertsHTML}</div>`;
   } catch (err) {
     console.error("Erreur alerts:", err);
   }
 }
 
-// -------------------------
-// 👤 Account
-// -------------------------
-async function loadAccount() {
+// ===============================
+// PODCASTS
+// ===============================
+async function loadPodcasts(type = "daily") {
   try {
-    document.getElementById("subscriptions").textContent = "Chargement abonnements...";
-    document.getElementById("user-podcasts").textContent = "Historique podcasts...";
-    document.getElementById("user-alerts").textContent = "Historique alertes...";
+    const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
+    const data = await res.json();
+
+    document.getElementById("podcasts").innerHTML = `
+      <div class="card">
+        <h3>🎙️ ${data.title || "Podcast météo"}</h3>
+        <audio controls src="${data.url}"></audio>
+      </div>`;
   } catch (err) {
-    console.error("Erreur account:", err);
+    console.error("Erreur podcast:", err);
   }
 }
 
-// -------------------------
-// 🛠️ Admin
-// -------------------------
-async function loadAdmin() {
+// ===============================
+// CHAT IA J.E.A.N
+// ===============================
+async function chatWithJean() {
+  const input = document.getElementById("chat-input").value;
+  if (!input) return;
+
   try {
-    const resAlerts = await fetch(`${API_BASE}/alerts`);
-    const data = await resAlerts.json();
-    document.getElementById("alerts-review").textContent = "Alertes à valider (70–90%)";
-    document.getElementById("alerts-validated").textContent = data.world?.map(a => `✅ ${a.type}`).join("<br>");
-    document.getElementById("admin-podcasts").textContent = "Liste des podcasts...";
-    document.getElementById("admin-codes").textContent = "Codes promo générés...";
-    document.getElementById("admin-users").textContent = "Supervision abonnements...";
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: input }),
+    });
+
+    const data = await res.json();
+
+    document.getElementById("chat-output").innerHTML += `
+      <div class="card"><b>Vous:</b> ${input}</div>
+      <div class="card ai"><b>J.E.A.N:</b> ${data.reply}</div>`;
   } catch (err) {
-    console.error("Erreur admin:", err);
+    console.error("Erreur chat:", err);
   }
 }
+
+// ===============================
+// INIT
+// ===============================
+window.addEventListener("DOMContentLoaded", () => {
+  loadLocalForecast();
+  loadNationalForecast("BE");
+  loadSevenDays();
+  loadRadar();
+  loadAlerts();
+  loadPodcasts();
+});
