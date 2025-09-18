@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TINSFLASH – La météo 1000% réelle</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="loader.css">
   <script defer src="app.js"></script>
+  <script defer src="loader.js"></script>
 </head>
 <body>
   <!-- 🎬 Intro vidéo -->
@@ -33,37 +35,43 @@
     <!-- Prévisions locales -->
     <section class="panel">
       <h2>📍 Prévisions Locales</h2>
-      <div id="local-forecast">⏳ Chargement...</div>
+      <div id="local-loader" class="loader-container"></div>
+      <div id="local-forecast"></div>
     </section>
 
     <!-- Prévisions nationales -->
     <section class="panel">
       <h2>🌍 Prévisions Nationales</h2>
-      <div id="national-forecast">⏳ Chargement...</div>
+      <div id="national-loader" class="loader-container"></div>
+      <div id="national-forecast"></div>
     </section>
 
     <!-- Prévisions 7 jours -->
     <section class="panel">
       <h2>📅 Prévisions 7 jours</h2>
-      <div id="seven-days">⏳ Chargement...</div>
+      <div id="days-loader" class="loader-container"></div>
+      <div id="seven-days"></div>
     </section>
 
     <!-- Radar -->
     <section class="panel">
       <h2>🛰️ Radar Pluie/Neige/Vent</h2>
-      <div id="radar">⏳ Chargement radar...</div>
+      <div id="radar-loader" class="loader-container"></div>
+      <div id="radar"></div>
     </section>
 
     <!-- Alertes -->
     <section class="panel">
       <h2>⚠️ Alertes</h2>
-      <div id="alerts">⏳ Chargement alertes...</div>
+      <div id="alerts-loader" class="loader-container"></div>
+      <div id="alerts"></div>
     </section>
 
     <!-- Podcasts -->
     <section class="panel">
       <h2>🎙️ Podcasts</h2>
-      <div id="podcasts">⏳ Chargement podcasts...</div>
+      <div id="podcasts-loader" class="loader-container"></div>
+      <div id="podcasts"></div>
     </section>
   </main>
 
@@ -77,6 +85,7 @@
   </footer>
 
   <script>
+    // 🎬 Vidéo Intro
     function toggleSound() {
       const video = document.getElementById("intro-jean");
       const btn = document.getElementById("sound-btn");
@@ -94,6 +103,16 @@
       video.pause();
       document.querySelector(".intro-video").style.display = "none";
     }
+
+    // 🚀 Loaders + données météo
+    window.addEventListener("DOMContentLoaded", () => {
+      startLoader("local-loader", () => loadLocalForecast());
+      startLoader("national-loader", () => loadNationalForecast("BE"));
+      startLoader("days-loader", () => loadSevenDays());
+      startLoader("radar-loader", () => loadRadar());
+      startLoader("alerts-loader", () => loadAlerts());
+      startLoader("podcasts-loader", () => loadPodcasts());
+    });
   </script>
 </body>
 </html>
