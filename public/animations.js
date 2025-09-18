@@ -10,26 +10,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const symbol = icon.textContent.trim();
 
     switch (symbol) {
-      case "☀️": // Soleil qui pulse
+      case "☀️": // Soleil
         icon.classList.add("sun-anim");
         break;
 
-      case "☁️": // Nuages flottants
+      case "☁️":
       case "⛅":
       case "🌤️":
         icon.classList.add("cloud-anim");
         break;
 
-      case "🌧️": // Pluie
+      case "🌧️":
       case "🌦️":
         icon.classList.add("rain-anim");
         break;
 
-      case "❄️": // Neige
+      case "❄️":
         icon.classList.add("snow-anim");
         break;
 
-      case "⛈️": // Orage
+      case "⛈️":
       case "🌩️":
         icon.classList.add("storm-anim");
         break;
