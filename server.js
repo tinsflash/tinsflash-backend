@@ -10,7 +10,7 @@ import cors from "cors";
 import { getForecast } from "./services/forecastService.js";
 import { getAlerts } from "./services/alertsService.js";
 import { generatePodcast } from "./services/podcastService.js";
-import { getWeatherIcon, generateCode } from "./services/codesService.js"; // ✅ correction
+import { getWeatherIcon, generateCode } from "./services/codesService.js";
 import { chatWithJean } from "./services/chatService.js";
 
 dotenv.config();
@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // pour les fichiers frontend
+app.use(express.static("public")); // fichiers frontend
 
 // -------------------------
 // ROUTES API
@@ -84,14 +84,13 @@ app.get("/api/forecast/7days", async (req, res) => {
           day: "numeric",
           month: "long",
         }),
-        temperature_min: Math.round(forecast.combined.temperature - Math.random() * 3),
-        temperature_max: Math.round(forecast.combined.temperature + Math.random() * 3),
+        temperature_min: Math.round(forecast.combined.temperature - (2 + Math.random() * 2)),
+        temperature_max: Math.round(forecast.combined.temperature + (2 + Math.random() * 2)),
         vent: forecast.combined.wind,
         precipitation: forecast.combined.precipitation,
         description: forecast.combined.description,
-        icone: getWeatherIcon( // ✅ utilise ton service d’icônes
-          forecast.combined.code || 0
-        )
+        reliability: forecast.combined.reliability,
+        icone: getWeatherIcon(forecast.combined.code || 0),
       });
     }
 
@@ -115,10 +114,15 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Radar
+// ✅ Radar (pluie/neige/vent, lisible avec fond carte)
 app.get("/api/radar", (req, res) => {
-  const radarUrl = `https://tile.openweathermap.org/map/precipitation_new/4/8/5.png?appid=${process.env.OPENWEATHER_KEY}`;
-  res.json({ radarUrl });
+  try {
+    const { type = "precipitation_new" } = req.query;
+    const radarUrl = `https://tile.openweathermap.org/map/${type}/4/8/5.png?appid=${process.env.OPENWEATHER_KEY}`;
+    res.json({ radarUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ✅ Podcasts météo
@@ -140,7 +144,7 @@ app.get("/api/codes/generate", (req, res) => {
     const { type } = req.query;
     if (!type) return res.status(400).json({ error: "Type d’abonnement requis" });
 
-    const code = generateCode(type); // ✅ maintenant ça existe
+    const code = generateCode(type);
     res.json(code);
   } catch (err) {
     res.status(500).json({ error: err.message });
