@@ -60,6 +60,7 @@
     <!-- 🛰️ Radar météo mondial -->
     <section class="forecast-section">
       <h2>🌍 Radar météo mondial</h2>
+      <div id="radar-loader" class="loader-container"></div>
       <div id="radar-content"></div>
     </section>
 
@@ -87,6 +88,7 @@
     <p>🚀 TINSFLASH 2025 – La machine météo mondiale</p>
   </footer>
 
+  <!-- Scripts -->
   <script>
     // 🎬 Vidéo Intro
     function toggleSound() {
@@ -109,11 +111,23 @@
 
     // 🚀 Loaders + données météo
     window.addEventListener("DOMContentLoaded", () => {
-      startLoader("local-loader", () => loadLocalForecast());
-      startLoader("national-loader", () => loadNationalForecast("BE"));
-      startLoader("days-loader", () => loadSevenDays());
-      startLoader("alerts-loader", () => loadAlerts());
-      startLoader("podcasts-loader", () => loadPodcasts());
+      const localLoader = startLoader("local-loader", 2500);
+      loadLocalForecast().then(() => localLoader.stop());
+
+      const nationalLoader = startLoader("national-loader", 2500);
+      loadNationalForecast("BE").then(() => nationalLoader.stop());
+
+      const daysLoader = startLoader("days-loader", 2500);
+      loadSevenDays().then(() => daysLoader.stop());
+
+      const radarLoader = startLoader("radar-loader", 2500);
+      loadRadar().then(() => radarLoader.stop());
+
+      const alertsLoader = startLoader("alerts-loader", 2500);
+      loadAlerts().then(() => alertsLoader.stop());
+
+      const podcastsLoader = startLoader("podcasts-loader", 2500);
+      loadPodcasts().then(() => podcastsLoader.stop());
     });
   </script>
 </body>
