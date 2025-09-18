@@ -69,9 +69,7 @@ body {
   font-weight: bold;
   transition: 0.2s;
 }
-.cta-btn:hover {
-  background: #00aacc;
-}
+.cta-btn:hover { background: #00aacc; }
 
 /* 📩 Footer */
 .footer {
@@ -82,7 +80,7 @@ body {
   color: #999;
 }
 
-/* === Cockpit NASA Base === */
+/* === Cockpit Base (commun) === */
 .cockpit-body {
   background: radial-gradient(circle at center, #000010, #000000);
   color: #00ffea;
@@ -108,9 +106,7 @@ body {
   border-radius: 15px;
   box-shadow: 0 0 15px rgba(0,255,234,0.5);
 }
-.cockpit-panel.wide {
-  grid-column: span 2;
-}
+.cockpit-panel.wide { grid-column: span 2; }
 .cockpit-controls {
   position: fixed;
   top: 50%;
@@ -132,10 +128,7 @@ body {
   box-shadow: 0 0 15px rgba(0,255,234,0.6);
   transition: all 0.2s;
 }
-.round-btn:hover {
-  background: #00ffea;
-  color: black;
-}
+.round-btn:hover { background: #00ffea; color: black; }
 .cockpit-footer {
   text-align: center;
   padding: 1rem;
@@ -143,121 +136,141 @@ body {
   font-size: 0.9rem;
 }
 
-/* === Highlight cockpit === */
-.cockpit-panel.highlight {
-  box-shadow: 0 0 25px rgba(0,255,234,0.9), 0 0 40px rgba(0,255,234,0.6);
-  transition: box-shadow 0.3s ease-in-out;
+/* === Cockpit Premium === */
+.premium-mode { background:#000; color:gold; }
+.premium-panel {
+  background:rgba(40,30,0,0.9);
+  border:1px solid gold;
+  box-shadow:0 0 20px rgba(255,215,0,0.3);
+  color:gold;
 }
+.premium-btn {
+  border-color:gold;
+  color:gold;
+  box-shadow:0 0 15px rgba(255,215,0,0.6);
+}
+.premium-btn:hover { background:gold; color:black; }
+.premium-footer { border-top:2px solid gold; color:gold; }
 
-/* === HUD Futuriste (Pro+) === */
+/* === Cockpit Pro === */
+.pro-mode { background:#000; color:#00ff99; }
+.pro-panel {
+  background:rgba(0,40,20,0.9);
+  border:1px solid #00ff99;
+  box-shadow:0 0 20px rgba(0,255,100,0.3);
+  color:#00ff99;
+}
+.pro-btn {
+  border-color:#00ff99;
+  color:#00ff99;
+  box-shadow:0 0 15px rgba(0,255,100,0.6);
+}
+.pro-btn:hover { background:#00ff99; color:black; }
+.pro-footer { border-top:2px solid #00ff99; color:#00ff99; }
+
+/* === Cockpit Pro+ (HUD Futuriste) === */
 .hud-mode {
-  background: #000;
-  color: #0f0;
-  font-family: "Orbitron","Consolas",monospace;
-  position: relative;
-  overflow: hidden;
+  background:#000;
+  color:#0f0;
+  font-family:"Orbitron","Consolas",monospace;
+  position:relative;
+  overflow:hidden;
 }
 .hud-mode::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: repeating-linear-gradient(
+  content:"";
+  position:absolute;
+  top:0; left:0; right:0; bottom:0;
+  background:repeating-linear-gradient(
     0deg,
     rgba(0,255,0,0.05),
     rgba(0,255,0,0.05) 2px,
     transparent 2px,
     transparent 4px
   );
-  pointer-events: none;
+  pointer-events:none;
 }
 .hud-panel {
-  background: rgba(0,40,0,0.85);
-  border: 1px solid #0f0;
-  box-shadow: 0 0 20px rgba(0,255,0,0.3);
-  color: #0f0;
+  background:rgba(0,40,0,0.85);
+  border:1px solid #0f0;
+  box-shadow:0 0 20px rgba(0,255,0,0.3);
+  color:#0f0;
 }
 .hud-btn {
-  border-color: #0f0;
-  color: #0f0;
-  box-shadow: 0 0 15px rgba(0,255,0,0.6);
+  border-color:#0f0;
+  color:#0f0;
+  box-shadow:0 0 15px rgba(0,255,0,0.6);
 }
-.hud-btn:hover {
-  background: #0f0;
-  color: black;
-}
-.hud-footer {
-  border-top: 2px solid #0f0;
-  color: #0f0;
-}
+.hud-btn:hover { background:#0f0; color:black; }
+.hud-footer { border-top:2px solid #0f0; color:#0f0; }
 
-/* === Gratuit (Index) === */
+/* === Gratuit (Index Widgets) === */
 .weather-widget {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  font-size: 1.2rem;
-  padding: 1rem;
-  border: 1px solid rgba(0,255,234,0.3);
-  border-radius: 12px;
-  background: rgba(10,10,30,0.8);
-  box-shadow: 0 0 20px rgba(0,255,234,0.2);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:1.5rem;
+  font-size:1.2rem;
+  padding:1rem;
+  border:1px solid rgba(0,255,234,0.3);
+  border-radius:12px;
+  background:rgba(10,10,30,0.8);
+  box-shadow:0 0 20px rgba(0,255,234,0.2);
 }
-.weather-icon { font-size: 3rem; }
-.weather-temp { font-size: 2rem; font-weight: bold; color: #00ffea; }
-.weather-desc { color: #ccc; }
+.weather-icon { font-size:3rem; }
+.weather-temp { font-size:2rem; font-weight:bold; color:#00ffea; }
+.weather-desc { color:#ccc; }
 .radar-box {
-  background: black;
-  border: 1px solid #00ffea;
-  border-radius: 10px;
-  padding: 0.5rem;
-  text-align: center;
-  min-height: 200px;
+  background:black;
+  border:1px solid #00ffea;
+  border-radius:10px;
+  padding:0.5rem;
+  text-align:center;
+  min-height:200px;
 }
 .alerts-card div {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  border-left: 4px solid #ff4444;
-  background: rgba(255,50,50,0.1);
-  border-radius: 6px;
+  margin-top:0.5rem;
+  padding:0.5rem;
+  border-left:4px solid #ff4444;
+  background:rgba(255,50,50,0.1);
+  border-radius:6px;
 }
 .ad-card {
-  border: 1px dashed #555;
-  text-align: center;
-  color: #999;
+  border:1px dashed #555;
+  text-align:center;
+  color:#999;
 }
 
-/* === Premium === */
+/* === Premium (site) === */
 .premium-card {
-  border: 1px solid rgba(255,215,0,0.4);
-  background: rgba(40,30,0,0.9);
-  box-shadow: 0 0 20px rgba(255,215,0,0.3);
+  border:1px solid rgba(255,215,0,0.4);
+  background:rgba(40,30,0,0.9);
+  box-shadow:0 0 20px rgba(255,215,0,0.3);
 }
-.premium-card h2 { color: gold; }
+.premium-card h2 { color:gold; }
 
-/* === Pro === */
+/* === Pro (site) === */
 .pro-card {
-  border: 1px solid rgba(0,255,100,0.4);
-  background: rgba(0,40,20,0.9);
-  box-shadow: 0 0 20px rgba(0,255,100,0.2);
+  border:1px solid rgba(0,255,100,0.4);
+  background:rgba(0,40,20,0.9);
+  box-shadow:0 0 20px rgba(0,255,100,0.2);
 }
-.pro-card h2 { color: #00ff99; }
+.pro-card h2 { color:#00ff99; }
 
-/* === Pro+ === */
+/* === Pro+ (site) === */
 .proplus-card {
-  border: 1px solid rgba(255,50,50,0.4);
-  background: rgba(40,0,0,0.9);
-  box-shadow: 0 0 20px rgba(255,50,50,0.3);
+  border:1px solid rgba(255,50,50,0.4);
+  background:rgba(40,0,0,0.9);
+  box-shadow:0 0 20px rgba(255,50,50,0.3);
 }
-.proplus-card h2 { color: #ff4444; }
+.proplus-card h2 { color:#ff4444; }
 
 /* === Admin === */
 .admin-card {
-  border: 1px solid rgba(200,100,255,0.4);
-  background: rgba(50,0,70,0.9);
-  box-shadow: 0 0 20px rgba(200,100,255,0.3);
+  border:1px solid rgba(200,100,255,0.4);
+  background:rgba(50,0,70,0.9);
+  box-shadow:0 0 20px rgba(200,100,255,0.3);
 }
-.admin-card h2 { color: #d580ff; }
+.admin-card h2 { color:#d580ff; }
 
 /* === Transition glitch === */
 .transition-glitch { animation: glitchFade 0.8s forwards; }
