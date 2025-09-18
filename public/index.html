@@ -1,139 +1,83 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH – La Machine de Guerre Météo</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TinsFlash Météo</title>
+  <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
 </head>
 <body>
-  <!-- =============================== -->
-  <!-- 🎬 INTRO VIDEO -->
-  <!-- =============================== -->
-  <div id="intro-overlay">
-    <video id="intro-video" autoplay muted>
-      <source src="intro-jean.mp4" type="video/mp4" />
+  <!-- 🎬 Vidéo Intro -->
+  <section class="intro-video">
+    <video autoplay muted playsinline id="intro-jean">
+      <source src="intro-jean.mp4" type="video/mp4">
       Votre navigateur ne supporte pas la vidéo.
     </video>
-    <div class="intro-controls">
-      <button onclick="skipIntro()">⏭ Passer</button>
-      <button onclick="togglePause()">⏯ Pause</button>
+    <div class="intro-overlay">
+      <h1>🌍 TINSFLASH</h1>
+      <p>La météo 1000% réelle, fonctionnelle et connectée</p>
+      <button onclick="document.getElementById('intro-jean').pause();document.querySelector('.intro-video').style.display='none';">
+        ⏭️ Passer l’intro
+      </button>
     </div>
-  </div>
+  </section>
 
-  <!-- =============================== -->
-  <!-- HEADER -->
-  <!-- =============================== -->
-  <header class="site-header">
-    <h1>🌍 TINSFLASH</h1>
-    <p>⚡ La météo 1000% réelle, fonctionnelle et connectée</p>
+  <!-- 🔝 Navbar -->
+  <header class="navbar">
+    <div class="logo">🌩️ TinsFlash</div>
+    <nav>
+      <a href="index.html" class="active">Accueil</a>
+      <a href="premium.html">Premium</a>
+      <a href="pro.html">Pro</a>
+      <a href="proplus.html">Pro+</a>
+      <a href="cockpit.html">Cockpit</a>
+      <a href="account.html">Mon Compte</a>
+      <a href="admin-pp.html" class="admin-link">Admin</a>
+    </nav>
   </header>
 
-  <!-- =============================== -->
-  <!-- PUBLICITÉ -->
-  <!-- =============================== -->
-  <section class="ads">
-    <p>— Publicité —</p>
-    <div id="ad-slot">
-      <img src="https://via.placeholder.com/728x90?text=Google+Ads" alt="Publicité" />
-    </div>
-  </section>
+  <!-- 📊 Contenu météo -->
+  <main class="container">
+    <section class="card">
+      <h2>📍 Prévisions locales</h2>
+      <div id="local-content">⏳ Chargement...</div>
+    </section>
 
-  <!-- =============================== -->
-  <!-- PRÉVISIONS LOCALES -->
-  <!-- =============================== -->
-  <section class="section">
-    <h2>📍 Prévisions Locales</h2>
-    <div id="local-forecast">⏳ Chargement...</div>
-  </section>
+    <section class="card">
+      <h2>🇧🇪 Prévisions nationales</h2>
+      <div id="national-content">⏳ Chargement...</div>
+    </section>
 
-  <!-- =============================== -->
-  <!-- PRÉVISIONS NATIONALES -->
-  <!-- =============================== -->
-  <section class="section">
-    <h2>🏳️ Prévisions Nationales</h2>
-    <div id="national-forecast">⏳ Chargement...</div>
-  </section>
+    <section class="card wide">
+      <h2>📅 Prévisions 7 jours</h2>
+      <div id="days-container" class="days-grid">⏳ Chargement...</div>
+    </section>
 
-  <!-- =============================== -->
-  <!-- PRÉVISIONS 7 JOURS -->
-  <!-- =============================== -->
-  <section class="section">
-    <h2>📅 Prévisions 7 Jours</h2>
-    <div id="forecast-7days">⏳ Chargement...</div>
-  </section>
+    <section class="card">
+      <h2>🛰️ Radar en temps réel</h2>
+      <div id="radar-content">⏳ Chargement radar...</div>
+    </section>
 
-  <!-- =============================== -->
-  <!-- RADAR -->
-  <!-- =============================== -->
-  <section class="section">
-    <h2>🛰️ Radar Temps Réel</h2>
-    <div id="radar">⏳ Chargement...</div>
-  </section>
+    <section class="card">
+      <h2>⚠️ Alertes Météo Mondiales</h2>
+      <div id="alerts-local"></div>
+      <div id="alerts-world"></div>
+    </section>
 
-  <!-- =============================== -->
-  <!-- ALERTES -->
-  <!-- =============================== -->
-  <section class="section">
-    <h2>⚠️ Alertes Météo</h2>
-    <div id="alerts">⏳ Chargement...</div>
-  </section>
+    <section class="card ai-card">
+      <h2>🤖 IA J.E.A.N.</h2>
+      <div id="ai-chat">
+        <textarea id="ai-input" placeholder="Posez une question météo..."></textarea>
+        <button id="ai-send">Envoyer</button>
+      </div>
+      <div id="ai-response"></div>
+    </section>
+  </main>
 
-  <!-- =============================== -->
-  <!-- PODCASTS -->
-  <!-- =============================== -->
-  <section class="section">
-    <h2>🎙️ Podcasts Météo</h2>
-    <div id="podcasts">⏳ Chargement...</div>
-  </section>
-
-  <!-- =============================== -->
-  <!-- CHAT IA J.E.A.N -->
-  <!-- =============================== -->
-  <section class="section">
-    <h2>🤖 Chat IA J.E.A.N</h2>
-    <div id="chat-box">
-      <input id="chat-input" type="text" placeholder="Posez votre question météo..." />
-      <button onclick="chatWithJean()">Envoyer</button>
-      <div id="chat-output"></div>
-    </div>
-  </section>
-
-  <!-- =============================== -->
-  <!-- FOOTER -->
-  <!-- =============================== -->
-  <footer class="site-footer">
-    <p>🚀 TINSFLASH 2025 – La météo du futur</p>
-    <p>
-      <a href="premium.html">Premium</a> |
-      <a href="pro.html">Pro</a> |
-      <a href="proplus.html">Pro+</a> |
-      <a href="account.html">Mon compte</a>
-    </p>
+  <!-- 📩 Footer -->
+  <footer class="footer">
+    <p>© 2025 TinsFlash – La météo qui fait grincer la NASA 🚀</p>
   </footer>
-
-  <script>
-    // 🎬 Gestion vidéo intro
-    const introOverlay = document.getElementById("intro-overlay");
-    const introVideo = document.getElementById("intro-video");
-
-    function skipIntro() {
-      introOverlay.style.display = "none";
-      introVideo.pause();
-    }
-
-    function togglePause() {
-      if (introVideo.paused) {
-        introVideo.play();
-      } else {
-        introVideo.pause();
-      }
-    }
-
-    introVideo.addEventListener("ended", () => {
-      introOverlay.style.display = "none";
-    });
-  </script>
 </body>
 </html>
