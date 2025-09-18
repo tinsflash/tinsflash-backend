@@ -1,126 +1,91 @@
-// -------------------------
-// 🌍 forecastService.js
-// Fusion Meteomatics + OpenWeather + GFS + ICON (+ pondération IA)
+// services/forecastService.js
+// Fusion des sources internes + pompage hiddensources
 // -------------------------
 
-export async function getForecast(lat, lon) {
+import { getBMBCForecast } from "../hiddensources/trullemans.js";
+import { getWetterzentrale } from "../hiddensources/wetterzentrale.js";
+import { getOpenWeather } from "../hiddensources/openweather.js";
+import { getMeteomaticsForecast } from "../hiddensources/meteomatics.js";
+import { getWeatherIcon } from "./codesService.js";
+
+// Petit helper pour moyenne numérique
+function average(values) {
+  const nums = values.filter(v => typeof v === "number" && !isNaN(v));
+  if (nums.length === 0) return null;
+  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
+}
+
+// ✅ Fonction principale
+export async function getForecast(lat = 50.5, lon = 4.5) {
+  const now = new Date();
+  const sources = [];
+
   try {
-    const results = { sources: {}, combined: {} };
+    // ---- Trullemans (BMBC) ----
+    const trullemans = await getBMBCForecast();
+    sources.push(trullemans);
 
-    // 1️⃣ Meteomatics
-    try {
-      const user = process.env.METEOMATICS_USER;
-      const pass = process.env.METEOMATICS_PASS;
-      if (!user || !pass) throw new Error("Identifiants Meteomatics manquants !");
+    // ---- Wetterzentrale (titres de modèles) ----
+    const wz = await getWetterzentrale();
+    sources.push(wz);
 
-      const now = new Date().toISOString().split(".")[0] + "Z";
-      const future = new Date(Date.now() + 7 * 24 * 3600 * 1000)
-        .toISOString()
-        .split(".")[0] + "Z";
+    // ---- OpenWeather ----
+    const ow = await getOpenWeather(lat, lon);
+    sources.push(ow);
 
-      const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_min_2m_24h:C,t_max_2m_24h:C,t_2m:C,precip_1h:mm,wind_speed_10m:kmh,weather_symbol_1h:idx/${lat},${lon}/json`;
+    // ---- Meteomatics ----
+    const mm = await getMeteomaticsForecast(lat, lon);
+    sources.push(mm);
 
-      const res = await fetch(url, {
-        headers: {
-          Authorization: "Basic " + Buffer.from(`${user}:${pass}`).toString("base64"),
-        },
-      });
-
-      if (!res.ok) throw new Error(`Erreur Meteomatics: ${res.statusText}`);
-      results.sources.meteomatics = await res.json();
-    } catch (err) {
-      results.sources.meteomatics = { status: "indisponible", error: err.message };
-    }
-
-    // 2️⃣ OpenWeather
-    try {
-      const apiKey = process.env.OPENWEATHER_KEY;
-      if (!apiKey) throw new Error("Clé OPENWEATHER_KEY manquante");
-
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Erreur OpenWeather");
-
-      results.sources.openweather = await res.json();
-    } catch (err) {
-      results.sources.openweather = { status: "indisponible", error: err.message };
-    }
-
-    // 3️⃣ GFS NOAA (fallback global)
-    try {
-      const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Erreur GFS NOAA");
-
-      results.sources.gfs = await res.json();
-    } catch (err) {
-      results.sources.gfs = { status: "indisponible", error: err.message };
-    }
-
-    // 4️⃣ ICON DWD (modèle européen)
-    try {
-      const url = `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=auto`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Erreur ICON");
-
-      results.sources.icon = await res.json();
-    } catch (err) {
-      results.sources.icon = { status: "indisponible", error: err.message };
-    }
-
-    // -------------------------
-    // 🧠 Fusion IA simplifiée
-    // -------------------------
-    const minCandidates = [];
-    const maxCandidates = [];
-    const windCandidates = [];
-    const precipCandidates = [];
-
-    if (results.sources.meteomatics?.data) {
-      const min = results.sources.meteomatics.data.find(d => d.parameter === "t_min_2m_24h:C")?.coordinates?.[0]?.dates?.[0]?.value;
-      const max = results.sources.meteomatics.data.find(d => d.parameter === "t_max_2m_24h:C")?.coordinates?.[0]?.dates?.[0]?.value;
-      const wind = results.sources.meteomatics.data.find(d => d.parameter === "wind_speed_10m:kmh")?.coordinates?.[0]?.dates?.[0]?.value;
-      const precip = results.sources.meteomatics.data.find(d => d.parameter === "precip_1h:mm")?.coordinates?.[0]?.dates?.[0]?.value;
-
-      if (min) minCandidates.push(min);
-      if (max) maxCandidates.push(max);
-      if (wind) windCandidates.push(wind);
-      if (precip) precipCandidates.push(precip);
-    }
-
-    if (results.sources.openweather?.main) {
-      minCandidates.push(results.sources.openweather.main.temp_min);
-      maxCandidates.push(results.sources.openweather.main.temp_max);
-      windCandidates.push(results.sources.openweather.wind?.speed);
-    }
-
-    if (results.sources.gfs?.daily) {
-      minCandidates.push(results.sources.gfs.daily.temperature_2m_min[0]);
-      maxCandidates.push(results.sources.gfs.daily.temperature_2m_max[0]);
-      windCandidates.push(results.sources.gfs.daily.windspeed_10m_max[0]);
-      precipCandidates.push(results.sources.gfs.daily.precipitation_sum[0]);
-    }
-
-    if (results.sources.icon?.daily) {
-      minCandidates.push(results.sources.icon.daily.temperature_2m_min[0]);
-      maxCandidates.push(results.sources.icon.daily.temperature_2m_max[0]);
-      windCandidates.push(results.sources.icon.daily.windspeed_10m_max[0]);
-      precipCandidates.push(results.sources.icon.daily.precipitation_sum[0]);
-    }
-
-    const avg = (arr) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : "N/A";
-
-    results.combined = {
-      temperature_min: avg(minCandidates),
-      temperature_max: avg(maxCandidates),
-      wind: avg(windCandidates),
-      precipitation: Math.round(avg(precipCandidates) * 10) / 10,
-      description: results.sources.openweather?.weather?.[0]?.description || "Prévision issue de la fusion des modèles",
-      reliability: 90 + Math.floor(Math.random() * 10), // IA ajuste
-    };
-
-    return results;
   } catch (err) {
-    throw new Error("Erreur fusion prévisions : " + err.message);
+    console.error("Erreur récupération sources forecast:", err);
   }
+
+  // ---- Fusion des données ----
+  const tempVals = [];
+  const descVals = [];
+  const reliability = [];
+
+  for (const src of sources) {
+    if (src.error) continue;
+
+    if (src.temp) tempVals.push(src.temp);
+    if (src.desc) descVals.push(src.desc);
+    if (src.models) reliability.push("modèles: " + src.models.join(", ")); // wetterzentrale
+  }
+
+  // Moyenne température
+  const temperature = average(tempVals) || 12;
+
+  // Choix description : celle la plus fréquente ou fallback
+  const description =
+    descVals.length > 0
+      ? descVals.sort((a, b) =>
+          descVals.filter(v => v === a).length -
+          descVals.filter(v => v === b).length
+        ).pop()
+      : "Ciel variable";
+
+  // Icône à partir description simplifiée
+  const icon = getWeatherIcon(
+    description.includes("pluie") ? 61 :
+    description.includes("neige") ? 71 :
+    description.includes("orage") ? 95 :
+    1 // soleil par défaut
+  );
+
+  // Indice de fiabilité = nombre de sources qui ont répondu
+  const reliabilityIndex = Math.min(100, sources.filter(s => !s.error).length * 25);
+
+  return {
+    timestamp: now.toISOString(),
+    location: { lat, lon },
+    combined: {
+      temperature,
+      description,
+      icon,
+      reliability: `${reliabilityIndex}%`,
+    },
+    rawSources: sources, // ⚡ tu vois tout ce qui a été pompé
+  };
 }
