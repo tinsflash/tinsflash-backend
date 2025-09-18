@@ -1,5 +1,5 @@
 // ============================
-// 🚀 TINSFLASH Loader amélioré (messages plus lents)
+// 🚀 TINSFLASH Loader amélioré (messages + barre animée en boucle)
 // ============================
 
 const loaderMessages = [
@@ -10,12 +10,10 @@ const loaderMessages = [
   "⏳ Les informations arrivent..."
 ];
 
-function startLoader(containerId, speed = 2500) { 
-  // speed en ms → par défaut 2,5 sec
+function startLoader(containerId, speed = 2500) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // Nettoyer le conteneur
   container.innerHTML = "";
 
   let msgIndex = 0;
@@ -31,7 +29,7 @@ function startLoader(containerId, speed = 2500) {
   bar.appendChild(progress);
   container.appendChild(bar);
 
-  // Changement de message progressif plus lent
+  // Changement de messages plus lent
   const interval = setInterval(() => {
     msgIndex++;
     if (msgIndex < loaderMessages.length) {
@@ -39,11 +37,11 @@ function startLoader(containerId, speed = 2500) {
     }
   }, speed);
 
-  // Retourner un handle pour pouvoir stopper le loader quand les données arrivent
+  // Retourner un handle pour stopper proprement
   return {
     stop: () => {
       clearInterval(interval);
-      container.innerHTML = ""; // on nettoie quand les vraies données sont prêtes
+      container.innerHTML = ""; // efface le loader
     }
   };
 }
