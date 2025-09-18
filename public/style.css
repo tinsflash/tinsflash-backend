@@ -1,352 +1,277 @@
-/* 🌐 Global */
-body {
+/* ============================
+   TINSFLASH GLOBAL STYLES
+   ============================ */
+
+/* Reset */
+* {
   margin: 0;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  background: #0a0a1a;
-  color: #f1f1f1;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* 🔝 Navbar */
-.navbar {
+body {
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: #0d1117;
+  color: #f0f0f0;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ============================
+   HERO VIDEO
+   ============================ */
+.hero {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.hero video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.55);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #ffffff;
+  animation: fadeIn 2s ease-in-out;
+}
+
+.hero-content h1 {
+  font-size: 2.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.hero-content h1 span {
+  color: #00d9ff;
+}
+
+.hero-content p {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.hero-buttons button {
+  background: #00d9ff;
+  color: #000;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.hero-buttons button:hover {
+  background: #00aacc;
+}
+
+/* ============================
+   ADS BANNER
+   ============================ */
+.ads-banner {
+  background: #161b22;
+  text-align: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid #222;
+}
+
+/* ============================
+   SECTIONS
+   ============================ */
+.block {
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.block h2 {
+  color: #00d9ff;
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid #00d9ff;
+  padding-left: 0.5rem;
+}
+
+/* ============================
+   WEATHER CARDS
+   ============================ */
+.card {
+  background: #161b22;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: transform 0.3s;
+}
+
+.card:hover {
+  transform: scale(1.02);
+}
+
+.weather-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  font-weight: bold;
-}
-.navbar .logo {
-  font-size: 1.3rem;
-}
-.navbar nav a {
-  margin: 0 0.8rem;
-  text-decoration: none;
-  color: #ddd;
-  transition: color 0.2s;
-}
-.navbar nav a:hover,
-.navbar nav a.active {
-  color: #fff;
-  text-decoration: underline;
+  font-size: 1.2rem;
 }
 
-/* Couleurs navbars */
-.navbar { background: linear-gradient(90deg, #0033cc, #000); }
-.navbar.premium { background: linear-gradient(90deg, #c99200, #000); }
-.navbar.pro { background: linear-gradient(90deg, #007744, #000); }
-.navbar.proplus { background: linear-gradient(90deg, #cc0000, #000); }
-.navbar.account { background: linear-gradient(90deg, #555, #000); }
-.navbar.admin { background: linear-gradient(90deg, #9900cc, #000); }
-
-/* 🃏 Cards */
-.container {
-  padding: 2rem;
+/* ============================
+   WEEKLY FORECAST GRID
+   ============================ */
+.forecast-grid {
   display: grid;
-  gap: 1.5rem;
-}
-.card {
-  background: #12122b;
-  padding: 1.5rem;
-  border-radius: 15px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
-.card h2 {
-  margin-top: 0;
-  font-size: 1.3rem;
-  color: #00d9ff;
-}
-.card.wide {
-  grid-column: span 2;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
 }
 
-/* CTA Buttons */
-.cta-btn {
-  display: inline-block;
-  background: #00d9ff;
-  color: #000;
-  padding: 0.6rem 1rem;
+.forecast-grid div {
+  background: #1f2937;
+  padding: 1rem;
   border-radius: 10px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: 0.2s;
+  text-align: center;
+  transition: background 0.3s;
 }
-.cta-btn:hover { background: #00aacc; }
 
-/* 📩 Footer */
-.footer {
+.forecast-grid div:hover {
+  background: #2d3748;
+}
+
+/* ============================
+   RADAR
+   ============================ */
+.radar-card img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+/* ============================
+   ALERTS
+   ============================ */
+.alerts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.alerts-container div {
+  background: #b91c1c;
+  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+/* ============================
+   CTA
+   ============================ */
+.cta {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #00d9ff, #0066ff);
+  color: #fff;
+}
+
+.cta h3 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.cta p {
+  margin-bottom: 1.5rem;
+}
+
+.cta .btn {
+  background: #fff;
+  color: #0066ff;
+  text-decoration: none;
+  padding: 0.8rem 1.5rem;
+  margin: 0.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.cta .btn:hover {
+  background: #0066ff;
+  color: #fff;
+}
+
+.cta .highlight {
+  background: #ffcc00;
+  color: #000;
+}
+
+.cta .highlight:hover {
+  background: #e6b800;
+}
+
+/* ============================
+   FOOTER
+   ============================ */
+footer {
+  background: #161b22;
   text-align: center;
   padding: 1rem;
   margin-top: 2rem;
   font-size: 0.9rem;
-  color: #999;
+  border-top: 1px solid #222;
 }
 
-/* === Cockpit Base (commun) === */
-.cockpit-body {
-  background: radial-gradient(circle at center, #000010, #000000);
-  color: #00ffea;
-  font-family: "Orbitron","Segoe UI",sans-serif;
-  margin: 0;
-  overflow-x: hidden;
-}
-.cockpit-header {
-  text-align: center;
-  padding: 1.5rem;
-  border-bottom: 2px solid #00ffea;
-}
-.cockpit-dashboard {
-  display: grid;
-  grid-template-columns: 2fr 2fr;
-  gap: 1.5rem;
-  padding: 2rem;
-}
-.cockpit-panel {
-  background: rgba(20,20,40,0.9);
-  padding: 1rem;
-  border: 1px solid #00ffea;
-  border-radius: 15px;
-  box-shadow: 0 0 15px rgba(0,255,234,0.5);
-}
-.cockpit-panel.wide { grid-column: span 2; }
-.cockpit-controls {
-  position: fixed;
-  top: 50%;
-  right: 1rem;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.round-btn {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  border: 2px solid #00ffea;
-  background: black;
-  color: #00ffea;
-  font-size: 1.5rem;
-  cursor: pointer;
-  box-shadow: 0 0 15px rgba(0,255,234,0.6);
-  transition: all 0.2s;
-}
-.round-btn:hover { background: #00ffea; color: black; }
-.cockpit-footer {
-  text-align: center;
-  padding: 1rem;
-  border-top: 2px solid #00ffea;
-  font-size: 0.9rem;
+/* ============================
+   ANIMATIONS
+   ============================ */
+@keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity: 1;}
 }
 
-/* === Cockpit Premium === */
-.premium-mode { background:#000; color:gold; }
-.premium-panel {
-  background:rgba(40,30,0,0.9);
-  border:1px solid gold;
-  box-shadow:0 0 20px rgba(255,215,0,0.3);
-  color:gold;
-}
-.premium-btn {
-  border-color:gold;
-  color:gold;
-  box-shadow:0 0 15px rgba(255,215,0,0.6);
-}
-.premium-btn:hover { background:gold; color:black; }
-.premium-footer { border-top:2px solid gold; color:gold; }
-
-/* === Cockpit Pro === */
-.pro-mode { background:#000; color:#00ff99; }
-.pro-panel {
-  background:rgba(0,40,20,0.9);
-  border:1px solid #00ff99;
-  box-shadow:0 0 20px rgba(0,255,100,0.3);
-  color:#00ff99;
-}
-.pro-btn {
-  border-color:#00ff99;
-  color:#00ff99;
-  box-shadow:0 0 15px rgba(0,255,100,0.6);
-}
-.pro-btn:hover { background:#00ff99; color:black; }
-.pro-footer { border-top:2px solid #00ff99; color:#00ff99; }
-
-/* === Cockpit Pro+ (HUD Futuriste) === */
-.hud-mode {
-  background:#000;
-  color:#0f0;
-  font-family:"Orbitron","Consolas",monospace;
-  position:relative;
-  overflow:hidden;
-}
-.hud-mode::before {
-  content:"";
-  position:absolute;
-  top:0; left:0; right:0; bottom:0;
-  background:repeating-linear-gradient(
-    0deg,
-    rgba(0,255,0,0.05),
-    rgba(0,255,0,0.05) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-  pointer-events:none;
-}
-.hud-panel {
-  background:rgba(0,40,0,0.85);
-  border:1px solid #0f0;
-  box-shadow:0 0 20px rgba(0,255,0,0.3);
-  color:#0f0;
-}
-.hud-btn {
-  border-color:#0f0;
-  color:#0f0;
-  box-shadow:0 0 15px rgba(0,255,0,0.6);
-}
-.hud-btn:hover { background:#0f0; color:black; }
-.hud-footer { border-top:2px solid #0f0; color:#0f0; }
-
-/* === Gratuit (Index Widgets) === */
-.weather-widget {
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:1.5rem;
-  font-size:1.2rem;
-  padding:1rem;
-  border:1px solid rgba(0,255,234,0.3);
-  border-radius:12px;
-  background:rgba(10,10,30,0.8);
-  box-shadow:0 0 20px rgba(0,255,234,0.2);
-}
-.weather-icon { font-size:3rem; }
-.weather-temp { font-size:2rem; font-weight:bold; color:#00ffea; }
-.weather-desc { color:#ccc; }
-.radar-box {
-  background:black;
-  border:1px solid #00ffea;
-  border-radius:10px;
-  padding:0.5rem;
-  text-align:center;
-  min-height:200px;
-}
-.alerts-card div {
-  margin-top:0.5rem;
-  padding:0.5rem;
-  border-left:4px solid #ff4444;
-  background:rgba(255,50,50,0.1);
-  border-radius:6px;
-}
-.ad-card {
-  border:1px dashed #555;
-  text-align:center;
-  color:#999;
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-/* === Premium (site) === */
-.premium-card {
-  border:1px solid rgba(255,215,0,0.4);
-  background:rgba(40,30,0,0.9);
-  box-shadow:0 0 20px rgba(255,215,0,0.3);
-}
-.premium-card h2 { color:gold; }
-
-/* === Pro (site) === */
-.pro-card {
-  border:1px solid rgba(0,255,100,0.4);
-  background:rgba(0,40,20,0.9);
-  box-shadow:0 0 20px rgba(0,255,100,0.2);
-}
-.pro-card h2 { color:#00ff99; }
-
-/* === Pro+ (site) === */
-.proplus-card {
-  border:1px solid rgba(255,50,50,0.4);
-  background:rgba(40,0,0,0.9);
-  box-shadow:0 0 20px rgba(255,50,50,0.3);
-}
-.proplus-card h2 { color:#ff4444; }
-
-/* === Admin === */
-.admin-card {
-  border:1px solid rgba(200,100,255,0.4);
-  background:rgba(50,0,70,0.9);
-  box-shadow:0 0 20px rgba(200,100,255,0.3);
-}
-.admin-card h2 { color:#d580ff; }
-
-/* === Transition glitch === */
-.transition-glitch { animation: glitchFade 0.8s forwards; }
-@keyframes glitchFade {
-  0% { filter:none; opacity:1; }
-  30% { filter:hue-rotate(90deg) contrast(2); opacity:0.7; }
-  60% { filter:hue-rotate(-90deg) contrast(2); opacity:0.4; }
-  100% { opacity:0; }
-}
-
-/* === Animations météo === */
-.sun-anim {
-  animation: sunPulse 3s infinite ease-in-out;
-  color: #FFD700;
-  text-shadow: 0 0 10px #FFD700, 0 0 20px #FFA500;
-}
-@keyframes sunPulse {
-  0%,100% { transform:scale(1); opacity:1; }
-  50% { transform:scale(1.2); opacity:0.9; }
-}
-
-.cloud-anim {
-  animation: cloudFloat 6s infinite ease-in-out;
-  color: #ccc;
-  text-shadow: 0 0 5px #00d9ff;
-}
-@keyframes cloudFloat {
-  0%,100% { transform:translateX(0); }
-  50% { transform:translateX(10px); }
-}
-
-.rain-anim {
-  position: relative;
-  color: #00aaff;
-  text-shadow: 0 0 8px #00d9ff;
-}
-.rain-anim::after {
-  content: "💧💧";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 100%;
-  font-size: 0.8rem;
-  opacity: 0.8;
-  animation: rainFall 1s infinite linear;
-}
-@keyframes rainFall {
-  0% { transform: translateY(0); opacity:1; }
-  100% { transform: translateY(20px); opacity:0; }
-}
-
-.snow-anim {
-  position: relative;
-  color: #fff;
-  text-shadow: 0 0 10px #00ccff;
-}
-.snow-anim::after {
-  content: "❄️";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 100%;
-  font-size: 0.8rem;
-  opacity: 0.9;
-  animation: snowFall 2s infinite linear;
-}
-@keyframes snowFall {
-  0% { transform: translateY(0); opacity:1; }
-  100% { transform: translateY(20px); opacity:0; }
-}
-
-.storm-anim {
-  color: #ffcc00;
-  animation: stormFlash 1s infinite;
-}
-@keyframes stormFlash {
-  0%,100% { text-shadow:none; opacity:1; }
-  50% { text-shadow:0 0 20px #ff0000, 0 0 40px #ff6600; opacity:0.7; }
+/* ============================
+   RESPONSIVE
+   ============================ */
+@media (max-width: 768px) {
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+  .hero-content p {
+    font-size: 1rem;
+  }
+  .hero-buttons button {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
 }
