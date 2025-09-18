@@ -3,97 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TinsFlash Météo</title>
+  <title>TINSFLASH – Machine météo</title>
   <link rel="stylesheet" href="style.css">
-  <script defer src="app.js"></script>
   <script defer src="ui.js"></script>
-  <script defer src="animations.js"></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
-  <header class="navbar">
-    <div class="logo">🌩️ TinsFlash</div>
-    <nav>
-      <a href="index.html" class="active">Accueil</a>
-      <a href="premium.html">Premium</a>
-      <a href="pro.html">Pro</a>
-      <a href="proplus.html">Pro+</a>
-      <a href="alerts.html">Alertes</a>
-      <a href="cockpit.html">Cockpit</a>
-      <a href="account.html">Mon Compte</a>
-    </nav>
-  </header>
 
-  <main class="container">
-    <!-- 📍 Prévisions locales -->
-    <section class="card weather-card">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-widget" class="weather-widget">
-        <div class="weather-icon">⏳</div>
-        <div class="weather-info">
-          <div class="weather-temp">--°C</div>
-          <div class="weather-desc">Chargement...</div>
-        </div>
+  <!-- 🎬 Hero Section avec intro vidéo -->
+  <section class="hero">
+    <video autoplay muted loop playsinline id="introVideo">
+      <source src="intro-jean.mp4" type="video/mp4">
+      Votre navigateur ne supporte pas la vidéo.
+    </video>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1>🚀 Bienvenue sur <span>TINSFLASH</span></h1>
+      <p>La machine de guerre météo la plus précise au monde</p>
+      <div class="hero-buttons">
+        <button id="skipIntro">➡️ Entrer</button>
+        <button id="muteToggle">🔇</button>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- 🇧🇪 Prévisions nationales -->
-    <section class="card">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-content">⏳ Chargement...</div>
-    </section>
+  <!-- === Barre pub Google Ads === -->
+  <section class="ads-banner">
+    <!-- Exemple Google Ads -->
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-xxxxxxxxxx"
+         data-ad-slot="1234567890"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </section>
 
-    <!-- 📅 Prévisions 7 jours -->
-    <section class="card wide">
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="days-container" class="days-grid">⏳</div>
-    </section>
+  <!-- === Prévisions Locales === -->
+  <section class="block" id="local-weather">
+    <h2>📍 Météo Locale</h2>
+    <div class="card weather-card">
+      <div id="local-forecast">⏳ Chargement...</div>
+    </div>
+  </section>
 
-    <!-- 🛰️ Radar maison -->
-    <section class="card">
-      <h2>🛰️ Radar en temps réel (Buienalarm++)</h2>
-      <div id="radar-content" class="radar-box">⏳ Chargement radar...</div>
-    </section>
+  <!-- === Prévisions Nationales === -->
+  <section class="block" id="national-weather">
+    <h2>🌍 Météo Nationale</h2>
+    <div class="card">
+      <div id="national-forecast">⏳ Chargement...</div>
+    </div>
+  </section>
 
-    <!-- ⚠️ Alertes -->
-    <section class="card alerts-card">
-      <h2>⚠️ Alertes Météo</h2>
-      <div id="alerts-local">⏳ Chargement alertes locales...</div>
-      <div id="alerts-world">⏳ Chargement alertes mondiales...</div>
-    </section>
+  <!-- === Prévisions 7 jours === -->
+  <section class="block" id="weekly-weather">
+    <h2>📅 Prévisions 7 jours</h2>
+    <div class="forecast-grid" id="forecast-7days">
+      ⏳ Chargement...
+    </div>
+  </section>
 
-    <!-- 🎙️ Podcasts -->
-    <section class="card">
-      <h2>🎙️ Podcasts gratuits</h2>
-      <div id="podcast-free">⏳ Lecture en cours...</div>
-    </section>
+  <!-- === Radar météo === -->
+  <section class="block" id="radar">
+    <h2>🛰️ Radar météo</h2>
+    <div class="card radar-card">
+      <div id="radar-map">⏳ Chargement...</div>
+    </div>
+  </section>
 
-    <!-- 🤖 IA J.E.A.N. -->
-    <section class="card ai-card">
-      <h2>🤖 IA J.E.A.N. (version gratuite)</h2>
-      <p class="note">Conseils rapides – passez Premium pour l’analyse complète</p>
-      <div id="ai-chat">
-        <textarea id="ai-input" placeholder="Posez une question météo..."></textarea>
-        <button id="ai-send">Envoyer</button>
-      </div>
-      <div id="ai-response"></div>
-    </section>
+  <!-- === Alertes météo === -->
+  <section class="block" id="alerts">
+    <h2>⚠️ Alertes Météo</h2>
+    <div id="alerts-list" class="alerts-container">⏳ Chargement...</div>
+  </section>
 
-    <!-- 📢 Publicités -->
-    <section class="card ad-card">
-      <h2>🔔 Publicité</h2>
-      <div class="ad-slot"><p>⏳ Chargement publicité...</p></div>
-    </section>
+  <!-- === Podcasts météo === -->
+  <section class="block" id="podcasts">
+    <h2>🎧 Podcasts</h2>
+    <div id="podcast-list">⏳ Chargement...</div>
+  </section>
 
-    <!-- 🚀 Teasing cockpit -->
-    <section class="card cockpit-preview">
-      <h2>🛰️ Mode Cockpit NASA</h2>
-      <p>Découvrez le tableau de bord futuriste réservé aux Premium, Pro et Pro+.</p>
-      <a href="premium.html" class="cta-btn">Débloquer le mode Premium</a>
-    </section>
-  </main>
+  <!-- === CTA vers Premium === -->
+  <section class="cta">
+    <h3>🔑 Débloquez plus de puissance météo</h3>
+    <p>
+      👉 <strong>Premium</strong> pour 2 localisations et alertes<br>
+      👉 <strong>Pro</strong> pour prévisions professionnelles<br>
+      👉 <strong>Pro+</strong> Cockpit NASA complet 🚀
+    </p>
+    <a href="premium.html" class="btn">Passer Premium</a>
+    <a href="pro.html" class="btn">Passer Pro</a>
+    <a href="proplus.html" class="btn highlight">Découvrir Pro+</a>
+  </section>
 
-  <footer class="footer">
-    <p>© 2025 TinsFlash – La météo qui fait grincer la NASA 🚀</p>
+  <!-- === Footer === -->
+  <footer>
+    <p>🚀 TINSFLASH 2025 – Données IA.J.E.A.N + satellites</p>
   </footer>
+
 </body>
 </html>
