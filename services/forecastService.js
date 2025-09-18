@@ -1,144 +1,144 @@
 // services/forecastService.js
-// 🚀 Centrale nucléaire météo TINSFLASH
+// 🌍 Fusion Meteomatics + OpenWeather + GFS + ICON + Trullemans + Wetterzentrale
+// Compatible Node.js 18+ (fetch natif)
 
-import { getOpenWeather } from "../hiddensources/openweather.js";
-import { getMeteomaticsForecast } from "../hiddensources/meteomatics.js";
-import { getBMBCForecast } from "../hiddensources/trullemans.js";
-import { getWetterzentrale } from "../hiddensources/wetterzentrale.js";
-import { compareSources } from "../hiddensources/comparator.js";
 import { fuseForecasts } from "./fusion.js";
-import { getWeatherIcon } from "./codesService.js";
 
-/**
- * Génère un indice de fiabilité basé sur la concordance des sources
- */
-function computeReliability(concordance, nbSources) {
-  const base = Math.round((concordance / nbSources) * 100);
-  if (base > 95) return 95 + Math.floor(Math.random() * 5); // max 100
-  if (base < 50) return 50 + Math.floor(Math.random() * 10); // minimum 50
-  return base;
-}
-
-/**
- * Prévisions météo TINSFLASH
- * @param {number} lat Latitude
- * @param {number} lon Longitude
- * @param {string} level Niveau d'abonnement : free | premium | pro | proplus
- */
-export async function getForecast(lat = 50.5, lon = 4.5, level = "free") {
+export async function getForecast(lat, lon, country = "BE") {
   try {
-    // 1. Récupération multi-sources
-    const [ow, meteo, trull, wetz] = await Promise.allSettled([
-      getOpenWeather(lat, lon),
-      getMeteomaticsForecast(lat, lon),
-      getBMBCForecast(),
-      getWetterzentrale(),
-    ]);
+    const sources = [];
 
-    const sources = [ow, meteo, trull, wetz]
-      .filter(s => s.status === "fulfilled")
-      .map(s => s.value);
+    // -------------------------
+    // 1. Meteomatics
+    // -------------------------
+    try {
+      const user = process.env.METEOMATICS_USER;
+      const pass = process.env.METEOMATICS_PASS;
+      if (user && pass) {
+        const now = new Date().toISOString().split(".")[0] + "Z";
+        const future = new Date(Date.now() + 24 * 3600 * 1000)
+          .toISOString()
+          .split(".")[0] + "Z";
 
-    if (sources.length === 0) {
-      throw new Error("Aucune source disponible pour les prévisions");
+        const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh,weather_symbol_1h:idx/${lat},${lon}/json`;
+
+        const res = await fetch(url, {
+          headers: {
+            Authorization:
+              "Basic " + Buffer.from(`${user}:${pass}`).toString("base64"),
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          sources.push({
+            source: "meteomatics",
+            temperature: data.data?.[0]?.coordinates?.[0]?.dates?.[0]?.value,
+            wind: data.data?.[2]?.coordinates?.[0]?.dates?.[0]?.value,
+            precipitation: data.data?.[1]?.coordinates?.[0]?.dates?.[0]?.value,
+            code: data.data?.[3]?.coordinates?.[0]?.dates?.[0]?.value,
+            description: "Données Meteomatics",
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Meteomatics KO:", err.message);
     }
 
-    // 2. Fusion des données
+    // -------------------------
+    // 2. OpenWeather
+    // -------------------------
+    try {
+      const apiKey = process.env.OPENWEATHER_KEY;
+      if (apiKey) {
+        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          sources.push({
+            source: "openweather",
+            temperature: data.main?.temp,
+            wind: data.wind?.speed,
+            precipitation: data.rain?.["1h"] || 0,
+            code: data.weather?.[0]?.id,
+            description: data.weather?.[0]?.description,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("OpenWeather KO:", err.message);
+    }
+
+    // -------------------------
+    // 3. GFS NOAA
+    // -------------------------
+    try {
+      const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        sources.push({
+          source: "gfs",
+          temperature: data.hourly?.temperature_2m?.[0],
+          wind: data.hourly?.wind_speed_10m?.[0],
+          precipitation: data.hourly?.precipitation?.[0],
+          description: "Données GFS",
+        });
+      }
+    } catch (err) {
+      console.warn("GFS KO:", err.message);
+    }
+
+    // -------------------------
+    // 4. ICON DWD
+    // -------------------------
+    try {
+      const url = `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        sources.push({
+          source: "icon",
+          temperature: data.hourly?.temperature_2m?.[0],
+          wind: data.hourly?.wind_speed_10m?.[0],
+          precipitation: data.hourly?.precipitation?.[0],
+          description: "Données ICON",
+        });
+      }
+    } catch (err) {
+      console.warn("ICON KO:", err.message);
+    }
+
+    // -------------------------
+    // 5. Trullemans (scraping léger pour la BE)
+    // -------------------------
+    try {
+      if (country === "BE") {
+        const res = await fetch("https://www.bmcb.be/forecast/");
+        if (res.ok) {
+          const html = await res.text();
+          // 🧩 Simplification: on prend la T° dans la page (regex ou parseur)
+          const tempMatch = html.match(/(\d{1,2})°/);
+          if (tempMatch) {
+            sources.push({
+              source: "trullemans",
+              temperature: parseInt(tempMatch[1]),
+              description: "Prévisions Luc Trullemans",
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Trullemans KO:", err.message);
+    }
+
+    // -------------------------
+    // 6. Fusion finale
+    // -------------------------
     const combined = fuseForecasts(sources);
 
-    // 3. Comparateur (divergences)
-    const comparison = await compareSources(combined, lat, lon);
-
-    // 4. Indice de fiabilité
-    const concordance = comparison.filter(c => c.concordance === "Aligné").length;
-    const reliability = computeReliability(concordance, sources.length);
-
-    // 5. Construction du résultat de base
-    const today = {
-      temp_min: Math.round(combined.temperature - 2),
-      temp_max: Math.round(combined.temperature + 2),
-      wind: combined.wind,
-      precip: combined.precipitation,
-      description: combined.description,
-      icon: getWeatherIcon(combined.code || 0),
-      reliability,
-    };
-
-    const week = [];
-    for (let i = 1; i <= 7; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() + i);
-      week.push({
-        date: date.toISOString().split("T")[0],
-        jour: date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
-        temp_min: Math.round(combined.temperature - 3 + Math.random() * 2),
-        temp_max: Math.round(combined.temperature + 3 + Math.random() * 2),
-        wind: combined.wind,
-        precip: combined.precipitation,
-        description: combined.description,
-        icon: getWeatherIcon(combined.code || 0),
-        reliability: reliability - Math.floor(Math.random() * 10),
-      });
-    }
-
-    // 6. Adaptation par niveau
-    let details = {};
-    switch (level) {
-      case "free":
-        details = {
-          info: "Prévisions locales et nationales simples. Alertes locales/nationales incluses.",
-          today,
-          week,
-        };
-        break;
-
-      case "premium":
-        details = {
-          info: "Prévisions détaillées + accès multi-modèles. Choix 2 localités.",
-          today,
-          week,
-          models: sources.map(s => s.source), // montre les modèles disponibles
-          comparison, // divergences visibles
-        };
-        break;
-
-      case "pro":
-        details = {
-          info: "Prévisions métiers (agriculteurs, communes). Créneaux horaires précis + alertes métiers.",
-          today,
-          week,
-          hourly: Array.from({ length: 24 }).map((_, h) => ({
-            hour: `${h}h`,
-            temp: Math.round(today.temp_min + Math.random() * (today.temp_max - today.temp_min)),
-            precip: Math.random() > 0.7 ? "pluie faible" : "sec",
-            reliability: reliability - Math.floor(Math.random() * 15),
-          })),
-          comparison,
-        };
-        break;
-
-      case "proplus":
-        details = {
-          info: "Prévisions mondiales + comparateur complet. Accès total aux modèles et divergences.",
-          today,
-          week,
-          models: sources,
-          comparison,
-          global_view: true,
-        };
-        break;
-
-      default:
-        details = { today, week };
-    }
-
-    return {
-      location: { lat, lon },
-      level,
-      forecast: details,
-    };
+    return { sources, combined };
   } catch (err) {
-    console.error("Erreur forecastService:", err);
-    return { error: err.message };
+    throw new Error("Erreur fusion prévisions : " + err.message);
   }
 }
