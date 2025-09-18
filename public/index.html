@@ -6,8 +6,12 @@
   <title>TINSFLASH – La météo 1000% réelle</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="loader.css">
+  <link rel="stylesheet" href="radar.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script defer src="app.js"></script>
   <script defer src="loader.js"></script>
+  <script defer src="radar.js"></script>
 </head>
 <body>
   <!-- 🎬 Intro vidéo -->
@@ -32,46 +36,45 @@
   </header>
 
   <main>
-    <!-- Prévisions locales -->
-    <section class="panel">
-      <h2>📍 Prévisions Locales</h2>
+    <!-- 📍 Prévisions locales -->
+    <section class="forecast-section">
+      <h2>📍 Prévisions locales</h2>
       <div id="local-loader" class="loader-container"></div>
-      <div id="local-forecast"></div>
+      <div id="local-content" class="forecast-box neon-card"></div>
     </section>
 
-    <!-- Prévisions nationales -->
-    <section class="panel">
-      <h2>🌍 Prévisions Nationales</h2>
+    <!-- 🌍 Prévisions nationales -->
+    <section class="forecast-section">
+      <h2>🌍 Prévisions nationales</h2>
       <div id="national-loader" class="loader-container"></div>
-      <div id="national-forecast"></div>
+      <div id="national-content" class="forecast-box neon-card"></div>
     </section>
 
-    <!-- Prévisions 7 jours -->
-    <section class="panel">
-      <h2>📅 Prévisions 7 jours</h2>
+    <!-- 📅 Prévisions 7 jours -->
+    <section class="forecast-section">
+      <h2>📅 Prévisions sur 7 jours</h2>
       <div id="days-loader" class="loader-container"></div>
-      <div id="seven-days"></div>
+      <div id="days-container" class="days-grid"></div>
     </section>
 
-    <!-- Radar -->
-    <section class="panel">
-      <h2>🛰️ Radar Pluie/Neige/Vent</h2>
-      <div id="radar-loader" class="loader-container"></div>
-      <div id="radar"></div>
+    <!-- 🛰️ Radar météo mondial -->
+    <section class="forecast-section">
+      <h2>🌍 Radar météo mondial</h2>
+      <div id="radar-content"></div>
     </section>
 
-    <!-- Alertes -->
-    <section class="panel">
+    <!-- ⚠️ Alertes -->
+    <section class="forecast-section">
       <h2>⚠️ Alertes</h2>
       <div id="alerts-loader" class="loader-container"></div>
-      <div id="alerts"></div>
+      <div id="alerts" class="forecast-box neon-card"></div>
     </section>
 
-    <!-- Podcasts -->
-    <section class="panel">
+    <!-- 🎙️ Podcasts -->
+    <section class="forecast-section">
       <h2>🎙️ Podcasts</h2>
       <div id="podcasts-loader" class="loader-container"></div>
-      <div id="podcasts"></div>
+      <div id="podcasts" class="forecast-box neon-card"></div>
     </section>
   </main>
 
@@ -109,7 +112,6 @@
       startLoader("local-loader", () => loadLocalForecast());
       startLoader("national-loader", () => loadNationalForecast("BE"));
       startLoader("days-loader", () => loadSevenDays());
-      startLoader("radar-loader", () => loadRadar());
       startLoader("alerts-loader", () => loadAlerts());
       startLoader("podcasts-loader", () => loadPodcasts());
     });
