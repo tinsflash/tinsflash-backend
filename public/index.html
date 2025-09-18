@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TinsFlash Météo</title>
+  <title>TINSFLASH – La météo 1000% réelle</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
 </head>
 <body>
-  <!-- 🎬 Vidéo Intro -->
+  <!-- 🎬 Intro vidéo -->
   <section class="intro-video">
     <video autoplay muted playsinline id="intro-jean">
       <source src="intro-jean.mp4" type="video/mp4">
@@ -17,67 +17,83 @@
     <div class="intro-overlay">
       <h1>🌍 TINSFLASH</h1>
       <p>La météo 1000% réelle, fonctionnelle et connectée</p>
-      <button onclick="document.getElementById('intro-jean').pause();document.querySelector('.intro-video').style.display='none';">
-        ⏭️ Passer l’intro
-      </button>
+      <div class="intro-buttons">
+        <button onclick="toggleSound()" id="sound-btn">🔊 Activer le son</button>
+        <button onclick="skipIntro()">⏭️ Passer l’intro</button>
+      </div>
     </div>
   </section>
 
-  <!-- 🔝 Navbar -->
-  <header class="navbar">
-    <div class="logo">🌩️ TinsFlash</div>
-    <nav>
-      <a href="index.html" class="active">Accueil</a>
-      <a href="premium.html">Premium</a>
-      <a href="pro.html">Pro</a>
-      <a href="proplus.html">Pro+</a>
-      <a href="cockpit.html">Cockpit</a>
-      <a href="account.html">Mon Compte</a>
-      <a href="admin-pp.html" class="admin-link">Admin</a>
-    </nav>
+  <!-- 🌤️ Contenu principal -->
+  <header>
+    <h1>Prévisions Météo TINSFLASH</h1>
   </header>
 
-  <!-- 📊 Contenu météo -->
-  <main class="container">
-    <section class="card">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-content">⏳ Chargement...</div>
+  <main>
+    <!-- Prévisions locales -->
+    <section class="panel">
+      <h2>📍 Prévisions Locales</h2>
+      <div id="local-forecast">⏳ Chargement...</div>
     </section>
 
-    <section class="card">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-content">⏳ Chargement...</div>
+    <!-- Prévisions nationales -->
+    <section class="panel">
+      <h2>🌍 Prévisions Nationales</h2>
+      <div id="national-forecast">⏳ Chargement...</div>
     </section>
 
-    <section class="card wide">
+    <!-- Prévisions 7 jours -->
+    <section class="panel">
       <h2>📅 Prévisions 7 jours</h2>
-      <div id="days-container" class="days-grid">⏳ Chargement...</div>
+      <div id="seven-days">⏳ Chargement...</div>
     </section>
 
-    <section class="card">
-      <h2>🛰️ Radar en temps réel</h2>
-      <div id="radar-content">⏳ Chargement radar...</div>
+    <!-- Radar -->
+    <section class="panel">
+      <h2>🛰️ Radar Pluie/Neige/Vent</h2>
+      <div id="radar">⏳ Chargement radar...</div>
     </section>
 
-    <section class="card">
-      <h2>⚠️ Alertes Météo Mondiales</h2>
-      <div id="alerts-local"></div>
-      <div id="alerts-world"></div>
+    <!-- Alertes -->
+    <section class="panel">
+      <h2>⚠️ Alertes</h2>
+      <div id="alerts">⏳ Chargement alertes...</div>
     </section>
 
-    <section class="card ai-card">
-      <h2>🤖 IA J.E.A.N.</h2>
-      <div id="ai-chat">
-        <textarea id="ai-input" placeholder="Posez une question météo..."></textarea>
-        <button id="ai-send">Envoyer</button>
-      </div>
-      <div id="ai-response"></div>
+    <!-- Podcasts -->
+    <section class="panel">
+      <h2>🎙️ Podcasts</h2>
+      <div id="podcasts">⏳ Chargement podcasts...</div>
     </section>
   </main>
 
-  <!-- 📩 Footer -->
-  <footer class="footer">
-    <p>© 2025 TinsFlash – La météo qui fait grincer la NASA 🚀</p>
+  <!-- Bandeau pub -->
+  <aside class="ads">
+    <p>[ Google Ads ici ]</p>
+  </aside>
+
+  <footer>
+    <p>🚀 TINSFLASH 2025 – La machine météo mondiale</p>
   </footer>
+
+  <script>
+    function toggleSound() {
+      const video = document.getElementById("intro-jean");
+      const btn = document.getElementById("sound-btn");
+      if (video.muted) {
+        video.muted = false;
+        btn.textContent = "🔇 Couper le son";
+      } else {
+        video.muted = true;
+        btn.textContent = "🔊 Activer le son";
+      }
+    }
+
+    function skipIntro() {
+      const video = document.getElementById("intro-jean");
+      video.pause();
+      document.querySelector(".intro-video").style.display = "none";
+    }
+  </script>
 </body>
 </html>
