@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // fichiers frontend
+app.use(express.static("public")); // pour les fichiers frontend
 
 // -------------------------
 // ROUTES API
@@ -34,18 +34,18 @@ app.get("/", (req, res) => {
 // ✅ Prévisions locales
 app.get("/api/forecast/local", async (req, res) => {
   try {
-    const { lat, lon } = req.query;
+    const { lat, lon, country } = req.query;
     if (!lat || !lon) {
       return res.status(400).json({ error: "Latitude et longitude requises" });
     }
-    const forecast = await getForecast(lat, lon);
+    const forecast = await getForecast(lat, lon, country || "BE");
     res.json(forecast);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ Prévisions nationales (par pays)
+// ✅ Prévisions nationales
 app.get("/api/forecast/national", async (req, res) => {
   try {
     const { country } = req.query;
@@ -54,7 +54,7 @@ app.get("/api/forecast/national", async (req, res) => {
     if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 }; // Paris
     if (country === "US") coords = { lat: 38.9072, lon: -77.0369 }; // Washington
 
-    const forecast = await getForecast(coords.lat, coords.lon);
+    const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
     res.json(forecast);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -64,11 +64,11 @@ app.get("/api/forecast/national", async (req, res) => {
 // ✅ Prévisions 7 jours
 app.get("/api/forecast/7days", async (req, res) => {
   try {
-    const { lat, lon } = req.query;
+    const { lat, lon, country } = req.query;
     if (!lat || !lon) {
       return res.status(400).json({ error: "Latitude et longitude requises" });
     }
-    const forecast = await getForecast(lat, lon);
+    const forecast = await getForecast(lat, lon, country || "BE");
 
     const now = new Date();
     const days = [];
@@ -84,18 +84,19 @@ app.get("/api/forecast/7days", async (req, res) => {
           day: "numeric",
           month: "long",
         }),
-        temperature_min: Math.round(forecast.combined.temperature - (2 + Math.random() * 2)),
-        temperature_max: Math.round(forecast.combined.temperature + (2 + Math.random() * 2)),
+        temperature_min: forecast.combined.temperature_min,
+        temperature_max: forecast.combined.temperature_max,
         vent: forecast.combined.wind,
         precipitation: forecast.combined.precipitation,
         description: forecast.combined.description,
-        reliability: forecast.combined.reliability,
+        fiabilité: forecast.combined.reliability,
+        anomalie: forecast.combined.anomaly?.message || "Normale",
         icone: getWeatherIcon(forecast.combined.code || 0),
       });
     }
 
     res.json({
-      source: "TINSFLASH IA + modèles",
+      source: "TINSFLASH IA + multi-modèles",
       reliability: forecast.combined.reliability,
       days,
     });
@@ -114,15 +115,10 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Radar (pluie/neige/vent, lisible avec fond carte)
+// ✅ Radar
 app.get("/api/radar", (req, res) => {
-  try {
-    const { type = "precipitation_new" } = req.query;
-    const radarUrl = `https://tile.openweathermap.org/map/${type}/4/8/5.png?appid=${process.env.OPENWEATHER_KEY}`;
-    res.json({ radarUrl });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const radarUrl = `https://tile.openweathermap.org/map/precipitation_new/4/8/5.png?appid=${process.env.OPENWEATHER_KEY}`;
+  res.json({ radarUrl });
 });
 
 // ✅ Podcasts météo
@@ -151,7 +147,7 @@ app.get("/api/codes/generate", (req, res) => {
   }
 });
 
-// ✅ Icône météo seule (utile pour tests front)
+// ✅ Icône météo seule (debug frontend)
 app.get("/api/weather/icon", (req, res) => {
   try {
     const { code } = req.query;
