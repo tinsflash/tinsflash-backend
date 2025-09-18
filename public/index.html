@@ -1,105 +1,139 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH – Machine météo</title>
-  <link rel="stylesheet" href="style.css">
-  <script defer src="ui.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TINSFLASH – La Machine de Guerre Météo</title>
+  <link rel="stylesheet" href="style.css" />
   <script defer src="app.js"></script>
 </head>
 <body>
-
-  <!-- 🎬 Hero Section avec intro vidéo -->
-  <section class="hero">
-    <video autoplay muted loop playsinline id="introVideo">
-      <source src="intro-jean.mp4" type="video/mp4">
+  <!-- =============================== -->
+  <!-- 🎬 INTRO VIDEO -->
+  <!-- =============================== -->
+  <div id="intro-overlay">
+    <video id="intro-video" autoplay muted>
+      <source src="intro-jean.mp4" type="video/mp4" />
       Votre navigateur ne supporte pas la vidéo.
     </video>
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <h1>🚀 Bienvenue sur <span>TINSFLASH</span></h1>
-      <p>La machine de guerre météo la plus précise au monde</p>
-      <div class="hero-buttons">
-        <button id="skipIntro">➡️ Entrer</button>
-        <button id="muteToggle">🔇</button>
-      </div>
+    <div class="intro-controls">
+      <button onclick="skipIntro()">⏭ Passer</button>
+      <button onclick="togglePause()">⏯ Pause</button>
+    </div>
+  </div>
+
+  <!-- =============================== -->
+  <!-- HEADER -->
+  <!-- =============================== -->
+  <header class="site-header">
+    <h1>🌍 TINSFLASH</h1>
+    <p>⚡ La météo 1000% réelle, fonctionnelle et connectée</p>
+  </header>
+
+  <!-- =============================== -->
+  <!-- PUBLICITÉ -->
+  <!-- =============================== -->
+  <section class="ads">
+    <p>— Publicité —</p>
+    <div id="ad-slot">
+      <img src="https://via.placeholder.com/728x90?text=Google+Ads" alt="Publicité" />
     </div>
   </section>
 
-  <!-- === Barre pub Google Ads === -->
-  <section class="ads-banner">
-    <!-- Exemple Google Ads -->
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-xxxxxxxxxx"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  <!-- =============================== -->
+  <!-- PRÉVISIONS LOCALES -->
+  <!-- =============================== -->
+  <section class="section">
+    <h2>📍 Prévisions Locales</h2>
+    <div id="local-forecast">⏳ Chargement...</div>
   </section>
 
-  <!-- === Prévisions Locales === -->
-  <section class="block" id="local-weather">
-    <h2>📍 Météo Locale</h2>
-    <div class="card weather-card">
-      <div id="local-forecast">⏳ Chargement...</div>
-    </div>
+  <!-- =============================== -->
+  <!-- PRÉVISIONS NATIONALES -->
+  <!-- =============================== -->
+  <section class="section">
+    <h2>🏳️ Prévisions Nationales</h2>
+    <div id="national-forecast">⏳ Chargement...</div>
   </section>
 
-  <!-- === Prévisions Nationales === -->
-  <section class="block" id="national-weather">
-    <h2>🌍 Météo Nationale</h2>
-    <div class="card">
-      <div id="national-forecast">⏳ Chargement...</div>
-    </div>
+  <!-- =============================== -->
+  <!-- PRÉVISIONS 7 JOURS -->
+  <!-- =============================== -->
+  <section class="section">
+    <h2>📅 Prévisions 7 Jours</h2>
+    <div id="forecast-7days">⏳ Chargement...</div>
   </section>
 
-  <!-- === Prévisions 7 jours === -->
-  <section class="block" id="weekly-weather">
-    <h2>📅 Prévisions 7 jours</h2>
-    <div class="forecast-grid" id="forecast-7days">
-      ⏳ Chargement...
-    </div>
+  <!-- =============================== -->
+  <!-- RADAR -->
+  <!-- =============================== -->
+  <section class="section">
+    <h2>🛰️ Radar Temps Réel</h2>
+    <div id="radar">⏳ Chargement...</div>
   </section>
 
-  <!-- === Radar météo === -->
-  <section class="block" id="radar">
-    <h2>🛰️ Radar météo</h2>
-    <div class="card radar-card">
-      <div id="radar-map">⏳ Chargement...</div>
-    </div>
-  </section>
-
-  <!-- === Alertes météo === -->
-  <section class="block" id="alerts">
+  <!-- =============================== -->
+  <!-- ALERTES -->
+  <!-- =============================== -->
+  <section class="section">
     <h2>⚠️ Alertes Météo</h2>
-    <div id="alerts-list" class="alerts-container">⏳ Chargement...</div>
+    <div id="alerts">⏳ Chargement...</div>
   </section>
 
-  <!-- === Podcasts météo === -->
-  <section class="block" id="podcasts">
-    <h2>🎧 Podcasts</h2>
-    <div id="podcast-list">⏳ Chargement...</div>
+  <!-- =============================== -->
+  <!-- PODCASTS -->
+  <!-- =============================== -->
+  <section class="section">
+    <h2>🎙️ Podcasts Météo</h2>
+    <div id="podcasts">⏳ Chargement...</div>
   </section>
 
-  <!-- === CTA vers Premium === -->
-  <section class="cta">
-    <h3>🔑 Débloquez plus de puissance météo</h3>
+  <!-- =============================== -->
+  <!-- CHAT IA J.E.A.N -->
+  <!-- =============================== -->
+  <section class="section">
+    <h2>🤖 Chat IA J.E.A.N</h2>
+    <div id="chat-box">
+      <input id="chat-input" type="text" placeholder="Posez votre question météo..." />
+      <button onclick="chatWithJean()">Envoyer</button>
+      <div id="chat-output"></div>
+    </div>
+  </section>
+
+  <!-- =============================== -->
+  <!-- FOOTER -->
+  <!-- =============================== -->
+  <footer class="site-footer">
+    <p>🚀 TINSFLASH 2025 – La météo du futur</p>
     <p>
-      👉 <strong>Premium</strong> pour 2 localisations et alertes<br>
-      👉 <strong>Pro</strong> pour prévisions professionnelles<br>
-      👉 <strong>Pro+</strong> Cockpit NASA complet 🚀
+      <a href="premium.html">Premium</a> |
+      <a href="pro.html">Pro</a> |
+      <a href="proplus.html">Pro+</a> |
+      <a href="account.html">Mon compte</a>
     </p>
-    <a href="premium.html" class="btn">Passer Premium</a>
-    <a href="pro.html" class="btn">Passer Pro</a>
-    <a href="proplus.html" class="btn highlight">Découvrir Pro+</a>
-  </section>
-
-  <!-- === Footer === -->
-  <footer>
-    <p>🚀 TINSFLASH 2025 – Données IA.J.E.A.N + satellites</p>
   </footer>
 
+  <script>
+    // 🎬 Gestion vidéo intro
+    const introOverlay = document.getElementById("intro-overlay");
+    const introVideo = document.getElementById("intro-video");
+
+    function skipIntro() {
+      introOverlay.style.display = "none";
+      introVideo.pause();
+    }
+
+    function togglePause() {
+      if (introVideo.paused) {
+        introVideo.play();
+      } else {
+        introVideo.pause();
+      }
+    }
+
+    introVideo.addEventListener("ended", () => {
+      introOverlay.style.display = "none";
+    });
+  </script>
 </body>
 </html>
