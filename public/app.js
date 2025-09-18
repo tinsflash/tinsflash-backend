@@ -35,50 +35,97 @@ async function loadLocalForecast() {
   });
 }
 
-// ===============================
-// PRÉVISIONS NATIONALES
-// ===============================
-async function loadNationalForecast(country = "BE") {
-  try {
-    const res = await fetch(`${API_BASE}/forecast/national?country=${country}`);
-    const data = await res.json();
+const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
-    document.getElementById("national-forecast").innerHTML = `
-      <div class="card weather-card">
-        <span>🏳️ ${country}</span>
-        <span>🌡️ ${data.combined.temperature}°C</span>
-        <span>${data.combined.description}</span>
-      </div>`;
-  } catch (err) {
-    console.error("Erreur forecast national:", err);
+// -------------------------
+// Prévisions locales
+// -------------------------
+async function loadLocalForecast() {
+  const c = document.getElementById("local-content");
+  c.innerHTML = "⏳ Chargement...";
+  try {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const res = await fetch(`${API_BASE}/forecast/local?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+      const data = await res.json();
+      const f = data.combined;
+
+      c.innerHTML = `
+        <strong>📍 Votre position</strong><br>
+        ${f.description} ${f.temperature}°C <br>
+        🌡️ Min: ${f.temperature_min}°C / Max: ${f.temperature_max}°C <br>
+        🔒 Fiabilité: ${f.reliability}% <br>
+        ⚠️ ${f.anomaly?.message || "Conditions normales"} <br>
+        ${f.icone || ""}
+      `;
+    });
+  } catch {
+    c.innerHTML = "❌ Erreur prévisions locales";
   }
 }
 
-// ===============================
-// PRÉVISIONS 7 JOURS
-// ===============================
-async function loadSevenDays(lat = 50.85, lon = 4.35) {
+// -------------------------
+// Prévisions nationales
+// -------------------------
+async function loadNationalForecast() {
+  const c = document.getElementById("national-content");
+  c.innerHTML = "⏳ Chargement...";
   try {
-    const res = await fetch(`${API_BASE}/forecast/7days?lat=${lat}&lon=${lon}`);
+    const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
     const data = await res.json();
+    const f = data.combined;
 
-    const daysHTML = data.days
-      .map(
-        (d) => `
-        <div>
-          <h4>${d.jour}</h4>
-          <p>${d.temperature_min}°C - ${d.temperature_max}°C</p>
-          <p>${d.icone} ${d.description}</p>
-        </div>`
-      )
-      .join("");
-
-    document.getElementById("forecast-7days").innerHTML = `
-      <div class="forecast-grid">${daysHTML}</div>`;
-  } catch (err) {
-    console.error("Erreur forecast 7j:", err);
+    c.innerHTML = `
+      <strong>🇧🇪 Prévisions nationales</strong><br>
+      ${f.description} ${f.temperature}°C <br>
+      🌡️ Min: ${f.temperature_min}°C / Max: ${f.temperature_max}°C <br>
+      🔒 Fiabilité: ${f.reliability}% <br>
+      ⚠️ ${f.anomaly?.message || "Conditions normales"} <br>
+      ${f.icone || ""}
+    `;
+  } catch {
+    c.innerHTML = "❌ Erreur prévisions nationales";
   }
 }
+
+// -------------------------
+// Prévisions 7 jours
+// -------------------------
+async function load7Days() {
+  const c = document.getElementById("days-container");
+  c.innerHTML = "⏳ Chargement...";
+  try {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const res = await fetch(`${API_BASE}/forecast/7days?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+      const data = await res.json();
+      c.innerHTML = "";
+
+      data.days.forEach(d => {
+        c.innerHTML += `
+          <div class="day-card">
+            <strong>${d.jour}</strong><br>
+            ${d.icone} ${d.description}<br>
+            🌡️ Min: ${d.temperature_min}°C / Max: ${d.temperature_max}°C <br>
+            💨 Vent: ${d.vent} km/h <br>
+            🌧️ Pluie: ${d.precipitation} mm <br>
+            🔒 Fiabilité: ${d.fiabilité}% <br>
+            ⚠️ ${d.anomalie}
+          </div>
+        `;
+      });
+    });
+  } catch {
+    c.innerHTML = "❌ Erreur prévisions 7 jours";
+  }
+}
+
+// -------------------------
+// Lancement auto
+// -------------------------
+window.onload = () => {
+  if (document.getElementById("local-content")) loadLocalForecast();
+  if (document.getElementById("national-content")) loadNationalForecast();
+  if (document.getElementById("days-container")) load7Days();
+};
 
 // ===============================
 // RADAR
