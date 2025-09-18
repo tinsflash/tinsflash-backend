@@ -6,43 +6,45 @@
   <title>TinsFlash Premium</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
+  <script defer src="ui.js"></script>
+  <script defer src="animations.js"></script>
 </head>
 <body>
   <header class="navbar premium">
     <div class="logo">🌟 TinsFlash Premium</div>
-    <button class="cockpit-btn" onclick="switchToCockpit()">🛰️ Mode Cockpit</button>
+    <button class="cockpit-btn">🛰️ Mode Cockpit</button>
   </header>
 
   <main class="container">
-    <!-- 🌍 Prévisions Premium -->
     <section class="card premium-card">
       <h2>🌍 Prévisions Premium</h2>
-      <div id="premium-forecast">⏳ Chargement des prévisions avancées...</div>
+      <div id="premium-forecast">⏳</div>
     </section>
 
-    <!-- 🔧 Outils météo -->
     <section class="card premium-card">
       <h2>🔧 Outils météo avancés</h2>
       <ul>
-        <li>Prévisions multi-localisations</li>
+        <li>Deux localisations (Maison + Vacances)</li>
         <li>Anomalies saisonnières</li>
-        <li>Vents détaillés par altitude</li>
-        <li>Comparaison des modèles météo</li>
+        <li>Comparaison modèles météo</li>
       </ul>
     </section>
 
-    <!-- 🎙️ Podcast Premium -->
     <section class="card premium-card">
-      <h2>🎙️ Podcast Premium</h2>
-      <div id="podcast-status">⏳ Chargement du podcast...</div>
+      <h2>🎙️ Podcasts Premium</h2>
+      <div id="podcast-premium">⏳</div>
     </section>
 
-    <!-- 🤖 IA J.E.A.N. Premium -->
+    <section class="card premium-card">
+      <h2>⚠️ Tocsin météo</h2>
+      <p>Activez l’alarme avec un capteur connecté Amazon.</p>
+      <button class="cta-btn">Acheter un capteur</button>
+    </section>
+
     <section class="card premium-card">
       <h2>🤖 IA J.E.A.N. Premium</h2>
-      <p class="note">Analyse enrichie et détaillée réservée aux abonnés Premium</p>
       <div id="ai-chat-premium">
-        <textarea id="ai-input-premium" placeholder="Posez votre question météo..."></textarea>
+        <textarea id="ai-input-premium" placeholder="Analyse Premium..."></textarea>
         <button id="ai-send-premium">Envoyer</button>
       </div>
       <div id="ai-response-premium"></div>
@@ -50,16 +52,7 @@
   </main>
 
   <footer class="footer">
-    <p>© 2025 TinsFlash Premium – Le futur de la météo est déjà là 🌟</p>
+    <p>© 2025 TinsFlash Premium – Le futur de la météo 🌟</p>
   </footer>
-
-  <script>
-    function switchToCockpit() {
-      document.body.classList.add("transition-glitch");
-      setTimeout(() => {
-        window.location.href = "cockpit.html";
-      }, 800);
-    }
-  </script>
 </body>
 </html>
