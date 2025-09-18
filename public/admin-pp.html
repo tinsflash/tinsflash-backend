@@ -3,29 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH Console Admin</title>
+  <title>Admin TinsFlash</title>
   <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🔐 Console Admin TINSFLASH</h1>
+  <header class="navbar admin">
+    <div class="logo">🛠️ Console Admin</div>
+    <nav>
+      <a href="index.html">Accueil</a>
+      <a href="alerts.html">Alertes</a>
+      <a href="account.html">Comptes</a>
+    </nav>
   </header>
 
-  <section>
-    <h2>Gestion Podcasts</h2>
-    <button>Générer Podcast matin</button>
-    <button>Générer Podcast soir</button>
-  </section>
+  <main class="container">
+    <!-- ⚠️ Alertes -->
+    <section class="card admin-card wide">
+      <h2>⚠️ Alertes en attente (70–90%)</h2>
+      <div id="alerts-review">⏳</div>
+    </section>
 
-  <section>
-    <h2>Validation Alertes (70–90%)</h2>
-    <div id="alerts-admin">⏳ Chargement alertes...</div>
-  </section>
+    <section class="card admin-card wide">
+      <h2>⚡ Alertes validées (≥ 90%)</h2>
+      <div id="alerts-validated">⏳</div>
+    </section>
 
-  <section>
-    <h2>Codes promo</h2>
-    <button>Créer code Premium 10j</button>
-    <button>Créer code Pro+ 30j</button>
-  </section>
+    <!-- 🎙️ Podcasts -->
+    <section class="card admin-card">
+      <h2>🎙️ Gestion des Podcasts</h2>
+      <button class="cta-btn">Générer un podcast</button>
+      <div id="admin-podcasts">⏳</div>
+    </section>
+
+    <!-- 🎟️ Codes Promo -->
+    <section class="card admin-card">
+      <h2>🎟️ Codes Promo</h2>
+      <button class="cta-btn">Générer code Premium</button>
+      <button class="cta-btn">Générer code Pro</button>
+      <button class="cta-btn">Générer code Pro+</button>
+      <div id="admin-codes">⏳</div>
+    </section>
+
+    <!-- 👤 Utilisateurs -->
+    <section class="card admin-card wide">
+      <h2>👤 Supervision des abonnements</h2>
+      <div id="admin-users">⏳</div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 TinsFlash – Console Admin Secrète</p>
+  </footer>
 </body>
 </html>
