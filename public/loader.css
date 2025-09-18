@@ -18,21 +18,32 @@
   border-radius: 6px;
   overflow: hidden;
   margin-top: 10px;
+  position: relative;
 }
 
 .loader-progress {
   height: 100%;
-  width: 0;
+  width: 30%; /* taille du "segment lumineux" */
   background: linear-gradient(90deg, #00ffea, #00aaff);
-  animation: loading 5s linear forwards;
+  border-radius: 6px;
+  position: absolute;
+  left: -30%;
+  animation: slideProgress 2s linear infinite;
 }
 
-@keyframes loading {
-  0% { width: 0; }
-  100% { width: 100%; }
+@keyframes slideProgress {
+  0% { left: -30%; }
+  50% { left: 100%; }
+  100% { left: -30%; }
 }
 
 .loader-message {
   margin-top: 12px;
   font-size: 14px;
+  animation: pulseText 2s infinite;
+}
+
+@keyframes pulseText {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
