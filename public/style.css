@@ -1,9 +1,54 @@
-/* 🌐 Style Global */
+/* 🌍 Global */
 body {
   margin: 0;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  background: #0a0a1a;
-  color: #f1f1f1;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f0f4f8;
+  color: #222;
+  line-height: 1.6;
+}
+
+h1, h2 {
+  margin: 0 0 10px;
+  font-weight: bold;
+  color: #004466;
+}
+
+header {
+  background: linear-gradient(90deg, #0077b6, #00b4d8);
+  color: white;
+  text-align: center;
+  padding: 1rem;
+}
+
+main {
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.panel {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.ads {
+  margin: 1rem;
+  text-align: center;
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+footer {
+  background: #004466;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  margin-top: 1rem;
 }
 
 /* 🎬 Intro vidéo */
@@ -27,121 +72,33 @@ body {
   bottom: 20px;
   left: 20px;
   background: rgba(0,0,0,0.6);
-  padding: 12px 18px;
+  padding: 15px 20px;
   border-radius: 10px;
   color: #fff;
 }
 
 .intro-overlay h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
 }
 
-.intro-overlay button {
+.intro-buttons {
+  display: flex;
+  gap: 10px;
   margin-top: 10px;
-  padding: 6px 14px;
+}
+
+.intro-buttons button {
+  padding: 6px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 5px;
   background: #00d9ff;
   color: black;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: 0.2s;
 }
-.intro-overlay button:hover {
+
+.intro-buttons button:hover {
   background: #00aacc;
-}
-
-/* 🔝 Navbar */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  font-weight: bold;
-  background: linear-gradient(90deg, #0033cc, #000);
-  color: #fff;
-}
-
-.navbar .logo {
-  font-size: 1.3rem;
-}
-
-.navbar nav a {
-  margin: 0 0.8rem;
-  text-decoration: none;
-  color: #ddd;
-  transition: color 0.2s;
-}
-
-.navbar nav a:hover,
-.navbar nav a.active {
-  color: #fff;
-  text-decoration: underline;
-}
-
-.navbar.premium { background: linear-gradient(90deg, #c99200, #000); }
-.navbar.pro { background: linear-gradient(90deg, #007744, #000); }
-.navbar.proplus { background: linear-gradient(90deg, #cc0000, #000); }
-.navbar.account { background: linear-gradient(90deg, #555, #000); }
-
-/* 🃏 Cards */
-.container {
-  padding: 2rem;
-  display: grid;
-  gap: 1.5rem;
-}
-
-.card {
-  background: #12122b;
-  padding: 1.5rem;
-  border-radius: 15px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
-
-.card h2 {
-  margin-top: 0;
-  font-size: 1.3rem;
-  color: #00d9ff;
-}
-
-.card.wide {
-  grid-column: span 2;
-}
-
-.days-grid {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.day-card {
-  flex: 1 1 120px;
-  background: #1a1a3a;
-  padding: 0.8rem;
-  border-radius: 10px;
-  text-align: center;
-}
-
-/* 🛰️ Cockpit button */
-.cockpit-btn {
-  background: gold;
-  border: none;
-  padding: 0.6rem 1rem;
-  border-radius: 10px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.cockpit-btn:hover {
-  background: orange;
-}
-
-/* 📩 Footer */
-.footer {
-  text-align: center;
-  padding: 1rem;
-  margin-top: 2rem;
-  font-size: 0.9rem;
-  color: #999;
 }
