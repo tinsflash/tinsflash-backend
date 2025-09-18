@@ -3,32 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH Premium</title>
+  <title>TinsFlash Premium</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🌍 TINSFLASH Premium</h1>
-    <nav>
-      <a href="index.html">Accueil</a>
-      <a href="premium.html">Premium</a>
-      <a href="pro.html">Pro</a>
-      <a href="proplus.html">Pro+</a>
-      <a href="alerts.html">Alertes</a>
-      <a href="account.html">Mon compte</a>
-    </nav>
+  <header class="navbar premium">
+    <div class="logo">🌟 TinsFlash Premium</div>
+    <button class="cockpit-btn" onclick="switchToCockpit()">🛰️ Mode Cockpit</button>
   </header>
 
-  <section>
-    <h2>Prévisions Premium</h2>
-    <p>Accédez à deux localisations, au vent, aux anomalies saisonnières et au cockpit météo simplifié.</p>
-    <button id="toggle-cockpit">🛰️ Activer mode Cockpit</button>
-    <div id="premium-content">⏳ Chargement...</div>
-  </section>
+  <main class="container">
+    <!-- 🌍 Prévisions Premium -->
+    <section class="card premium-card">
+      <h2>🌍 Prévisions Premium</h2>
+      <div id="premium-forecast">⏳ Chargement des prévisions avancées...</div>
+    </section>
 
-  <footer>
-    <p>📢 Publicités légères pour Premium</p>
+    <!-- 🔧 Outils météo -->
+    <section class="card premium-card">
+      <h2>🔧 Outils météo avancés</h2>
+      <ul>
+        <li>Prévisions multi-localisations</li>
+        <li>Anomalies saisonnières</li>
+        <li>Vents détaillés par altitude</li>
+        <li>Comparaison des modèles météo</li>
+      </ul>
+    </section>
+
+    <!-- 🎙️ Podcast Premium -->
+    <section class="card premium-card">
+      <h2>🎙️ Podcast Premium</h2>
+      <div id="podcast-status">⏳ Chargement du podcast...</div>
+    </section>
+
+    <!-- 🤖 IA J.E.A.N. Premium -->
+    <section class="card premium-card">
+      <h2>🤖 IA J.E.A.N. Premium</h2>
+      <p class="note">Analyse enrichie et détaillée réservée aux abonnés Premium</p>
+      <div id="ai-chat-premium">
+        <textarea id="ai-input-premium" placeholder="Posez votre question météo..."></textarea>
+        <button id="ai-send-premium">Envoyer</button>
+      </div>
+      <div id="ai-response-premium"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 TinsFlash Premium – Le futur de la météo est déjà là 🌟</p>
   </footer>
+
+  <script>
+    function switchToCockpit() {
+      document.body.classList.add("transition-glitch");
+      setTimeout(() => {
+        window.location.href = "cockpit.html";
+      }, 800);
+    }
+  </script>
 </body>
 </html>
