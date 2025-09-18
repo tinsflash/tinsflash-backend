@@ -1,102 +1,201 @@
-/* 🌍 TINSFLASH Design */
-/* Global */
+/* 🌌 Fond global */
 body {
   margin: 0;
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  background: linear-gradient(to bottom, #0b1e39, #1a2f50);
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: #0a0a1a;
   color: #f1f1f1;
+  overflow-x: hidden;
+}
+
+/* === 🌌 Hero NASA === */
+.hero {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: url('https://images.unsplash.com/photo-1504384308090-c894fdcc538d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') no-repeat center center/cover;
+  overflow: hidden;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,20,0.6);
+  backdrop-filter: blur(2px);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
   text-align: center;
+  margin: auto;
+  color: #00ffea;
 }
 
-header {
-  background: #0d213a;
-  padding: 1rem;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+.hero h1 {
+  font-size: 3rem;
+  margin: 0 0 1rem 0;
+  text-shadow: 0 0 20px rgba(0,255,234,0.8);
+  font-family: "Orbitron", sans-serif;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 1.8rem;
+.hero p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
 }
 
-nav {
-  margin-top: 0.5rem;
+.hero-weather {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  color: #fff;
+  text-shadow: 0 0 15px #00ffea;
 }
 
-nav a {
-  margin: 0 10px;
-  color: #f1f1f1;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-nav a:hover {
-  color: #ffd700;
-}
-
-section {
-  margin: 2rem auto;
-  padding: 1.5rem;
-  max-width: 900px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-}
-
-h2 {
-  margin-bottom: 1rem;
-  color: #ffd700;
-}
-
-/* Cards */
-.day-card {
+.cta-btn {
   display: inline-block;
-  width: 120px;
-  padding: 10px;
-  margin: 5px;
-  background: rgba(255,255,255,0.08);
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(90deg, #00ffea, #0066ff);
+  border-radius: 30px;
+  color: black;
+  font-weight: bold;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.cta-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px #00ffea;
+}
+
+/* 🔝 Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  font-weight: bold;
+  background: rgba(0, 0, 20, 0.7);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  position: relative;
+  z-index: 3;
+}
+
+.navbar .logo {
+  font-size: 1.3rem;
+}
+
+.navbar nav a {
+  margin: 0 0.8rem;
+  text-decoration: none;
+  color: #ddd;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+.navbar nav a:hover,
+.navbar nav a.active {
+  color: #00ffea;
+  text-shadow: 0 0 10px #00ffea;
+}
+
+/* === 🃏 Cards === */
+.container {
+  padding: 2rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.card {
+  background: rgba(20, 20, 40, 0.9);
+  padding: 1.5rem;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(0,255,234,0.2);
+  border: 1px solid rgba(0,255,234,0.3);
+  animation: fadeIn 1s ease forwards;
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.3rem;
+  color: #00d9ff;
+}
+
+.card.wide {
+  grid-column: span 2;
+}
+
+.days-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.day-card {
+  flex: 1 1 120px;
+  background: #1a1a3a;
+  padding: 0.8rem;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  text-align: center;
+  border: 1px solid rgba(0,255,234,0.3);
 }
 
-.day-card strong {
-  display: block;
-  margin-bottom: 5px;
-  font-size: 1rem;
-}
-
-/* Radar */
-#radar-content img {
-  border: 2px solid #ffd700;
-  border-radius: 12px;
-  max-width: 100%;
-  height: auto;
-}
-
-/* Alertes */
-.alert {
-  margin: 10px auto;
-  padding: 10px;
+/* 🤖 AI Section */
+.ai-card textarea {
+  width: 100%;
+  height: 80px;
+  background: #0a0a1a;
+  border: 1px solid #00ffea;
   border-radius: 8px;
-  text-align: left;
-}
-.alert.orange { background: rgba(255,165,0,0.2); border-left: 4px solid orange; }
-.alert.red { background: rgba(255,0,0,0.2); border-left: 4px solid red; }
-.alert.green { background: rgba(0,255,0,0.2); border-left: 4px solid green; }
-
-/* Cockpit mode */
-.cockpit-active {
-  background: black !important;
-  color: #0f0 !important;
+  color: #fff;
+  padding: 0.5rem;
   font-family: monospace;
 }
 
-/* Footer */
-footer {
+.ai-card button {
+  margin-top: 0.5rem;
+  background: #00ffea;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: black;
+  font-weight: bold;
+}
+
+.ai-card button:hover {
+  background: #00aaff;
+}
+
+/* 📢 Pub */
+.ad-card {
+  border: 1px dashed #555;
+  text-align: center;
+  color: #999;
+}
+
+/* 🚀 Cockpit teaser */
+.cockpit-preview {
+  text-align: center;
+}
+
+.cockpit-preview p {
+  margin-bottom: 1rem;
+  color: #aaa;
+}
+
+/* 📩 Footer */
+.footer {
+  text-align: center;
   padding: 1rem;
   margin-top: 2rem;
-  background: #0d213a;
+  font-size: 0.9rem;
+  color: #999;
+  border-top: 1px solid rgba(0,255,234,0.2);
+}
+
+/* === ✨ Animations === */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
