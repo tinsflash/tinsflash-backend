@@ -3,35 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH Pro+</title>
+  <title>TinsFlash Pro+</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🌍 TINSFLASH Pro+</h1>
-    <nav>
-      <a href="index.html">Accueil</a>
-      <a href="premium.html">Premium</a>
-      <a href="pro.html">Pro</a>
-      <a href="proplus.html">Pro+</a>
-      <a href="alerts.html">Alertes</a>
-      <a href="account.html">Mon compte</a>
-    </nav>
+  <header class="navbar proplus">
+    <div class="logo">🚀 TinsFlash Pro+</div>
+    <button class="cockpit-btn" onclick="switchToCockpit()">🛰️ Accéder au Cockpit NASA</button>
   </header>
 
-  <section>
-    <h2>Pro+ Mode NASA</h2>
-    <p>
-      Outils scientifiques, cockpit complet, IA J.E.A.N au niveau expert.
-      Idéal pour l’aviation, TV, radio, services météorologiques internationaux.
-    </p>
-    <button id="toggle-cockpit">🛰️ Activer mode Cockpit NASA</button>
-    <div id="proplus-content">⏳ Chargement...</div>
-  </section>
+  <main class="container">
+    <!-- 🌍 Prévisions mondiales -->
+    <section class="card proplus-card">
+      <h2>🌍 Prévisions mondiales haute précision</h2>
+      <p>Fusion multi-modèles, données scientifiques avancées, anomalies globales.</p>
+      <div id="world-data">⏳ Chargement données mondiales...</div>
+    </section>
 
-  <footer>
-    <p>✅ Zéro pub, 100% science</p>
+    <!-- ✈️ Aviation & Spatial -->
+    <section class="card proplus-card">
+      <h2>✈️ Aviation & Spatial</h2>
+      <p>Données atmosphériques pour vols, fusées et satellites.</p>
+      <div id="aero-data">⏳ Chargement aviation/spatial...</div>
+    </section>
+
+    <!-- 🧠 IA scientifique -->
+    <section class="card proplus-card">
+      <h2>🧠 IA J.E.A.N. scientifique</h2>
+      <p>Analyses détaillées et complètes pour experts météo et climat.</p>
+      <div id="ai-scientific">⏳ Chargement analyses IA...</div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 TinsFlash Pro+ – Le cockpit météorologique ultime 🚀</p>
   </footer>
+
+  <script>
+    function switchToCockpit() {
+      document.body.classList.add("transition-glitch");
+      setTimeout(() => {
+        window.location.href = "cockpit.html";
+      }, 800);
+    }
+  </script>
 </body>
 </html>
