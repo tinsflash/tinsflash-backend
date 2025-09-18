@@ -6,46 +6,38 @@
   <title>TinsFlash Pro</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
+  <script defer src="ui.js"></script>
 </head>
 <body>
   <header class="navbar pro">
     <div class="logo">💼 TinsFlash Pro</div>
-    <button class="cockpit-btn" onclick="switchToCockpit()">🛰️ Mode Cockpit</button>
+    <button class="cockpit-btn">🛰️ Mode Cockpit</button>
   </header>
 
   <main class="container">
-    <!-- 🌾 Prévisions agricoles -->
     <section class="card pro-card">
-      <h2>🌾 Prévisions agricoles</h2>
-      <p>Données adaptées aux cultures : précipitations, ensoleillement, anomalies saisonnières.</p>
-      <div id="agri-data">⏳ Chargement données agricoles...</div>
+      <h2>❄️ Salage & Verglas</h2>
+      <div id="salage-data">⏳</div>
     </section>
 
-    <!-- 🏙️ Prévisions communales -->
     <section class="card pro-card">
-      <h2>🏙️ Prévisions communales</h2>
-      <p>Précisions locales : vent, neige, verglas, canicules, inondations.</p>
-      <div id="communal-data">⏳ Chargement données communales...</div>
+      <h2>🌱 Agriculture</h2>
+      <div id="agri-data">⏳</div>
     </section>
 
-    <!-- 📊 Tableaux de fiabilité -->
-    <section class="card pro-card wide">
-      <h2>📊 Indicateurs de fiabilité</h2>
-      <div id="pro-metrics">⏳ Chargement indicateurs...</div>
+    <section class="card pro-card">
+      <h2>🌊 Inondations</h2>
+      <div id="flood-data">⏳</div>
+    </section>
+
+    <section class="card pro-card">
+      <h2>☀️ Canicules</h2>
+      <div id="heat-data">⏳</div>
     </section>
   </main>
 
   <footer class="footer">
-    <p>© 2025 TinsFlash Pro – La météo métier au service des décideurs 💼</p>
+    <p>© 2025 TinsFlash Pro – La météo métier 💼</p>
   </footer>
-
-  <script>
-    function switchToCockpit() {
-      document.body.classList.add("transition-glitch");
-      setTimeout(() => {
-        window.location.href = "cockpit.html";
-      }, 800);
-    }
-  </script>
 </body>
 </html>
