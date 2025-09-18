@@ -1,277 +1,147 @@
-/* ============================
-   TINSFLASH GLOBAL STYLES
-   ============================ */
-
-/* Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
+/* 🌐 Style Global */
 body {
+  margin: 0;
   font-family: "Segoe UI", Roboto, sans-serif;
-  background: #0d1117;
-  color: #f0f0f0;
-  line-height: 1.6;
-  overflow-x: hidden;
+  background: #0a0a1a;
+  color: #f1f1f1;
 }
 
-/* ============================
-   HERO VIDEO
-   ============================ */
-.hero {
+/* 🎬 Intro vidéo */
+.intro-video {
   position: relative;
-  height: 100vh;
+  width: 100%;
+  max-height: 400px;
   overflow: hidden;
 }
 
-.hero video {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  min-width: 100%;
-  min-height: 100%;
-  object-fit: cover;
-  transform: translate(-50%, -50%);
-  z-index: 0;
-}
-
-.hero-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
+.intro-video video {
   width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.55);
-  z-index: 1;
+  height: auto;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
 }
 
-.hero-content {
-  position: relative;
-  z-index: 2;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  color: #ffffff;
-  animation: fadeIn 2s ease-in-out;
+.intro-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0,0,0,0.6);
+  padding: 12px 18px;
+  border-radius: 10px;
+  color: #fff;
 }
 
-.hero-content h1 {
-  font-size: 2.8rem;
-  margin-bottom: 0.5rem;
+.intro-overlay h1 {
+  margin: 0;
+  font-size: 1.5rem;
 }
 
-.hero-content h1 span {
-  color: #00d9ff;
-}
-
-.hero-content p {
-  font-size: 1.2rem;
-  margin-bottom: 1.5rem;
-}
-
-.hero-buttons {
-  display: flex;
-  gap: 1rem;
-}
-
-.hero-buttons button {
-  background: #00d9ff;
-  color: #000;
+.intro-overlay button {
+  margin-top: 10px;
+  padding: 6px 14px;
   border: none;
-  padding: 0.8rem 1.5rem;
-  font-size: 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
+  background: #00d9ff;
+  color: black;
+  font-weight: bold;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: background 0.3s ease;
 }
-
-.hero-buttons button:hover {
+.intro-overlay button:hover {
   background: #00aacc;
 }
 
-/* ============================
-   ADS BANNER
-   ============================ */
-.ads-banner {
-  background: #161b22;
-  text-align: center;
-  padding: 0.5rem;
-  border-bottom: 1px solid #222;
-}
-
-/* ============================
-   SECTIONS
-   ============================ */
-.block {
-  padding: 2rem 1rem;
-  max-width: 1200px;
-  margin: auto;
-}
-
-.block h2 {
-  color: #00d9ff;
-  font-size: 1.6rem;
-  margin-bottom: 1rem;
-  border-left: 4px solid #00d9ff;
-  padding-left: 0.5rem;
-}
-
-/* ============================
-   WEATHER CARDS
-   ============================ */
-.card {
-  background: #161b22;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  transition: transform 0.3s;
-}
-
-.card:hover {
-  transform: scale(1.02);
-}
-
-.weather-card {
+/* 🔝 Navbar */
+.navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1.2rem;
-}
-
-/* ============================
-   WEEKLY FORECAST GRID
-   ============================ */
-.forecast-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-}
-
-.forecast-grid div {
-  background: #1f2937;
-  padding: 1rem;
-  border-radius: 10px;
-  text-align: center;
-  transition: background 0.3s;
-}
-
-.forecast-grid div:hover {
-  background: #2d3748;
-}
-
-/* ============================
-   RADAR
-   ============================ */
-.radar-card img {
-  width: 100%;
-  border-radius: 10px;
-}
-
-/* ============================
-   ALERTS
-   ============================ */
-.alerts-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.alerts-container div {
-  background: #b91c1c;
-  padding: 0.8rem 1rem;
-  border-radius: 6px;
-  color: white;
+  padding: 1rem 2rem;
   font-weight: bold;
-  animation: pulse 2s infinite;
-}
-
-/* ============================
-   CTA
-   ============================ */
-.cta {
-  text-align: center;
-  padding: 2rem 1rem;
-  background: linear-gradient(135deg, #00d9ff, #0066ff);
+  background: linear-gradient(90deg, #0033cc, #000);
   color: #fff;
 }
 
-.cta h3 {
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
+.navbar .logo {
+  font-size: 1.3rem;
 }
 
-.cta p {
-  margin-bottom: 1.5rem;
-}
-
-.cta .btn {
-  background: #fff;
-  color: #0066ff;
+.navbar nav a {
+  margin: 0 0.8rem;
   text-decoration: none;
-  padding: 0.8rem 1.5rem;
-  margin: 0.5rem;
-  border-radius: 8px;
-  font-weight: bold;
-  transition: all 0.3s;
+  color: #ddd;
+  transition: color 0.2s;
 }
 
-.cta .btn:hover {
-  background: #0066ff;
+.navbar nav a:hover,
+.navbar nav a.active {
   color: #fff;
+  text-decoration: underline;
 }
 
-.cta .highlight {
-  background: #ffcc00;
-  color: #000;
+.navbar.premium { background: linear-gradient(90deg, #c99200, #000); }
+.navbar.pro { background: linear-gradient(90deg, #007744, #000); }
+.navbar.proplus { background: linear-gradient(90deg, #cc0000, #000); }
+.navbar.account { background: linear-gradient(90deg, #555, #000); }
+
+/* 🃏 Cards */
+.container {
+  padding: 2rem;
+  display: grid;
+  gap: 1.5rem;
 }
 
-.cta .highlight:hover {
-  background: #e6b800;
+.card {
+  background: #12122b;
+  padding: 1.5rem;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-/* ============================
-   FOOTER
-   ============================ */
-footer {
-  background: #161b22;
+.card h2 {
+  margin-top: 0;
+  font-size: 1.3rem;
+  color: #00d9ff;
+}
+
+.card.wide {
+  grid-column: span 2;
+}
+
+.days-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.day-card {
+  flex: 1 1 120px;
+  background: #1a1a3a;
+  padding: 0.8rem;
+  border-radius: 10px;
+  text-align: center;
+}
+
+/* 🛰️ Cockpit button */
+.cockpit-btn {
+  background: gold;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cockpit-btn:hover {
+  background: orange;
+}
+
+/* 📩 Footer */
+.footer {
   text-align: center;
   padding: 1rem;
   margin-top: 2rem;
   font-size: 0.9rem;
-  border-top: 1px solid #222;
-}
-
-/* ============================
-   ANIMATIONS
-   ============================ */
-@keyframes fadeIn {
-  from {opacity: 0;}
-  to {opacity: 1;}
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* ============================
-   RESPONSIVE
-   ============================ */
-@media (max-width: 768px) {
-  .hero-content h1 {
-    font-size: 2rem;
-  }
-  .hero-content p {
-    font-size: 1rem;
-  }
-  .hero-buttons button {
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-  }
+  color: #999;
 }
