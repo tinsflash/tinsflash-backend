@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TinsFlash Cockpit NASA Pro+</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="cockpit.js"></script>
+  <script defer src="animations.js"></script>
+</head>
+<body class="cockpit-body hud-mode">
+  <header class="cockpit-header">
+    <h1>🛰️ TinsFlash Cockpit – HUD Pro+</h1>
+    <p>Mode NASA holographique – réservé aux abonnés Pro+</p>
+  </header>
+
+  <main class="cockpit-dashboard">
+    <section class="cockpit-panel hud-panel">
+      <h2>🌍 Prévisions Locales</h2>
+      <div id="cockpit-local" class="cockpit-data weather-icon">⏳</div>
+    </section>
+
+    <section class="cockpit-panel hud-panel">
+      <h2>📅 7 Jours</h2>
+      <div id="cockpit-7days" class="cockpit-days">⏳</div>
+    </section>
+
+    <section class="cockpit-panel wide hud-panel">
+      <h2>🛰️ Radar</h2>
+      <div id="cockpit-radar">⏳ Radar...</div>
+    </section>
+
+    <section class="cockpit-panel hud-panel">
+      <h2>⚠️ Alertes Mondiales</h2>
+      <div id="cockpit-alerts">⏳</div>
+    </section>
+  </main>
+
+  <aside class="cockpit-controls">
+    <button class="round-btn hud-btn">🔄</button>
+    <button class="round-btn hud-btn">🌡️</button>
+    <button class="round-btn hud-btn">💨</button>
+    <button class="round-btn hud-btn">🌧️</button>
+    <button class="round-btn hud-btn">⚡</button>
+  </aside>
+
+  <footer class="cockpit-footer hud-footer">
+    <p>🚀 Données fusionnées IA.J.E.A.N – Mode HUD Pro+ 2025</p>
+  </footer>
+</body>
+</html>
