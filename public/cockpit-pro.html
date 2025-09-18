@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TinsFlash Cockpit Pro</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="cockpit.js"></script>
+  <script defer src="animations.js"></script>
+</head>
+<body class="cockpit-body pro-mode">
+  <header class="cockpit-header">
+    <h1>💼 TinsFlash Cockpit Pro</h1>
+    <p>Mode Pro – outils métiers (routes, agriculture, inondations)</p>
+  </header>
+
+  <main class="cockpit-dashboard">
+    <section class="cockpit-panel pro-panel">
+      <h2>🌍 Prévisions Locales</h2>
+      <div id="cockpit-local" class="cockpit-data weather-icon">⏳</div>
+    </section>
+
+    <section class="cockpit-panel pro-panel">
+      <h2>📅 7 Jours</h2>
+      <div id="cockpit-7days" class="cockpit-days">⏳</div>
+    </section>
+
+    <section class="cockpit-panel wide pro-panel">
+      <h2>🛰️ Radar Pro</h2>
+      <div id="cockpit-radar">⏳ Radar...</div>
+    </section>
+
+    <section class="cockpit-panel pro-panel">
+      <h2>⚠️ Alertes Locales Pro</h2>
+      <div id="cockpit-alerts">⏳</div>
+    </section>
+  </main>
+
+  <aside class="cockpit-controls">
+    <button class="round-btn pro-btn">🔄</button>
+    <button class="round-btn pro-btn">🌡️</button>
+    <button class="round-btn pro-btn">💨</button>
+    <button class="round-btn pro-btn">🌧️</button>
+    <button class="round-btn pro-btn">⚡</button>
+  </aside>
+
+  <footer class="cockpit-footer pro-footer">
+    <p>💼 Cockpit Pro – TinsFlash 2025</p>
+  </footer>
+</body>
+</html>
