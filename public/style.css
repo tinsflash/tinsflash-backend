@@ -1,57 +1,23 @@
-/* 🌍 Global */
+/* ============================
+   🌍 Global
+============================ */
 body {
   margin: 0;
-  font-family: "Segoe UI", Arial, sans-serif;
-  background: #f0f4f8;
-  color: #222;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: #0a0a1a;
+  color: #f1f1f1;
   line-height: 1.6;
 }
 
 h1, h2 {
   margin: 0 0 10px;
   font-weight: bold;
-  color: #004466;
+  color: #00d9ff;
 }
 
-header {
-  background: linear-gradient(90deg, #0077b6, #00b4d8);
-  color: white;
-  text-align: center;
-  padding: 1rem;
-}
-
-main {
-  padding: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1rem;
-}
-
-.panel {
-  background: white;
-  border-radius: 10px;
-  padding: 1rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.ads {
-  margin: 1rem;
-  text-align: center;
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 0.5rem;
-  border-radius: 8px;
-}
-
-footer {
-  background: #004466;
-  color: white;
-  text-align: center;
-  padding: 1rem;
-  margin-top: 1rem;
-}
-
-/* 🎬 Intro vidéo */
+/* ============================
+   🎬 Intro vidéo
+============================ */
 .intro-video {
   position: relative;
   width: 100%;
@@ -98,7 +64,134 @@ footer {
   cursor: pointer;
   transition: 0.2s;
 }
-
 .intro-buttons button:hover {
   background: #00aacc;
+}
+
+/* ============================
+   📰 Header
+============================ */
+header {
+  background: linear-gradient(90deg, #0033cc, #000);
+  color: white;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* ============================
+   🌤️ Sections météo
+============================ */
+.forecast-section {
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background: #12122b;
+  border-radius: 12px;
+  box-shadow: 0 0 25px rgba(0, 217, 255, 0.2);
+  max-width: 1200px;
+}
+
+.forecast-section h2 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: #00d9ff;
+  border-left: 4px solid #00d9ff;
+  padding-left: 8px;
+}
+
+.forecast-box {
+  padding: 1.2rem;
+  background: #1a1a3a;
+  border-radius: 10px;
+  min-height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #ccc;
+  text-align: center;
+}
+
+/* Effet futuriste */
+.neon-card {
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.3),
+              inset 0 0 10px rgba(0, 217, 255, 0.1);
+  transition: transform 0.2s ease-in-out;
+}
+.neon-card:hover {
+  transform: scale(1.02);
+}
+
+/* ============================
+   📅 Prévisions 7 jours
+============================ */
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.days-grid .day-card {
+  background: #222244;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  color: #fff;
+  transition: 0.2s;
+}
+.days-grid .day-card:hover {
+  background: #2a2a55;
+  transform: translateY(-3px);
+}
+
+/* ============================
+   🛰️ Radar
+============================ */
+#radar-content {
+  width: 100%;
+  height: 500px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 1rem;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
+}
+
+/* ============================
+   📢 Pub
+============================ */
+.ads {
+  margin: 1rem auto;
+  text-align: center;
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  padding: 0.5rem;
+  border-radius: 8px;
+  color: #000;
+  max-width: 800px;
+}
+
+/* ============================
+   📩 Footer
+============================ */
+footer {
+  background: #003;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+/* ============================
+   🔁 Animations
+============================ */
+.loader-text {
+  font-family: monospace;
+  color: #00ffea;
+  animation: pulseText 2s infinite;
+}
+
+@keyframes pulseText {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
