@@ -10,7 +10,7 @@ import cors from "cors";
 import { getForecast } from "./services/forecastService.js";
 import { getAlerts } from "./services/alertsService.js";
 import { generatePodcast } from "./services/podcastService.js";
-import { generateCode } from "./services/codesService.js";
+import { getWeatherIcon, generateCode } from "./services/codesService.js"; // ✅ correction
 import { chatWithJean } from "./services/chatService.js";
 
 dotenv.config();
@@ -89,11 +89,9 @@ app.get("/api/forecast/7days", async (req, res) => {
         vent: forecast.combined.wind,
         precipitation: forecast.combined.precipitation,
         description: forecast.combined.description,
-        icone: forecast.combined.description.includes("pluie")
-          ? "🌧️"
-          : forecast.combined.description.includes("nuage")
-          ? "☁️"
-          : "☀️",
+        icone: getWeatherIcon( // ✅ utilise ton service d’icônes
+          forecast.combined.code || 0
+        )
       });
     }
 
@@ -142,8 +140,21 @@ app.get("/api/codes/generate", (req, res) => {
     const { type } = req.query;
     if (!type) return res.status(400).json({ error: "Type d’abonnement requis" });
 
-    const code = generateCode(type);
+    const code = generateCode(type); // ✅ maintenant ça existe
     res.json(code);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Icône météo seule (utile pour tests front)
+app.get("/api/weather/icon", (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ error: "Code météo requis" });
+
+    const icon = getWeatherIcon(parseInt(code, 10));
+    res.json({ code, icon });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
