@@ -115,10 +115,11 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Radar
+// ✅ Radar interactif avec RainViewer
 app.get("/api/radar", (req, res) => {
-  const radarUrl = `https://tile.openweathermap.org/map/precipitation_new/4/8/5.png?appid=${process.env.OPENWEATHER_KEY}`;
-  res.json({ radarUrl });
+  res.json({
+    tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+    timestampsUrl: "https://api.rainviewer.com/public/maps.json"
 });
 
 // ✅ Podcasts météo
