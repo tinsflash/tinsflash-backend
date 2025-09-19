@@ -1,11 +1,9 @@
 // -------------------------
 // 🌍 forecastService.js
-// Fusion multi-modèles + Détection anomalies saisonnières
-// Compatible Node.js 18+ (fetch natif)
+// Fusion multi-modèles : Meteomatics + OpenWeather + GFS + ICON
+// + Détection anomalies saisonnières + codes météo standardisés
 // -------------------------
 
-import fs from "fs";
-import path from "path";
 import { detectAnomaly } from "../utils/seasonalNorms.js";
 
 export async function getForecast(lat, lon, country = "BE") {
@@ -21,12 +19,16 @@ export async function getForecast(lat, lon, country = "BE") {
       if (!user || !pass) throw new Error("Identifiants Meteomatics manquants !");
 
       const now = new Date().toISOString().split(".")[0] + "Z";
-      const future = new Date(Date.now() + 24 * 3600 * 1000).toISOString().split(".")[0] + "Z";
+      const future = new Date(Date.now() + 24 * 3600 * 1000)
+        .toISOString()
+        .split(".")[0] + "Z";
 
       const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh,weather_symbol_1h:idx/${lat},${lon}/json`;
 
       const res = await fetch(url, {
-        headers: { Authorization: "Basic " + Buffer.from(`${user}:${pass}`).toString("base64") },
+        headers: {
+          Authorization: "Basic " + Buffer.from(`${user}:${pass}`).toString("base64"),
+        },
       });
 
       if (!res.ok) throw new Error(`Erreur Meteomatics: ${res.statusText}`);
@@ -52,24 +54,26 @@ export async function getForecast(lat, lon, country = "BE") {
     }
 
     // -------------------------
-    // 3. GFS NOAA
+    // 3. GFS NOAA (modèle global)
     // -------------------------
     try {
       const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erreur GFS NOAA");
+
       results.sources.gfs = await res.json();
     } catch (err) {
       results.sources.gfs = { status: "indisponible", error: err.message };
     }
 
     // -------------------------
-    // 4. ICON DWD
+    // 4. ICON DWD (modèle allemand)
     // -------------------------
     try {
       const url = `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erreur ICON");
+
       results.sources.icon = await res.json();
     } catch (err) {
       results.sources.icon = { status: "indisponible", error: err.message };
@@ -112,7 +116,7 @@ export async function getForecast(lat, lon, country = "BE") {
     const precip = Math.round(avg(precipCandidates) * 10) / 10;
 
     // -------------------------
-    // 6. Détection anomalies
+    // 6. Détection anomalies saisonnières
     // -------------------------
     const anomaly = detectAnomaly(temp, country);
 
@@ -127,6 +131,7 @@ export async function getForecast(lat, lon, country = "BE") {
         "Prévision issue de la fusion des modèles",
       reliability: 92 + Math.floor(Math.random() * 6),
       anomaly,
+      code: results.sources.openweather?.weather?.[0]?.id || 800, // ✅ code météo standardisé
       sources: Object.keys(results.sources),
     };
 
@@ -134,34 +139,4 @@ export async function getForecast(lat, lon, country = "BE") {
   } catch (err) {
     throw new Error("Erreur fusion prévisions : " + err.message);
   }
-}
-
-// -------------------------
-// 🔥 Supercalculateur TINSFLASH
-// -------------------------
-const runsDir = path.join(process.cwd(), "data", "forecasts");
-if (!fs.existsSync(runsDir)) fs.mkdirSync(runsDir, { recursive: true });
-
-export async function runAndSaveForecast(label = "manual") {
-  const lat = 50.8503; // Bruxelles par défaut
-  const lon = 4.3517;
-  const country = "BE";
-
-  const forecast = await getForecast(lat, lon, country);
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const fileName = `run-${label}-${timestamp}.json`;
-  const filePath = path.join(runsDir, fileName);
-
-  fs.writeFileSync(filePath, JSON.stringify(forecast, null, 2));
-
-  const logLine = `[${new Date().toISOString()}] Run ${label} : ${forecast.combined.temperature}°C, Fiabilité ${forecast.combined.reliability}%\n`;
-  fs.appendFileSync(path.join(runsDir, "logs.txt"), logLine);
-
-  return {
-    status: "ok",
-    label,
-    forecast: forecast.combined,
-    saved: fileName,
-  };
 }
