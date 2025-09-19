@@ -1,45 +1,12 @@
-7// ===============================
+// ===============================
 // 🌍 TINSFLASH FRONTEND APP
 // ===============================
 
-// API Base URL (Render backend)
 const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
 // ===============================
-// GEOLOCALISATION → Prévisions locales
-// ===============================
-async function loadLocalForecast() {
-  if (!navigator.geolocation) {
-    document.getElementById("local-forecast").innerHTML = "⚠️ Géolocalisation non supportée";
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-
-    try {
-      const res = await fetch(`${API_BASE}/forecast/local?lat=${lat}&lon=${lon}`);
-      const data = await res.json();
-
-      document.getElementById("local-forecast").innerHTML = `
-        <div class="card weather-card">
-          <span>📍 ${data.city || "Localisation détectée"}</span>
-          <span>🌡️ ${data.combined.temperature}°C</span>
-          <span>💨 ${data.combined.wind} km/h</span>
-          <span>${data.combined.description}</span>
-        </div>`;
-    } catch (err) {
-      console.error("Erreur forecast local:", err);
-    }
-  });
-}
-
-const API_BASE = "https://tinsflash-backend.onrender.com/api";
-
-// -------------------------
 // Prévisions locales
-// -------------------------
+// ===============================
 async function loadLocalForecast() {
   const c = document.getElementById("local-content");
   c.innerHTML = "⏳ Chargement...";
@@ -53,6 +20,8 @@ async function loadLocalForecast() {
         <strong>📍 Votre position</strong><br>
         ${f.description} ${f.temperature}°C <br>
         🌡️ Min: ${f.temperature_min}°C / Max: ${f.temperature_max}°C <br>
+        💨 Vent: ${f.wind} km/h <br>
+        🌧️ Pluie: ${f.precipitation} mm <br>
         🔒 Fiabilité: ${f.reliability}% <br>
         ⚠️ ${f.anomaly?.message || "Conditions normales"} <br>
         ${f.icone || ""}
@@ -63,9 +32,9 @@ async function loadLocalForecast() {
   }
 }
 
-// -------------------------
+// ===============================
 // Prévisions nationales
-// -------------------------
+// ===============================
 async function loadNationalForecast() {
   const c = document.getElementById("national-content");
   c.innerHTML = "⏳ Chargement...";
@@ -78,6 +47,8 @@ async function loadNationalForecast() {
       <strong>🇧🇪 Prévisions nationales</strong><br>
       ${f.description} ${f.temperature}°C <br>
       🌡️ Min: ${f.temperature_min}°C / Max: ${f.temperature_max}°C <br>
+      💨 Vent: ${f.wind} km/h <br>
+      🌧️ Pluie: ${f.precipitation} mm <br>
       🔒 Fiabilité: ${f.reliability}% <br>
       ⚠️ ${f.anomaly?.message || "Conditions normales"} <br>
       ${f.icone || ""}
@@ -87,9 +58,9 @@ async function loadNationalForecast() {
   }
 }
 
-// -------------------------
+// ===============================
 // Prévisions 7 jours
-// -------------------------
+// ===============================
 async function load7Days() {
   const c = document.getElementById("days-container");
   c.innerHTML = "⏳ Chargement...";
@@ -118,17 +89,8 @@ async function load7Days() {
   }
 }
 
-// -------------------------
-// Lancement auto
-// -------------------------
-window.onload = () => {
-  if (document.getElementById("local-content")) loadLocalForecast();
-  if (document.getElementById("national-content")) loadNationalForecast();
-  if (document.getElementById("days-container")) load7Days();
-};
-
 // ===============================
-// RADAR INTERACTIF
+// Radar interactif
 // ===============================
 async function loadRadar() {
   const radarDiv = document.getElementById("radar");
@@ -138,20 +100,17 @@ async function loadRadar() {
     const res = await fetch(`${API_BASE}/radar`);
     const data = await res.json();
 
-    // Crée la carte Leaflet
     radarDiv.innerHTML = `<div id="radar-map" style="height:400px;border-radius:10px;"></div>`;
     const map = L.map("radar-map").setView([50.85, 4.35], 6); // Bruxelles par défaut
 
-    // Fond de carte
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);
 
-    // Charge les frames disponibles
     const framesRes = await fetch(data.timestampsUrl);
     const frames = await framesRes.json();
 
-    let currentFrame = frames.length - 1; // dernière frame (la plus récente)
+    let currentFrame = frames.length - 1;
     let radarLayer;
 
     function showFrame(i) {
@@ -162,12 +121,11 @@ async function loadRadar() {
       ).addTo(map);
     }
 
-    // Animation
     showFrame(currentFrame);
     setInterval(() => {
       currentFrame = (currentFrame + 1) % frames.length;
       showFrame(currentFrame);
-    }, 800); // change toutes les 0.8s
+    }, 800);
 
   } catch (err) {
     radarDiv.innerHTML = "❌ Erreur radar";
@@ -176,7 +134,7 @@ async function loadRadar() {
 }
 
 // ===============================
-// ALERTES
+// Alertes
 // ===============================
 async function loadAlerts() {
   try {
@@ -197,7 +155,7 @@ async function loadAlerts() {
 }
 
 // ===============================
-// PODCASTS
+// Podcasts
 // ===============================
 async function loadPodcasts(type = "daily") {
   try {
@@ -215,7 +173,7 @@ async function loadPodcasts(type = "daily") {
 }
 
 // ===============================
-// CHAT IA J.E.A.N
+// Chat IA J.E.A.N
 // ===============================
 async function chatWithJean() {
   const input = document.getElementById("chat-input").value;
@@ -237,42 +195,15 @@ async function chatWithJean() {
     console.error("Erreur chat:", err);
   }
 }
-async function generateForecastText(daysData) {
-  if (!daysData || daysData.length === 0) {
-    document.getElementById("forecast-text").innerText =
-      "⚠️ Données insuffisantes pour générer un bulletin.";
-    return;
-  }
 
-  const today = daysData[0];
-  const tomorrow = daysData[1];
-  const rest = daysData.slice(2);
-
-  let text = "";
-
-  // Ce soir
-  text += `🌙 Ce soir : ${today.description}, températures autour de ${today.temperature_min}°C à ${today.temperature_max}°C.\n\n`;
-
-  // Demain
-  text += `☀️ Demain (${tomorrow.jour}) : ${tomorrow.description}, min ${tomorrow.temperature_min}°C et max ${tomorrow.temperature_max}°C.\n\n`;
-
-  // Prochains jours
-  if (rest.length > 0) {
-    const minTemp = Math.min(...rest.map(d => d.temperature_min));
-    const maxTemp = Math.max(...rest.map(d => d.temperature_max));
-    text += `📅 Ensuite : tendance générale ${rest[0].description.toLowerCase()}, avec des températures entre ${minTemp}°C et ${maxTemp}°C les prochains jours.`;
-  }
-
-  document.getElementById("forecast-text").innerText = text;
-}
 // ===============================
 // INIT
 // ===============================
 window.addEventListener("DOMContentLoaded", () => {
-  loadLocalForecast();
-  loadNationalForecast("BE");
-  loadSevenDays();
-  loadRadar();
-  loadAlerts();
-  loadPodcasts();
+  if (document.getElementById("local-content")) loadLocalForecast();
+  if (document.getElementById("national-content")) loadNationalForecast();
+  if (document.getElementById("days-container")) load7Days();
+  if (document.getElementById("radar")) loadRadar();
+  if (document.getElementById("alerts")) loadAlerts();
+  if (document.getElementById("podcasts")) loadPodcasts();
 });
