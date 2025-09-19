@@ -5,6 +5,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import { connectDB } from "./db.js";
+import Forecast from "./models/Forecast.js";
 
 // Import services
 import { getForecast } from "./services/forecastService.js";
@@ -15,6 +17,7 @@ import { chatWithJean } from "./services/chatService.js";
 import { getRadarLayers } from "./services/radarService.js";
 
 dotenv.config();
+connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,56 +29,65 @@ app.use(express.static("public")); // frontend
 // -------------------------
 // 🚀 Supercalculateur météo
 // -------------------------
-let lastRuns = []; // mémoire des derniers runs
-
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { time, country } = req.body;
     const coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles
 
-    // Lancement du forecast
+    // Vérifier si déjà en DB
+    const existing = await Forecast.findOne({ runTime: time, country });
+    if (existing) {
+      return res.json({ ...existing._doc, status: "♻️ Résultat récupéré depuis DB" });
+    }
+
     const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
 
     const runResult = {
-      time: time || new Date().toISOString(),
-      status: forecast.status,         // ✅ Statut du run
-      forecast: forecast.combined,     // ✅ Prévisions fusionnées
-      errors: forecast.errors || [],   // ✅ Liste erreurs
+      runTime: time || new Date().toISOString(),
+      country: country || "BE",
+      lat: coords.lat,
+      lon: coords.lon,
+      forecast: forecast.combined,
+      errors: forecast.combined.errors || [],
     };
 
-    // Sauvegarde mémoire
-    lastRuns.push(runResult);
-    if (lastRuns.length > 10) lastRuns.shift();
+    await Forecast.create(runResult);
 
-    console.log("⚡ Nouveau run :", runResult);
-
-    res.json(runResult);
+    res.json({
+      ...runResult,
+      status: runResult.errors.length
+        ? `⚠️ Run partiel : ${Object.keys(forecast.sources).length - runResult.errors.length} sources OK, ${runResult.errors.length} erreurs`
+        : "✅ Run 100% réussi"
+    });
   } catch (err) {
-    console.error("❌ Erreur supercalculateur:", err.message);
     res.status(500).json({ error: "Erreur supercalculateur: " + err.message });
   }
 });
 
-// Logs des runs
-app.get("/api/supercalc/logs", (req, res) => {
-  res.json(lastRuns);
+app.get("/api/supercalc/logs", async (req, res) => {
+  try {
+    const logs = await Forecast.find().sort({ createdAt: -1 }).limit(10);
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération logs" });
+  }
 });
 
 // -------------------------
 // ROUTES API classiques
 // -------------------------
 
-app.get("/", (req, res) => {
-  res.send("🚀 TINSFLASH Backend opérationnel !");
-});
+app.get("/", (req, res) => res.send("🚀 TINSFLASH Backend opérationnel !"));
 
-// ✅ Prévisions locales
+// Local forecast
 app.get("/api/forecast/local", async (req, res) => {
   try {
     const { lat, lon, country } = req.query;
-    if (!lat || !lon) {
-      return res.status(400).json({ error: "Latitude et longitude requises" });
-    }
+    if (!lat || !lon) return res.status(400).json({ error: "Latitude et longitude requises" });
+
+    const lastRun = await Forecast.findOne({ country: country || "BE" }).sort({ createdAt: -1 });
+    if (lastRun) return res.json(lastRun);
+
     const forecast = await getForecast(lat, lon, country || "BE");
     res.json(forecast);
   } catch (err) {
@@ -83,69 +95,7 @@ app.get("/api/forecast/local", async (req, res) => {
   }
 });
 
-// ✅ Prévisions nationales
-app.get("/api/forecast/national", async (req, res) => {
-  try {
-    const { country } = req.query;
-    let coords = { lat: 50.8503, lon: 4.3517 };
-
-    if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 };
-    if (country === "US") coords = { lat: 38.9072, lon: -77.0369 };
-
-    const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
-    res.json(forecast);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Prévisions 7 jours
-app.get("/api/forecast/7days", async (req, res) => {
-  try {
-    const { lat, lon, country } = req.query;
-    if (!lat || !lon) {
-      return res.status(400).json({ error: "Latitude et longitude requises" });
-    }
-    const forecast = await getForecast(lat, lon, country || "BE");
-
-    const now = new Date();
-    const days = [];
-
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(now.getDate() + i);
-
-      days.push({
-        date: date.toISOString().split("T")[0],
-        jour: date.toLocaleDateString("fr-FR", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        }),
-        temperature_min: forecast.combined.temperature_min,
-        temperature_max: forecast.combined.temperature_max,
-        vent: forecast.combined.wind,
-        precipitation: forecast.combined.precipitation,
-        description: forecast.combined.description,
-        fiabilité: forecast.combined.reliability,
-        anomalie: forecast.combined.anomaly?.message || "Normale",
-        icone: getWeatherIcon(forecast.combined.code || 0),
-      });
-    }
-
-    res.json({
-      source: "TINSFLASH IA + multi-modèles",
-      reliability: forecast.combined.reliability,
-      status: forecast.status,
-      errors: forecast.errors,
-      days,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Alertes météo
+// Alerts
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await getAlerts();
@@ -155,14 +105,13 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Radar interactif
+// Radar
 app.get("/api/radar", async (req, res) => {
   try {
     const layers = await getRadarLayers();
     res.json({
       layers,
-      tilesUrl:
-        "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+      tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
       timestampsUrl: "https://api.rainviewer.com/public/maps.json",
     });
   } catch (err) {
@@ -170,7 +119,7 @@ app.get("/api/radar", async (req, res) => {
   }
 });
 
-// ✅ Podcasts météo
+// Podcast
 app.post("/api/podcast/generate", async (req, res) => {
   try {
     const { type, text } = req.body;
@@ -181,7 +130,7 @@ app.post("/api/podcast/generate", async (req, res) => {
   }
 });
 
-// ✅ Codes promo
+// Codes
 app.get("/api/codes/generate", (req, res) => {
   try {
     const { type } = req.query;
@@ -189,30 +138,6 @@ app.get("/api/codes/generate", (req, res) => {
 
     const code = generateCode(type);
     res.json(code);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Icône météo
-app.get("/api/weather/icon", (req, res) => {
-  try {
-    const { code } = req.query;
-    if (!code) return res.status(400).json({ error: "Code météo requis" });
-
-    const icon = getWeatherIcon(parseInt(code, 10));
-    res.json({ code, icon });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Chat IA J.E.A.N
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-    const reply = await chatWithJean(message || "Analyse météo globale");
-    res.json(reply);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
