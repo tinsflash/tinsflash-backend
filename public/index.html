@@ -4,11 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TINSFLASH – La météo 1000% réelle</title>
+
+  <!-- ✅ Google AdSense verification -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
+     crossorigin="anonymous"></script>
+
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="loader.css">
   <link rel="stylesheet" href="radar.css">
+
+  <!-- 🌍 Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
   <script defer src="app.js"></script>
   <script defer src="loader.js"></script>
   <script defer src="radar.js"></script>
@@ -57,6 +65,24 @@
       <div id="days-container" class="days-grid"></div>
     </section>
 
+    <!-- 📝 Prévisions écrites -->
+    <section class="forecast-section">
+      <h2>📝 Prévisions écrites</h2>
+      <div id="forecast-text" class="forecast-box neon-card">
+        ⏳ Génération du bulletin météo...
+      </div>
+    </section>
+
+    <!-- 🎙️ Prévisions audio -->
+    <section class="forecast-section">
+      <h2>🎙️ Prévisions audio</h2>
+      <div id="audio-forecast" class="forecast-box neon-card">
+        <p>🎧 Cliquez sur Lecture pour écouter le bulletin météo.</p>
+        <button onclick="playForecast()">▶️ Lecture</button>
+        <button onclick="stopForecast()">⏹️ Stop</button>
+      </div>
+    </section>
+
     <!-- 🛰️ Radar météo mondial -->
     <section class="forecast-section">
       <h2>🌍 Radar météo mondial</h2>
@@ -70,25 +96,26 @@
       <div id="alerts-loader" class="loader-container"></div>
       <div id="alerts" class="forecast-box neon-card"></div>
     </section>
-
-    <!-- 🎙️ Podcasts -->
-    <section class="forecast-section">
-      <h2>🎙️ Podcasts</h2>
-      <div id="podcasts-loader" class="loader-container"></div>
-      <div id="podcasts" class="forecast-box neon-card"></div>
-    </section>
   </main>
 
-  <!-- Bandeau pub -->
+  <!-- 📢 Bandeau pub Google -->
   <aside class="ads">
-    <p>[ Google Ads ici ]</p>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-6828365665232268"
+         data-ad-slot="1234567890"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
   </aside>
 
   <footer>
     <p>🚀 TINSFLASH 2025 – La machine météo mondiale</p>
   </footer>
 
-  <!-- Scripts -->
+  <!-- 🚀 Scripts -->
   <script>
     // 🎬 Vidéo Intro
     function toggleSound() {
@@ -109,25 +136,97 @@
       document.querySelector(".intro-video").style.display = "none";
     }
 
+    // 📝 Génération du bulletin écrit
+    function generateForecastText(daysData) {
+      if (!daysData || daysData.length === 0) {
+        document.getElementById("forecast-text").innerText =
+          "⚠️ Données insuffisantes pour générer un bulletin.";
+        return;
+      }
+
+      const today = daysData[0];
+      const tomorrow = daysData[1];
+      const rest = daysData.slice(2);
+
+      let text = "";
+      text += `🌙 Ce soir : ${today.description}, températures autour de ${today.temperature_min}°C à ${today.temperature_max}°C.\n\n`;
+      text += `☀️ Demain (${tomorrow.jour}) : ${tomorrow.description}, min ${tomorrow.temperature_min}°C et max ${tomorrow.temperature_max}°C.\n\n`;
+
+      if (rest.length > 0) {
+        const minTemp = Math.min(...rest.map(d => d.temperature_min));
+        const maxTemp = Math.max(...rest.map(d => d.temperature_max));
+        text += `📅 Ensuite : tendance ${rest[0].description.toLowerCase()}, avec des températures entre ${minTemp}°C et ${maxTemp}°C.`;
+      }
+
+      document.getElementById("forecast-text").innerText = text;
+    }
+
+    // 🎙️ Audio forecast
+    let synth = window.speechSynthesis;
+    let utterance;
+
+    function playForecast() {
+      const text = document.getElementById("forecast-text").innerText;
+      if (!text || text.startsWith("⚠️")) {
+        alert("⚠️ Bulletin météo indisponible pour l’instant.");
+        return;
+      }
+
+      stopForecast();
+      utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "fr-FR";
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      synth.speak(utterance);
+    }
+
+    function stopForecast() {
+      if (synth.speaking) {
+        synth.cancel();
+      }
+    }
+
     // 🚀 Loaders + données météo
     window.addEventListener("DOMContentLoaded", () => {
+      // Local avec GPS
       const localLoader = startLoader("local-loader", 2500);
-      loadLocalForecast().then(() => localLoader.stop());
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            loadLocalForecast(pos.coords.latitude, pos.coords.longitude)
+              .then(() => localLoader.stop());
+          },
+          err => {
+            document.getElementById("local-content").innerHTML =
+              "⚠️ Localisation refusée.<br> Merci d’encoder votre adresse complète dans l’onglet <strong>Compte</strong>.";
+            localLoader.stop();
+          }
+        );
+      } else {
+        document.getElementById("local-content").innerHTML =
+          "💻 Vous êtes connecté depuis une localisation générique.<br>" +
+          "Merci d’encoder votre adresse complète dans l’onglet <strong>Compte</strong>.";
+        localLoader.stop();
+      }
 
+      // National
       const nationalLoader = startLoader("national-loader", 2500);
       loadNationalForecast("BE").then(() => nationalLoader.stop());
 
+      // 7 jours + texte écrit
       const daysLoader = startLoader("days-loader", 2500);
-      loadSevenDays().then(() => daysLoader.stop());
+      loadSevenDays().then((daysData) => {
+        daysLoader.stop();
+        generateForecastText(daysData.days);
+      });
 
+      // Radar
       const radarLoader = startLoader("radar-loader", 2500);
       loadRadar().then(() => radarLoader.stop());
 
+      // Alertes
       const alertsLoader = startLoader("alerts-loader", 2500);
       loadAlerts().then(() => alertsLoader.stop());
-
-      const podcastsLoader = startLoader("podcasts-loader", 2500);
-      loadPodcasts().then(() => podcastsLoader.stop());
     });
   </script>
 </body>
