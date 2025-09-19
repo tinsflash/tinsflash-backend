@@ -1,16 +1,39 @@
 // -------------------------
-// 📂 models/Forecast.js - Schéma Forecast
+// 📊 models/Forecast.js
+// Schéma MongoDB pour sauvegarder les runs météo
 // -------------------------
 import mongoose from "mongoose";
 
-const ForecastSchema = new mongoose.Schema({
-  runTime: String, // ex: "07h10", "12h10", "19h10"
-  country: String,
-  lat: Number,
-  lon: Number,
-  forecast: Object, // résultat fusionné
-  errors: [String], // erreurs éventuelles des sources
-  createdAt: { type: Date, default: Date.now }
-});
+const ForecastSchema = new mongoose.Schema(
+  {
+    time: {
+      type: String,
+      required: true,
+    },
+    forecast: {
+      temperature: Number,
+      temperature_min: Number,
+      temperature_max: Number,
+      wind: Number,
+      precipitation: Number,
+      description: String,
+      reliability: Number,
+      anomaly: Object,
+      sources: [String],
+      bulletin: String,
+    },
+    errors: {
+      type: [String],
+      default: [],
+    },
+    status: {
+      type: String,
+      default: "⏳ En attente",
+    },
+  },
+  { timestamps: true } // createdAt, updatedAt automatiques
+);
 
-export default mongoose.model("Forecast", ForecastSchema);
+const Forecast = mongoose.model("Forecast", ForecastSchema);
+
+export default Forecast;
