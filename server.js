@@ -178,3 +178,4 @@ app.post("/api/chat", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 TINSFLASH backend en ligne sur http://localhost:${PORT}`);
 });
+}
