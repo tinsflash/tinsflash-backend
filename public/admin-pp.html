@@ -2,10 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🛰️ Console Admin-PP TINSFLASH</title>
+  <title>🛰️ Console Admin TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- 🔒 Pas d’indexation -->
   <meta name="robots" content="noindex, nofollow">
 
   <style>
@@ -16,30 +14,25 @@
       margin: 0;
       padding: 0;
     }
-
     h1, h2 {
       text-align: center;
       margin: 20px 0;
       font-weight: 600;
     }
-
     h1 {
       color: #00eaff;
       font-size: 2rem;
       text-shadow: 0 0 12px #00eaff;
     }
-
     h2 {
       color: #ffd700;
       font-size: 1.3rem;
     }
-
     .container {
       padding: 20px;
       max-width: 1200px;
       margin: auto;
     }
-
     .card {
       background: #132a44;
       padding: 20px;
@@ -48,12 +41,10 @@
       box-shadow: 0 0 15px rgba(0, 234, 255, 0.2);
       transition: transform 0.2s ease-in-out;
     }
-
     .card:hover {
       transform: scale(1.01);
       box-shadow: 0 0 25px rgba(0, 234, 255, 0.4);
     }
-
     .btn {
       padding: 10px 15px;
       margin: 6px;
@@ -65,12 +56,10 @@
       font-weight: bold;
       transition: 0.2s;
     }
-
     .btn:hover {
       background: linear-gradient(135deg, #0c75d4, #00b3cc);
       transform: translateY(-2px);
     }
-
     textarea, input, select {
       width: 100%;
       padding: 10px;
@@ -79,7 +68,6 @@
       border: none;
       font-size: 14px;
     }
-
     #logs {
       background: #000;
       color: #0f0;
@@ -89,8 +77,8 @@
       border-radius: 8px;
       overflow-y: auto;
       box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.3);
+      white-space: pre-line;
     }
-
     #forecast-status, #comparisons, #external-status, #podcast-status, #code-result {
       margin-top: 10px;
       font-size: 0.95rem;
@@ -101,17 +89,24 @@
   </style>
 </head>
 <body>
-  <h1>🛰️ Console Admin-PP – TINSFLASH</h1>
+  <h1>🛰️ Console Administrateur – TINSFLASH</h1>
   <div class="container">
 
     <!-- Supercalculateur -->
     <div class="card">
       <h2>⚡ Supercalculateur Météo</h2>
       <p>Lancer manuellement les prévisions fusionnées (matin, midi, soir).</p>
-      <button class="btn" onclick="runForecast('morning')">🌅 Lancer Run 07h10</button>
-      <button class="btn" onclick="runForecast('noon')">☀️ Lancer Run 12h10</button>
-      <button class="btn" onclick="runForecast('evening')">🌙 Lancer Run 19h10</button>
-      <div id="forecast-status">⏳ En attente de lancement...</div>
+      <button class="btn" onclick="runForecast('morning')">🌅 Run 07h10</button>
+      <button class="btn" onclick="runForecast('noon')">☀️ Run 12h10</button>
+      <button class="btn" onclick="runForecast('evening')">🌙 Run 19h10</button>
+      <div id="forecast-status">⏳ En attente...</div>
+    </div>
+
+    <!-- Logs -->
+    <div class="card">
+      <h2>📡 Logs Supercalculateur</h2>
+      <button class="btn" onclick="loadLogs()">🔄 Rafraîchir</button>
+      <div id="logs">⏳ En attente...</div>
     </div>
 
     <!-- Comparateur ForecastVision -->
@@ -119,7 +114,7 @@
       <h2>🔍 ForecastVision</h2>
       <p>Comparer les prévisions de TINSFLASH avec d’autres sources.</p>
       <button class="btn" onclick="loadComparisons()">📊 Charger Comparateur</button>
-      <div id="comparisons">⏳ Aucune donnée encore...</div>
+      <div id="comparisons">⏳ Aucune donnée...</div>
     </div>
 
     <!-- Capture prévisions externes -->
@@ -135,12 +130,11 @@
       <div id="external-status">⏳ Aucun ajout.</div>
     </div>
 
-    <!-- Monitoring -->
+    <!-- Alertes -->
     <div class="card">
-      <h2>📡 Monitoring</h2>
-      <button class="btn" onclick="loadLogs()">📖 Voir Logs</button>
-      <button class="btn" onclick="loadAlerts()">⚠️ Voir Alertes</button>
-      <div id="logs">⏳ Logs en attente...</div>
+      <h2>⚠️ Monitoring Alertes</h2>
+      <button class="btn" onclick="loadAlerts()">📢 Charger Alertes</button>
+      <div id="alerts">⏳ En attente...</div>
     </div>
 
     <!-- Podcasts -->
@@ -167,28 +161,49 @@
   <script>
     const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
-    // ✅ Supercalculateur (endpoint spécial admin-pp)
+    // -------------------------
+    // Supercalculateur
+    // -------------------------
     async function runForecast(time) {
-      document.getElementById("forecast-status").innerText = "⏳ Calcul en cours...";
+      document.getElementById("forecast-status").innerText = "⏳ Calcul...";
       try {
         const res = await fetch(`${API_BASE}/admin-pp/run`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: time })
+          body: JSON.stringify({ type: time }),
         });
         const data = await res.json();
 
-        if (data.error) throw new Error(data.error);
+        if (data.error) {
+          document.getElementById("forecast-status").innerText = "❌ " + data.error;
+          return;
+        }
 
-        document.getElementById("forecast-status").innerText =
-          `✅ Run ${time} terminé : ${data.temperature}°C, Fiabilité ${data.reliability}%`;
-      } catch (err) {
+        const msg = `✅ Run ${time.toUpperCase()} : ${data.temperature}°C, Fiabilité ${data.reliability}%`;
+        document.getElementById("forecast-status").innerText = msg;
+        document.getElementById("logs").innerText = `[NOW] ${msg}\n` + document.getElementById("logs").innerText;
+      } catch {
         document.getElementById("forecast-status").innerText = "❌ Erreur lancement forecast";
-        console.error("Erreur runForecast:", err);
       }
     }
 
-    // Comparateur
+    // -------------------------
+    // Logs
+    // -------------------------
+    async function loadLogs() {
+      document.getElementById("logs").innerText = "⏳ Chargement...";
+      try {
+        const res = await fetch(`${API_BASE}/admin-pp/logs`);
+        const data = await res.json();
+        document.getElementById("logs").innerText = data.reverse().join("\n");
+      } catch {
+        document.getElementById("logs").innerText = "❌ Erreur logs";
+      }
+    }
+
+    // -------------------------
+    // ForecastVision
+    // -------------------------
     async function loadComparisons() {
       document.getElementById("comparisons").innerText = "⏳ Chargement...";
       try {
@@ -201,7 +216,9 @@
       }
     }
 
-    // Ajout source externe
+    // -------------------------
+    // Ajout Source externe
+    // -------------------------
     document.getElementById("externalForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
@@ -213,38 +230,30 @@
           body: JSON.stringify(body),
         });
         const data = await res.json();
-        document.getElementById("external-status").innerText = "✅ Source ajoutée : " + data.source;
+        document.getElementById("external-status").innerText = "✅ Ajout : " + data.source;
       } catch {
         document.getElementById("external-status").innerText = "❌ Erreur ajout source";
       }
     });
 
-    // Logs
-    async function loadLogs() {
-      document.getElementById("logs").innerText = "⏳ Chargement logs...";
-      try {
-        const res = await fetch(`${API_BASE}/logs`);
-        const data = await res.json();
-        document.getElementById("logs").innerText = data.join("\n");
-      } catch {
-        document.getElementById("logs").innerText = "❌ Erreur logs";
-      }
-    }
-
+    // -------------------------
     // Alertes
+    // -------------------------
     async function loadAlerts() {
-      document.getElementById("logs").innerText = "⏳ Chargement alertes...";
+      document.getElementById("alerts").innerText = "⏳ Chargement...";
       try {
         const res = await fetch(`${API_BASE}/alerts`);
         const data = await res.json();
-        document.getElementById("logs").innerText =
+        document.getElementById("alerts").innerText =
           data.map(a => `⚠️ ${a.level} - ${a.message}`).join("\n");
       } catch {
-        document.getElementById("logs").innerText = "❌ Erreur alertes";
+        document.getElementById("alerts").innerText = "❌ Erreur alertes";
       }
     }
 
+    // -------------------------
     // Podcasts
+    // -------------------------
     async function generatePodcast(type) {
       document.getElementById("podcast-status").innerText = "⏳ Génération...";
       try {
@@ -257,10 +266,12 @@
       }
     }
 
-    // Codes abonnements
+    // -------------------------
+    // Codes promo
+    // -------------------------
     async function generateCode() {
       const type = document.getElementById("subscription-type").value;
-      document.getElementById("code-result").innerText = "⏳ Génération code...";
+      document.getElementById("code-result").innerText = "⏳ Génération...";
       try {
         const res = await fetch(`${API_BASE}/codes/generate?type=${type}`);
         const data = await res.json();
@@ -269,6 +280,9 @@
         document.getElementById("code-result").innerText = "❌ Erreur code";
       }
     }
+
+    // Auto-load logs au démarrage
+    window.onload = loadLogs;
   </script>
 </body>
 </html>
