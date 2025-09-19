@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🛰️ Console Admin TINSFLASH</title>
+  <title>🛰️ Console Admin-PP TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- 🔒 Empêche Google & autres moteurs d’indexer -->
+  <!-- 🔒 Pas d’indexation -->
   <meta name="robots" content="noindex, nofollow">
 
   <style>
@@ -101,7 +101,7 @@
   </style>
 </head>
 <body>
-  <h1>🛰️ Console Administrateur – TINSFLASH</h1>
+  <h1>🛰️ Console Admin-PP – TINSFLASH</h1>
   <div class="container">
 
     <!-- Supercalculateur -->
@@ -167,18 +167,28 @@
   <script>
     const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
+    // ✅ Supercalculateur (endpoint spécial admin-pp)
     async function runForecast(time) {
       document.getElementById("forecast-status").innerText = "⏳ Calcul en cours...";
       try {
-        const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
+        const res = await fetch(`${API_BASE}/admin-pp/run`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: time })
+        });
         const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
         document.getElementById("forecast-status").innerText =
-          `✅ Run ${time} terminé : ${data.combined.temperature}°C, Fiabilité ${data.combined.reliability}%`;
+          `✅ Run ${time} terminé : ${data.temperature}°C, Fiabilité ${data.reliability}%`;
       } catch (err) {
         document.getElementById("forecast-status").innerText = "❌ Erreur lancement forecast";
+        console.error("Erreur runForecast:", err);
       }
     }
 
+    // Comparateur
     async function loadComparisons() {
       document.getElementById("comparisons").innerText = "⏳ Chargement...";
       try {
@@ -191,6 +201,7 @@
       }
     }
 
+    // Ajout source externe
     document.getElementById("externalForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
@@ -208,6 +219,7 @@
       }
     });
 
+    // Logs
     async function loadLogs() {
       document.getElementById("logs").innerText = "⏳ Chargement logs...";
       try {
@@ -219,6 +231,7 @@
       }
     }
 
+    // Alertes
     async function loadAlerts() {
       document.getElementById("logs").innerText = "⏳ Chargement alertes...";
       try {
@@ -231,6 +244,7 @@
       }
     }
 
+    // Podcasts
     async function generatePodcast(type) {
       document.getElementById("podcast-status").innerText = "⏳ Génération...";
       try {
@@ -243,6 +257,7 @@
       }
     }
 
+    // Codes abonnements
     async function generateCode() {
       const type = document.getElementById("subscription-type").value;
       document.getElementById("code-result").innerText = "⏳ Génération code...";
