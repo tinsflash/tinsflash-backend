@@ -2,58 +2,273 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <title>🛰️ Console Admin TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin TinsFlash</title>
-  <link rel="stylesheet" href="style.css">
-  <script defer src="app.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      background: linear-gradient(135deg, #0c1a2b, #061019);
+      color: #e6f1ff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 2rem;
+      color: #1e90ff;
+      text-shadow: 0 0 12px #1e90ff;
+    }
+
+    h2 {
+      margin: 0 0 10px 0;
+      font-size: 1.3rem;
+      color: #00e5ff;
+      text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .card {
+      background: rgba(19, 42, 68, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.3);
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 18px;
+      margin: 6px 4px;
+      background: linear-gradient(135deg, #1e90ff, #00cfff);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #0c75d4, #00a4cc);
+      transform: scale(1.05);
+    }
+
+    textarea, input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+      background: #0c1a2b;
+      color: #e6f1ff;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+    }
+
+    textarea:focus, input:focus, select:focus {
+      border-color: #00e5ff;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+    }
+
+    #logs {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      border-radius: 6px;
+      border: 1px solid #0f0;
+    }
+
+    #forecast-status, #comparisons, #external-status,
+    #podcast-status, #code-result {
+      margin-top: 8px;
+      font-size: 0.95rem;
+      color: #a6fffa;
+    }
+
+    footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 30px;
+    }
+  </style>
 </head>
 <body>
-  <header class="navbar admin">
-    <div class="logo">🛠️ Console Admin</div>
-    <nav>
-      <a href="index.html">Accueil</a>
-      <a href="alerts.html">Alertes</a>
-      <a href="account.html">Comptes</a>
-    </nav>
-  </header>
+  <h1>🛰️ Console Administrateur – TINSFLASH</h1>
+  <div class="container">
 
-  <main class="container">
-    <!-- ⚠️ Alertes -->
-    <section class="card admin-card wide">
-      <h2>⚠️ Alertes en attente (70–90%)</h2>
-      <div id="alerts-review">⏳</div>
-    </section>
+    <!-- Supercalculateur -->
+    <div class="card">
+      <h2>⚡ Supercalculateur Météo</h2>
+      <p>Lancer manuellement les prévisions fusionnées (matin, midi, soir).</p>
+      <button class="btn" onclick="runForecast('morning')">🌅 Lancer Run 07h10</button>
+      <button class="btn" onclick="runForecast('noon')">☀️ Lancer Run 12h10</button>
+      <button class="btn" onclick="runForecast('evening')">🌙 Lancer Run 19h10</button>
+      <div id="forecast-status">⏳ En attente de lancement...</div>
+    </div>
 
-    <section class="card admin-card wide">
-      <h2>⚡ Alertes validées (≥ 90%)</h2>
-      <div id="alerts-validated">⏳</div>
-    </section>
+    <!-- Comparateur ForecastVision -->
+    <div class="card">
+      <h2>🔍 ForecastVision</h2>
+      <p>Comparer les prévisions de TINSFLASH avec d’autres sources.</p>
+      <button class="btn" onclick="loadComparisons()">📊 Charger Comparateur</button>
+      <div id="comparisons">⏳ Aucune donnée encore...</div>
+    </div>
 
-    <!-- 🎙️ Podcasts -->
-    <section class="card admin-card">
-      <h2>🎙️ Gestion des Podcasts</h2>
-      <button class="cta-btn">Générer un podcast</button>
-      <div id="admin-podcasts">⏳</div>
-    </section>
+    <!-- Capture prévisions externes -->
+    <div class="card">
+      <h2>📝 Ajout Source Externe</h2>
+      <form id="externalForm">
+        <label>Source (Facebook, WhatsApp, Site...)</label>
+        <input type="text" name="source" required>
+        <label>Texte capturé</label>
+        <textarea name="text" rows="3" required></textarea>
+        <button type="submit" class="btn">💾 Enregistrer</button>
+      </form>
+      <div id="external-status">⏳ Aucun ajout.</div>
+    </div>
 
-    <!-- 🎟️ Codes Promo -->
-    <section class="card admin-card">
-      <h2>🎟️ Codes Promo</h2>
-      <button class="cta-btn">Générer code Premium</button>
-      <button class="cta-btn">Générer code Pro</button>
-      <button class="cta-btn">Générer code Pro+</button>
-      <div id="admin-codes">⏳</div>
-    </section>
+    <!-- Monitoring -->
+    <div class="card">
+      <h2>📡 Monitoring</h2>
+      <button class="btn" onclick="loadLogs()">📖 Voir Logs</button>
+      <button class="btn" onclick="loadAlerts()">⚠️ Voir Alertes</button>
+      <div id="logs">⏳ Logs en attente...</div>
+    </div>
 
-    <!-- 👤 Utilisateurs -->
-    <section class="card admin-card wide">
-      <h2>👤 Supervision des abonnements</h2>
-      <div id="admin-users">⏳</div>
-    </section>
-  </main>
+    <!-- Podcasts -->
+    <div class="card">
+      <h2>🎙️ Podcasts météo</h2>
+      <button class="btn" onclick="generatePodcast('daily')">📆 Podcast du jour</button>
+      <button class="btn" onclick="generatePodcast('weekly')">📅 Podcast semaine</button>
+      <div id="podcast-status">⏳ Aucun podcast généré.</div>
+    </div>
 
-  <footer class="footer">
-    <p>© 2025 TinsFlash – Console Admin Secrète</p>
-  </footer>
+    <!-- Gestion abonnements -->
+    <div class="card">
+      <h2>🔑 Abonnements & Codes</h2>
+      <select id="subscription-type">
+        <option value="premium">Premium</option>
+        <option value="pro">Pro</option>
+        <option value="proplus">Pro+</option>
+      </select>
+      <button class="btn" onclick="generateCode()">🎟️ Générer Code</button>
+      <div id="code-result">⏳ Aucun code généré.</div>
+    </div>
+  </div>
+
+  <footer>© 2025 TINSFLASH | Console Admin</footer>
+
+  <script>
+    const API_BASE = "https://tinsflash-backend.onrender.com/api";
+
+    async function runForecast(time) {
+      document.getElementById("forecast-status").innerText = "⏳ Calcul en cours...";
+      try {
+        const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
+        const data = await res.json();
+        document.getElementById("forecast-status").innerText =
+          `✅ Run ${time} terminé : ${data.combined.temperature}°C, Fiabilité ${data.combined.reliability}%`;
+      } catch {
+        document.getElementById("forecast-status").innerText = "❌ Erreur lancement forecast";
+      }
+    }
+
+    async function loadComparisons() {
+      document.getElementById("comparisons").innerText = "⏳ Chargement...";
+      try {
+        const res = await fetch(`${API_BASE}/forecastvision`);
+        const data = await res.json();
+        document.getElementById("comparisons").innerHTML =
+          data.map(d => `<div>📌 ${d.source}: ${d.summary}</div>`).join("");
+      } catch {
+        document.getElementById("comparisons").innerText = "❌ Erreur comparateur";
+      }
+    }
+
+    document.getElementById("externalForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const body = Object.fromEntries(formData);
+      body.timestamp = new Date().toISOString();
+      try {
+        const res = await fetch(`${API_BASE}/forecastvision/add`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        document.getElementById("external-status").innerText = "✅ Source ajoutée : " + data.source;
+      } catch {
+        document.getElementById("external-status").innerText = "❌ Erreur ajout source";
+      }
+    });
+
+    async function loadLogs() {
+      document.getElementById("logs").innerText = "⏳ Chargement logs...";
+      try {
+        const res = await fetch(`${API_BASE}/logs`);
+        const data = await res.json();
+        document.getElementById("logs").innerText = data.join("\n");
+      } catch {
+        document.getElementById("logs").innerText = "❌ Erreur logs";
+      }
+    }
+
+    async function loadAlerts() {
+      document.getElementById("logs").innerText = "⏳ Chargement alertes...";
+      try {
+        const res = await fetch(`${API_BASE}/alerts`);
+        const data = await res.json();
+        document.getElementById("logs").innerText =
+          data.map(a => `⚠️ ${a.level} - ${a.message}`).join("\n");
+      } catch {
+        document.getElementById("logs").innerText = "❌ Erreur alertes";
+      }
+    }
+
+    async function generatePodcast(type) {
+      document.getElementById("podcast-status").innerText = "⏳ Génération...";
+      try {
+        const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
+        const data = await res.json();
+        document.getElementById("podcast-status").innerHTML =
+          `✅ ${data.forecast}<br><audio controls src="${data.audioUrl}"></audio>`;
+      } catch {
+        document.getElementById("podcast-status").innerText = "❌ Erreur podcast";
+      }
+    }
+
+    async function generateCode() {
+      const type = document.getElementById("subscription-type").value;
+      document.getElementById("code-result").innerText = "⏳ Génération code...";
+      try {
+        const res = await fetch(`${API_BASE}/codes/generate?type=${type}`);
+        const data = await res.json();
+        document.getElementById("code-result").innerText = `🎟️ Code ${type}: ${data.code}`;
+      } catch {
+        document.getElementById("code-result").innerText = "❌ Erreur code";
+      }
+    }
+  </script>
 </body>
 </html>
