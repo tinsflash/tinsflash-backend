@@ -1,125 +1,86 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌍 TINSFLASH - Prévisions météo</title>
-
-  <!-- Styles globaux -->
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- Loader -->
-  <link rel="stylesheet" href="loader.css" />
-
-  <!-- Radar Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <meta charset="UTF-8">
+  <title>TinsFlash Météo – Prévisions et Radar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
      crossorigin="anonymous"></script>
-</head>
-<body>
-  <header>
-    <h1>🌍 TINSFLASH</h1>
-    <p>La météo 1000% réelle, fonctionnelle et connectée</p>
-  </header>
 
-  <!-- 📍 Prévisions locales -->
-  <section id="forecast-local" class="section">
-    <h2>📍 Prévisions locales</h2>
-    <div id="local-loader" class="loader-container"></div>
-    <div id="local-content" class="forecast-card">
-      ⏳ Chargement des prévisions locales...
-    </div>
-  </section>
+  <!-- Styles globaux -->
+  <link rel="stylesheet" href="style.css">
 
-  <!-- 🇧🇪 Prévisions nationales -->
-  <section id="forecast-national" class="section">
-    <h2>🇧🇪 Prévisions nationales</h2>
-    <div id="national-loader" class="loader-container"></div>
-    <div id="national-content" class="forecast-card">
-      ⏳ Chargement des prévisions nationales...
-    </div>
-  </section>
-
-  <!-- 📅 Prévisions 7 jours -->
-  <section id="forecast-7days" class="section">
-    <h2>📅 Prévisions sur 7 jours</h2>
-    <div id="days-loader" class="loader-container"></div>
-    <div id="days-container" class="days-grid">
-      ⏳ Chargement des prévisions à 7 jours...
-    </div>
-    <!-- Texte météo automatique -->
-    <div id="forecast-text" class="forecast-text">
-      ✍️ Prévisions détaillées en cours de génération...
-    </div>
-  </section>
-
-  <!-- 🔊 Podcast météo -->
-  <section id="podcast-section" class="section">
-    <h2>🎧 Podcast météo</h2>
-    <button id="play-podcast">▶️ Écouter la météo du jour</button>
-    <audio id="podcast-audio" controls style="display:none;"></audio>
-  </section>
-
-  <!-- ⚠️ Alertes météo -->
-  <section id="alerts-section" class="section">
-    <h2>⚠️ Alertes météo</h2>
-    <div id="alerts-loader" class="loader-container"></div>
-    <div id="alerts" class="alerts-container">
-      ⏳ Chargement des alertes météo...
-    </div>
-  </section>
-
-  <!-- 🌍 Radar météo -->
-  <section id="radar-section" class="section">
-    <h2>🌍 Radar météo</h2>
-    <div id="radar-loader" class="loader-container"></div>
-    <div id="radar" class="radar-container">
-      ⏳ Chargement du radar...
-    </div>
-  </section>
-
-  <!-- Bandeau pub -->
-  <section class="ads-section">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-6828365665232268"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-      (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
-  </section>
-
-  <footer>
-    <p>© 2025 🌍 TINSFLASH | La météo qui donne des frissons à la NASA 🚀</p>
-  </footer>
+  <!-- Leaflet pour radar -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <!-- Scripts -->
-  <script src="loader.js"></script>
-  <script src="app.js"></script>
-  <script src="radar.js"></script>
+  <script defer src="app.js"></script>
+  <script defer src="radar.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">🌩️ TinsFlash</div>
+    <nav>
+      <a href="index.html" class="active">Accueil</a>
+      <a href="premium.html">Premium</a>
+      <a href="pro.html">Pro</a>
+      <a href="proplus.html">Pro+</a>
+      <a href="cockpit.html">Cockpit</a>
+      <a href="account.html">Mon Compte</a>
+    </nav>
+  </header>
 
-  <script>
-    // 🎬 Lancement des loaders + prévisions
-    startLoader("local-loader", () => loadLocalForecast());
-    startLoader("national-loader", () => loadNationalForecast());
-    startLoader("days-loader", () => load7DaysForecast());
-    startLoader("alerts-loader", () => loadAlerts());
-    startLoader("radar-loader", () => loadRadar());
+  <main class="container">
 
-    // 🎧 Gestion du podcast
-    document.getElementById("play-podcast").addEventListener("click", async () => {
-      const res = await fetch("/api/podcast/generate?type=daily");
-      const data = await res.json();
-      const audio = document.getElementById("podcast-audio");
-      audio.src = data.url || data.file || "";
-      audio.style.display = "block";
-      audio.play();
-    });
-  </script>
+    <!-- Prévisions locales -->
+    <section class="card" id="local">
+      <h2>📍 Prévisions locales</h2>
+      <div id="local-content">⏳ Chargement...</div>
+    </section>
+
+    <!-- Prévisions nationales -->
+    <section class="card" id="national">
+      <h2>🇧🇪 Prévisions nationales</h2>
+      <div id="national-content">⏳ Chargement...</div>
+    </section>
+
+    <!-- Prévisions 7 jours -->
+    <section class="card wide" id="seven-days">
+      <h2>📅 Prévisions 7 jours</h2>
+      <div id="days-container" class="days-grid">⏳ Chargement...</div>
+    </section>
+
+    <!-- Bulletin texte -->
+    <section class="card" id="forecast-text-section">
+      <h2>📰 Bulletin météo</h2>
+      <pre id="forecast-text">⏳ Génération...</pre>
+    </section>
+
+    <!-- Radar -->
+    <section class="card wide" id="radar">
+      <h2>🛰️ Radar en direct</h2>
+      <div id="radar-map" style="height:400px;border-radius:10px;">⏳ Radar...</div>
+    </section>
+
+    <!-- Alertes -->
+    <section class="card" id="alerts">
+      <h2>⚠️ Alertes météo</h2>
+      <div id="alerts-content">⏳ Chargement...</div>
+    </section>
+
+    <!-- Podcast -->
+    <section class="card" id="podcast">
+      <h2>🎙️ Podcast météo</h2>
+      <div id="podcast-container">⏳ Génération...</div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 TinsFlash – La météo qui fait grincer la NASA 🚀</p>
+  </footer>
 </body>
 </html>
