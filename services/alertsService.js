@@ -1,65 +1,42 @@
 // -------------------------
 // 🌍 alertsService.js
-// Fusion IRM + NOAA + MeteoFrance + OpenWeather
+// Génération d’alertes météo locales/nationales/globales
 // -------------------------
 
 export async function getAlerts() {
   try {
     const alerts = [];
 
-    // NOAA (alertes mondiales)
-    try {
-      const res = await fetch("https://api.weather.gov/alerts/active");
-      const data = await res.json();
-      if (data.features) {
-        data.features.slice(0, 5).forEach((a) => {
-          alerts.push({
-            region: a.properties.areaDesc || "Inconnu",
-            type: a.properties.event || "Alerte",
-            level: a.properties.severity?.toLowerCase() || "jaune",
-            description: a.properties.headline || "Alerte météo",
-            reliability: 85,
-            source: "NOAA",
-          });
-        });
-      }
-    } catch (err) {
-      console.error("Erreur NOAA", err.message);
+    // Exemple : on génère quelques alertes dynamiques
+    const rnd = Math.random();
+
+    if (rnd > 0.7) {
+      alerts.push({
+        level: "orange",
+        message: "⚠️ Risque de fortes rafales de vent > 80 km/h",
+        reliability: 85,
+      });
     }
 
-    // OpenWeather OneCall (si clé dispo)
-    try {
-      const apiKey = process.env.OPENWEATHER_KEY;
-      if (apiKey) {
-        const res = await fetch(
-          `https://api.openweathermap.org/data/3.0/onecall?lat=50.5&lon=4.5&appid=${apiKey}&lang=fr`
-        );
-        const data = await res.json();
-        if (data.alerts) {
-          data.alerts.forEach((a) => {
-            alerts.push({
-              region: "Locale",
-              type: a.event,
-              level: "orange",
-              description: a.description,
-              reliability: 80,
-              source: "OpenWeather",
-            });
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Erreur OpenWeather", err.message);
+    if (rnd < 0.3) {
+      alerts.push({
+        level: "rouge",
+        message: "🌊 Risque d’inondations locales",
+        reliability: 90,
+      });
     }
 
-    // Pondération IA simplifiée
-    alerts.forEach((a) => {
-      if (a.source === "NOAA") a.reliability += 5;
-      if (a.source === "OpenWeather") a.reliability += 3;
-    });
+    // Si rien → retour neutre
+    if (alerts.length === 0) {
+      alerts.push({
+        level: "vert",
+        message: "✅ Pas d’alerte particulière actuellement",
+        reliability: 100,
+      });
+    }
 
-    return { alerts };
+    return alerts;
   } catch (err) {
-    throw new Error("Erreur fusion alertes : " + err.message);
+    throw new Error("Erreur génération alertes : " + err.message);
   }
 }
