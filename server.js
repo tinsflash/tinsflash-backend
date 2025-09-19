@@ -162,12 +162,10 @@ app.get("/api/radar", async (req, res) => {
 });
 
 // ✅ Podcasts météo
-app.get("/api/podcast/generate", async (req, res) => {
+app.post("/api/podcast/generate", async (req, res) => {
   try {
-    const { type } = req.query;
-    if (!type) return res.status(400).json({ error: "Type de podcast requis" });
-
-    const podcast = await generatePodcast(type);
+    const { type, text } = req.body;
+    const podcast = await generatePodcast(type || "daily", text);
     res.json(podcast);
   } catch (err) {
     res.status(500).json({ error: err.message });
