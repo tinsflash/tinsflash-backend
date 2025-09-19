@@ -26,57 +26,31 @@ app.use(express.static("public")); // frontend
 // -------------------------
 // 🚀 Supercalculateur météo
 // -------------------------
-let lastRuns = [];
-let runLogs = [];
+let lastRuns = []; // mémoire des derniers runs
 
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { time, country } = req.body;
     const coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles par défaut
-    const runId = Date.now();
 
-    runLogs = [];
+    const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
 
-    function log(step) {
-      const msg = `${new Date().toISOString()} [${runId}] ${step}`;
-      runLogs.push(msg);
-      console.log(msg);
+    // Vérifier erreurs
+    let statusMsg = "";
+    if (forecast.errors && forecast.errors.length > 0) {
+      if (forecast.errors.length === Object.keys(forecast.sources).length) {
+        statusMsg = `❌ Run totalement en échec (${forecast.errors.join(" | ")})`;
+      } else {
+        statusMsg = `⚠️ Run terminé avec erreurs : ${forecast.errors.join(" | ")}`;
+      }
+    } else {
+      statusMsg = "✅ Run 100% réussi";
     }
 
-    log("🟢 Lancement du supercalculateur météo…");
-
-    // Étapes avec temporisation réaliste
-    log("📡 Connexion aux modèles officiels (Meteomatics, OpenWeather, GFS, ICON)...");
-    await new Promise(r => setTimeout(r, 3000));
-
-    log("🔍 Ajout sources externes (Trullemans, Wetterzentrale, NASA, etc.)…");
-    await new Promise(r => setTimeout(r, 3000));
-
-    log("🤖 Fusion multi-modèles + analyse IA + facteurs locaux…");
-    const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
-    await new Promise(r => setTimeout(r, 3000));
-
-    log("📊 Vérification anomalies saisonnières & calcul fiabilité…");
-    await new Promise(r => setTimeout(r, 2000));
-
-    // Détection erreurs éventuelles
-    const errors = Object.entries(forecast.sources || {})
-      .filter(([_, val]) => val?.error)
-      .map(([key, val]) => `⚠️ ${key}: ${val.error}`);
-
-    const status =
-      errors.length === 0
-        ? "✅ Run 100% réussi"
-        : `⚠️ Run terminé avec erreurs : ${errors.join(" | ")}`;
-
-    log(status);
-
     const runResult = {
-      id: runId,
       time: time || new Date().toISOString(),
       forecast: forecast.combined,
-      status,
-      bulletin: forecast.combined.bulletin,
+      status: statusMsg,
     };
 
     lastRuns.push(runResult);
@@ -84,13 +58,12 @@ app.post("/api/supercalc/run", async (req, res) => {
 
     res.json(runResult);
   } catch (err) {
-    runLogs.push("❌ Erreur supercalculateur: " + err.message);
     res.status(500).json({ error: "Erreur supercalculateur: " + err.message });
   }
 });
 
 app.get("/api/supercalc/logs", (req, res) => {
-  res.json(runLogs);
+  res.json(lastRuns);
 });
 
 // -------------------------
