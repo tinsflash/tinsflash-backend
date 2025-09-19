@@ -24,8 +24,40 @@ app.use(express.json());
 app.use(express.static("public")); // frontend
 
 // -------------------------
-// ROUTES API
+// 🚀 Supercalculateur météo
 // -------------------------
+let lastRuns = []; // mémoire des derniers runs
+
+app.post("/api/supercalc/run", async (req, res) => {
+  try {
+    const { time, country } = req.body;
+    const coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles
+
+    const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
+
+    const runResult = {
+      time: time || new Date().toISOString(),
+      forecast: forecast.combined,
+    };
+
+    lastRuns.push(runResult);
+    if (lastRuns.length > 10) lastRuns.shift();
+
+    res.json(runResult);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur supercalculateur: " + err.message });
+  }
+});
+
+app.get("/api/supercalc/logs", (req, res) => {
+  res.json(lastRuns);
+});
+
+// -------------------------
+// ROUTES API classiques
+// -------------------------
+
+// ✅ Test route
 app.get("/", (req, res) => {
   res.send("🚀 TINSFLASH Backend opérationnel !");
 });
@@ -34,8 +66,9 @@ app.get("/", (req, res) => {
 app.get("/api/forecast/local", async (req, res) => {
   try {
     const { lat, lon, country } = req.query;
-    if (!lat || !lon) return res.status(400).json({ error: "Latitude et longitude requises" });
-
+    if (!lat || !lon) {
+      return res.status(400).json({ error: "Latitude et longitude requises" });
+    }
     const forecast = await getForecast(lat, lon, country || "BE");
     res.json(forecast);
   } catch (err) {
@@ -47,7 +80,7 @@ app.get("/api/forecast/local", async (req, res) => {
 app.get("/api/forecast/national", async (req, res) => {
   try {
     const { country } = req.query;
-    let coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles
+    let coords = { lat: 50.8503, lon: 4.3517 };
 
     if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 };
     if (country === "US") coords = { lat: 38.9072, lon: -77.0369 };
@@ -63,44 +96,33 @@ app.get("/api/forecast/national", async (req, res) => {
 app.get("/api/forecast/7days", async (req, res) => {
   try {
     const { lat, lon, country } = req.query;
-    if (!lat || !lon) return res.status(400).json({ error: "Latitude et longitude requises" });
-
+    if (!lat || !lon) {
+      return res.status(400).json({ error: "Latitude et longitude requises" });
+    }
     const forecast = await getForecast(lat, lon, country || "BE");
-    const model = forecast.sources.gfs || forecast.sources.icon;
 
-    const days = [];
     const now = new Date();
+    const days = [];
 
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(now.getDate() + i);
 
-      let temps = [], vents = [], precip = [];
-
-      if (model?.hourly?.temperature_2m) {
-        for (let h = i * 24; h < (i + 1) * 24; h++) {
-          temps.push(model.hourly.temperature_2m[h] || forecast.combined.temperature);
-          vents.push(model.hourly.wind_speed_10m[h] || forecast.combined.wind);
-          precip.push(model.hourly.precipitation[h] || 0);
-        }
-      }
-
-      const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-
-      const tmin = temps.length ? Math.min(...temps) : forecast.combined.temperature_min;
-      const tmax = temps.length ? Math.max(...temps) : forecast.combined.temperature_max;
-
       days.push({
         date: date.toISOString().split("T")[0],
-        jour: date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
-        temperature_min: Math.round(tmin),
-        temperature_max: Math.round(tmax),
-        vent: Math.round(avg(vents) || forecast.combined.wind),
-        precipitation: Math.round(avg(precip) * 10) / 10 || 0,
+        jour: date.toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }),
+        temperature_min: forecast.combined.temperature_min,
+        temperature_max: forecast.combined.temperature_max,
+        vent: forecast.combined.wind,
+        precipitation: forecast.combined.precipitation,
         description: forecast.combined.description,
         fiabilité: forecast.combined.reliability,
         anomalie: forecast.combined.anomaly?.message || "Normale",
-        icone: getWeatherIcon(forecast.combined.code || 800),
+        icone: getWeatherIcon(forecast.combined.code || 0),
       });
     }
 
@@ -130,7 +152,8 @@ app.get("/api/radar", async (req, res) => {
     const layers = await getRadarLayers();
     res.json({
       layers,
-      tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+      tilesUrl:
+        "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
       timestampsUrl: "https://api.rainviewer.com/public/maps.json",
     });
   } catch (err) {
@@ -164,7 +187,7 @@ app.get("/api/codes/generate", (req, res) => {
   }
 });
 
-// ✅ Icône météo seule
+// ✅ Icône météo
 app.get("/api/weather/icon", (req, res) => {
   try {
     const { code } = req.query;
