@@ -13,13 +13,12 @@
     .btn { padding:10px 15px; margin:5px; background:linear-gradient(135deg,#1e90ff,#00eaff); border:none; border-radius:8px; color:white; font-weight:bold; cursor:pointer; }
     .btn:hover { background:linear-gradient(135deg,#0c75d4,#00b3cc); }
     textarea,input,select { width:100%; padding:10px; margin:6px 0; border-radius:8px; border:none; font-size:14px; }
-    #logs { background:#000; color:#0f0; font-family:monospace; padding:12px; height:220px; border-radius:8px; overflow-y:auto; }
-    .status { margin-top:10px; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05); font-size:0.95rem; white-space:pre-line; }
-    .bulletin { background:#0f2238; margin-top:10px; padding:10px; border-radius:8px; font-style:italic; }
+    #logs { background:#000; color:#0f0; font-family:monospace; padding:12px; height:200px; border-radius:8px; overflow-y:auto; }
+    .status { margin-top:10px; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05); font-size:0.95rem; }
   </style>
 </head>
 <body>
-  <h1>🛰️ Console Administrateur – TINSFLASH</h1>
+  <h1>TINSFLASH</h1>
   <div class="container">
 
     <!-- Supercalculateur -->
@@ -29,7 +28,6 @@
       <button class="btn" onclick="runForecast('12h10')">☀️ Run 12h10</button>
       <button class="btn" onclick="runForecast('19h10')">🌙 Run 19h10</button>
       <div id="forecast-status" class="status">⏳ En attente de lancement...</div>
-      <div id="forecast-bulletin" class="bulletin">Aucun bulletin généré.</div>
     </div>
 
     <!-- Logs -->
@@ -89,10 +87,9 @@
   <script>
     const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
-    // --- Supercalculateur ---
+    // Supercalculateur
     async function runForecast(time) {
       document.getElementById("forecast-status").innerText = "⏳ Calcul en cours...";
-      document.getElementById("forecast-bulletin").innerText = "⏳ Génération bulletin...";
       try {
         const res = await fetch(`${API_BASE}/supercalc/run`, {
           method:"POST", headers:{ "Content-Type":"application/json" },
@@ -100,13 +97,10 @@
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-
-        document.getElementById("forecast-status").innerText = data.status;
-        document.getElementById("forecast-bulletin").innerText =
-          data.bulletin || "Aucun bulletin généré.";
-      } catch (err) {
+        document.getElementById("forecast-status").innerText =
+          `${data.status}\nPrévisions: ${data.forecast.temperature_min}°C à ${data.forecast.temperature_max}°C, vent ${data.forecast.wind} km/h, précipitations ${data.forecast.precipitation} mm.\nFiabilité: ${data.forecast.reliability}%`;
+      } catch {
         document.getElementById("forecast-status").innerText = "❌ Erreur lancement forecast";
-        document.getElementById("forecast-bulletin").innerText = "";
       }
     }
 
@@ -115,13 +109,14 @@
       try {
         const res = await fetch(`${API_BASE}/supercalc/logs`);
         const data = await res.json();
-        document.getElementById("logs").innerText = data.join("\n");
+        document.getElementById("logs").innerText =
+          data.map(r => `${r.time} → ${r.status} | ${r.forecast.temperature}°C | Fiabilité ${r.forecast.reliability}%`).join("\n");
       } catch {
         document.getElementById("logs").innerText = "❌ Erreur logs";
       }
     }
 
-    // --- ForecastVision ---
+    // ForecastVision
     async function loadComparisons() {
       document.getElementById("comparisons").innerText = "⏳ Chargement...";
       try {
@@ -151,7 +146,7 @@
       }
     });
 
-    // --- Alertes ---
+    // Alertes
     async function loadAlerts() {
       document.getElementById("alerts-status").innerText = "⏳ Chargement alertes...";
       try {
@@ -164,15 +159,11 @@
       }
     }
 
-    // --- Podcasts ---
+    // Podcasts
     async function generatePodcast(type) {
       document.getElementById("podcast-status").innerText = "⏳ Génération...";
       try {
-        const res = await fetch(`${API_BASE}/podcast/generate`, {
-          method:"POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify({ type })
-        });
+        const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
         const data = await res.json();
         document.getElementById("podcast-status").innerHTML =
           `✅ ${data.title || "Podcast généré"}<br><audio controls src="${data.url}"></audio>`;
@@ -181,7 +172,7 @@
       }
     }
 
-    // --- Codes ---
+    // Codes
     async function generateCode() {
       const type = document.getElementById("subscription-type").value;
       document.getElementById("code-result").innerText = "⏳ Génération code...";
