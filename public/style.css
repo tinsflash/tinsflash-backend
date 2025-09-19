@@ -143,6 +143,14 @@ header {
   background: #2a2a55;
   transform: translateY(-3px);
 }
+#forecast-text {
+  text-align: left;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #e6faff;
+  white-space: pre-line; /* pour garder les sauts de ligne */
+}
+
 
 /* ============================
    🛰️ Radar
