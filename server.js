@@ -12,6 +12,7 @@ import { getAlerts } from "./services/alertsService.js";
 import { generatePodcast } from "./services/podcastService.js";
 import { getWeatherIcon, generateCode } from "./services/codesService.js";
 import { chatWithJean } from "./services/chatService.js";
+import { getRadarLayers } from "./services/radarService.js";
 
 dotenv.config();
 
@@ -73,7 +74,7 @@ app.get("/api/forecast/7days", async (req, res) => {
     const now = new Date();
     const days = [];
 
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(now.getDate() + i);
 
@@ -115,12 +116,18 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Radar interactif avec RainViewer
-app.get("/api/radar", (req, res) => {
-  res.json({
-    tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
-    timestampsUrl: "https://api.rainviewer.com/public/maps.json"
-  });
+// ✅ Radar interactif
+app.get("/api/radar", async (req, res) => {
+  try {
+    const layers = await getRadarLayers();
+    res.json({
+      layers,
+      tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+      timestampsUrl: "https://api.rainviewer.com/public/maps.json",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ✅ Podcasts météo
