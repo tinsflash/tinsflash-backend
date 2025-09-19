@@ -31,26 +31,22 @@ let lastRuns = []; // mémoire des derniers runs
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { time, country } = req.body;
-    const coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles par défaut
+    const coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles
 
     const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
 
-    // Vérifier erreurs
-    let statusMsg = "";
-    if (forecast.errors && forecast.errors.length > 0) {
-      if (forecast.errors.length === Object.keys(forecast.sources).length) {
-        statusMsg = `❌ Run totalement en échec (${forecast.errors.join(" | ")})`;
-      } else {
-        statusMsg = `⚠️ Run terminé avec erreurs : ${forecast.errors.join(" | ")}`;
-      }
-    } else {
-      statusMsg = "✅ Run 100% réussi";
+    // statut global
+    let status = "✅ Run 100% réussi";
+    if (forecast.combined.errors.length > 0 && forecast.combined.sources.length > forecast.combined.errors.length) {
+      status = `⚠️ Run partiel : ${forecast.combined.sources.length - forecast.combined.errors.length} sources OK, ${forecast.combined.errors.length} erreurs`;
+    } else if (forecast.combined.sources.length === forecast.combined.errors.length) {
+      status = "❌ Run KO (toutes les sources ont échoué)";
     }
 
     const runResult = {
       time: time || new Date().toISOString(),
+      status,
       forecast: forecast.combined,
-      status: statusMsg,
     };
 
     lastRuns.push(runResult);
