@@ -1,73 +1,49 @@
 // -------------------------
-// 🌍 podcastService.js
-// Génération de prévisions audio par IA
+// 🎙️ podcastService.js
+// Génération de podcasts météo en voix grave FR
 // -------------------------
-
-import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
+import OpenAI from "openai";
 
-export async function generatePodcast(type = "free") {
-  let prompt = "";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  switch (type) {
-    case "free":
-      prompt = "Prévision météo simple et concise en français.";
-      break;
-    case "premium":
-      prompt = "Prévision météo détaillée avec températures, pluie, vent.";
-      break;
-    case "pro":
-      prompt = "Prévision météo locale adaptée aux agriculteurs et aux pros.";
-      break;
-    case "proplus":
-      prompt = "Prévision météo scientifique ultra précise avec tendances.";
-      break;
-    default:
-      prompt = "Prévision météo générique.";
-  }
+// Dossier temporaire pour stocker les fichiers audio
+const PODCAST_DIR = path.resolve("public/podcasts");
+if (!fs.existsSync(PODCAST_DIR)) fs.mkdirSync(PODCAST_DIR, { recursive: true });
 
+export async function generatePodcast(type = "daily", text = null) {
   try {
-    // Génération du texte météo avec GPT
-    const reply = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-      }),
+    // Si pas de texte fourni → fallback
+    if (!text) {
+      text = type === "daily"
+        ? "Voici le bulletin météo du jour par TINSFLASH."
+        : "Voici le bulletin météo de la semaine par TINSFLASH.";
+    }
+
+    // Nom de fichier unique
+    const filename = `podcast_${type}_${Date.now()}.mp3`;
+    const filePath = path.join(PODCAST_DIR, filename);
+
+    // Appel API OpenAI TTS → voix grave, sérieuse
+    const response = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "alloy", // ⚠️ adapter si tu veux une voix spécifique FR
+      input: `Bulletin météo TINSFLASH. ${text}`,
+      format: "mp3"
     });
 
-    const data = await reply.json();
-    const forecastText = data.choices?.[0]?.message?.content || "Prévision indisponible";
-
-    // Génération audio (TTS)
-    const tts = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini-tts",
-        voice: "alloy",
-        input: forecastText,
-      }),
-    });
-
-    const buffer = Buffer.from(await tts.arrayBuffer());
-    const filePath = path.join(process.cwd(), `public/podcast-${type}.mp3`);
+    // Sauvegarde du fichier audio
+    const buffer = Buffer.from(await response.arrayBuffer());
     fs.writeFileSync(filePath, buffer);
 
     return {
-      type,
-      text: forecastText,
-      audioUrl: `/podcast-${type}.mp3`,
+      title: `Podcast météo (${type})`,
+      text,
+      audioUrl: `/podcasts/${filename}`
     };
   } catch (err) {
-    throw new Error("Erreur génération podcast : " + err.message);
+    console.error("Erreur podcastService:", err);
+    return { error: "Impossible de générer le podcast" };
   }
 }
