@@ -1,4 +1,4 @@
-// ===============================
+7// ===============================
 // 🌍 TINSFLASH FRONTEND APP
 // ===============================
 
@@ -237,7 +237,34 @@ async function chatWithJean() {
     console.error("Erreur chat:", err);
   }
 }
+async function generateForecastText(daysData) {
+  if (!daysData || daysData.length === 0) {
+    document.getElementById("forecast-text").innerText =
+      "⚠️ Données insuffisantes pour générer un bulletin.";
+    return;
+  }
 
+  const today = daysData[0];
+  const tomorrow = daysData[1];
+  const rest = daysData.slice(2);
+
+  let text = "";
+
+  // Ce soir
+  text += `🌙 Ce soir : ${today.description}, températures autour de ${today.temperature_min}°C à ${today.temperature_max}°C.\n\n`;
+
+  // Demain
+  text += `☀️ Demain (${tomorrow.jour}) : ${tomorrow.description}, min ${tomorrow.temperature_min}°C et max ${tomorrow.temperature_max}°C.\n\n`;
+
+  // Prochains jours
+  if (rest.length > 0) {
+    const minTemp = Math.min(...rest.map(d => d.temperature_min));
+    const maxTemp = Math.max(...rest.map(d => d.temperature_max));
+    text += `📅 Ensuite : tendance générale ${rest[0].description.toLowerCase()}, avec des températures entre ${minTemp}°C et ${maxTemp}°C les prochains jours.`;
+  }
+
+  document.getElementById("forecast-text").innerText = text;
+}
 // ===============================
 // INIT
 // ===============================
