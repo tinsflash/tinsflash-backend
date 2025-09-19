@@ -128,19 +128,50 @@ window.onload = () => {
 };
 
 // ===============================
-// RADAR
+// RADAR INTERACTIF
 // ===============================
 async function loadRadar() {
+  const radarDiv = document.getElementById("radar");
+  radarDiv.innerHTML = "⏳ Chargement radar...";
+
   try {
     const res = await fetch(`${API_BASE}/radar`);
     const data = await res.json();
 
-    document.getElementById("radar").innerHTML = `
-      <div class="card radar-card">
-        <img src="${data.radarUrl}" alt="Radar précipitations">
-      </div>`;
+    // Crée la carte Leaflet
+    radarDiv.innerHTML = `<div id="radar-map" style="height:400px;border-radius:10px;"></div>`;
+    const map = L.map("radar-map").setView([50.85, 4.35], 6); // Bruxelles par défaut
+
+    // Fond de carte
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    // Charge les frames disponibles
+    const framesRes = await fetch(data.timestampsUrl);
+    const frames = await framesRes.json();
+
+    let currentFrame = frames.length - 1; // dernière frame (la plus récente)
+    let radarLayer;
+
+    function showFrame(i) {
+      if (radarLayer) map.removeLayer(radarLayer);
+      radarLayer = L.tileLayer(
+        data.tilesUrl.replace("{time}", frames[i]),
+        { opacity: 0.6 }
+      ).addTo(map);
+    }
+
+    // Animation
+    showFrame(currentFrame);
+    setInterval(() => {
+      currentFrame = (currentFrame + 1) % frames.length;
+      showFrame(currentFrame);
+    }, 800); // change toutes les 0.8s
+
   } catch (err) {
-    console.error("Erreur radar:", err);
+    radarDiv.innerHTML = "❌ Erreur radar";
+    console.error("Radar error:", err);
   }
 }
 
