@@ -37,9 +37,9 @@ app.post("/api/supercalc/run", async (req, res) => {
 
     // statut global
     let status = "✅ Run 100% réussi";
-    if (forecast.combined.errors.length > 0 && forecast.combined.sources.length > forecast.combined.errors.length) {
+    if (forecast.combined.errors?.length > 0 && forecast.combined.sources?.length > forecast.combined.errors.length) {
       status = `⚠️ Run partiel : ${forecast.combined.sources.length - forecast.combined.errors.length} sources OK, ${forecast.combined.errors.length} erreurs`;
-    } else if (forecast.combined.sources.length === forecast.combined.errors.length) {
+    } else if (forecast.combined.sources?.length === forecast.combined.errors?.length) {
       status = "❌ Run KO (toutes les sources ont échoué)";
     }
 
@@ -47,10 +47,11 @@ app.post("/api/supercalc/run", async (req, res) => {
       time: time || new Date().toISOString(),
       status,
       forecast: forecast.combined,
+      errors: forecast.combined.errors || [],
     };
 
     lastRuns.push(runResult);
-    if (lastRuns.length > 10) lastRuns.shift();
+    if (lastRuns.length > 20) lastRuns.shift(); // garder 20 derniers runs max
 
     res.json(runResult);
   } catch (err) {
@@ -59,7 +60,11 @@ app.post("/api/supercalc/run", async (req, res) => {
 });
 
 app.get("/api/supercalc/logs", (req, res) => {
-  res.json(lastRuns);
+  try {
+    res.json(lastRuns);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération logs: " + err.message });
+  }
 });
 
 // -------------------------
