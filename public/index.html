@@ -1,105 +1,88 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH – La météo 1000% réelle</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌍 TINSFLASH - Prévisions météo</title>
 
-  <!-- ✅ Google AdSense verification -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
-     crossorigin="anonymous"></script>
+  <!-- Styles globaux -->
+  <link rel="stylesheet" href="style.css" />
 
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="loader.css">
-  <link rel="stylesheet" href="radar.css">
+  <!-- Loader -->
+  <link rel="stylesheet" href="loader.css" />
 
-  <!-- 🌍 Leaflet -->
+  <!-- Radar Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <script defer src="app.js"></script>
-  <script defer src="loader.js"></script>
-  <script defer src="radar.js"></script>
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
+     crossorigin="anonymous"></script>
 </head>
 <body>
-  <!-- 🎬 Intro vidéo -->
-  <section class="intro-video">
-    <video autoplay muted playsinline id="intro-jean">
-      <source src="intro-jean.mp4" type="video/mp4">
-      Votre navigateur ne supporte pas la vidéo.
-    </video>
-    <div class="intro-overlay">
-      <h1>🌍 TINSFLASH</h1>
-      <p>La météo 1000% réelle, fonctionnelle et connectée</p>
-      <div class="intro-buttons">
-        <button onclick="toggleSound()" id="sound-btn">🔊 Activer le son</button>
-        <button onclick="skipIntro()">⏭️ Passer l’intro</button>
-      </div>
+  <header>
+    <h1>🌍 TINSFLASH</h1>
+    <p>La météo 1000% réelle, fonctionnelle et connectée</p>
+  </header>
+
+  <!-- 📍 Prévisions locales -->
+  <section id="forecast-local" class="section">
+    <h2>📍 Prévisions locales</h2>
+    <div id="local-loader" class="loader-container"></div>
+    <div id="local-content" class="forecast-card">
+      ⏳ Chargement des prévisions locales...
     </div>
   </section>
 
-  <!-- 🌤️ Contenu principal -->
-  <header>
-    <h1>Prévisions Météo TINSFLASH</h1>
-  </header>
+  <!-- 🇧🇪 Prévisions nationales -->
+  <section id="forecast-national" class="section">
+    <h2>🇧🇪 Prévisions nationales</h2>
+    <div id="national-loader" class="loader-container"></div>
+    <div id="national-content" class="forecast-card">
+      ⏳ Chargement des prévisions nationales...
+    </div>
+  </section>
 
-  <main>
-    <!-- 📍 Prévisions locales -->
-    <section class="forecast-section">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-loader" class="loader-container"></div>
-      <div id="local-content" class="forecast-box neon-card"></div>
-    </section>
+  <!-- 📅 Prévisions 7 jours -->
+  <section id="forecast-7days" class="section">
+    <h2>📅 Prévisions sur 7 jours</h2>
+    <div id="days-loader" class="loader-container"></div>
+    <div id="days-container" class="days-grid">
+      ⏳ Chargement des prévisions à 7 jours...
+    </div>
+    <!-- Texte météo automatique -->
+    <div id="forecast-text" class="forecast-text">
+      ✍️ Prévisions détaillées en cours de génération...
+    </div>
+  </section>
 
-    <!-- 🌍 Prévisions nationales -->
-    <section class="forecast-section">
-      <h2>🌍 Prévisions nationales</h2>
-      <div id="national-loader" class="loader-container"></div>
-      <div id="national-content" class="forecast-box neon-card"></div>
-    </section>
+  <!-- 🔊 Podcast météo -->
+  <section id="podcast-section" class="section">
+    <h2>🎧 Podcast météo</h2>
+    <button id="play-podcast">▶️ Écouter la météo du jour</button>
+    <audio id="podcast-audio" controls style="display:none;"></audio>
+  </section>
 
-    <!-- 📅 Prévisions 7 jours -->
-    <section class="forecast-section">
-      <h2>📅 Prévisions sur 7 jours</h2>
-      <div id="days-loader" class="loader-container"></div>
-      <div id="days-container" class="days-grid"></div>
-    </section>
+  <!-- ⚠️ Alertes météo -->
+  <section id="alerts-section" class="section">
+    <h2>⚠️ Alertes météo</h2>
+    <div id="alerts-loader" class="loader-container"></div>
+    <div id="alerts" class="alerts-container">
+      ⏳ Chargement des alertes météo...
+    </div>
+  </section>
 
-    <!-- 📝 Prévisions écrites -->
-    <section class="forecast-section">
-      <h2>📝 Prévisions écrites</h2>
-      <div id="forecast-text" class="forecast-box neon-card">
-        ⏳ Génération du bulletin météo...
-      </div>
-    </section>
+  <!-- 🌍 Radar météo -->
+  <section id="radar-section" class="section">
+    <h2>🌍 Radar météo</h2>
+    <div id="radar-loader" class="loader-container"></div>
+    <div id="radar" class="radar-container">
+      ⏳ Chargement du radar...
+    </div>
+  </section>
 
-    <!-- 🎙️ Prévisions audio -->
-    <section class="forecast-section">
-      <h2>🎙️ Prévisions audio</h2>
-      <div id="audio-forecast" class="forecast-box neon-card">
-        <p>🎧 Cliquez sur Lecture pour écouter le bulletin météo.</p>
-        <button onclick="playForecast()">▶️ Lecture</button>
-        <button onclick="stopForecast()">⏹️ Stop</button>
-      </div>
-    </section>
-
-    <!-- 🛰️ Radar météo mondial -->
-    <section class="forecast-section">
-      <h2>🌍 Radar météo mondial</h2>
-      <div id="radar-loader" class="loader-container"></div>
-      <div id="radar-content"></div>
-    </section>
-
-    <!-- ⚠️ Alertes -->
-    <section class="forecast-section">
-      <h2>⚠️ Alertes</h2>
-      <div id="alerts-loader" class="loader-container"></div>
-      <div id="alerts" class="forecast-box neon-card"></div>
-    </section>
-  </main>
-
-  <!-- 📢 Bandeau pub Google -->
-  <aside class="ads">
+  <!-- Bandeau pub -->
+  <section class="ads-section">
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-client="ca-pub-6828365665232268"
@@ -107,126 +90,35 @@
          data-ad-format="auto"
          data-full-width-responsive="true"></ins>
     <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
+      (adsbygoogle = window.adsbygoogle || []).push({});
     </script>
-  </aside>
+  </section>
 
   <footer>
-    <p>🚀 TINSFLASH 2025 – La machine météo mondiale</p>
+    <p>© 2025 🌍 TINSFLASH | La météo qui donne des frissons à la NASA 🚀</p>
   </footer>
 
-  <!-- 🚀 Scripts -->
+  <!-- Scripts -->
+  <script src="loader.js"></script>
+  <script src="app.js"></script>
+  <script src="radar.js"></script>
+
   <script>
-    // 🎬 Vidéo Intro
-    function toggleSound() {
-      const video = document.getElementById("intro-jean");
-      const btn = document.getElementById("sound-btn");
-      if (video.muted) {
-        video.muted = false;
-        btn.textContent = "🔇 Couper le son";
-      } else {
-        video.muted = true;
-        btn.textContent = "🔊 Activer le son";
-      }
-    }
+    // 🎬 Lancement des loaders + prévisions
+    startLoader("local-loader", () => loadLocalForecast());
+    startLoader("national-loader", () => loadNationalForecast());
+    startLoader("days-loader", () => load7DaysForecast());
+    startLoader("alerts-loader", () => loadAlerts());
+    startLoader("radar-loader", () => loadRadar());
 
-    function skipIntro() {
-      const video = document.getElementById("intro-jean");
-      video.pause();
-      document.querySelector(".intro-video").style.display = "none";
-    }
-
-    // 📝 Génération du bulletin écrit
-    function generateForecastText(daysData) {
-      if (!daysData || daysData.length === 0) {
-        document.getElementById("forecast-text").innerText =
-          "⚠️ Données insuffisantes pour générer un bulletin.";
-        return;
-      }
-
-      const today = daysData[0];
-      const tomorrow = daysData[1];
-      const rest = daysData.slice(2);
-
-      let text = "";
-      text += `🌙 Ce soir : ${today.description}, températures autour de ${today.temperature_min}°C à ${today.temperature_max}°C.\n\n`;
-      text += `☀️ Demain (${tomorrow.jour}) : ${tomorrow.description}, min ${tomorrow.temperature_min}°C et max ${tomorrow.temperature_max}°C.\n\n`;
-
-      if (rest.length > 0) {
-        const minTemp = Math.min(...rest.map(d => d.temperature_min));
-        const maxTemp = Math.max(...rest.map(d => d.temperature_max));
-        text += `📅 Ensuite : tendance ${rest[0].description.toLowerCase()}, avec des températures entre ${minTemp}°C et ${maxTemp}°C.`;
-      }
-
-      document.getElementById("forecast-text").innerText = text;
-    }
-
-    // 🎙️ Audio forecast
-    let synth = window.speechSynthesis;
-    let utterance;
-
-    function playForecast() {
-      const text = document.getElementById("forecast-text").innerText;
-      if (!text || text.startsWith("⚠️")) {
-        alert("⚠️ Bulletin météo indisponible pour l’instant.");
-        return;
-      }
-
-      stopForecast();
-      utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "fr-FR";
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      synth.speak(utterance);
-    }
-
-    function stopForecast() {
-      if (synth.speaking) {
-        synth.cancel();
-      }
-    }
-
-    // 🚀 Loaders + données météo
-    window.addEventListener("DOMContentLoaded", () => {
-      // Local avec GPS
-      const localLoader = startLoader("local-loader", 2500);
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            loadLocalForecast(pos.coords.latitude, pos.coords.longitude)
-              .then(() => localLoader.stop());
-          },
-          err => {
-            document.getElementById("local-content").innerHTML =
-              "⚠️ Localisation refusée.<br> Merci d’encoder votre adresse complète dans l’onglet <strong>Compte</strong>.";
-            localLoader.stop();
-          }
-        );
-      } else {
-        document.getElementById("local-content").innerHTML =
-          "💻 Vous êtes connecté depuis une localisation générique.<br>" +
-          "Merci d’encoder votre adresse complète dans l’onglet <strong>Compte</strong>.";
-        localLoader.stop();
-      }
-
-      // National
-      const nationalLoader = startLoader("national-loader", 2500);
-      loadNationalForecast("BE").then(() => nationalLoader.stop());
-
-      // 7 jours + texte écrit
-      const daysLoader = startLoader("days-loader", 2500);
-      loadSevenDays().then((daysData) => {
-        daysLoader.stop();
-        generateForecastText(daysData.days);
-      });
-
-      // Radar
-      const radarLoader = startLoader("radar-loader", 2500);
-      loadRadar().then(() => radarLoader.stop());
-
-      // Alertes
-      const alertsLoader = startLoader("alerts-loader", 2500);
-      loadAlerts().then(() => alertsLoader.stop());
+    // 🎧 Gestion du podcast
+    document.getElementById("play-podcast").addEventListener("click", async () => {
+      const res = await fetch("/api/podcast/generate?type=daily");
+      const data = await res.json();
+      const audio = document.getElementById("podcast-audio");
+      audio.src = data.url || data.file || "";
+      audio.style.display = "block";
+      audio.play();
     });
   </script>
 </body>
