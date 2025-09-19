@@ -120,6 +120,7 @@ app.get("/api/radar", (req, res) => {
   res.json({
     tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
     timestampsUrl: "https://api.rainviewer.com/public/maps.json"
+  });
 });
 
 // ✅ Podcasts météo
@@ -178,4 +179,3 @@ app.post("/api/chat", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 TINSFLASH backend en ligne sur http://localhost:${PORT}`);
 });
-}
