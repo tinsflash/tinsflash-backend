@@ -4,9 +4,9 @@
 
 const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
-// ===============================
+// -------------------------
 // Prévisions locales
-// ===============================
+// -------------------------
 async function loadLocalForecast() {
   const c = document.getElementById("local-content");
   c.innerHTML = "⏳ Chargement...";
@@ -17,14 +17,12 @@ async function loadLocalForecast() {
       const f = data.combined;
 
       c.innerHTML = `
-        <strong>📍 Votre position</strong><br>
-        ${f.description} ${f.temperature}°C <br>
-        🌡️ Min: ${f.temperature_min}°C / Max: ${f.temperature_max}°C <br>
-        💨 Vent: ${f.wind} km/h <br>
-        🌧️ Pluie: ${f.precipitation} mm <br>
-        🔒 Fiabilité: ${f.reliability}% <br>
-        ⚠️ ${f.anomaly?.message || "Conditions normales"} <br>
-        ${f.icone || ""}
+        <strong>${f.description}</strong><br>
+        🌡️ ${f.temperature}°C (min: ${f.temperature_min}°C / max: ${f.temperature_max}°C)<br>
+        💨 Vent: ${f.wind} km/h<br>
+        🌧️ Pluie: ${f.precipitation} mm<br>
+        🔒 Fiabilité: ${f.reliability}%<br>
+        ⚠️ ${f.anomaly?.message || "Conditions normales"}<br>
       `;
     });
   } catch {
@@ -32,9 +30,9 @@ async function loadLocalForecast() {
   }
 }
 
-// ===============================
+// -------------------------
 // Prévisions nationales
-// ===============================
+// -------------------------
 async function loadNationalForecast() {
   const c = document.getElementById("national-content");
   c.innerHTML = "⏳ Chargement...";
@@ -44,23 +42,21 @@ async function loadNationalForecast() {
     const f = data.combined;
 
     c.innerHTML = `
-      <strong>🇧🇪 Prévisions nationales</strong><br>
-      ${f.description} ${f.temperature}°C <br>
-      🌡️ Min: ${f.temperature_min}°C / Max: ${f.temperature_max}°C <br>
-      💨 Vent: ${f.wind} km/h <br>
-      🌧️ Pluie: ${f.precipitation} mm <br>
-      🔒 Fiabilité: ${f.reliability}% <br>
-      ⚠️ ${f.anomaly?.message || "Conditions normales"} <br>
-      ${f.icone || ""}
+      <strong>${f.description}</strong><br>
+      🌡️ ${f.temperature}°C (min: ${f.temperature_min}°C / max: ${f.temperature_max}°C)<br>
+      💨 Vent: ${f.wind} km/h<br>
+      🌧️ Pluie: ${f.precipitation} mm<br>
+      🔒 Fiabilité: ${f.reliability}%<br>
+      ⚠️ ${f.anomaly?.message || "Conditions normales"}<br>
     `;
   } catch {
     c.innerHTML = "❌ Erreur prévisions nationales";
   }
 }
 
-// ===============================
+// -------------------------
 // Prévisions 7 jours
-// ===============================
+// -------------------------
 async function load7Days() {
   const c = document.getElementById("days-container");
   c.innerHTML = "⏳ Chargement...";
@@ -74,35 +70,64 @@ async function load7Days() {
         c.innerHTML += `
           <div class="day-card">
             <strong>${d.jour}</strong><br>
-            ${d.icone} ${d.description}<br>
-            🌡️ Min: ${d.temperature_min}°C / Max: ${d.temperature_max}°C <br>
-            💨 Vent: ${d.vent} km/h <br>
-            🌧️ Pluie: ${d.precipitation} mm <br>
-            🔒 Fiabilité: ${d.fiabilité}% <br>
+            ${d.description}<br>
+            🌡️ ${d.temperature_min}°C / ${d.temperature_max}°C<br>
+            💨 ${d.vent} km/h<br>
+            🌧️ ${d.precipitation} mm<br>
+            🔒 ${d.fiabilité}%<br>
             ⚠️ ${d.anomalie}
           </div>
         `;
       });
+
+      generateForecastText(data.days); // ✅ Génère le texte bulletin
     });
   } catch {
     c.innerHTML = "❌ Erreur prévisions 7 jours";
   }
 }
 
-// ===============================
-// Radar interactif
-// ===============================
-async function loadRadar() {
-  const radarDiv = document.getElementById("radar");
-  radarDiv.innerHTML = "⏳ Chargement radar...";
+// -------------------------
+// Bulletin météo texte
+// -------------------------
+function generateForecastText(daysData) {
+  if (!daysData || daysData.length === 0) {
+    document.getElementById("forecast-text").innerText = "⚠️ Données insuffisantes.";
+    return;
+  }
 
+  const today = daysData[0];
+  const tomorrow = daysData[1];
+  const rest = daysData.slice(2);
+
+  let text = `Bulletin météo TINSFLASH :\n\n`;
+
+  text += `🌙 Aujourd'hui (${today.jour}) : ${today.description}, températures ${today.temperature_min}°C à ${today.temperature_max}°C.\n\n`;
+  text += `☀️ Demain (${tomorrow.jour}) : ${tomorrow.description}, min ${tomorrow.temperature_min}°C / max ${tomorrow.temperature_max}°C.\n\n`;
+
+  if (rest.length > 0) {
+    const minTemp = Math.min(...rest.map(d => d.temperature_min));
+    const maxTemp = Math.max(...rest.map(d => d.temperature_max));
+    text += `📅 Ensuite : tendance ${rest[0].description.toLowerCase()}, températures entre ${minTemp}°C et ${maxTemp}°C.\n\n`;
+  }
+
+  document.getElementById("forecast-text").innerText = text;
+
+  // ✅ Lance aussi le podcast basé sur ce texte
+  loadPodcast(text);
+}
+
+// -------------------------
+// Radar interactif
+// -------------------------
+async function loadRadar() {
+  const radarDiv = document.getElementById("radar-map");
+  radarDiv.innerHTML = "⏳ Chargement radar...";
   try {
     const res = await fetch(`${API_BASE}/radar`);
     const data = await res.json();
 
-    radarDiv.innerHTML = `<div id="radar-map" style="height:400px;border-radius:10px;"></div>`;
-    const map = L.map("radar-map").setView([50.85, 4.35], 6); // Bruxelles par défaut
-
+    const map = L.map("radar-map").setView([50.85, 4.35], 6);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);
@@ -115,17 +140,15 @@ async function loadRadar() {
 
     function showFrame(i) {
       if (radarLayer) map.removeLayer(radarLayer);
-      radarLayer = L.tileLayer(
-        data.tilesUrl.replace("{time}", frames[i]),
-        { opacity: 0.6 }
-      ).addTo(map);
+      radarLayer = L.tileLayer(data.tilesUrl.replace("{time}", frames[i]), { opacity: 0.6 });
+      radarLayer.addTo(map);
     }
 
     showFrame(currentFrame);
     setInterval(() => {
       currentFrame = (currentFrame + 1) % frames.length;
       showFrame(currentFrame);
-    }, 800);
+    }, 1000);
 
   } catch (err) {
     radarDiv.innerHTML = "❌ Erreur radar";
@@ -133,77 +156,52 @@ async function loadRadar() {
   }
 }
 
-// ===============================
-// Alertes
-// ===============================
+// -------------------------
+// Alertes météo
+// -------------------------
 async function loadAlerts() {
+  const c = document.getElementById("alerts-content");
+  c.innerHTML = "⏳ Chargement...";
   try {
     const res = await fetch(`${API_BASE}/alerts`);
     const data = await res.json();
 
-    const alertsHTML = data
-      .map(
-        (a) => `<div>⚠️ ${a.level.toUpperCase()} - ${a.message} (Fiabilité: ${a.reliability}%)</div>`
-      )
+    c.innerHTML = data
+      .map(a => `<div>⚠️ ${a.level.toUpperCase()} - ${a.message} (Fiabilité: ${a.reliability}%)</div>`)
       .join("");
-
-    document.getElementById("alerts").innerHTML = `
-      <div class="alerts-container">${alertsHTML}</div>`;
-  } catch (err) {
-    console.error("Erreur alerts:", err);
+  } catch {
+    c.innerHTML = "❌ Erreur alertes";
   }
 }
 
-// ===============================
-// Podcasts
-// ===============================
-async function loadPodcasts(type = "daily") {
+// -------------------------
+// Podcast météo
+// -------------------------
+async function loadPodcast(textBulletin) {
   try {
-    const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
-    const data = await res.json();
-
-    document.getElementById("podcasts").innerHTML = `
-      <div class="card">
-        <h3>🎙️ ${data.title || "Podcast météo"}</h3>
-        <audio controls src="${data.url}"></audio>
-      </div>`;
-  } catch (err) {
-    console.error("Erreur podcast:", err);
-  }
-}
-
-// ===============================
-// Chat IA J.E.A.N
-// ===============================
-async function chatWithJean() {
-  const input = document.getElementById("chat-input").value;
-  if (!input) return;
-
-  try {
-    const res = await fetch(`${API_BASE}/chat`, {
+    const res = await fetch(`${API_BASE}/podcast/generate?type=daily`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: input }),
+      body: JSON.stringify({ text: textBulletin })
     });
-
     const data = await res.json();
 
-    document.getElementById("chat-output").innerHTML += `
-      <div class="card"><b>Vous:</b> ${input}</div>
-      <div class="card ai"><b>J.E.A.N:</b> ${data.reply}</div>`;
+    document.getElementById("podcast-container").innerHTML = `
+      <div>✅ Podcast généré</div>
+      <audio controls src="${data.audioUrl}"></audio>
+    `;
   } catch (err) {
-    console.error("Erreur chat:", err);
+    document.getElementById("podcast-container").innerText = "❌ Erreur podcast";
   }
 }
 
-// ===============================
+// -------------------------
 // INIT
-// ===============================
+// -------------------------
 window.addEventListener("DOMContentLoaded", () => {
-  if (document.getElementById("local-content")) loadLocalForecast();
-  if (document.getElementById("national-content")) loadNationalForecast();
-  if (document.getElementById("days-container")) load7Days();
-  if (document.getElementById("radar")) loadRadar();
-  if (document.getElementById("alerts")) loadAlerts();
-  if (document.getElementById("podcasts")) loadPodcasts();
+  loadLocalForecast();
+  loadNationalForecast();
+  load7Days();
+  loadRadar();
+  loadAlerts();
 });
