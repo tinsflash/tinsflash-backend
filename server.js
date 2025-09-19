@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 
 // Import services
-import { getForecast } from "./services/forecastService.js";
+import { getForecast, runAndSaveForecast } from "./services/forecastService.js";
 import { getAlerts } from "./services/alertsService.js";
 import { generatePodcast } from "./services/podcastService.js";
 import { getWeatherIcon, generateCode } from "./services/codesService.js";
@@ -21,20 +21,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // fichiers frontend
-
-// -------------------------
-// Stockage mémoire (logs & forecastvision)
-// -------------------------
-let adminLogs = [];
-let forecastVisionSources = [];
-
-// Ajout log avec limite
-function addLog(msg) {
-  const entry = `[${new Date().toLocaleString("fr-FR")}] ${msg}`;
-  adminLogs.unshift(entry);
-  if (adminLogs.length > 200) adminLogs.pop(); // garde 200 derniers logs max
-}
+app.use(express.static("public")); // Fichiers frontend
 
 // -------------------------
 // ROUTES API
@@ -65,8 +52,8 @@ app.get("/api/forecast/national", async (req, res) => {
     const { country } = req.query;
     let coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles par défaut
 
-    if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 };
-    if (country === "US") coords = { lat: 38.9072, lon: -77.0369 };
+    if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 }; // Paris
+    if (country === "US") coords = { lat: 38.9072, lon: -77.0369 }; // Washington
 
     const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
     res.json(forecast);
@@ -135,8 +122,8 @@ app.get("/api/radar", async (req, res) => {
     const layers = await getRadarLayers();
     res.json({
       layers,
-      tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
-      timestampsUrl: "https://api.rainviewer.com/public/maps.json",
+      tilesUrl: layers.radarTiles,
+      timestampsUrl: layers.radarTimestamps,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -193,57 +180,15 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// -------------------------
-// ROUTES ADMIN-PP
-// -------------------------
-
-// Lancer un run manuel
-app.post("/api/admin-pp/run", async (req, res) => {
+// ✅ Run manuel (admin-pp)
+app.get("/api/admin-pp/run", async (req, res) => {
   try {
-    const { type } = req.body;
-    const forecast = await getForecast(50.85, 4.35, "BE"); // run central sur Bruxelles
-
-    const msg = `Run ${type} -> Temp: ${forecast.combined.temperature}°C | Fiabilité: ${forecast.combined.reliability}%`;
-    addLog(msg);
-
-    res.json({
-      run: type,
-      temperature: forecast.combined.temperature,
-      reliability: forecast.combined.reliability,
-    });
+    const { label } = req.query;
+    const result = await runAndSaveForecast(label || "manual");
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-// Logs admin
-app.get("/api/admin-pp/logs", (req, res) => {
-  res.json(adminLogs);
-});
-
-// ForecastVision – comparaison
-app.get("/api/forecastvision", (req, res) => {
-  res.json(forecastVisionSources);
-});
-
-// Ajout manuel de sources
-app.post("/api/forecastvision/add", (req, res) => {
-  const { source, text, timestamp } = req.body;
-  if (!source || !text) {
-    return res.status(400).json({ error: "Source et texte requis" });
-  }
-
-  const entry = {
-    source,
-    summary: text,
-    timestamp: timestamp || new Date().toISOString(),
-  };
-
-  forecastVisionSources.push(entry);
-  if (forecastVisionSources.length > 100) forecastVisionSources.shift(); // limite
-
-  addLog(`Source ajoutée: ${source}`);
-  res.json(entry);
 });
 
 // -------------------------
