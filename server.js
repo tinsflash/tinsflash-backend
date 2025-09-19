@@ -5,6 +5,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import fs from "fs";
+import path from "path";
 
 // Import services
 import { getForecast, runAndSaveForecast } from "./services/forecastService.js";
@@ -21,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // Fichiers frontend
+app.use(express.static("public"));
 
 // -------------------------
 // ROUTES API
@@ -32,13 +34,11 @@ app.get("/", (req, res) => {
   res.send("🚀 TINSFLASH Backend opérationnel !");
 });
 
-// ✅ Prévisions locales
+// ✅ Forecast local
 app.get("/api/forecast/local", async (req, res) => {
   try {
     const { lat, lon, country } = req.query;
-    if (!lat || !lon) {
-      return res.status(400).json({ error: "Latitude et longitude requises" });
-    }
+    if (!lat || !lon) return res.status(400).json({ error: "Latitude et longitude requises" });
     const forecast = await getForecast(lat, lon, country || "BE");
     res.json(forecast);
   } catch (err) {
@@ -46,14 +46,14 @@ app.get("/api/forecast/local", async (req, res) => {
   }
 });
 
-// ✅ Prévisions nationales
+// ✅ Forecast national
 app.get("/api/forecast/national", async (req, res) => {
   try {
     const { country } = req.query;
-    let coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles par défaut
+    let coords = { lat: 50.8503, lon: 4.3517 };
 
-    if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 }; // Paris
-    if (country === "US") coords = { lat: 38.9072, lon: -77.0369 }; // Washington
+    if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 };
+    if (country === "US") coords = { lat: 38.9072, lon: -77.0369 };
 
     const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
     res.json(forecast);
@@ -62,15 +62,13 @@ app.get("/api/forecast/national", async (req, res) => {
   }
 });
 
-// ✅ Prévisions 7 jours
+// ✅ Forecast 7 jours
 app.get("/api/forecast/7days", async (req, res) => {
   try {
     const { lat, lon, country } = req.query;
-    if (!lat || !lon) {
-      return res.status(400).json({ error: "Latitude et longitude requises" });
-    }
-    const forecast = await getForecast(lat, lon, country || "BE");
+    if (!lat || !lon) return res.status(400).json({ error: "Latitude et longitude requises" });
 
+    const forecast = await getForecast(lat, lon, country || "BE");
     const now = new Date();
     const days = [];
 
@@ -80,11 +78,7 @@ app.get("/api/forecast/7days", async (req, res) => {
 
       days.push({
         date: date.toISOString().split("T")[0],
-        jour: date.toLocaleDateString("fr-FR", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        }),
+        jour: date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
         temperature_min: forecast.combined.temperature_min,
         temperature_max: forecast.combined.temperature_max,
         vent: forecast.combined.wind,
@@ -106,7 +100,7 @@ app.get("/api/forecast/7days", async (req, res) => {
   }
 });
 
-// ✅ Alertes météo
+// ✅ Alertes
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await getAlerts();
@@ -116,21 +110,21 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Radar interactif
+// ✅ Radar
 app.get("/api/radar", async (req, res) => {
   try {
     const layers = await getRadarLayers();
     res.json({
       layers,
-      tilesUrl: layers.radarTiles,
-      timestampsUrl: layers.radarTimestamps,
+      tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+      timestampsUrl: "https://api.rainviewer.com/public/maps.json",
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ Podcasts météo
+// ✅ Podcasts
 app.get("/api/podcast/generate", async (req, res) => {
   try {
     const { type } = req.query;
@@ -143,12 +137,11 @@ app.get("/api/podcast/generate", async (req, res) => {
   }
 });
 
-// ✅ Codes promo
+// ✅ Codes
 app.get("/api/codes/generate", (req, res) => {
   try {
     const { type } = req.query;
     if (!type) return res.status(400).json({ error: "Type d’abonnement requis" });
-
     const code = generateCode(type);
     res.json(code);
   } catch (err) {
@@ -156,12 +149,11 @@ app.get("/api/codes/generate", (req, res) => {
   }
 });
 
-// ✅ Icône météo seule (debug frontend)
+// ✅ Icône météo
 app.get("/api/weather/icon", (req, res) => {
   try {
     const { code } = req.query;
     if (!code) return res.status(400).json({ error: "Code météo requis" });
-
     const icon = getWeatherIcon(parseInt(code, 10));
     res.json({ code, icon });
   } catch (err) {
@@ -169,7 +161,7 @@ app.get("/api/weather/icon", (req, res) => {
   }
 });
 
-// ✅ Chat IA J.E.A.N
+// ✅ Chat IA
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -180,12 +172,25 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// ✅ Run manuel (admin-pp)
-app.get("/api/admin-pp/run", async (req, res) => {
+// -------------------------
+// 🔥 Routes Admin-PP
+// -------------------------
+app.post("/api/admin-pp/run", async (req, res) => {
   try {
-    const { label } = req.query;
+    const { label } = req.body;
     const result = await runAndSaveForecast(label || "manual");
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/admin-pp/logs", (req, res) => {
+  try {
+    const filePath = path.join(process.cwd(), "data", "forecasts", "logs.txt");
+    if (!fs.existsSync(filePath)) return res.json(["Aucun log encore"]);
+    const logs = fs.readFileSync(filePath, "utf-8").split("\n").filter(l => l.trim());
+    res.json(logs.slice(-20));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
