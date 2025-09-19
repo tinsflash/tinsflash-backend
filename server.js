@@ -33,45 +33,38 @@ app.post("/api/supercalc/run", async (req, res) => {
     const { time, country } = req.body;
     const coords = { lat: 50.8503, lon: 4.3517 }; // Bruxelles
 
+    // Lancement du forecast
     const forecast = await getForecast(coords.lat, coords.lon, country || "BE");
-
-    // statut global
-    let status = "✅ Run 100% réussi";
-    if (forecast.combined.errors?.length > 0 && forecast.combined.sources?.length > forecast.combined.errors.length) {
-      status = `⚠️ Run partiel : ${forecast.combined.sources.length - forecast.combined.errors.length} sources OK, ${forecast.combined.errors.length} erreurs`;
-    } else if (forecast.combined.sources?.length === forecast.combined.errors?.length) {
-      status = "❌ Run KO (toutes les sources ont échoué)";
-    }
 
     const runResult = {
       time: time || new Date().toISOString(),
-      status,
-      forecast: forecast.combined,
-      errors: forecast.combined.errors || [],
+      status: forecast.status,         // ✅ Statut du run
+      forecast: forecast.combined,     // ✅ Prévisions fusionnées
+      errors: forecast.errors || [],   // ✅ Liste erreurs
     };
 
+    // Sauvegarde mémoire
     lastRuns.push(runResult);
-    if (lastRuns.length > 20) lastRuns.shift(); // garder 20 derniers runs max
+    if (lastRuns.length > 10) lastRuns.shift();
+
+    console.log("⚡ Nouveau run :", runResult);
 
     res.json(runResult);
   } catch (err) {
+    console.error("❌ Erreur supercalculateur:", err.message);
     res.status(500).json({ error: "Erreur supercalculateur: " + err.message });
   }
 });
 
+// Logs des runs
 app.get("/api/supercalc/logs", (req, res) => {
-  try {
-    res.json(lastRuns);
-  } catch (err) {
-    res.status(500).json({ error: "Erreur récupération logs: " + err.message });
-  }
+  res.json(lastRuns);
 });
 
 // -------------------------
 // ROUTES API classiques
 // -------------------------
 
-// ✅ Test route
 app.get("/", (req, res) => {
   res.send("🚀 TINSFLASH Backend opérationnel !");
 });
@@ -143,6 +136,8 @@ app.get("/api/forecast/7days", async (req, res) => {
     res.json({
       source: "TINSFLASH IA + multi-modèles",
       reliability: forecast.combined.reliability,
+      status: forecast.status,
+      errors: forecast.errors,
       days,
     });
   } catch (err) {
