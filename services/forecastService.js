@@ -1,6 +1,6 @@
 // -------------------------
 // 🌍 forecastService.js
-// Machine de guerre météo : fusion multi-modèles + facteurs locaux + IA
+// Fusion multi-modèles + facteurs locaux + IA + gestion erreurs
 // -------------------------
 import { detectAnomaly } from "../utils/seasonalNorms.js";
 import { getTrullemansData } from "./trullemans.js";
@@ -13,119 +13,92 @@ export async function getForecast(lat, lon, country = "BE") {
     const results = { sources: {}, combined: {}, errors: [] };
 
     // -------------------------
-    // 1. Promesses API (officielles)
+    // 1. Sources officielles
     // -------------------------
-    const tasks = [
-      // Meteomatics
-      (async () => {
-        try {
-          const user = process.env.METEOMATICS_USER;
-          const pass = process.env.METEOMATICS_PASS;
-          if (!user || !pass) throw new Error("Identifiants Meteomatics manquants !");
+    try {
+      const user = process.env.METEOMATICS_USER;
+      const pass = process.env.METEOMATICS_PASS;
+      if (!user || !pass) throw new Error("Identifiants Meteomatics manquants");
 
-          const now = new Date().toISOString().split(".")[0] + "Z";
-          const future = new Date(Date.now() + 24 * 3600 * 1000).toISOString().split(".")[0] + "Z";
-          const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh/${lat},${lon}/json`;
+      const now = new Date().toISOString().split(".")[0] + "Z";
+      const future = new Date(Date.now() + 24 * 3600 * 1000)
+        .toISOString()
+        .split(".")[0] + "Z";
 
-          const res = await fetch(url, {
-            headers: { Authorization: "Basic " + Buffer.from(`${user}:${pass}`).toString("base64") },
-          });
-          if (!res.ok) throw new Error(`Erreur Meteomatics: ${res.statusText}`);
-          results.sources.meteomatics = await res.json();
-        } catch (err) {
-          results.sources.meteomatics = { error: err.message };
-          results.errors.push("meteomatics: " + err.message);
-        }
-      })(),
+      const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh/${lat},${lon}/json`;
 
-      // OpenWeather
-      (async () => {
-        try {
-          const apiKey = process.env.OPENWEATHER_KEY;
-          if (!apiKey) throw new Error("Clé OPENWEATHER_KEY manquante");
-          const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`Erreur OpenWeather: ${res.statusText}`);
-          results.sources.openweather = await res.json();
-        } catch (err) {
-          results.sources.openweather = { error: err.message };
-          results.errors.push("openweather: " + err.message);
-        }
-      })(),
+      const res = await fetch(url, {
+        headers: {
+          Authorization:
+            "Basic " + Buffer.from(`${user}:${pass}`).toString("base64"),
+        },
+      });
 
-      // GFS
-      (async () => {
-        try {
-          const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`Erreur GFS: ${res.statusText}`);
-          results.sources.gfs = await res.json();
-        } catch (err) {
-          results.sources.gfs = { error: err.message };
-          results.errors.push("gfs: " + err.message);
-        }
-      })(),
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      results.sources.meteomatics = await res.json();
+    } catch (err) {
+      results.errors.push("meteomatics: " + err.message);
+      results.sources.meteomatics = { error: err.message };
+    }
 
-      // ICON
-      (async () => {
-        try {
-          const url = `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`Erreur ICON: ${res.statusText}`);
-          results.sources.icon = await res.json();
-        } catch (err) {
-          results.sources.icon = { error: err.message };
-          results.errors.push("icon: " + err.message);
-        }
-      })(),
-    ];
+    try {
+      const apiKey = process.env.OPENWEATHER_KEY;
+      if (!apiKey) throw new Error("Clé OPENWEATHER_KEY manquante");
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      results.sources.openweather = await res.json();
+    } catch (err) {
+      results.errors.push("openweather: " + err.message);
+      results.sources.openweather = { error: err.message };
+    }
+
+    try {
+      const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      results.sources.gfs = await res.json();
+    } catch (err) {
+      results.errors.push("gfs: " + err.message);
+      results.sources.gfs = { error: err.message };
+    }
+
+    try {
+      const url = `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      results.sources.icon = await res.json();
+    } catch (err) {
+      results.errors.push("icon: " + err.message);
+      results.sources.icon = { error: err.message };
+    }
 
     // -------------------------
     // 2. Sources pirates
     // -------------------------
-    tasks.push(
-      (async () => {
-        try {
-          results.sources.trullemans = await getTrullemansData(lat, lon);
-        } catch (err) {
-          results.sources.trullemans = { error: err.message };
-          results.errors.push("trullemans: " + err.message);
-        }
-      })()
-    );
+    try {
+      results.sources.trullemans = await getTrullemansData(lat, lon);
+    } catch (err) {
+      results.errors.push("trullemans: " + err.message);
+      results.sources.trullemans = { error: err.message };
+    }
 
-    tasks.push(
-      (async () => {
-        try {
-          results.sources.wetterzentrale = await getWetterzentraleData(lat, lon);
-        } catch (err) {
-          results.sources.wetterzentrale = { error: err.message };
-          results.errors.push("wetterzentrale: " + err.message);
-        }
-      })()
-    );
+    try {
+      results.sources.wetterzentrale = await getWetterzentraleData(lat, lon);
+    } catch (err) {
+      results.errors.push("wetterzentrale: " + err.message);
+      results.sources.wetterzentrale = { error: err.message };
+    }
 
-    tasks.push(
-      (async () => {
-        try {
-          results.sources.nasa = await getNasaSatData(lat, lon);
-        } catch (err) {
-          results.sources.nasa = { error: err.message };
-          results.errors.push("nasa: " + err.message);
-        }
-      })()
-    );
+    try {
+      results.sources.nasa = await getNasaSatData(lat, lon);
+    } catch (err) {
+      results.errors.push("nasa: " + err.message);
+      results.sources.nasa = { error: err.message };
+    }
 
     // -------------------------
-    // 3. Attente + délai min réaliste
-    // -------------------------
-    await Promise.allSettled(tasks);
-
-    // délai min (4 secondes)
-    await new Promise((resolve) => setTimeout(resolve, 4000));
-
-    // -------------------------
-    // 4. Fusion
+    // 3. Fusion des résultats
     // -------------------------
     const temps = [];
     const winds = [];
@@ -137,32 +110,45 @@ export async function getForecast(lat, lon, country = "BE") {
       if (src?.precipitation) rains.push(src.precipitation);
     }
 
-    const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+    const avg = (arr) =>
+      arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
 
-    let temp = avg(temps) !== null ? Math.round(avg(temps)) : 15; // fallback 15°C
-    let wind = avg(winds) !== null ? Math.round(avg(winds)) : 10; // fallback 10 km/h
-    let rain = avg(rains) !== null ? Math.round(avg(rains) * 10) / 10 : 0; // fallback 0 mm
+    let temp = Math.round(avg(temps));
+    let wind = winds.length ? Math.round(avg(winds)) : null;
+    let rain = rains.length ? Math.round(avg(rains) * 10) / 10 : 0;
 
     // -------------------------
-    // 5. Facteurs locaux
+    // 4. Facteurs locaux
     // -------------------------
     ({ temp, wind, rain } = applyLocalFactors(lat, lon, { temp, wind, rain }));
 
     // -------------------------
-    // 6. Anomalies saisonnières
+    // 5. Anomalies saisonnières
     // -------------------------
     const anomaly = detectAnomaly(temp, country);
 
     // -------------------------
-    // 7. Fiabilité
+    // 6. Fiabilité
     // -------------------------
-    const variance = temps.length ? Math.max(...temps) - Math.min(...temps) : 0;
+    const variance = temps.length
+      ? Math.max(...temps) - Math.min(...temps)
+      : 0;
     let reliability = 98 - variance;
     if (reliability < 60) reliability = 60;
     if (reliability > 99) reliability = 99;
 
     // -------------------------
-    // 8. Résultats
+    // 7. Statut
+    // -------------------------
+    let status = "✅ Run 100% réussi";
+    if (results.errors.length > 0 && results.errors.length < 3) {
+      status = `⚠️ Run partiel : ${Object.keys(results.sources).length - results.errors.length} sources OK, ${results.errors.length} erreurs`;
+    } else if (results.errors.length >= 3) {
+      status = `❌ Run KO (${results.errors.length} erreurs)`;
+    }
+
+    // -------------------------
+    // 8. Résultats finaux
     // -------------------------
     results.combined = {
       temperature: temp,
@@ -170,20 +156,17 @@ export async function getForecast(lat, lon, country = "BE") {
       temperature_max: temp + 2,
       wind,
       precipitation: rain,
-      description: "Prévisions issues d'une fusion multi-modèles + IA + sources locales",
+      description:
+        "Prévisions issues d'une fusion multi-modèles + IA + sources locales",
       reliability,
       anomaly,
       sources: Object.keys(results.sources),
-      errors: results.errors,
-      bulletin: `
-        Bulletin météo : températures entre ${temp - 2}°C et ${temp + 2}°C,
-        vent ${wind} km/h, précipitations ${rain} mm.
-        ${anomaly?.message || ""}
-        Fiabilité : ${reliability}%.
-      `,
     };
 
-    return results;
+    return {
+      ...results,
+      status,
+    };
   } catch (err) {
     throw new Error("Erreur fusion prévisions : " + err.message);
   }
