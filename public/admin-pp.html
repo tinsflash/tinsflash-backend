@@ -18,7 +18,7 @@
   </style>
 </head>
 <body>
-  <h1>TINSFLASH</h1>
+  <h1>🛰️ Console Administrateur – TINSFLASH</h1>
   <div class="container">
 
     <!-- Supercalculateur -->
@@ -37,55 +37,10 @@
       <div id="logs">⏳ Logs en attente...</div>
     </div>
 
-    <!-- ForecastVision -->
-    <div class="card">
-      <h2>🔍 ForecastVision</h2>
-      <button class="btn" onclick="loadComparisons()">📊 Charger Comparateur</button>
-      <div id="comparisons" class="status">⏳ Aucune donnée encore...</div>
-    </div>
-
-    <!-- Ajout Source Externe -->
-    <div class="card">
-      <h2>📝 Ajout Source Externe</h2>
-      <form id="externalForm">
-        <input type="text" name="source" placeholder="Source (Facebook, WhatsApp...)" required>
-        <textarea name="text" rows="3" placeholder="Texte capturé" required></textarea>
-        <button type="submit" class="btn">💾 Enregistrer</button>
-      </form>
-      <div id="external-status" class="status">⏳ Aucun ajout.</div>
-    </div>
-
-    <!-- Monitoring Alertes -->
-    <div class="card">
-      <h2>⚠️ Monitoring Alertes</h2>
-      <button class="btn" onclick="loadAlerts()">📢 Charger Alertes</button>
-      <div id="alerts-status" class="status">⏳ En attente...</div>
-    </div>
-
-    <!-- Podcasts -->
-    <div class="card">
-      <h2>🎙️ Podcasts météo</h2>
-      <button class="btn" onclick="generatePodcast('daily')">📆 Podcast du jour</button>
-      <button class="btn" onclick="generatePodcast('weekly')">📅 Podcast semaine</button>
-      <div id="podcast-status" class="status">⏳ Aucun podcast généré.</div>
-    </div>
-
-    <!-- Codes -->
-    <div class="card">
-      <h2>🔑 Abonnements & Codes</h2>
-      <select id="subscription-type">
-        <option value="premium">Premium</option>
-        <option value="pro">Pro</option>
-        <option value="proplus">Pro+</option>
-      </select>
-      <button class="btn" onclick="generateCode()">🎟️ Générer Code</button>
-      <div id="code-result" class="status">⏳ Aucun code généré.</div>
-    </div>
-
   </div>
 
   <script>
-    const API_BASE = "https://tinsflash-backend.onrender.com/api";
+    const API_BASE = "/api";
 
     // Supercalculateur
     async function runForecast(time) {
@@ -97,9 +52,15 @@
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        document.getElementById("forecast-status").innerText =
-          `${data.status}\nPrévisions: ${data.forecast.temperature_min}°C à ${data.forecast.temperature_max}°C, vent ${data.forecast.wind} km/h, précipitations ${data.forecast.precipitation} mm.\nFiabilité: ${data.forecast.reliability}%`;
-      } catch {
+
+        let statusText = `${data.status}\nPrévisions: ${data.forecast.temperature_min}°C à ${data.forecast.temperature_max}°C, vent ${data.forecast.wind} km/h, précipitations ${data.forecast.precipitation} mm.\nFiabilité: ${data.forecast.reliability}%`;
+
+        if (data.forecast.errors && data.forecast.errors.length > 0) {
+          statusText += `\n⚠️ Erreurs: ${data.forecast.errors.join(" | ")}`;
+        }
+
+        document.getElementById("forecast-status").innerText = statusText;
+      } catch (e) {
         document.getElementById("forecast-status").innerText = "❌ Erreur lancement forecast";
       }
     }
@@ -110,78 +71,9 @@
         const res = await fetch(`${API_BASE}/supercalc/logs`);
         const data = await res.json();
         document.getElementById("logs").innerText =
-          data.map(r => `${r.time} → ${r.status} | ${r.forecast.temperature}°C | Fiabilité ${r.forecast.reliability}%`).join("\n");
+          data.map(r => `${r.time} → ${r.status} | Temp: ${r.forecast.temperature}°C | Fiabilité ${r.forecast.reliability}%`).join("\n");
       } catch {
         document.getElementById("logs").innerText = "❌ Erreur logs";
-      }
-    }
-
-    // ForecastVision
-    async function loadComparisons() {
-      document.getElementById("comparisons").innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch(`${API_BASE}/forecastvision`);
-        const data = await res.json();
-        document.getElementById("comparisons").innerHTML =
-          data.map(d => `<div>📌 ${d.source}: ${d.summary}</div>`).join("");
-      } catch {
-        document.getElementById("comparisons").innerText = "❌ Erreur comparateur";
-      }
-    }
-
-    document.getElementById("externalForm").addEventListener("submit", async (e)=>{
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const body = Object.fromEntries(formData);
-      body.timestamp = new Date().toISOString();
-      try {
-        const res = await fetch(`${API_BASE}/forecastvision/add`, {
-          method:"POST", headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        document.getElementById("external-status").innerText = "✅ Source ajoutée : " + data.source;
-      } catch {
-        document.getElementById("external-status").innerText = "❌ Erreur ajout source";
-      }
-    });
-
-    // Alertes
-    async function loadAlerts() {
-      document.getElementById("alerts-status").innerText = "⏳ Chargement alertes...";
-      try {
-        const res = await fetch(`${API_BASE}/alerts`);
-        const data = await res.json();
-        document.getElementById("alerts-status").innerText =
-          data.map(a => `⚠️ ${a.level.toUpperCase()} - ${a.message} (Fiabilité: ${a.reliability}%)`).join("\n");
-      } catch {
-        document.getElementById("alerts-status").innerText = "❌ Erreur alertes";
-      }
-    }
-
-    // Podcasts
-    async function generatePodcast(type) {
-      document.getElementById("podcast-status").innerText = "⏳ Génération...";
-      try {
-        const res = await fetch(`${API_BASE}/podcast/generate?type=${type}`);
-        const data = await res.json();
-        document.getElementById("podcast-status").innerHTML =
-          `✅ ${data.title || "Podcast généré"}<br><audio controls src="${data.url}"></audio>`;
-      } catch {
-        document.getElementById("podcast-status").innerText = "❌ Erreur podcast";
-      }
-    }
-
-    // Codes
-    async function generateCode() {
-      const type = document.getElementById("subscription-type").value;
-      document.getElementById("code-result").innerText = "⏳ Génération code...";
-      try {
-        const res = await fetch(`${API_BASE}/codes/generate?type=${type}`);
-        const data = await res.json();
-        document.getElementById("code-result").innerText = `🎟️ Code ${type}: ${data.code}`;
-      } catch {
-        document.getElementById("code-result").innerText = "❌ Erreur code";
       }
     }
   </script>
