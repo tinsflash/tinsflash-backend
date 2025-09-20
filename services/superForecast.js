@@ -1,107 +1,102 @@
 // services/superForecast.js
-import { getMeteomatics } from "../hiddensources/meteomatics.js";
-import { getOpenWeather } from "../hiddensources/openweather.js";
-import { compareSources } from "../hiddensources/comparator.js";
-import { parseWetterzentraleData } from "./wetterzentrale.js";
-import { adjustWithLocalFactors } from "./localFactors.js";
-import { applyTrullemansAdjustments } from "./trullemans.js";
-import { applyGeoFactors } from "./geoFactors.js";
-import { getNorm } from "../utils/seasonalNorms.js";
+import { getForecast as getOpenWeather } from "../sources/openweather.js";
+import { getForecast as getMeteomatics } from "../sources/meteomatics.js";
+import { getForecast as getWetterzentrale } from "../sources/wetterzentrale.js";
+import { getForecast as getIconDwd } from "../sources/iconDwd.js";
+import { getForecast as getGfs } from "../sources/gfs.js";
+import compareForecasts from "../sources/comparator.js";
 import { askOpenAI } from "../utils/openai.js";
+import Forecast from "../models/Forecast.js";
 
-// -----------------------------
-// Pondérations des modèles
-// -----------------------------
-const MODEL_WEIGHTS = {
-  GFS: 40,
-  ECMWF: 25,
-  ICON: 20,
-  ARPEGE: 10,
-  LOCAL: 5
-};
-
-/**
- * Super moteur météo TINSFLASH
- * - croise plusieurs modèles
- * - applique IA pour corriger incohérences
- * - ajoute ajustements locaux + géographiques
- * - détecte anomalies climatiques
- */
-export async function runSuperForecast(lat, lon, country = "BE") {
-  const sources = [];
-  const errors = [];
-
-  // 1️⃣ Charger les différentes sources
-  const meteomatics = await getMeteomatics(lat, lon);
-  meteomatics.error ? errors.push(meteomatics.error) : sources.push({ ...meteomatics, model: "Meteomatics" });
-
-  const openweather = await getOpenWeather(lat, lon);
-  openweather.error ? errors.push(openweather.error) : sources.push({ ...openweather, model: "OpenWeather" });
-
-  const comparator = await compareSources(lat, lon);
-  sources.push(...comparator.map(c => ({ ...c, model: c.source || "Comparator" })));
-
-  // Exemple Wetterzentrale (simulé)
-  try {
-    const wz = parseWetterzentraleData({ temp: 14, wind: 20, desc: "Couvert" });
-    sources.push({ ...wz, model: "Wetterzentrale" });
-  } catch (err) {
-    errors.push("Wetterzentrale: " + err.message);
-  }
-
-  // 2️⃣ IA : croiser et analyser les résultats
-  let aiSummary = null;
-  try {
-    const prompt = `
-      Voici des prévisions météo de plusieurs modèles pour lat=${lat}, lon=${lon}.
-      Sources :
-      ${JSON.stringify(sources, null, 2)}
-
-      Pondérations appliquées :
-      ${JSON.stringify(MODEL_WEIGHTS, null, 2)}
-
-      Ta mission :
-      - détecter et corriger les incohérences
-      - produire une prévision finale réaliste (T° min/max, vent, précipitations, description)
-      - donner un indice de fiabilité (0–100) basé sur la cohérence entre modèles
-      Réponds uniquement en JSON.
-    `;
-    const aiResponse = await askOpenAI(prompt);
-    aiSummary = JSON.parse(aiResponse);
-  } catch (err) {
-    errors.push("Erreur IA: " + err.message);
-  }
-
-  // 3️⃣ Corrections locales et géographiques
-  let forecast = aiSummary || sources[0] || {};
-  forecast = adjustWithLocalFactors(forecast, country);
-  forecast = applyTrullemansAdjustments(forecast);
-  forecast = await applyGeoFactors(forecast, lat, lon);
-
-  // 4️⃣ Vérifier normes saisonnières
-  const season = getSeason(new Date());
-  const norm = getNorm(season);
-  if (forecast.temperature_max > norm.temp_max + 10) {
-    forecast.anomaly = "🌡️ Chaleur anormale";
-  } else if (forecast.temperature_min < norm.temp_min - 10) {
-    forecast.anomaly = "🥶 Froid anormal";
-  }
-
-  return {
-    lat,
-    lon,
-    country,
-    forecast,
-    errors,
-    sources: sources.map(s => s.model || "unknown"),
-    weights: MODEL_WEIGHTS
-  };
+// 🔒 Fonctions de sécurité
+function safeNumber(value, fallback = 0) {
+  return typeof value === "number" && !isNaN(value) ? value : fallback;
 }
 
-function getSeason(date) {
-  const m = date.getMonth() + 1;
-  if (m >= 3 && m <= 5) return "spring";
-  if (m >= 6 && m <= 8) return "summer";
-  if (m >= 9 && m <= 11) return "autumn";
-  return "winter";
+function safeString(value, fallback = "Non défini") {
+  return value && typeof value === "string" ? value : fallback;
+}
+
+function avg(values) {
+  const nums = values.filter(v => typeof v === "number" && !isNaN(v));
+  if (nums.length === 0) return 0;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function detectAnomaly(forecasts) {
+  try {
+    const temps = forecasts.map(f => safeNumber(f.temperature, null)).filter(v => v !== null);
+    if (temps.length < 2) return "Normale";
+
+    const mean = avg(temps);
+    const maxDeviation = Math.max(...temps.map(t => Math.abs(t - mean)));
+
+    if (maxDeviation > 8) return "⚠️ Anomalie forte";
+    if (maxDeviation > 4) return "⚠️ Anomalie modérée";
+    return "Normale";
+  } catch {
+    return "Normale";
+  }
+}
+
+export async function runSuperForecast(location = "Bruxelles") {
+  try {
+    console.log(`🚀 Lancement du run météo pour ${location}`);
+
+    // 1. Récupérer toutes les sources
+    const [ow, mm, wz, dwd, gfs] = await Promise.allSettled([
+      getOpenWeather(location),
+      getMeteomatics(location),
+      getWetterzentrale(location),
+      getIconDwd(location),
+      getGfs(location),
+    ]);
+
+    const forecasts = [ow, mm, wz, dwd, gfs]
+      .filter(r => r.status === "fulfilled")
+      .map(r => r.value);
+
+    if (forecasts.length === 0) throw new Error("Aucune donnée disponible des modèles.");
+
+    // 2. Pondération (GFS renforcé)
+    const weights = {
+      openweather: 15,
+      meteomatics: 15,
+      wetterzentrale: 15,
+      icondwd: 15,
+      gfs: 40,
+    };
+
+    // 3. Fusion
+    const consolidated = {
+      temperature_min: avg(forecasts.map(f => safeNumber(f.temperature_min))),
+      temperature_max: avg(forecasts.map(f => safeNumber(f.temperature_max))),
+      wind: avg(forecasts.map(f => safeNumber(f.wind))),
+      precipitation: avg(forecasts.map(f => safeNumber(f.precipitation))),
+      description: safeString(forecasts[0]?.description, "Non défini"),
+      anomaly: detectAnomaly(forecasts),
+      reliability: compareForecasts(forecasts, weights),
+    };
+
+    // 4. Résumé IA
+    const aiSummary = await askOpenAI(
+      `Synthèse météo experte pour ${location} avec tendance, risques et anomalies.`
+    );
+
+    // 5. Sauvegarde MongoDB
+    const forecast = new Forecast({
+      location,
+      ...consolidated,
+      aiSummary,
+      runAt: new Date(),
+    });
+
+    await forecast.save();
+
+    console.log("✅ Run météo enregistré !");
+    return forecast;
+  } catch (err) {
+    console.error("❌ Erreur superForecast:", err.message);
+    return { error: err.message };
+  }
 }
