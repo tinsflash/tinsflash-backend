@@ -1,86 +1,87 @@
 // -------------------------
-// 🌍 server.js
-// Backend Express pour TINSFLASH avec MongoDB et moteur IA multi-modèles
+// 🚀 server.js
+// Backend Express + MongoDB + IA météo
+// Machine nucléaire météo TINSFLASH
 // -------------------------
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import connectDB from "./db.js"; // Connexion MongoDB
-import Forecast from "./models/Forecast.js"; // Modèle Forecast
+import connectDB from "./db.js";
+import Forecast from "./models/Forecast.js";
 
-// Import services
 import { runSuperForecast } from "./services/superForecast.js";
 import { getAlerts } from "./services/alertsService.js";
 import { generatePodcast } from "./services/podcastService.js";
 import { getWeatherIcon, generateCode } from "./services/codesService.js";
 import { chatWithJean } from "./services/chatService.js";
 import { getRadarLayers } from "./services/radarService.js";
-import { getLatestForecast, getForecastLogs } from "./services/forecastService.js";
 
 dotenv.config();
+connectDB();
 
-// -------------------------
-// Initialisation serveur
-// -------------------------
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // frontend
+app.use(express.static("public"));
+
+let lastRuns = [];
+let currentProgress = { step: 0, total: 5, status: "idle" };
 
 // -------------------------
-// Connexion MongoDB
+// SUPER CALCULATEUR
 // -------------------------
-connectDB();
-
-// -------------------------
-// 🚀 Supercalculateur météo
-// -------------------------
-let lastRuns = []; // mémoire locale (backup rapide)
-
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { time, country, lat, lon } = req.body;
-    const coords = {
-      lat: lat || 50.8503,
-      lon: lon || 4.3517
-    };
+    const coords = { lat: lat || 50.8503, lon: lon || 4.3517 };
 
-    // 🔥 Lancement prévisions multi-modèles IA
+    currentProgress = { step: 0, total: 5, status: "running" };
+
+    // Étape 1 : Préparation
+    currentProgress.step = 1;
+
+    // Étape 2 : Exécution IA
+    currentProgress.step = 2;
     const forecast = await runSuperForecast(coords.lat, coords.lon, country || "BE");
 
+    // Étape 3 : Consolidation
+    currentProgress.step = 3;
     const runResult = {
       time: time || new Date().toISOString(),
       forecast: forecast.forecast,
       errors: forecast.errors || [],
       status:
         forecast.errors && forecast.errors.length > 0
-          ? `⚠️ Run partiel : ${forecast.sources?.length || 0} sources utilisées, ${forecast.errors.length} erreurs`
-          : "✅ Run 100% réussi",
+          ? `⚠️ Partiel (${forecast.sources?.length} sources, ${forecast.errors.length} erreurs)`
+          : "✅ Run réussi",
     };
 
-    // Sauvegarde en mémoire locale
+    // Étape 4 : Sauvegarde
+    currentProgress.step = 4;
     lastRuns.push(runResult);
     if (lastRuns.length > 10) lastRuns.shift();
 
-    // Sauvegarde en base MongoDB
-    const dbEntry = new Forecast({
-      time: runResult.time,
-      forecast: runResult.forecast,
-      errors: runResult.errors,
-      status: runResult.status,
-    });
+    const dbEntry = new Forecast(runResult);
     await dbEntry.save();
+
+    // Étape 5 : Terminé
+    currentProgress.step = 5;
+    currentProgress.status = "done";
 
     res.json(runResult);
   } catch (err) {
-    console.error("❌ Erreur supercalculateur :", err);
-    res.status(500).json({ error: "Erreur supercalculateur: " + err.message });
+    currentProgress.status = "error";
+    res.status(500).json({ error: "Supercalc error: " + err.message });
   }
 });
 
-// 🔹 Logs complets (historique des runs)
+app.get("/api/supercalc/progress", (req, res) => {
+  res.json(currentProgress);
+});
+
 app.get("/api/supercalc/logs", async (req, res) => {
   try {
     const runs = await Forecast.find().sort({ createdAt: -1 }).limit(10);
@@ -90,30 +91,27 @@ app.get("/api/supercalc/logs", async (req, res) => {
   }
 });
 
-// 🔹 Dernière prévision stockée (version publique)
-app.get("/api/forecast/latest", async (req, res) => {
-  const latest = await getLatestForecast();
-  res.json(latest);
-});
-
 // -------------------------
 // ROUTES API
 // -------------------------
+app.get("/", (req, res) => res.send("🚀 Backend TINSFLASH en ligne !"));
 
-// ✅ Test route
-app.get("/", (req, res) => {
-  res.send("🚀 TINSFLASH Backend opérationnel avec moteur IA multi-modèles !");
+app.get("/api/forecast/local", async (req, res) => {
+  try {
+    const { lat, lon, country } = req.query;
+    const forecast = await runSuperForecast(lat, lon, country || "BE");
+    res.json(forecast);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ✅ Prévisions nationales (utilisé pour Premium/Pro)
 app.get("/api/forecast/national", async (req, res) => {
   try {
     const { country } = req.query;
-    let coords = { lat: 50.8503, lon: 4.3517 }; // BE par défaut
-
+    let coords = { lat: 50.8503, lon: 4.3517 };
     if (country === "FR") coords = { lat: 48.8566, lon: 2.3522 };
     if (country === "US") coords = { lat: 38.9072, lon: -77.0369 };
-
     const forecast = await runSuperForecast(coords.lat, coords.lon, country || "BE");
     res.json(forecast);
   } catch (err) {
@@ -121,7 +119,35 @@ app.get("/api/forecast/national", async (req, res) => {
   }
 });
 
-// ✅ Alertes météo
+app.get("/api/forecast/7days", async (req, res) => {
+  try {
+    const { lat, lon, country } = req.query;
+    const forecast = await runSuperForecast(lat, lon, country || "BE");
+
+    const now = new Date();
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(now.getDate() + i);
+      days.push({
+        date: date.toISOString().split("T")[0],
+        jour: date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
+        temperature_min: forecast.forecast.temperature_min,
+        temperature_max: forecast.forecast.temperature_max,
+        vent: forecast.forecast.wind,
+        precipitation: forecast.forecast.precipitation,
+        description: forecast.forecast.description,
+        fiabilité: forecast.forecast.reliability,
+        anomalie: forecast.forecast.anomaly || "Normale",
+        icone: getWeatherIcon(forecast.forecast.code || 0),
+      });
+    }
+    res.json({ source: "TINSFLASH IA", days });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await getAlerts();
@@ -131,14 +157,12 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Radar interactif
 app.get("/api/radar", async (req, res) => {
   try {
     const layers = await getRadarLayers();
     res.json({
       layers,
-      tilesUrl:
-        "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+      tilesUrl: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
       timestampsUrl: "https://api.rainviewer.com/public/maps.json",
     });
   } catch (err) {
@@ -146,7 +170,6 @@ app.get("/api/radar", async (req, res) => {
   }
 });
 
-// ✅ Podcasts météo
 app.post("/api/podcast/generate", async (req, res) => {
   try {
     const { type, text } = req.body;
@@ -157,33 +180,18 @@ app.post("/api/podcast/generate", async (req, res) => {
   }
 });
 
-// ✅ Codes promo
 app.get("/api/codes/generate", (req, res) => {
-  try {
-    const { type } = req.query;
-    if (!type) return res.status(400).json({ error: "Type d’abonnement requis" });
-
-    const code = generateCode(type);
-    res.json(code);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { type } = req.query;
+  const code = generateCode(type || "premium");
+  res.json(code);
 });
 
-// ✅ Icône météo
 app.get("/api/weather/icon", (req, res) => {
-  try {
-    const { code } = req.query;
-    if (!code) return res.status(400).json({ error: "Code météo requis" });
-
-    const icon = getWeatherIcon(parseInt(code, 10));
-    res.json({ code, icon });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { code } = req.query;
+  const icon = getWeatherIcon(parseInt(code || 0, 10));
+  res.json({ code, icon });
 });
 
-// ✅ Chat IA J.E.A.N
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -195,8 +203,8 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // -------------------------
-// Lancement serveur
+// LANCEMENT
 // -------------------------
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur TINSFLASH lancé sur le port ${PORT}`);
+  console.log(`🚀 Serveur TINSFLASH lancé sur port ${PORT}`);
 });
