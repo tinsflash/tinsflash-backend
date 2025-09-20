@@ -1,6 +1,6 @@
 // -------------------------
 // 🌍 server.js
-// Backend Express pour TINSFLASH avec MongoDB et moteur IA multi-modèles
+// Backend Express pour TINSFLASH avec MongoDB et moteur IA multi-modèles pondérés
 // -------------------------
 import express from "express";
 import dotenv from "dotenv";
@@ -42,19 +42,18 @@ app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { time, country, lat, lon } = req.body;
     const coords = {
-      lat: lat || 50.8503,
-      lon: lon || 4.3517,
+      lat: lat || 50.8503, // Bruxelles par défaut
+      lon: lon || 4.3517
     };
 
-    // 🔥 Lancement prévisions multi-modèles IA pondérées
+    // 🔥 Lancement prévisions multi-modèles IA pondérés
     const forecast = await runSuperForecast(coords.lat, coords.lon, country || "BE");
 
     const runResult = {
       time: time || new Date().toISOString(),
       forecast: forecast.forecast,
-      sources: forecast.sources,
-      weights: forecast.weights,
       errors: forecast.errors || [],
+      sources: forecast.sources || [],
       status:
         forecast.errors && forecast.errors.length > 0
           ? `⚠️ Run partiel : ${forecast.sources?.length || 0} sources utilisées, ${forecast.errors.length} erreurs`
