@@ -2,10 +2,11 @@
 
 import meteomatics from "../hiddensources/meteomatics.js";
 import openweather from "../hiddensources/openweather.js";
-import wetterzentrale from "../hiddensources/wetterzentrale.js";
-import trullemans from "../hiddensources/trullemans.js";
 import iconDwd from "../hiddensources/iconDwd.js";
 import comparator from "../hiddensources/comparator.js";
+
+import wetterzentrale from "../services/wetterzentrale.js";
+import trullemans from "../services/trullemans.js";
 
 import { applyGeoFactors } from "../services/geoFactors.js";
 import { applyLocalFactors } from "../services/localFactors.js";
