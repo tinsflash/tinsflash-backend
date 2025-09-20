@@ -1,22 +1,25 @@
 // hiddensources/meteomatics.js
 import axios from "axios";
 
-/**
- * 🔗 Source Meteomatics (via proxy Open-Meteo gratuit)
- */
-export async function getMeteomatics(lat, lon) {
+async function getForecast(lat, lon) {
   try {
+    // Exemple simplifié : remplacer par vraie API Meteomatics si clé dispo
     const res = await axios.get(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`
     );
 
     return {
-      temperature: res.data.hourly.temperature_2m[0],
-      precipitation: res.data.hourly.precipitation[0],
-      wind: res.data.hourly.wind_speed_10m[0],
-      source: "Meteomatics (via Open-Meteo proxy)"
+      source: "Meteomatics",
+      temperature_min: Math.min(...res.data.hourly.temperature_2m),
+      temperature_max: Math.max(...res.data.hourly.temperature_2m),
+      wind: Math.max(...res.data.hourly.wind_speed_10m),
+      precipitation: res.data.hourly.precipitation.reduce((a, b) => a + b, 0),
+      reliability: 75
     };
   } catch (err) {
-    return { source: "Meteomatics", error: err.message };
+    console.error("❌ Meteomatics error:", err.message);
+    return null;
   }
 }
+
+export default { getForecast };
