@@ -1,19 +1,26 @@
-const OpenAI = require("openai");
+// utils/openai.js
+import axios from "axios";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_KEY,
-});
+const OPENAI_KEY = process.env.OPENAI_KEY || "demo";
 
-async function generatePodcast(location) {
-  const prompt = `Fais un bulletin météo clair et concis pour ${location}.`;
+/**
+ * Envoie une requête à l'API OpenAI pour analyse IA
+ * @param {string} prompt - Question ou données météo à analyser
+ * @returns {Promise<string>} - Réponse IA (texte brut)
+ */
+export async function askOpenAI(prompt) {
+  try {
+    const res = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }]
+      },
+      { headers: { Authorization: `Bearer ${OPENAI_KEY}` } }
+    );
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  return completion.choices[0].message.content;
+    return res.data.choices[0].message.content;
+  } catch (err) {
+    return `Erreur OpenAI: ${err.message}`;
+  }
 }
-
-module.exports = { generatePodcast };
-
