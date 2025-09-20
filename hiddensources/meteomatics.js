@@ -1,29 +1,22 @@
 // hiddensources/meteomatics.js
-// Meteomatics Free API - Besoin d’un compte gratuit
+import axios from "axios";
 
-import fetch from "node-fetch";
-
-export async function getMeteomaticsForecast(lat = 50.5, lon = 4.5) {
+/**
+ * 🔗 Source Meteomatics (via proxy Open-Meteo gratuit)
+ */
+export async function getMeteomatics(lat, lon) {
   try {
-    // Exemple d’appel simple (température actuelle)
-    const username = process.env.METEOMATICS_USER;
-    const password = process.env.METEOMATICS_PASS;
-    const url = `https://api.meteomatics.com/now/t_2m:C/${lat},${lon}/json`;
+    const res = await axios.get(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`
+    );
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: "Basic " + Buffer.from(username + ":" + password).toString("base64")
-      }
-    });
-
-    const data = await response.json();
     return {
-      source: "Meteomatics",
-      temp: data?.data?.[0]?.coordinates?.[0]?.dates?.[0]?.value || "N/A",
-      date: new Date().toISOString(),
+      temperature: res.data.hourly.temperature_2m[0],
+      precipitation: res.data.hourly.precipitation[0],
+      wind: res.data.hourly.wind_speed_10m[0],
+      source: "Meteomatics (via Open-Meteo proxy)"
     };
   } catch (err) {
-    console.error("Erreur Meteomatics:", err);
-    return { source: "Meteomatics", error: true };
+    return { source: "Meteomatics", error: err.message };
   }
 }
