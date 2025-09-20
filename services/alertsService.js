@@ -1,67 +1,83 @@
 // services/alertsService.js
-import Forecast from "../models/Forecast.js";
 import Alert from "../models/Alert.js";
-import fetch from "node-fetch";
+import { getRadarLayers } from "./radarService.js";
 
-const RAINVIEWER_MAPS = "https://api.rainviewer.com/public/maps.json";
-
-export async function getAlerts() {
-  const alerts = [];
-  const runs = await Forecast.find().sort({ createdAt: -1 }).limit(5);
-
-  for (const run of runs) {
-    const fc = run.forecast || {};
-    const reliability = fc.reliability || 0;
-
-    if (fc.precipitation > 10 || fc.wind > 80 || fc.anomaly) {
-      const alert = {
-        time: run.time,
-        reliability,
-        status: run.status,
-        forecast: {
-          temperature: fc.temperature || fc.temperature_max || "N/A",
-          precipitation: fc.precipitation || 0,
-          wind: fc.wind || 0,
-          description: fc.description || "N/A",
-          anomaly: fc.anomaly || null,
-        },
-        message: buildAlertMessage(fc, reliability),
-        radarImage: await getLatestRadarImage(),
-        validationRequired: reliability >= 70 && reliability < 90,
-        autoSend: reliability >= 90,
-        validated: reliability >= 90, // auto validées si >=90
-      };
-
-      // Sauvegarde en DB si nouvelle
-      await Alert.create(alert);
-      alerts.push(alert);
-    }
-  }
-
-  return alerts;
-}
-
-function buildAlertMessage(fc, reliability) {
-  let msg = `⚠️ Alerte météo — Fiabilité ${reliability}%\n`;
-
-  if (fc.precipitation > 10) msg += `🌧️ Fortes précipitations (${fc.precipitation} mm/h)\n`;
-  if (fc.wind > 80) msg += `💨 Vent violent (${fc.wind} km/h)\n`;
-  if (fc.anomaly) msg += `❗ Anomalie: ${fc.anomaly}\n`;
-
-  msg += `\nPrévision: ${fc.description || "N/A"}`;
-  return msg;
-}
-
-async function getLatestRadarImage() {
+/**
+ * Génère et sauvegarde une alerte météo
+ * @param {Object} forecast - prévisions météo finales issues du superForecast
+ * @returns {Object} - alerte sauvegardée ou erreur
+ */
+export async function generateAlert(forecast) {
   try {
-    const res = await fetch(RAINVIEWER_MAPS);
-    const data = await res.json();
-    if (data && data.length > 0) {
-      const latest = data[data.length - 1];
-      return `https://tilecache.rainviewer.com/v2/radar/${latest}/256/{z}/{x}/{y}/2/1_1.png`;
+    if (!forecast) {
+      throw new Error("Aucune donnée météo fournie");
     }
+
+    // Détection seuils d’alerte
+    const reliability = forecast.reliability || 0;
+    let validationRequired = false;
+    let autoSend = false;
+
+    if (reliability >= 90) {
+      autoSend = true; // on diffuse automatiquement
+    } else if (reliability >= 70) {
+      validationRequired = true; // nécessite validation manuelle
+    }
+
+    // Construire le message d’alerte
+    const message = `
+      ⚠️ Alerte météo détectée
+      ${forecast.description || "Conditions particulières"}
+      - Température: ${forecast.temperature}°C
+      - Précipitations: ${forecast.precipitation || 0} mm
+      - Vent: ${forecast.wind || 0} km/h
+      Fiabilité: ${reliability}%
+    `;
+
+    // Capture radar simplifiée (URL des tuiles radar actuelles)
+    const radarLayers = await getRadarLayers();
+    const radarImage = radarLayers?.[0]?.url || "N/A";
+
+    // Sauvegarde MongoDB
+    const alert = new Alert({
+      time: new Date(),
+      reliability,
+      status: reliability >= 90 ? "Auto-envoyée" : "En attente",
+      forecast: {
+        temperature: forecast.temperature,
+        precipitation: forecast.precipitation,
+        wind: forecast.wind,
+        description: forecast.description,
+        anomaly: forecast.anomaly || null,
+      },
+      message,
+      radarImage,
+      validationRequired,
+      autoSend,
+      validated: autoSend, // auto validée si fiabilité >= 90
+    });
+
+    await alert.save();
+
+    return {
+      success: true,
+      alert,
+    };
   } catch (err) {
-    console.error("Erreur récupération radar:", err.message);
+    console.error("❌ Erreur génération alerte :", err);
+    return { success: false, error: err.message };
   }
-  return null;
+}
+
+/**
+ * Récupère les dernières alertes
+ */
+export async function getAlerts(limit = 10) {
+  try {
+    const alerts = await Alert.find().sort({ createdAt: -1 }).limit(limit);
+    return alerts;
+  } catch (err) {
+    console.error("❌ Erreur récupération alertes :", err);
+    return [];
+  }
 }
