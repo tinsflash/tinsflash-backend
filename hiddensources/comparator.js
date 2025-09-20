@@ -1,24 +1,20 @@
-import { applyTrullemansAdjustments } from "../services/trullemans.js";
+// hiddensources/comparator.js
+import axios from "axios";
 
 export async function compareSources(lat, lon) {
   try {
-    // Exemple de comparaison de sources
-    const baseForecast = {
-      source: "Comparator",
-      temperature: 15,
-      wind: 20,
-      precipitation: 5
-    };
-
-    // Application de la méthode Trullemans
-    const adjusted = applyTrullemansAdjustments({ ...baseForecast });
-
-    return {
-      source: "Comparator",
-      summary: `Temp ${adjusted.temperature}°C, Vent ${adjusted.wind} km/h`,
-      adjustment: "Trullemans applied"
-    };
+    const res = await axios.get(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
+    );
+    return [
+      {
+        source: "Open-Meteo",
+        temperature_min: res.data.daily.temperature_2m_min[0],
+        temperature_max: res.data.daily.temperature_2m_max[0],
+        summary: `T° min: ${res.data.daily.temperature_2m_min[0]}°C, max: ${res.data.daily.temperature_2m_max[0]}°C`
+      }
+    ];
   } catch (err) {
-    return { source: "Comparator", error: err.message };
+    return [{ source: "Open-Meteo", error: err.message }];
   }
 }
