@@ -1,69 +1,120 @@
 // server.js
 import express from "express";
 import mongoose from "mongoose";
-import cors from "cors";
 import dotenv from "dotenv";
+import cors from "cors";
 
-import { runSuperForecast } from "./src/services/superForecast.js";
-import Forecast from "./src/models/Forecast.js";
-import Alert from "./src/models/Alerts.js";
+// === Services ===
+import superForecast from "./services/superForecast.js";
+import forecastService from "./services/forecastService.js";
+import alertsService from "./services/alertsService.js";
+import radarService from "./services/radarService.js";
+import podcastService from "./services/podcastService.js";
+import chatService from "./services/chatService.js";
+
+// === DB Models ===
+import Forecast from "./models/Forecast.js";
+import Alert from "./models/Alerts.js";
 
 dotenv.config();
+
 const app = express();
-app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
+app.use(cors());
 
-// ✅ Connexion MongoDB
+// === MongoDB connection ===
 mongoose
-  .connect(process.env.MONGO_URI, { dbName: "tinsflash" })
-  .then(() => console.log("✅ MongoDB connecté"))
-  .catch(err => console.error("❌ MongoDB erreur:", err));
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// --- ROUTES ---
+// ==============================
+// 📡 API ROUTES
+// ==============================
 
-// 🔹 Lancer un run météo
+// Supercalculateur météo
 app.post("/api/supercalc/run", async (req, res) => {
   try {
-    const { location } = req.body;
-    const forecast = await runSuperForecast(location || "Bruxelles");
+    const result = await superForecast.runFullForecast();
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error("❌ Supercalc error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Prévisions locales
+app.get("/api/forecast/local", async (req, res) => {
+  try {
+    const forecast = await forecastService.getLocalForecast(req.query.lat, req.query.lon);
     res.json(forecast);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 🔹 Obtenir le dernier run
-app.get("/api/forecast/latest", async (req, res) => {
+// Prévisions nationales
+app.get("/api/forecast/national", async (req, res) => {
   try {
-    const forecast = await Forecast.findOne().sort({ runAt: -1 });
-    if (!forecast) return res.status(404).json({ error: "Aucune prévision disponible" });
+    const forecast = await forecastService.getNationalForecast(req.query.country);
     res.json(forecast);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 🔹 Obtenir tous les runs sauvegardés
-app.get("/api/forecast/logs", async (req, res) => {
+// Prévisions 7 jours
+app.get("/api/forecast/7days", async (req, res) => {
   try {
-    const logs = await Forecast.find().sort({ runAt: -1 }).limit(50);
-    res.json(logs);
+    const forecast = await forecastService.get7DayForecast(req.query.lat, req.query.lon);
+    res.json(forecast);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 🔹 Alertes météo
+// Radar météo
+app.get("/api/radar", async (req, res) => {
+  try {
+    const radar = await radarService.getRadar(req.query.type || "rain");
+    res.json(radar);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Alertes météo
 app.get("/api/alerts", async (req, res) => {
   try {
-    const alerts = await Alert.find().sort({ createdAt: -1 });
+    const alerts = await alertsService.getAlerts();
     res.json(alerts);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- LANCEMENT SERVEUR ---
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Serveur TINSFLASH lancé sur http://localhost:${PORT}`));
+// Podcast météo
+app.post("/api/podcast/generate", async (req, res) => {
+  try {
+    const podcast = await podcastService.generatePodcast(req.body.text);
+    res.json(podcast);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Chat IA
+app.post("/api/chat", async (req, res) => {
+  try {
+    const response = await chatService.askJean(req.body.message);
+    res.json(response);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================
+// 🚀 START SERVER
+// ==============================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
