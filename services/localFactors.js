@@ -1,16 +1,22 @@
 // services/localFactors.js
 
-export function applyLocalFactors(forecast, region = "BE") {
-  // 🇧🇪 Ajustements pour la Belgique
+// Ajuste les prévisions en fonction de facteurs locaux (ex: microclimat)
+export function adjustWithLocalFactors(forecast, region = "BE") {
+  if (!forecast) return forecast;
+
   if (region === "BE") {
-    forecast.reliability = Math.min(100, forecast.reliability + 5);
+    forecast.reliability += 5;
+  }
+  if (forecast.temperature_max && forecast.temperature_max > 30) {
+    forecast.reliability -= 2; // fortes chaleurs = incertitude
   }
 
-  // 🇫🇷 Ajustements pour la France
-  if (region === "FR") {
-    forecast.temperature_max += 1;
-  }
-
-  // On peut rajouter d'autres pays/régions ici plus tard
   return forecast;
+}
+
+// ✅ Alias attendu par superForecast.js
+export function applyLocalFactors(forecast, lat, lon) {
+  let region = "GENERIC";
+  if (lat > 49 && lat < 52 && lon > 2 && lon < 6) region = "BE";
+  return adjustWithLocalFactors(forecast, region);
 }
