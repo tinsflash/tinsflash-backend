@@ -10,7 +10,7 @@ import Forecast from "./models/Forecast.js"; // Modèle Forecast
 
 // Import services
 import { runSuperForecast } from "./services/superForecast.js";
-import { getAlerts } from "./services/alertsService.js";
+import { getAlerts, getUserAlerts } from "./services/alertsService.js";
 import { generatePodcast } from "./services/podcastService.js";
 import { getWeatherIcon, generateCode } from "./services/codesService.js";
 import { chatWithJean } from "./services/chatService.js";
@@ -26,19 +26,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-
-// 🔒 Protection admin-pp
-app.use("/admin-pp.html", (req, res, next) => {
-  const pass = req.query.pass || req.headers["x-admin-pass"];
-  if (pass === "202679") {
-    next(); // autorisé
-  } else {
-    res.status(403).send("🚫 Accès interdit");
-  }
-});
-
-// Frontend
-app.use(express.static("public"));
+app.use(express.static("public")); // frontend
 
 // -------------------------
 // Connexion MongoDB
@@ -184,10 +172,24 @@ app.get("/api/forecast/7days", async (req, res) => {
   }
 });
 
-// ✅ Alertes météo
+// ✅ Alertes météo globales
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await getAlerts();
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Alertes météo personnalisées (push)
+app.get("/api/alerts/push", async (req, res) => {
+  try {
+    const { lat, lon, level } = req.query;
+    if (!lat || !lon) {
+      return res.status(400).json({ error: "Latitude et longitude requises" });
+    }
+    const alerts = await getUserAlerts(lat, lon, level || "free");
     res.json(alerts);
   } catch (err) {
     res.status(500).json({ error: err.message });
