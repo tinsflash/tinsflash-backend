@@ -2,70 +2,114 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🚀 Admin Pro+ – TINSFLASH</title>
+  <title>🔒 Admin Console – TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- 🚫 Empêcher indexation Google -->
-  <meta name="robots" content="noindex,nofollow">
-
   <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #0c1a2b; color: #eee; }
+    .card { background: #1e2f47; color: #fff; margin-bottom: 20px; padding: 15px; border-radius: 8px; }
+    button { margin-top: 10px; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; }
+    .btn-validate { background: #00eaff; color: #000; }
+    .btn-run { background: #4caf50; color: #fff; font-weight: bold; }
+  </style>
   <script defer>
-    async function runSupercalc() {
-      const el = document.getElementById("supercalc-result");
-      el.innerText = "⏳ Exécution du moteur...";
+    async function checkPassword() {
+      const pwd = prompt("Entrez le mot de passe admin :");
+      if (pwd !== "202679") {
+        document.body.innerHTML = "<h1>⛔ Accès refusé</h1>";
+        throw new Error("Accès refusé");
+      }
+      loadAlerts();
+    }
+
+    // Charger alertes
+    async function loadAlerts() {
+      const el = document.getElementById("alerts-container");
+      el.innerText = "⏳ Chargement...";
+      try {
+        const res = await fetch("/api/alerts");
+        const data = await res.json();
+        if (!data || data.length === 0) {
+          el.innerText = "✅ Aucune alerte en attente";
+          return;
+        }
+
+        el.innerHTML = data.map(a => `
+          <div class="card">
+            <h3>⚠️ ${a.message.split("\n")[0]}</h3>
+            <p><b>Fiabilité:</b> ${a.reliability}%</p>
+            <p><b>Description:</b> ${a.forecast.description || "N/A"}</p>
+            <p><b>Vent:</b> ${a.forecast.wind} km/h | 🌧️ ${a.forecast.precipitation} mm</p>
+            <p><b>Radar:</b> ${a.radarImage ? `<a href="${a.radarImage}" target="_blank">Voir radar</a>` : "N/A"}</p>
+            <p><b>Status:</b> ${a.validated ? "✅ Validée" : (a.validationRequired ? "🟠 En attente" : "⏳ Générée")}</p>
+            ${!a.validated && a.validationRequired ? 
+              `<button class="btn-validate" onclick="validateAlert('${a._id}')">Valider</button>` 
+              : ""}
+          </div>
+        `).join("");
+      } catch (err) {
+        el.innerText = "❌ Erreur chargement alertes";
+      }
+    }
+
+    // Valider alerte
+    async function validateAlert(alertId) {
+      try {
+        const res = await fetch("/api/alerts/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alertId })
+        });
+        const data = await res.json();
+        alert(data.message || "Alerte validée");
+        loadAlerts();
+      } catch {
+        alert("❌ Erreur validation alerte");
+      }
+    }
+
+    // Générer prévisions
+    async function runForecast() {
+      const el = document.getElementById("run-result");
+      el.innerText = "⏳ Lancement du supercalculateur météo...";
       try {
         const res = await fetch("/api/supercalc/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ country: "BE" })
+          body: JSON.stringify({
+            time: new Date().toISOString(),
+            country: "BE",
+            lat: 50.8503,
+            lon: 4.3517
+          })
         });
         const data = await res.json();
-        el.innerText = JSON.stringify(data, null, 2);
+        el.innerText = `✅ Prévisions générées (${data.status})`;
       } catch (err) {
-        el.innerText = "❌ Erreur: " + err.message;
+        el.innerText = "❌ Erreur génération prévisions";
       }
     }
 
-    async function loadLogs() {
-      const el = document.getElementById("supercalc-logs");
-      el.innerText = "⏳ Chargement logs...";
-      try {
-        const res = await fetch("/api/supercalc/logs");
-        const data = await res.json();
-        el.innerText = JSON.stringify(data, null, 2);
-      } catch (err) {
-        el.innerText = "❌ Erreur logs: " + err.message;
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("btn-run").addEventListener("click", runSupercalc);
-      document.getElementById("btn-logs").addEventListener("click", loadLogs);
-    });
+    document.addEventListener("DOMContentLoaded", checkPassword);
   </script>
 </head>
 <body>
-  <header class="navbar">
-    <div class="logo">🌩️ TINSFLASH – Admin Pro+</div>
-    <!-- 🚫 pas de menu pour éviter découverte -->
-  </header>
-
   <main class="container">
+    <h1>🔒 Console Admin – Gestion des alertes & runs</h1>
+
+    <!-- Bouton lancement manuel -->
     <section class="card">
-      <h2>🚀 Supercalculateur météo</h2>
-      <button id="btn-run">▶️ Lancer un run</button>
-      <pre id="supercalc-result">⏳ En attente...</pre>
+      <h2>⚡ Supercalculateur météo</h2>
+      <button class="btn-run" onclick="runForecast()">▶️ Générer les prévisions</button>
+      <p id="run-result"></p>
+      <p><small>⏰ Runs recommandés : 07h10, 12h10, 19h10 (heure belge)</small></p>
     </section>
 
-    <section class="card">
-      <h2>📜 Logs récents</h2>
-      <button id="btn-logs">🔄 Recharger logs</button>
-      <pre id="supercalc-logs">⏳ En attente...</pre>
+    <!-- Alertes -->
+    <section>
+      <h2>⚠️ Alertes météo</h2>
+      <div id="alerts-container">⏳ Chargement...</div>
     </section>
   </main>
-
-  <footer class="footer">
-    <p>© 2025 TINSFLASH – Console Pro+</p>
-  </footer>
 </body>
 </html>
