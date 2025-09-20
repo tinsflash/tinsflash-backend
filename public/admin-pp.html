@@ -2,114 +2,172 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🔒 Admin Console – TINSFLASH</title>
+  <title>⚡ Admin Pro+ – TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
   <style>
-    body { background: #0c1a2b; color: #eee; }
-    .card { background: #1e2f47; color: #fff; margin-bottom: 20px; padding: 15px; border-radius: 8px; }
-    button { margin-top: 10px; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; }
-    .btn-validate { background: #00eaff; color: #000; }
-    .btn-run { background: #4caf50; color: #fff; font-weight: bold; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0c1a2b;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #132a44;
+      padding: 20px;
+      text-align: center;
+      color: #00eaff;
+    }
+    main {
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    section {
+      background: #1e2f47;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px rgba(0,234,255,0.2);
+    }
+    button {
+      padding: 10px 20px;
+      background: #00eaff;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #00bcd4;
+    }
+    .progress-bar {
+      width: 100%;
+      background: #333;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 10px 0;
+      height: 22px;
+    }
+    .progress-fill {
+      background: #00eaff;
+      height: 100%;
+      width: 0%;
+      text-align: center;
+      color: #000;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    pre {
+      background: #0a1a2a;
+      padding: 10px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+    }
   </style>
-  <script defer>
-    async function checkPassword() {
-      const pwd = prompt("Entrez le mot de passe admin :");
-      if (pwd !== "202679") {
-        document.body.innerHTML = "<h1>⛔ Accès refusé</h1>";
-        throw new Error("Accès refusé");
-      }
-      loadAlerts();
-    }
+</head>
+<body>
+  <header>
+    <h1>⚡ Admin Pro+ – Centrale météo</h1>
+  </header>
 
-    // Charger alertes
-    async function loadAlerts() {
-      const el = document.getElementById("alerts-container");
-      el.innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch("/api/alerts");
-        const data = await res.json();
-        if (!data || data.length === 0) {
-          el.innerText = "✅ Aucune alerte en attente";
-          return;
-        }
+  <main>
+    <!-- Mot de passe -->
+    <section id="login-section">
+      <h2>🔐 Accès sécurisé</h2>
+      <input type="password" id="password" placeholder="Mot de passe">
+      <button onclick="checkPassword()">Entrer</button>
+      <p id="login-error" style="color:red;"></p>
+    </section>
 
-        el.innerHTML = data.map(a => `
-          <div class="card">
-            <h3>⚠️ ${a.message.split("\n")[0]}</h3>
-            <p><b>Fiabilité:</b> ${a.reliability}%</p>
-            <p><b>Description:</b> ${a.forecast.description || "N/A"}</p>
-            <p><b>Vent:</b> ${a.forecast.wind} km/h | 🌧️ ${a.forecast.precipitation} mm</p>
-            <p><b>Radar:</b> ${a.radarImage ? `<a href="${a.radarImage}" target="_blank">Voir radar</a>` : "N/A"}</p>
-            <p><b>Status:</b> ${a.validated ? "✅ Validée" : (a.validationRequired ? "🟠 En attente" : "⏳ Générée")}</p>
-            ${!a.validated && a.validationRequired ? 
-              `<button class="btn-validate" onclick="validateAlert('${a._id}')">Valider</button>` 
-              : ""}
-          </div>
-        `).join("");
-      } catch (err) {
-        el.innerText = "❌ Erreur chargement alertes";
-      }
-    }
+    <!-- Console admin -->
+    <section id="console-section" style="display:none;">
+      <h2>🚀 Supercalculateur</h2>
+      <button onclick="launchRun()">▶️ Lancer un run</button>
 
-    // Valider alerte
-    async function validateAlert(alertId) {
-      try {
-        const res = await fetch("/api/alerts/validate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alertId })
-        });
-        const data = await res.json();
-        alert(data.message || "Alerte validée");
-        loadAlerts();
-      } catch {
-        alert("❌ Erreur validation alerte");
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill">0%</div>
+      </div>
+      <p id="progress-status">En attente...</p>
+
+      <h3>📜 Logs récents</h3>
+      <div id="logs">⏳ Chargement...</div>
+    </section>
+  </main>
+
+  <script>
+    const ADMIN_PASSWORD = "202679";
+
+    function checkPassword() {
+      const input = document.getElementById("password").value;
+      if (input === ADMIN_PASSWORD) {
+        document.getElementById("login-section").style.display = "none";
+        document.getElementById("console-section").style.display = "block";
+        loadLogs();
+      } else {
+        document.getElementById("login-error").innerText = "❌ Mot de passe incorrect";
       }
     }
 
-    // Générer prévisions
-    async function runForecast() {
-      const el = document.getElementById("run-result");
-      el.innerText = "⏳ Lancement du supercalculateur météo...";
+    async function launchRun() {
+      document.getElementById("progress-status").innerText = "🚀 Run en cours...";
+      updateProgress();
+
       try {
         const res = await fetch("/api/supercalc/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            time: new Date().toISOString(),
-            country: "BE",
-            lat: 50.8503,
-            lon: 4.3517
-          })
+          body: JSON.stringify({})
         });
         const data = await res.json();
-        el.innerText = `✅ Prévisions générées (${data.status})`;
+        document.getElementById("progress-status").innerText = data.status || "✅ Terminé";
+        loadLogs();
       } catch (err) {
-        el.innerText = "❌ Erreur génération prévisions";
+        document.getElementById("progress-status").innerText = "❌ Erreur run: " + err.message;
       }
     }
 
-    document.addEventListener("DOMContentLoaded", checkPassword);
+    async function updateProgress() {
+      const fill = document.getElementById("progress-fill");
+      const status = document.getElementById("progress-status");
+
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/supercalc/progress");
+          const data = await res.json();
+          const percent = Math.round((data.step / data.total) * 100);
+          fill.style.width = percent + "%";
+          fill.innerText = percent + "%";
+          status.innerText = "⏳ " + data.status;
+
+          if (data.status === "done" || data.status === "error") {
+            clearInterval(interval);
+          }
+        } catch {
+          clearInterval(interval);
+          status.innerText = "❌ Erreur progression";
+        }
+      }, 2000);
+    }
+
+    async function loadLogs() {
+      try {
+        const res = await fetch("/api/supercalc/logs");
+        const data = await res.json();
+        document.getElementById("logs").innerHTML = data.map(run => `
+          <pre>
+⏰ ${run.time}
+📊 ${run.status}
+🌡️ ${run.forecast?.temperature_min}°C → ${run.forecast?.temperature_max}°C
+💨 Vent: ${run.forecast?.wind} km/h
+🌧️ Pluie: ${run.forecast?.precipitation} mm
+${run.forecast?.description || ""}
+          </pre>
+        `).join("");
+      } catch {
+        document.getElementById("logs").innerText = "❌ Erreur chargement logs";
+      }
+    }
   </script>
-</head>
-<body>
-  <main class="container">
-    <h1>🔒 Console Admin – Gestion des alertes & runs</h1>
-
-    <!-- Bouton lancement manuel -->
-    <section class="card">
-      <h2>⚡ Supercalculateur météo</h2>
-      <button class="btn-run" onclick="runForecast()">▶️ Générer les prévisions</button>
-      <p id="run-result"></p>
-      <p><small>⏰ Runs recommandés : 07h10, 12h10, 19h10 (heure belge)</small></p>
-    </section>
-
-    <!-- Alertes -->
-    <section>
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-container">⏳ Chargement...</div>
-    </section>
-  </main>
 </body>
 </html>
