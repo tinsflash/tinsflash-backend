@@ -9,11 +9,18 @@ import { applyGeoFactors } from "./geoFactors.js";
 import { getNorm } from "../utils/seasonalNorms.js";
 import { askOpenAI } from "../utils/openai.js";
 
+/**
+ * Super moteur météo TINSFLASH
+ * - croise plusieurs modèles
+ * - applique IA pour corriger incohérences
+ * - ajoute ajustements locaux + géographiques
+ * - détecte anomalies climatiques
+ */
 export async function runSuperForecast(lat, lon, country = "BE") {
   const sources = [];
   const errors = [];
 
-  // 1. Charger les différentes sources
+  // 1️⃣ Charger les différentes sources
   const meteomatics = await getMeteomatics(lat, lon);
   meteomatics.error ? errors.push(meteomatics.error) : sources.push(meteomatics);
 
@@ -23,10 +30,7 @@ export async function runSuperForecast(lat, lon, country = "BE") {
   const comparator = await compareSources(lat, lon);
   sources.push(...comparator);
 
-  // TODO: Wetterzentrale, NOAA, etc.
-  // const wetter = parseWetterzentraleData(rawData)
-
-  // 2. Demander à l’IA de croiser les résultats
+  // 2️⃣ IA : croiser et analyser les résultats
   let aiSummary = null;
   try {
     const prompt = `
@@ -34,10 +38,10 @@ export async function runSuperForecast(lat, lon, country = "BE") {
       Sources :
       ${JSON.stringify(sources, null, 2)}
 
-      Ta mission : 
-      - détecter et corriger les incohérences,
-      - produire une prévision finale réaliste (T° min/max, vent, précipitations, fiabilité),
-      - ajouter un degré de fiabilité (0–100) basé sur la cohérence entre modèles.
+      Ta mission :
+      - détecter et corriger les incohérences
+      - produire une prévision finale réaliste (T° min/max, vent, précipitations, description)
+      - donner un indice de fiabilité (0–100) basé sur la cohérence entre modèles
       Réponds uniquement en JSON.
     `;
     const aiResponse = await askOpenAI(prompt);
@@ -46,13 +50,13 @@ export async function runSuperForecast(lat, lon, country = "BE") {
     errors.push("Erreur IA: " + err.message);
   }
 
-  // 3. Appliquer corrections locales + géographiques
-  let forecast = aiSummary || sources[0]; // fallback
+  // 3️⃣ Corrections locales et géographiques
+  let forecast = aiSummary || sources[0] || {};
   forecast = adjustWithLocalFactors(forecast, country);
   forecast = applyTrullemansAdjustments(forecast);
   forecast = await applyGeoFactors(forecast, lat, lon);
 
-  // 4. Vérifier normes saisonnières
+  // 4️⃣ Vérifier normes saisonnières
   const season = getSeason(new Date());
   const norm = getNorm(season);
   if (forecast.temperature_max > norm.temp_max + 10) {
