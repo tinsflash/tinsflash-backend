@@ -1,44 +1,79 @@
 import express from "express";
 import mongoose from "mongoose";
-import cors from "cors";
 import dotenv from "dotenv";
-
-import superForecast from "./services/superForecast.js";
-import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alerts.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import { runSuperForecast } from "./services/superForecast.js";
+import alertsService from "./services/alertsService.js";
 
 dotenv.config();
+
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
-// MongoDB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+// Connexion MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("✅ Connecté à MongoDB"))
+  .catch(err => console.error("❌ Erreur MongoDB:", err));
 
-// API : Lancer un run (uniquement admin)
+// Route API classique
 app.post("/api/supercalc/run", async (req, res) => {
   try {
-    const result = await superForecast();
-    const forecast = new Forecast(result);
-    await forecast.save();
+    const forecast = await runSuperForecast();
     res.json({ success: true, forecast });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Route SSE pour le suivi en temps réel
+app.get("/api/supercalc/stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const send = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const forecast = await runSuperForecast((step, msg, progress) => {
+      send({ type: "log", message: msg });
+      send({ type: "progress", value: progress, message: step });
+    });
+
+    send({ type: "done", message: "✅ Run terminé", forecast });
+    res.end();
+  } catch (err) {
+    send({ type: "error", message: err.message });
+    res.end();
+  }
+});
+
+// Alertes
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const alerts = await alertsService.getAlerts();
+    res.json(alerts);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// API : Dernier forecast (utilisé par index)
-app.get("/api/forecast/latest", async (req, res) => {
-  const last = await Forecast.findOne().sort({ createdAt: -1 });
-  res.json(last || { message: "Pas de prévisions disponibles" });
+// Pages admin
+app.get("/admin-pp", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
 });
 
-// API : Alertes
-app.get("/api/alerts", async (req, res) => {
-  const alerts = await Alert.find().sort({ createdAt: -1 }).limit(5);
-  res.json(alerts);
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server running on ${PORT}`));
