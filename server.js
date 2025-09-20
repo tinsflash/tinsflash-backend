@@ -26,7 +26,19 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public")); // frontend
+
+// 🔒 Protection admin-pp
+app.use("/admin-pp.html", (req, res, next) => {
+  const pass = req.query.pass || req.headers["x-admin-pass"];
+  if (pass === "202679") {
+    next(); // autorisé
+  } else {
+    res.status(403).send("🚫 Accès interdit");
+  }
+});
+
+// Frontend
+app.use(express.static("public"));
 
 // -------------------------
 // Connexion MongoDB
