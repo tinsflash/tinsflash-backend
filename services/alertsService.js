@@ -1,89 +1,107 @@
 // -------------------------
-// ⚡ alertsService.js
-// Gestion des alertes météo TINSFLASH (free / premium / pro / pro+)
+// ⚠️ alertsService.js
+// Générateur d’alertes météo intelligentes
 // -------------------------
-import fetch from "node-fetch";
 
-// ✅ Simule une API météo radar pour la pluie
-async function checkRain(lat, lon) {
-  return {
-    intensity: Math.random() * 10, // mm/h
-    minutes: Math.floor(Math.random() * 60),
-    reliability: 80 + Math.random() * 20
-  };
-}
+import { runSuperForecast } from "./superForecast.js";
 
-// ✅ Simule la neige
-async function checkSnow(lat, lon) {
-  return {
-    prob: Math.random(),
-    intensity: Math.random() * 5,
-    reliability: 70 + Math.random() * 30
-  };
-}
+let memoryAlerts = []; // backup mémoire si pas de DB
 
-// ✅ Simule le vent
-async function checkWind(lat, lon) {
-  return {
-    speed: Math.floor(20 + Math.random() * 60), // km/h
-    reliability: 75 + Math.random() * 25
-  };
-}
+/**
+ * Génère des alertes météo à partir des prévisions
+ * @param {number} lat - latitude
+ * @param {number} lon - longitude
+ * @param {string} country - pays
+ */
+export async function getAlerts(lat = 50.85, lon = 4.35, country = "BE") {
+  try {
+    const forecast = await runSuperForecast(lat, lon, country);
+    const f = forecast.forecast || {};
 
-// ✅ Alertes globales (affichées dans cockpit)
-export async function getAlerts() {
-  return [
-    {
-      level: "info",
-      message: "🌤️ Journée globalement calme",
-      reliability: 95
-    },
-    {
-      level: "warning",
-      message: "🌧️ Risque d’averses en fin de journée",
-      reliability: 80
-    }
-  ];
-}
+    const alerts = [];
 
-// ✅ Alertes personnalisées (push sur mobile)
-export async function getUserAlerts(lat, lon, level = "free") {
-  const alerts = [];
-
-  // 🌧️ Pluie
-  const rain = await checkRain(lat, lon);
-  if (rain.intensity > 0.1) {
-    alerts.push({
-      type: "rain",
-      message: `🌧️ Pluie attendue dans ${rain.minutes} min`,
-      level: rain.intensity > 5 ? "forte" : "faible",
-      reliability: rain.reliability
-    });
-  }
-
-  // ❄️ Neige (premium+)
-  if (level !== "free") {
-    const snow = await checkSnow(lat, lon);
-    if (snow.prob > 0.2) {
+    // 🌧️ Pluie forte
+    if (f.precipitation > 20) {
       alerts.push({
-        type: "snow",
-        message: `❄️ Risque de neige (${snow.intensity.toFixed(1)} mm/h)`,
-        level: snow.intensity > 3 ? "forte" : "légère",
-        reliability: snow.reliability
+        level: "danger",
+        type: "pluie",
+        message: "Précipitations intenses attendues",
+        reliability: f.reliability || 60,
+      });
+    } else if (f.precipitation > 5) {
+      alerts.push({
+        level: "warning",
+        type: "pluie",
+        message: "Risque de pluie significative",
+        reliability: f.reliability || 70,
       });
     }
-  }
 
-  // 💨 Vent fort
-  const wind = await checkWind(lat, lon);
-  if (wind.speed > 50) {
-    alerts.push({
-      type: "wind",
-      message: `💨 Rafales à ${wind.speed} km/h attendues`,
-      level: "danger",
-      reliability: wind.reliability
-    });
-  }
+    // ❄️ Neige / Verglas
+    if (f.temperature_min <= 0 && f.precipitation > 2) {
+      alerts.push({
+        level: "danger",
+        type: "neige",
+        message: "Risque de neige ou verglas",
+        reliability: f.reliability || 75,
+      });
+    }
 
-  return alerts;
+    // 🌡️ Températures extrêmes
+    if (f.temperature_max >= 35) {
+      alerts.push({
+        level: "danger",
+        type: "chaleur",
+        message: "Canicule / Températures extrêmes",
+        reliability: f.reliability || 80,
+      });
+    }
+    if (f.temperature_min <= -10) {
+      alerts.push({
+        level: "danger",
+        type: "froid",
+        message: "Grand froid anormal",
+        reliability: f.reliability || 80,
+      });
+    }
+
+    // 🌬️ Vent violent
+    if (f.wind >= 80) {
+      alerts.push({
+        level: "danger",
+        type: "vent",
+        message: "Rafales de vent violentes attendues",
+        reliability: f.reliability || 85,
+      });
+    } else if (f.wind >= 50) {
+      alerts.push({
+        level: "warning",
+        type: "vent",
+        message: "Rafales de vent modérées",
+        reliability: f.reliability || 75,
+      });
+    }
+
+    // 🌩️ Orages
+    if (f.description && f.description.toLowerCase().includes("orage")) {
+      alerts.push({
+        level: "warning",
+        type: "orage",
+        message: "Risque d’orages",
+        reliability: f.reliability || 70,
+      });
+    }
+
+    // Sauvegarde en mémoire locale
+    memoryAlerts = alerts;
+
+    return alerts;
+  } catch (err) {
+    console.error("❌ Erreur génération alertes :", err.message);
+
+    // fallback → renvoyer dernières alertes connues
+    return memoryAlerts.length > 0
+      ? memoryAlerts
+      : [{ level: "info", message: "Pas d’alertes disponibles", reliability: 0 }];
+  }
 }
