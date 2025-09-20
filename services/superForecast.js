@@ -1,10 +1,11 @@
 // services/superForecast.js
-import meteomatics from "../sources/meteomatics.js";
-import openweather from "../sources/openweather.js";
-import wetterzentrale from "../sources/wetterzentrale.js";
-import trullemans from "../sources/trullemans.js";
-import iconDwd from "../sources/iconDwd.js";
-import comparator from "../sources/comparator.js";
+
+import meteomatics from "../hiddensources/meteomatics.js";
+import openweather from "../hiddensources/openweather.js";
+import wetterzentrale from "../hiddensources/wetterzentrale.js";
+import trullemans from "../hiddensources/trullemans.js";
+import iconDwd from "../hiddensources/iconDwd.js";
+import comparator from "../hiddensources/comparator.js";
 
 import { applyGeoFactors } from "../services/geoFactors.js";
 import { applyLocalFactors } from "../services/localFactors.js";
@@ -14,7 +15,7 @@ import Forecast from "../models/Forecast.js";
 
 async function runFullForecast(lat = 50.5, lon = 4.7) {
   try {
-    // 📡 Récupération des données brutes
+    // 📡 Récupération des données brutes depuis chaque source météo
     const [meteoData, openData, wetterData, trulData, iconData] = await Promise.all([
       meteomatics.getForecast(lat, lon),
       openweather.getForecast(lat, lon),
@@ -23,13 +24,14 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
       iconDwd.getForecast(lat, lon),
     ]);
 
+    // Filtrer les sources valides
     const sources = [meteoData, openData, wetterData, trulData, iconData].filter(Boolean);
 
     if (!sources.length) {
       throw new Error("Aucune source météo disponible");
     }
 
-    // ⚖️ Fusion intelligente
+    // ⚖️ Fusion intelligente des prévisions
     let merged = comparator.mergeForecasts(sources);
 
     // 🌍 Ajustements géographiques et locaux
@@ -45,7 +47,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
       timestamp: new Date(),
       location: { lat, lon },
       data: merged,
-      sources: sources.map(s => s.source || "unknown"),
+      sources: sources.map((s) => s.source || "unknown"),
     });
 
     await forecastDoc.save();
