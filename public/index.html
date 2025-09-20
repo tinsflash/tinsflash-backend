@@ -1,154 +1,84 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>TinsFlash Météo – Gratuit + Radar amélioré</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
-     crossorigin="anonymous"></script>
-
-  <!-- Styles globaux -->
-  <link rel="stylesheet" href="style.css">
-
-  <!-- Leaflet (Radar) -->
+  <meta charset="UTF-8" />
+  <title>TinsFlash – La météo gratuite + pub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <!-- Scripts -->
-  <script defer src="app.js"></script>
-  <script defer src="radar.js"></script>
-
-  <style>
-    /* ✅ Bandeau vidéo */
-    .video-banner {
-      position: relative;
-      width: 100%;
-      height: 280px;
-      overflow: hidden;
-      border-bottom: 4px solid #00eaff;
-    }
-    .video-banner video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .video-controls {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.6);
-      padding: 6px 10px;
-      border-radius: 6px;
-    }
-    .video-controls button {
-      background: #00eaff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-right: 6px;
-    }
-    .video-controls button:hover {
-      background: #009bb5;
-    }
-  </style>
 </head>
 <body>
-  <!-- ✅ Navbar modernisée -->
-  <header class="navbar">
-    <div class="logo">🌩️ <b>TinsFlash</b></div>
-    <nav>
-      <a href="index.html" class="active">Accueil</a>
-      <a href="premium.html">Premium</a>
-      <a href="pro.html">Pro</a>
-      <a href="proplus.html">Pro+</a>
-      <a href="cockpit.html">Cockpit</a>
-      <a href="account.html">Mon Compte</a>
-    </nav>
+  <header class="banner">
+    <video autoplay muted loop id="bg-video">
+      <source src="intro.mp4" type="video/mp4" />
+    </video>
+    <div class="overlay">
+      <h1>🌩️ TinsFlash</h1>
+      <nav>
+        <a href="index.html">Accueil</a>
+        <a href="premium.html">Premium</a>
+        <a href="pro.html">Pro</a>
+        <a href="proplus.html">Pro+</a>
+        <a href="cockpit.html">Cockpit</a>
+        <a href="account.html">Mon Compte</a>
+      </nav>
+    </div>
   </header>
 
-  <!-- ✅ Bandeau vidéo -->
-  <div class="video-banner">
-    <video id="intro-video" autoplay muted loop>
-      <source src="intro-jean.mp4" type="video/mp4">
-      Votre navigateur ne supporte pas la vidéo.
-    </video>
-    <div class="video-controls">
-      <button onclick="playVideo()">▶️ Play</button>
-      <button onclick="pauseVideo()">⏸ Pause</button>
-    </div>
-  </div>
-
-  <!-- ✅ Contenu -->
-  <main class="container">
-
-    <!-- Prévisions locales -->
-    <section class="card" id="local">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-content">⏳ Chargement...</div>
-    </section>
-
-    <!-- Prévisions nationales -->
-    <section class="card" id="national">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-content">⏳ Chargement...</div>
-    </section>
-
-    <!-- Prévisions 7 jours -->
-    <section class="card wide" id="seven-days">
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="days-container" class="days-grid">⏳ Chargement...</div>
-    </section>
-
-    <!-- Bulletin texte -->
-    <section class="card" id="forecast-text-section">
-      <h2>📰 Bulletin météo</h2>
-      <pre id="forecast-text">⏳ Génération...</pre>
-    </section>
-
-    <!-- Radar météo -->
-    <section class="card wide" id="radar">
-      <h2>🛰️ Radar en direct (pluie/neige/vent)</h2>
-      <div id="radar-map" style="height:400px;border-radius:10px;">⏳ Radar...</div>
-    </section>
-
-    <!-- Alertes -->
-    <section class="card" id="alerts">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-content">⏳ Chargement...</div>
-    </section>
-
-    <!-- Podcast -->
-    <section class="card" id="podcast">
-      <h2>🎙️ Podcast météo</h2>
-      <div id="podcast-container">⏳ Génération...</div>
-    </section>
-
-    <!-- ✅ Google Ads -->
+  <main>
     <section class="card">
-      <h2>💰 Publicité</h2>
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-6828365665232268"
-           data-ad-slot="1234567890"
-           data-ad-format="auto"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      <h2>📍 Prévisions locales</h2>
+      <div id="local-forecast">⏳ Chargement...</div>
+    </section>
+
+    <section class="card">
+      <h2>🇧🇪 Prévisions nationales</h2>
+      <div id="national-forecast">⏳ Chargement...</div>
+    </section>
+
+    <section class="card wide">
+      <h2>📅 Prévisions 7 jours</h2>
+      <div id="forecast-7days">⏳ Chargement...</div>
+    </section>
+
+    <section class="card wide">
+      <h2>📰 Bulletin météo</h2>
+      <div id="bulletin">⏳ Génération...</div>
+    </section>
+
+    <section class="card wide">
+      <h2>🛰️ Radar en direct</h2>
+      <div id="radar-map" style="height:400px;"></div>
+      <div class="radar-controls">
+        ⏳ Frame : <span id="radar-time">--:--</span>
+        <button onclick="playTimeline()">▶️ Lecture</button>
+        <button onclick="clearInterval(playInterval)">⏸ Pause</button>
+      </div>
+      <canvas id="radar-graph" width="100%" height="120"></canvas>
+    </section>
+
+    <section class="card">
+      <h2>⚠️ Alertes météo</h2>
+      <div id="alerts">✅ Aucune alerte</div>
+    </section>
+
+    <section class="card">
+      <h2>🎙️ Podcast météo</h2>
+      <audio id="podcast" controls></audio>
+    </section>
+
+    <section class="card ad">
+      <h2>📢 Publicité</h2>
+      <div id="ads">Zone pub</div>
     </section>
   </main>
 
-  <footer class="footer">
-    <p>© 2025 TinsFlash – La météo gratuite, précise et commerciale ⚡</p>
+  <footer>
+    © 2025 TinsFlash – La météo gratuite + pub
   </footer>
 
-  <script>
-    function playVideo() {
-      document.getElementById("intro-video").play();
-    }
-    function pauseVideo() {
-      document.getElementById("intro-video").pause();
-    }
-  </script>
+  <script src="radar.js"></script>
+  <script src="scripts.js"></script>
 </body>
 </html>
