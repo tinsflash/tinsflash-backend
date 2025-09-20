@@ -1,62 +1,61 @@
-// -------------------------
-// 🛰️ Radar interactif gratuit TINSFLASH
-// -------------------------
+// Radar météo amélioré (gratuit) basé sur RainViewer + OpenWeather Layers
+// Inclut pluie, neige et vent 🌧️❄️💨
 
 async function loadRadar() {
   const map = L.map("radar-map").setView([50.85, 4.35], 7);
 
+  // Fond de carte OSM
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
+    attribution: "© OpenStreetMap contributors"
   }).addTo(map);
 
-  // Récupération des couches dispo
   try {
-    const res = await fetch("/api/radar");
-    const data = await res.json();
-
-    const overlays = {};
-    const activeLayers = {};
-
-    data.layers.forEach(layer => {
-      const tile = L.tileLayer(layer.url, {
-        opacity: 0.6,
-        attribution: layer.attribution,
-        tileSize: 256
-      });
-      overlays[layer.name] = tile;
-      if (layer.type === "rain") {
-        tile.addTo(map); // pluie active par défaut
-        activeLayers.rain = tile;
+    // 🌧️ Radar pluie (RainViewer)
+    const radarLayer = L.tileLayer(
+      "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+      {
+        attribution: "Radar RainViewer",
+        opacity: 0.6
       }
-    });
+    );
+    radarLayer.addTo(map);
 
-    // Contrôle couches
-    L.control.layers(null, overlays, { collapsed: false }).addTo(map);
-
-    // Animation timestamps
-    if (data.timestampsUrl && activeLayers.rain) {
-      const tsRes = await fetch(data.timestampsUrl);
-      const tsData = await tsRes.json();
-      const timestamps = tsData.radar?.past || [];
-
-      if (timestamps.length > 0) {
-        let i = 0;
-        setInterval(() => {
-          const ts = timestamps[i].time;
-          activeLayers.rain.setUrl(
-            `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/2/1_1.png`
-          );
-          if (overlays["❄️ Neige"] && map.hasLayer(overlays["❄️ Neige"])) {
-            overlays["❄️ Neige"].setUrl(
-              `https://tilecache.rainviewer.com/v2/snow/${ts}/256/{z}/{x}/{y}/2/1_1.png`
-            );
-          }
-          i = (i + 1) % timestamps.length;
-        }, 1500);
+    // ❄️ Neige (OpenWeather)
+    const snowLayer = L.tileLayer(
+      `https://tile.openweathermap.org/map/snow/{z}/{x}/{y}.png?appid=${OPENWEATHER_KEY}`,
+      {
+        attribution: "Neige © OpenWeather",
+        opacity: 0.5
       }
-    }
+    );
+    snowLayer.addTo(map);
+
+    // 💨 Vent (OpenWeather)
+    const windLayer = L.tileLayer(
+      `https://tile.openweathermap.org/map/wind/{z}/{x}/{y}.png?appid=${OPENWEATHER_KEY}`,
+      {
+        attribution: "Vent © OpenWeather",
+        opacity: 0.5
+      }
+    );
+    windLayer.addTo(map);
+
+    // Contrôles des calques
+    L.control.layers(
+      {
+        "Carte OSM": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+      },
+      {
+        "🌧️ Pluie (Radar)": radarLayer,
+        "❄️ Neige": snowLayer,
+        "💨 Vent": windLayer
+      }
+    ).addTo(map);
+
   } catch (err) {
-    console.error("❌ Erreur radar:", err);
+    console.error("❌ Erreur radar :", err);
+    document.getElementById("radar-map").innerText =
+      "Erreur de chargement du radar météo.";
   }
 }
 
