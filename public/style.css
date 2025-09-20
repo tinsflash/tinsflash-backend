@@ -1,114 +1,150 @@
+/* 🌞 Thème clair et coloré */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  background: #f8fbff;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  background: #f9fbfd;
   color: #222;
+  line-height: 1.6;
 }
 
-/* HEADER vidéo */
+/* 🎥 Bandeau vidéo */
 .hero {
   position: relative;
+  width: 100%;
   height: 300px;
   overflow: hidden;
 }
+
 .hero video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  filter: brightness(0.7);
 }
+
 .hero-overlay {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  color: #fff;
+  align-items: center;
+  color: white;
   text-align: center;
+  background: rgba(0,0,0,0.3);
 }
+
 .hero-overlay h1 {
-  font-size: 1.8rem;
-  margin: 0 0 10px;
+  font-size: 2.5rem;
+  margin: 0;
+  color: #00bcd4;
 }
+
+.hero-overlay p {
+  margin: 10px 0;
+  font-size: 1.2rem;
+}
+
 .hero-overlay button {
-  background: #00bfff;
-  color: #fff;
-  border: none;
+  margin-top: 10px;
   padding: 10px 20px;
-  border-radius: 6px;
+  background: #00bcd4;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-weight: bold;
   cursor: pointer;
-  font-size: 1rem;
+  transition: background 0.3s;
 }
 .hero-overlay button:hover {
-  background: #0099cc;
+  background: #0097a7;
 }
 
-/* NAVBAR */
+/* 🌐 Navbar */
 .navbar {
+  background: #00bcd4;
+  color: white;
   display: flex;
-  justify-content: center;
-  gap: 20px;
-  background: #ffffff;
-  border-bottom: 2px solid #00bfff;
-  padding: 12px;
-}
-.navbar a {
-  text-decoration: none;
-  font-weight: bold;
-  color: #333;
-}
-.navbar a.active,
-.navbar a:hover {
-  color: #00bfff;
+  justify-content: space-between;
+  padding: 12px 20px;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-/* CONTENU */
+.navbar .logo {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.navbar nav a {
+  color: white;
+  text-decoration: none;
+  margin-left: 15px;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.navbar nav a.active, 
+.navbar nav a:hover {
+  color: #ffe082;
+}
+
+/* 📦 Conteneur */
 .container {
   max-width: 1200px;
   margin: auto;
   padding: 20px;
+  display: grid;
+  gap: 20px;
 }
 
+/* 📊 Cartes */
 .card {
-  background: #ffffff;
-  border-radius: 10px;
+  background: white;
+  border-radius: 12px;
   padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.card h2 {
+  margin-top: 0;
+  color: #00bcd4;
 }
 
 .card.wide {
   grid-column: span 2;
 }
 
+/* 📅 Prévisions */
 .days-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+  gap: 15px;
 }
 
+.days-grid div {
+  background: #f1faff;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* 📢 Pub */
+#ads {
+  text-align: center;
+}
+
+/* 👣 Footer */
 .footer {
-  background: #00bfff;
+  background: #00bcd4;
   color: white;
   text-align: center;
   padding: 15px;
-  margin-top: 20px;
-}
-
-/* ADS */
-.ad {
-  text-align: center;
-  margin: 15px 0;
-}
-
-/* RESPONSIVE */
-@media(max-width: 768px) {
-  .hero-overlay h1 {
-    font-size: 1.3rem;
-  }
-  .navbar {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
+  margin-top: 30px;
+  font-size: 0.9rem;
 }
