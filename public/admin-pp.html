@@ -1,96 +1,160 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>🛰️ Console Pro+ – TINSFLASH</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚀 Console Pro+ – Supercalculateur</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
   <style>
-    body { background: #0c1a2b; color: #eee; font-family: Arial, sans-serif; }
-    h1 { text-align: center; color: #00eaff; }
-    .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; }
-    .btn-run { background: #00eaff; color: #0c1a2b; font-weight: bold; }
-    .progress { width: 100%; background: #333; border-radius: 8px; margin: 15px 0; height: 22px; }
-    .progress-bar { height: 22px; background: #00eaff; width: 0%; border-radius: 8px; transition: width 0.4s; }
-    .card { background: #132a44; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    pre { background: #1e2f47; padding: 10px; border-radius: 6px; overflow-x: auto; }
+    body {
+      background-color: #0d1b2a;
+      color: #e0e1dd;
+      font-family: "Segoe UI", sans-serif;
+    }
+    h1 {
+      color: #00b4d8;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .btn-run {
+      background: linear-gradient(90deg, #ff4e50, #f9d423);
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .progress {
+      height: 25px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+    }
+    .log-box {
+      background: #1b263b;
+      padding: 10px;
+      border-radius: 8px;
+      height: 150px;
+      overflow-y: auto;
+      font-size: 0.9em;
+    }
+    .run-card {
+      background: #1b263b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
   </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <h1>🛰 Console Pro+ – Supercalculateur</h1>
+
+    <!-- Bouton lancement -->
+    <div class="text-center">
+      <button id="runBtn" class="btn-run">🚀 Lancer un run météo</button>
+    </div>
+
+    <!-- Jauge de progression -->
+    <div class="progress">
+      <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+           role="progressbar" style="width: 0%">0%</div>
+    </div>
+
+    <!-- Zone logs -->
+    <h4>📜 Logs d’exécution</h4>
+    <div id="logBox" class="log-box"></div>
+
+    <!-- Derniers runs -->
+    <h4 class="mt-4">💾 Derniers runs sauvegardés</h4>
+    <div id="runsList"></div>
+  </div>
+
   <script>
-    async function runForecast() {
-      const btn = document.getElementById("btn-run");
-      const progress = document.getElementById("progress-bar");
-      const output = document.getElementById("result");
-      btn.disabled = true;
-      output.innerText = "⏳ Lancement du supercalculateur météo...";
-      progress.style.width = "10%";
+    const runBtn = document.getElementById("runBtn");
+    const progressBar = document.getElementById("progressBar");
+    const logBox = document.getElementById("logBox");
+    const runsList = document.getElementById("runsList");
+
+    function logMessage(msg, type = "info") {
+      const line = document.createElement("div");
+      line.textContent = msg;
+      line.style.color = type === "error" ? "#ff6b6b" : "#9be9a8";
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function fetchRuns() {
+      try {
+        const res = await fetch("/api/forecast/logs");
+        const data = await res.json();
+        runsList.innerHTML = "";
+        data.forEach(run => {
+          const card = document.createElement("div");
+          card.className = "run-card";
+          card.innerHTML = `
+            <b>${run.location}</b> – ${new Date(run.runAt).toLocaleString()} <br/>
+            🌡️ ${run.temperature_min}°C / ${run.temperature_max}°C |
+            💨 ${run.wind} km/h |
+            ☔ ${run.precipitation} mm <br/>
+            🔎 ${run.anomaly} | 📊 Fiabilité: ${run.reliability}% <br/>
+            📝 ${run.aiSummary || "Pas de résumé IA"}
+          `;
+          runsList.appendChild(card);
+        });
+      } catch (err) {
+        logMessage("Erreur récupération des runs: " + err.message, "error");
+      }
+    }
+
+    runBtn.addEventListener("click", async () => {
+      logBox.innerHTML = "";
+      progressBar.style.width = "0%";
+      progressBar.textContent = "0%";
+
+      logMessage("🚀 Début du run météo...");
 
       try {
+        let progress = 0;
+        const interval = setInterval(() => {
+          if (progress < 90) {
+            progress += 5;
+            progressBar.style.width = progress + "%";
+            progressBar.textContent = progress + "%";
+          }
+        }, 1000);
+
         const res = await fetch("/api/supercalc/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ time: new Date().toISOString(), country: "BE" })
+          body: JSON.stringify({ location: "Bruxelles" }),
         });
 
-        progress.style.width = "70%";
+        clearInterval(interval);
         const data = await res.json();
 
-        progress.style.width = "100%";
-
-        output.innerHTML = `
-          <h3>✅ Résultat du run</h3>
-          <p><b>Status :</b> ${data.status}</p>
-          <p><b>Anomalie :</b> ${data.forecast.anomaly || "Normale"}</p>
-          <p><b>Température :</b> ${data.forecast.temperature_min}°C – ${data.forecast.temperature_max}°C</p>
-          <p><b>Vent :</b> ${data.forecast.wind} km/h</p>
-          <p><b>Précipitations :</b> ${data.forecast.precipitation} mm</p>
-          <p><b>Fiabilité :</b> ${data.forecast.reliability}%</p>
-          <h4>🌍 Pondérations appliquées :</h4>
-          <pre>${JSON.stringify(data.weights, null, 2)}</pre>
-          <h4>📡 Sources utilisées :</h4>
-          <pre>${JSON.stringify(data.sources, null, 2)}</pre>
-          <h4>⚠️ Erreurs éventuelles :</h4>
-          <pre>${JSON.stringify(data.errors, null, 2)}</pre>
-        `;
+        if (data.error) {
+          logMessage("❌ Erreur: " + data.error, "error");
+          progressBar.style.width = "100%";
+          progressBar.textContent = "Erreur";
+          progressBar.classList.add("bg-danger");
+        } else {
+          logMessage("✅ Run terminé avec succès !");
+          progressBar.style.width = "100%";
+          progressBar.textContent = "100%";
+          progressBar.classList.add("bg-success");
+          fetchRuns();
+        }
       } catch (err) {
-        output.innerText = "❌ Erreur lors du run: " + err.message;
+        logMessage("❌ Exception: " + err.message, "error");
+        progressBar.style.width = "100%";
+        progressBar.textContent = "Erreur";
+        progressBar.classList.add("bg-danger");
       }
+    });
 
-      btn.disabled = false;
-    }
-
-    async function loadLogs() {
-      const logsEl = document.getElementById("logs");
-      logsEl.innerText = "⏳ Chargement logs...";
-      try {
-        const res = await fetch("/api/supercalc/logs");
-        const data = await res.json();
-        logsEl.innerHTML = data.map(l =>
-          `<div class="card">
-            <b>Run :</b> ${l.time}<br>
-            <b>Status :</b> ${l.status}<br>
-            <pre>${JSON.stringify(l.forecast, null, 2)}</pre>
-          </div>`
-        ).join("");
-      } catch (err) {
-        logsEl.innerText = "❌ Erreur chargement logs: " + err.message;
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", loadLogs);
+    // Charger la liste au démarrage
+    fetchRuns();
   </script>
-</head>
-<body>
-  <h1>🛰️ Console Pro+ – Supercalculateur</h1>
-
-  <div class="card">
-    <button id="btn-run" class="btn btn-run" onclick="runForecast()">🚀 Lancer un run météo</button>
-    <div class="progress"><div id="progress-bar" class="progress-bar"></div></div>
-    <div id="result">Résultat en attente...</div>
-  </div>
-
-  <div class="card">
-    <h2>🗄 Derniers runs sauvegardés</h2>
-    <div id="logs">⏳ En attente...</div>
-  </div>
 </body>
 </html>
