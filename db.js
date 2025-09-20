@@ -1,31 +1,38 @@
-// db.js
+// -------------------------
+// 📦 db.js
+// Connexion MongoDB robuste avec fallback
+// -------------------------
 import mongoose from "mongoose";
 
-const connectDB = async () => {
+const MONGO_URI = process.env.MONGO_URI;
+
+async function connectDB() {
+  if (!MONGO_URI) {
+    console.warn("⚠️ Aucun MONGO_URI défini → le serveur tourne sans base de données !");
+    return;
+  }
+
   try {
-    console.log("⏳ Tentative de connexion MongoDB...");
-
-    if (!process.env.MONGO_URI) {
-      throw new Error("⚠️ Variable MONGO_URI non définie dans Render !");
-    }
-
-    await mongoose.connect(process.env.MONGO_URI, {
+    console.log("🔌 Tentative de connexion MongoDB...");
+    await mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // timeout rapide
+      serverSelectionTimeoutMS: 10000, // 10s timeout
     });
 
-    console.log("✅ MongoDB connecté avec succès !");
+    console.log("✅ Connexion MongoDB réussie !");
   } catch (err) {
-    console.error("❌ Erreur connexion MongoDB :", err.message);
-
-    // Affiche l'URI tronqué pour debug (sécurisé)
-    if (process.env.MONGO_URI) {
-      console.error("🔑 URI (début) :", process.env.MONGO_URI.substring(0, 50) + "...");
-    }
-
-    process.exit(1); // stoppe le serveur si échec DB
+    console.error("❌ Erreur de connexion MongoDB :", err.message);
+    console.warn("⚠️ Le serveur continue en mode SANS DB (backup mémoire locale).");
   }
-};
+
+  mongoose.connection.on("disconnected", () => {
+    console.warn("⚠️ Déconnecté de MongoDB. Tentative de reconnexion automatique...");
+  });
+
+  mongoose.connection.on("reconnected", () => {
+    console.log("🔄 Reconnexion MongoDB réussie !");
+  });
+}
 
 export default connectDB;
