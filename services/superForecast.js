@@ -1,9 +1,4 @@
-// -------------------------
-// 🌍 services/superForecast.js
-// Super moteur météo TINSFLASH
-// Multi-modèles + IA + pondérations dynamiques
-// -------------------------
-
+// services/superForecast.js
 import { getMeteomatics } from "../hiddensources/meteomatics.js";
 import { getOpenWeather } from "../hiddensources/openweather.js";
 import { compareSources } from "../hiddensources/comparator.js";
@@ -14,47 +9,47 @@ import { applyGeoFactors } from "./geoFactors.js";
 import { getNorm } from "../utils/seasonalNorms.js";
 import { askOpenAI } from "../utils/openai.js";
 
-// -------------------------
-// Pondérations par modèle
-// -------------------------
+// -----------------------------
+// Pondérations des modèles
+// -----------------------------
 const MODEL_WEIGHTS = {
   GFS: 40,
   ECMWF: 25,
   ICON: 20,
   ARPEGE: 10,
-  LOCAL: 5,
+  LOCAL: 5
 };
 
-// -------------------------
-// Super moteur météo
-// -------------------------
+/**
+ * Super moteur météo TINSFLASH
+ * - croise plusieurs modèles
+ * - applique IA pour corriger incohérences
+ * - ajoute ajustements locaux + géographiques
+ * - détecte anomalies climatiques
+ */
 export async function runSuperForecast(lat, lon, country = "BE") {
   const sources = [];
   const errors = [];
 
-  // 1️⃣ Charger différentes sources
+  // 1️⃣ Charger les différentes sources
   const meteomatics = await getMeteomatics(lat, lon);
-  meteomatics.error ? errors.push(meteomatics.error) : sources.push(meteomatics);
+  meteomatics.error ? errors.push(meteomatics.error) : sources.push({ ...meteomatics, model: "Meteomatics" });
 
   const openweather = await getOpenWeather(lat, lon);
-  openweather.error ? errors.push(openweather.error) : sources.push(openweather);
+  openweather.error ? errors.push(openweather.error) : sources.push({ ...openweather, model: "OpenWeather" });
 
   const comparator = await compareSources(lat, lon);
-  sources.push(...comparator);
+  sources.push(...comparator.map(c => ({ ...c, model: c.source || "Comparator" })));
 
-  // Wetterzentrale (si disponible)
+  // Exemple Wetterzentrale (simulé)
   try {
-    const wz = parseWetterzentraleData({
-      temp: 14, // ⚠️ à remplacer par fetch réel
-      wind: 20,
-      desc: "Nuageux avec éclaircies",
-    });
-    if (!wz.error) sources.push({ ...wz, source: "Wetterzentrale" });
+    const wz = parseWetterzentraleData({ temp: 14, wind: 20, desc: "Couvert" });
+    sources.push({ ...wz, model: "Wetterzentrale" });
   } catch (err) {
     errors.push("Wetterzentrale: " + err.message);
   }
 
-  // 2️⃣ Fusion pondérée (IA + pondérations fixes)
+  // 2️⃣ IA : croiser et analyser les résultats
   let aiSummary = null;
   try {
     const prompt = `
@@ -62,18 +57,14 @@ export async function runSuperForecast(lat, lon, country = "BE") {
       Sources :
       ${JSON.stringify(sources, null, 2)}
 
-      Pondérations (influence dans le calcul final) :
-      - GFS: ${MODEL_WEIGHTS.GFS}%
-      - ECMWF: ${MODEL_WEIGHTS.ECMWF}%
-      - ICON: ${MODEL_WEIGHTS.ICON}%
-      - ARPEGE: ${MODEL_WEIGHTS.ARPEGE}%
-      - Local/Wetterzentrale: ${MODEL_WEIGHTS.LOCAL}%
+      Pondérations appliquées :
+      ${JSON.stringify(MODEL_WEIGHTS, null, 2)}
 
       Ta mission :
-      - Applique les pondérations pour fusionner les données
-      - Détecte et corrige les incohérences
-      - Sors une prévision finale réaliste en JSON avec :
-        { temperature_min, temperature_max, wind, precipitation, description, reliability, code }
+      - détecter et corriger les incohérences
+      - produire une prévision finale réaliste (T° min/max, vent, précipitations, description)
+      - donner un indice de fiabilité (0–100) basé sur la cohérence entre modèles
+      Réponds uniquement en JSON.
     `;
     const aiResponse = await askOpenAI(prompt);
     aiSummary = JSON.parse(aiResponse);
@@ -81,7 +72,7 @@ export async function runSuperForecast(lat, lon, country = "BE") {
     errors.push("Erreur IA: " + err.message);
   }
 
-  // 3️⃣ Corrections locales & géographiques
+  // 3️⃣ Corrections locales et géographiques
   let forecast = aiSummary || sources[0] || {};
   forecast = adjustWithLocalFactors(forecast, country);
   forecast = applyTrullemansAdjustments(forecast);
@@ -102,14 +93,11 @@ export async function runSuperForecast(lat, lon, country = "BE") {
     country,
     forecast,
     errors,
-    sources: sources.map((s) => s.source || "unknown"),
-    weights: MODEL_WEIGHTS,
+    sources: sources.map(s => s.model || "unknown"),
+    weights: MODEL_WEIGHTS
   };
 }
 
-// -------------------------
-// Helpers
-// -------------------------
 function getSeason(date) {
   const m = date.getMonth() + 1;
   if (m >= 3 && m <= 5) return "spring";
