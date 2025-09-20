@@ -4,7 +4,7 @@ import axios from "axios";
 const OPENAI_KEY = process.env.OPENAI_KEY || "demo";
 
 /**
- * Envoie une requête à l'API OpenAI pour analyse IA
+ * 🔮 Fonction utilitaire pour parler avec l'IA (OpenAI)
  * @param {string} prompt - Question ou données météo à analyser
  * @returns {Promise<string>} - Réponse IA (texte brut)
  */
