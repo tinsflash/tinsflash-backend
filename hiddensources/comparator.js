@@ -1,38 +1,24 @@
-// hiddensources/comparator.js
-// Compare nos prévisions internes avec celles pompées ailleurs
+import { applyTrullemansAdjustments } from "../services/trullemans.js";
 
-import { getBMBCForecast } from "./trullemans.js";
-import { getMeteomaticsForecast } from "./meteomatics.js";
-import { getWetterzentrale } from "./wetterzentrale.js";
-import { getOpenWeather } from "./openweather.js";
+export async function compareSources(lat, lon) {
+  try {
+    // Exemple de comparaison de sources
+    const baseForecast = {
+      source: "Comparator",
+      temperature: 15,
+      wind: 20,
+      precipitation: 5
+    };
 
-export async function compareSources(ourForecast, lat = 50.5, lon = 4.5) {
-  const sources = [];
-
-  // BMBC
-  sources.push(await getBMBCForecast());
-
-  // Meteomatics
-  sources.push(await getMeteomaticsForecast(lat, lon));
-
-  // Wetterzentrale
-  sources.push(await getWetterzentrale());
-
-  // OpenWeather
-  sources.push(await getOpenWeather(lat, lon));
-
-  // Analyse simple
-  return sources.map(src => {
-    if (src.error) {
-      return { source: src.source, status: "Erreur récupération" };
-    }
+    // Application de la méthode Trullemans
+    const adjusted = applyTrullemansAdjustments({ ...baseForecast });
 
     return {
-      source: src.source,
-      data: src,
-      concordance: ourForecast.includes("pluie") && JSON.stringify(src).includes("pluie")
-        ? "Aligné"
-        : "Différent"
+      source: "Comparator",
+      summary: `Temp ${adjusted.temperature}°C, Vent ${adjusted.wind} km/h`,
+      adjustment: "Trullemans applied"
     };
-  });
+  } catch (err) {
+    return { source: "Comparator", error: err.message };
+  }
 }
