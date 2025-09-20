@@ -2,67 +2,42 @@
 import axios from "axios";
 
 /**
- * Calcule des facteurs géographiques (altitude, proximité mer/rivière, etc.)
- * et ajuste la prévision en conséquence.
+ * Applique les ajustements géographiques (relief, altitude, rivières…)
+ * pour améliorer la prévision météo.
  */
 export async function applyGeoFactors(forecast, lat, lon) {
-  let adjusted = { ...forecast };
-
   try {
-    // ✅ Altitude via API Open-Elevation
-    const elevRes = await axios.get(
-      `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
+    // 🌍 Exemples d’API (remplacer si besoin par de vraies données DEM / hydro)
+    const elevationRes = await axios.get(
+      `https://api.opentopodata.org/v1/test-dataset?locations=${lat},${lon}`
     );
-    const altitude = elevRes.data.results[0].elevation || 0;
 
-    // Correction température selon altitude
-    adjusted.temperature_min -= Math.round(altitude / 200 * 0.65);
-    adjusted.temperature_max -= Math.round(altitude / 150 * 0.65);
+    const elevation = elevationRes.data?.results?.[0]?.elevation || 0;
 
-    // ✅ Approximations simples
-    const nearSea = isNearSea(lat, lon);
-    const nearRiver = isNearRiver(lat, lon);
-
-    if (nearSea) {
-      adjusted.wind += 5; // vents plus forts
-      adjusted.reliability += 2;
-      adjusted.description += " | Influence maritime";
+    // Ajustement en fonction de l’altitude
+    if (elevation > 500) {
+      forecast.temperature_max -= 2;
+      forecast.temperature_min -= 1;
+      forecast.reliability -= 2;
     }
 
-    if (nearRiver) {
-      adjusted.reliability += 3;
-      adjusted.description += " | Risque brouillard";
+    if (elevation > 1000) {
+      forecast.temperature_max -= 4;
+      forecast.temperature_min -= 3;
+      forecast.reliability -= 5;
     }
 
-    if (altitude > 800) {
-      adjusted.description += " | Zone montagneuse";
-      adjusted.reliability -= 5; // modèles moins fiables en montagne
+    // Influence des rivières / zones humides (simplifié)
+    if (lat > 49.5 && lat < 50.5 && lon > 4 && lon < 5) {
+      forecast.precipitation += 5;
+      forecast.description += " 🌊 Influence locale de l’humidité (rivière)";
     }
 
-    // Clamp valeurs
-    adjusted.reliability = Math.min(100, Math.max(0, adjusted.reliability));
+    forecast.elevation = elevation;
+    return forecast;
   } catch (err) {
-    console.error("⚠️ Erreur geoFactors:", err.message);
-    adjusted.description += " | Facteurs locaux non appliqués";
+    console.error("❌ Erreur geoFactors:", err.message);
+    forecast.geoError = err.message;
+    return forecast;
   }
-
-  return adjusted;
-}
-
-// Détection simplifiée de proximité mer
-function isNearSea(lat, lon) {
-  // Exemple rapide : si proche des côtes BE, FR, NL
-  return (
-    (lat >= 48 && lat <= 52 && lon >= 2 && lon <= 4) || // Manche, mer du Nord
-    (lat >= 43 && lat <= 45 && lon >= -1 && lon <= 3)   // Atlantique Sud-Ouest
-  );
-}
-
-// Détection simplifiée de proximité rivière
-function isNearRiver(lat, lon) {
-  // Exemple basique : coordonnées proches du Rhin ou de la Meuse
-  return (
-    (lat >= 50 && lat <= 52 && lon >= 5 && lon <= 7) || // Rhin
-    (lat >= 49 && lat <= 51 && lon >= 4 && lon <= 6)    // Meuse
-  );
 }
