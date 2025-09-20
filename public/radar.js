@@ -1,5 +1,5 @@
 let map;
-let rainLayer, snowLayer, windLayer;
+let rainLayer;
 let radarTimeline = [];
 let currentFrame = 0;
 let playInterval;
@@ -33,6 +33,11 @@ function playTimeline() {
   }, 1000);
 }
 
+function pauseTimeline() {
+  if (playInterval) clearInterval(playInterval);
+  playInterval = null;
+}
+
 function updateRadarFrame() {
   const frame = radarTimeline[currentFrame];
   if (rainLayer) map.removeLayer(rainLayer);
@@ -57,7 +62,8 @@ function updateGraph() {
   ctx.lineWidth = 2;
 
   radarTimeline.forEach((frame, idx) => {
-    const y = 100 - (idx % 10) * 10; // fake data
+    // Intensité simulée par rapport au temps (on peut remplacer par vrai champ si dispo)
+    const y = 100 - ((frame.time % 60) / 60) * 100;
     ctx.lineTo(idx * 10, y);
   });
 
