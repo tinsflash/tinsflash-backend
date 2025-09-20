@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./db.js"; // Connexion MongoDB
 import Forecast from "./models/Forecast.js"; // Modèle Forecast
+import Alert from "./models/Alert.js"; // Modèle Alert
 
 // Import services
 import { runSuperForecast } from "./services/superForecast.js";
@@ -21,8 +22,6 @@ dotenv.config();
 // -------------------------
 // Initialisation serveur
 // -------------------------
-console.log("🚀 Initialisation serveur TINSFLASH...");
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -33,16 +32,7 @@ app.use(express.static("public")); // frontend
 // -------------------------
 // Connexion MongoDB
 // -------------------------
-(async () => {
-  try {
-    console.log("🔌 Connexion MongoDB...");
-    await connectDB();
-    console.log("✅ MongoDB connecté avec succès !");
-  } catch (err) {
-    console.error("❌ Erreur MongoDB :", err.message);
-    console.error("⚠️ Le serveur va tourner en mode SANS DB (backup mémoire locale).");
-  }
-})();
+connectDB();
 
 // -------------------------
 // 🚀 Supercalculateur météo
@@ -54,7 +44,7 @@ app.post("/api/supercalc/run", async (req, res) => {
     const { time, country, lat, lon } = req.body;
     const coords = {
       lat: lat || 50.8503,
-      lon: lon || 4.3517,
+      lon: lon || 4.3517
     };
 
     // 🔥 Lancement prévisions multi-modèles IA
@@ -74,18 +64,14 @@ app.post("/api/supercalc/run", async (req, res) => {
     lastRuns.push(runResult);
     if (lastRuns.length > 10) lastRuns.shift();
 
-    // Sauvegarde en DB
-    try {
-      const dbEntry = new Forecast({
-        time: runResult.time,
-        forecast: runResult.forecast,
-        errors: runResult.errors,
-        status: runResult.status,
-      });
-      await dbEntry.save();
-    } catch (dbErr) {
-      console.warn("⚠️ Impossible de sauvegarder en DB :", dbErr.message);
-    }
+    // Sauvegarde en base MongoDB
+    const dbEntry = new Forecast({
+      time: runResult.time,
+      forecast: runResult.forecast,
+      errors: runResult.errors,
+      status: runResult.status,
+    });
+    await dbEntry.save();
 
     res.json(runResult);
   } catch (err) {
@@ -94,15 +80,10 @@ app.post("/api/supercalc/run", async (req, res) => {
   }
 });
 
-// Logs des derniers runs
 app.get("/api/supercalc/logs", async (req, res) => {
   try {
-    let runs = [];
-    try {
-      runs = await Forecast.find().sort({ createdAt: -1 }).limit(10);
-    } catch {
-      runs = lastRuns;
-    }
+    // Cherche les 10 derniers runs en DB
+    const runs = await Forecast.find().sort({ createdAt: -1 }).limit(10);
     res.json(runs);
   } catch (err) {
     res.status(500).json({ error: "Erreur récupération logs: " + err.message });
@@ -192,13 +173,31 @@ app.get("/api/forecast/7days", async (req, res) => {
   }
 });
 
-// ✅ Alertes météo
+// ✅ Alertes météo générées
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await getAlerts();
     res.json(alerts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erreur génération alertes: " + err.message });
+  }
+});
+
+// ✅ Validation manuelle d’une alerte
+app.post("/api/alerts/validate", async (req, res) => {
+  try {
+    const { alertId } = req.body;
+    if (!alertId) return res.status(400).json({ error: "ID alerte requis" });
+
+    const alert = await Alert.findById(alertId);
+    if (!alert) return res.status(404).json({ error: "Alerte introuvable" });
+
+    alert.validated = true;
+    await alert.save();
+
+    res.json({ message: "Alerte validée avec succès ✅", alert });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur validation alerte: " + err.message });
   }
 });
 
