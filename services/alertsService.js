@@ -1,107 +1,85 @@
-// -------------------------
-// ⚠️ alertsService.js
-// Générateur d’alertes météo intelligentes
-// -------------------------
+// services/alertsService.js
+import Forecast from "../models/Forecast.js";
+import fetch from "node-fetch";
 
-import { runSuperForecast } from "./superForecast.js";
-
-let memoryAlerts = []; // backup mémoire si pas de DB
+const RAINVIEWER_MAPS = "https://api.rainviewer.com/public/maps.json";
 
 /**
- * Génère des alertes météo à partir des prévisions
- * @param {number} lat - latitude
- * @param {number} lon - longitude
- * @param {string} country - pays
+ * Génère des alertes météo à partir des derniers runs
+ * - Si fiabilité >= 90% => envoi auto
+ * - Si 70–89% => envoi manuel / validation
  */
-export async function getAlerts(lat = 50.85, lon = 4.35, country = "BE") {
-  try {
-    const forecast = await runSuperForecast(lat, lon, country);
-    const f = forecast.forecast || {};
+export async function getAlerts() {
+  const alerts = [];
+  const runs = await Forecast.find().sort({ createdAt: -1 }).limit(5);
 
-    const alerts = [];
-
-    // 🌧️ Pluie forte
-    if (f.precipitation > 20) {
-      alerts.push({
-        level: "danger",
-        type: "pluie",
-        message: "Précipitations intenses attendues",
-        reliability: f.reliability || 60,
-      });
-    } else if (f.precipitation > 5) {
-      alerts.push({
-        level: "warning",
-        type: "pluie",
-        message: "Risque de pluie significative",
-        reliability: f.reliability || 70,
-      });
-    }
-
-    // ❄️ Neige / Verglas
-    if (f.temperature_min <= 0 && f.precipitation > 2) {
-      alerts.push({
-        level: "danger",
-        type: "neige",
-        message: "Risque de neige ou verglas",
-        reliability: f.reliability || 75,
-      });
-    }
-
-    // 🌡️ Températures extrêmes
-    if (f.temperature_max >= 35) {
-      alerts.push({
-        level: "danger",
-        type: "chaleur",
-        message: "Canicule / Températures extrêmes",
-        reliability: f.reliability || 80,
-      });
-    }
-    if (f.temperature_min <= -10) {
-      alerts.push({
-        level: "danger",
-        type: "froid",
-        message: "Grand froid anormal",
-        reliability: f.reliability || 80,
-      });
-    }
-
-    // 🌬️ Vent violent
-    if (f.wind >= 80) {
-      alerts.push({
-        level: "danger",
-        type: "vent",
-        message: "Rafales de vent violentes attendues",
-        reliability: f.reliability || 85,
-      });
-    } else if (f.wind >= 50) {
-      alerts.push({
-        level: "warning",
-        type: "vent",
-        message: "Rafales de vent modérées",
-        reliability: f.reliability || 75,
-      });
-    }
-
-    // 🌩️ Orages
-    if (f.description && f.description.toLowerCase().includes("orage")) {
-      alerts.push({
-        level: "warning",
-        type: "orage",
-        message: "Risque d’orages",
-        reliability: f.reliability || 70,
-      });
-    }
-
-    // Sauvegarde en mémoire locale
-    memoryAlerts = alerts;
-
-    return alerts;
-  } catch (err) {
-    console.error("❌ Erreur génération alertes :", err.message);
-
-    // fallback → renvoyer dernières alertes connues
-    return memoryAlerts.length > 0
-      ? memoryAlerts
-      : [{ level: "info", message: "Pas d’alertes disponibles", reliability: 0 }];
+  if (!runs.length) {
+    return [{ type: "info", message: "Aucun run météo récent en base" }];
   }
+
+  for (const run of runs) {
+    const fc = run.forecast || {};
+    const reliability = fc.reliability || 0;
+
+    // Conditions de déclenchement
+    if (fc.precipitation > 10 || fc.wind > 80 || fc.anomaly) {
+      const alert = {
+        time: run.time,
+        reliability,
+        status: run.status,
+        forecast: {
+          temperature: fc.temperature || fc.temperature_max || "N/A",
+          precipitation: fc.precipitation || 0,
+          wind: fc.wind || 0,
+          description: fc.description || "N/A",
+          anomaly: fc.anomaly || null,
+        },
+        message: buildAlertMessage(fc, reliability),
+        radarImage: await getLatestRadarImage(),
+        validationRequired: reliability >= 70 && reliability < 90,
+        autoSend: reliability >= 90,
+      };
+
+      alerts.push(alert);
+    }
+  }
+
+  return alerts;
+}
+
+/**
+ * Construit un message d’alerte clair
+ */
+function buildAlertMessage(fc, reliability) {
+  let msg = `⚠️ Alerte météo — Fiabilité ${reliability}%\n`;
+
+  if (fc.precipitation > 10) {
+    msg += `🌧️ Risque de fortes précipitations (${fc.precipitation} mm/h)\n`;
+  }
+  if (fc.wind > 80) {
+    msg += `💨 Vent violent (${fc.wind} km/h)\n`;
+  }
+  if (fc.anomaly) {
+    msg += `❗ Anomalie détectée: ${fc.anomaly}\n`;
+  }
+
+  msg += `\nPrévision: ${fc.description || "N/A"}`;
+  return msg;
+}
+
+/**
+ * Récupère l’image radar la plus récente via RainViewer
+ */
+async function getLatestRadarImage() {
+  try {
+    const res = await fetch(RAINVIEWER_MAPS);
+    const data = await res.json();
+    if (data && data.length > 0) {
+      const latest = data[data.length - 1];
+      return `https://tilecache.rainviewer.com/v2/radar/${latest}/256/{z}/{x}/{y}/2/1_1.png`;
+    }
+  } catch (err) {
+    console.error("Erreur récupération radar:", err.message);
+  }
+  return null;
 }
