@@ -2,43 +2,32 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <title>Alertes météo – TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alertes Météo - TinsFlash</title>
   <link rel="stylesheet" href="style.css">
-  <script defer src="app.js"></script>
+  <script defer src="alerts.js"></script>
 </head>
 <body>
   <header class="navbar">
-    <div class="logo">⚠️ Alertes TinsFlash</div>
+    <div class="logo">🌩️ TinsFlash</div>
     <nav>
       <a href="index.html">Accueil</a>
-      <a href="premium.html">Premium</a>
-      <a href="pro.html">Pro</a>
-      <a href="proplus.html">Pro+</a>
+      <a href="alerts.html" class="active">Alertes</a>
     </nav>
   </header>
 
   <main class="container">
-    <section class="card alerts-card">
-      <h2>⚠️ Alertes locales</h2>
-      <div id="alerts-local">⏳</div>
-    </section>
-
-    <section class="card alerts-card">
-      <h2>🌍 Alertes nationales</h2>
-      <div id="alerts-national">⏳</div>
-    </section>
-
-    <section class="card alerts-card">
-      <h2>🌐 Alertes mondiales</h2>
-      <div id="alerts-world">⏳</div>
-    </section>
-
     <section class="card">
-      <h2>🛒 Tocsin météo</h2>
-      <p>Activez votre Tocsin Premium/Pro/Pro+ avec nos capteurs Amazon.</p>
-      <button class="cta-btn">Acheter un capteur</button>
+      <h2>⚠️ Alertes météo</h2>
+      <div id="alerts-container">⏳ Chargement...</div>
+      <button onclick="testPush('pluie')">🔔 Tester alerte pluie</button>
+      <button onclick="testPush('vent')">🔔 Tester alerte vent</button>
+      <button onclick="testPush('neige')">🔔 Tester alerte neige</button>
     </section>
   </main>
+
+  <footer class="footer">
+    <p>© 2025 TinsFlash – Alertes</p>
+  </footer>
 </body>
 </html>
