@@ -2,92 +2,95 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <title>🛰️ Console Pro+ – TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Console Admin – TinsFlash</title>
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="style.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #0d1b2a;
-      color: #fff;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #1b263b;
-      padding: 15px;
-      text-align: center;
-    }
-    h1 { margin: 0; color: #f9c74f; }
-    main { padding: 20px; }
-    button {
-      background: #43aa8b;
-      color: #fff;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover { background: #90be6d; }
-    #progressContainer {
-      width: 100%;
-      background: #2a2a2a;
-      height: 20px;
-      border-radius: 10px;
-      margin: 15px 0;
-      overflow: hidden;
-    }
-    #progressBar {
-      height: 100%;
-      width: 0%;
-      background: #f9c74f;
-      transition: width 0.3s ease;
-    }
-    #status {
-      margin: 10px 0;
-      font-weight: bold;
-    }
-    pre {
-      background: #1b263b;
-      padding: 10px;
-      border-radius: 5px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    section {
-      background: #162447;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-    }
-    h2 { color: #4cc9f0; }
+    body { background: #0c1a2b; color: #eee; font-family: Arial, sans-serif; }
+    h1 { text-align: center; color: #00eaff; }
+    .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; }
+    .btn-run { background: #00eaff; color: #0c1a2b; font-weight: bold; }
+    .progress { width: 100%; background: #333; border-radius: 8px; margin: 15px 0; height: 22px; }
+    .progress-bar { height: 22px; background: #00eaff; width: 0%; border-radius: 8px; transition: width 0.4s; }
+    .card { background: #132a44; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    pre { background: #1e2f47; padding: 10px; border-radius: 6px; overflow-x: auto; }
   </style>
+  <script>
+    async function runForecast() {
+      const btn = document.getElementById("btn-run");
+      const progress = document.getElementById("progress-bar");
+      const output = document.getElementById("result");
+      btn.disabled = true;
+      output.innerText = "⏳ Lancement du supercalculateur météo...";
+      progress.style.width = "10%";
+
+      try {
+        const res = await fetch("/api/supercalc/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ time: new Date().toISOString(), country: "BE" })
+        });
+
+        progress.style.width = "70%";
+        const data = await res.json();
+
+        progress.style.width = "100%";
+
+        output.innerHTML = `
+          <h3>✅ Résultat du run</h3>
+          <p><b>Status :</b> ${data.status}</p>
+          <p><b>Anomalie :</b> ${data.forecast.anomaly || "Normale"}</p>
+          <p><b>Température :</b> ${data.forecast.temperature_min}°C – ${data.forecast.temperature_max}°C</p>
+          <p><b>Vent :</b> ${data.forecast.wind} km/h</p>
+          <p><b>Précipitations :</b> ${data.forecast.precipitation} mm</p>
+          <p><b>Fiabilité :</b> ${data.forecast.reliability}%</p>
+          <h4>🌍 Pondérations appliquées :</h4>
+          <pre>${JSON.stringify(data.weights, null, 2)}</pre>
+          <h4>📡 Sources utilisées :</h4>
+          <pre>${JSON.stringify(data.sources, null, 2)}</pre>
+          <h4>⚠️ Erreurs éventuelles :</h4>
+          <pre>${JSON.stringify(data.errors, null, 2)}</pre>
+        `;
+      } catch (err) {
+        output.innerText = "❌ Erreur lors du run: " + err.message;
+      }
+
+      btn.disabled = false;
+    }
+
+    async function loadLogs() {
+      const logsEl = document.getElementById("logs");
+      logsEl.innerText = "⏳ Chargement logs...";
+      try {
+        const res = await fetch("/api/supercalc/logs");
+        const data = await res.json();
+        logsEl.innerHTML = data.map(l =>
+          `<div class="card">
+            <b>Run :</b> ${l.time}<br>
+            <b>Status :</b> ${l.status}<br>
+            <pre>${JSON.stringify(l.forecast, null, 2)}</pre>
+          </div>`
+        ).join("");
+      } catch (err) {
+        logsEl.innerText = "❌ Erreur chargement logs: " + err.message;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadLogs);
+  </script>
 </head>
 <body>
-  <header>
-    <h1>🔒 Console Admin – Gestion des alertes & runs</h1>
-  </header>
+  <h1>🛰️ Console Pro+ – Supercalculateur</h1>
 
-  <main>
-    <section class="supercalc">
-      <h2>⚡ Supercalculateur météo</h2>
-      <button id="runBtn">▶️ Générer les prévisions</button>
-      
-      <div id="progressContainer">
-        <div id="progressBar"></div>
-      </div>
+  <div class="card">
+    <button id="btn-run" class="btn btn-run" onclick="runForecast()">🚀 Lancer un run météo</button>
+    <div class="progress"><div id="progress-bar" class="progress-bar"></div></div>
+    <div id="result">Résultat en attente...</div>
+  </div>
 
-      <div id="status">⏳ En attente...</div>
-      <pre id="logs"></pre>
-    </section>
-
-    <section class="alerts">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts">⏳ Chargement...</div>
-    </section>
-  </main>
-
-  <script src="/js/admin.js"></script>
+  <div class="card">
+    <h2>🗄 Derniers runs sauvegardés</h2>
+    <div id="logs">⏳ En attente...</div>
+  </div>
 </body>
 </html>
