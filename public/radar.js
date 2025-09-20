@@ -1,62 +1,67 @@
-// Radar interactif TINSFLASH (version gratuite améliorée)
-// Inclut précipitations + neige + vent (open-data RainViewer)
+let map;
+let rainLayer, snowLayer, windLayer;
+let radarTimeline = [];
+let currentFrame = 0;
+let playInterval;
 
-async function loadRadar() {
-  const map = L.map("radar-map").setView([50.85, 4.35], 7);
+async function initRadar() {
+  map = L.map("radar-map").setView([50.85, 4.35], 7);
 
-  // Fond de carte OpenStreetMap
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap contributors"
-  }).addTo(map);
+  // Fonds de carte
+  const baseLayers = {
+    "Carte": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+    "Satellite": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}")
+  };
+  baseLayers["Carte"].addTo(map);
+  L.control.layers(baseLayers).addTo(map);
 
-  try {
-    // Charger infos RainViewer
-    const res = await fetch("/api/radar");
-    const data = await res.json();
+  // Charger RainViewer
+  const res = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+  const data = await res.json();
+  radarTimeline = data.radar.past.concat(data.radar.nowcast);
 
-    if (!data.tilesUrl || !data.timestampsUrl) {
-      console.error("❌ Impossible de charger RainViewer");
-      return;
-    }
-
-    // Charger timestamps (dernières images disponibles)
-    const tsRes = await fetch(data.timestampsUrl);
-    const tsData = await tsRes.json();
-    const latest = tsData[tsData.length - 1]; // dernière frame radar
-
-    // 📌 Calque précipitations
-    const rainLayer = L.tileLayer(
-      data.tilesUrl.replace("{time}", latest),
-      { opacity: 0.6, attribution: "RainViewer - Pluie" }
-    );
-
-    // 📌 Calque neige (utilisation couche alternative si dispo)
-    const snowLayer = L.tileLayer(
-      "https://tilecache.rainviewer.com/v2/snow/" + latest + "/256/{z}/{x}/{y}/2/1_1.png",
-      { opacity: 0.5, attribution: "RainViewer - Neige" }
-    );
-
-    // 📌 Calque vent (simulation via flèches)
-    const windLayer = L.tileLayer(
-      "https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=demo",
-      { opacity: 0.5, attribution: "OpenWeather - Vent" }
-    );
-
-    // Ajouter contrôleur de couches
-    const overlays = {
-      "🌧 Pluie": rainLayer,
-      "❄️ Neige": snowLayer,
-      "💨 Vent": windLayer
-    };
-
-    L.control.layers(null, overlays, { collapsed: false }).addTo(map);
-
-    // Activer pluie par défaut
-    rainLayer.addTo(map);
-
-  } catch (err) {
-    console.error("Erreur radar:", err);
-  }
+  // Première frame
+  updateRadarFrame();
+  playTimeline();
 }
 
-document.addEventListener("DOMContentLoaded", loadRadar);
+function playTimeline() {
+  if (playInterval) clearInterval(playInterval);
+  playInterval = setInterval(() => {
+    currentFrame = (currentFrame + 1) % radarTimeline.length;
+    updateRadarFrame();
+  }, 1000);
+}
+
+function updateRadarFrame() {
+  const frame = radarTimeline[currentFrame];
+  if (rainLayer) map.removeLayer(rainLayer);
+
+  rainLayer = L.tileLayer(
+    `https://tilecache.rainviewer.com/v2/radar/${frame.path}/256/{z}/{x}/{y}/2/1_1.png`,
+    { opacity: 0.6 }
+  ).addTo(map);
+
+  document.getElementById("radar-time").innerText = new Date(frame.time * 1000)
+    .toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" });
+
+  updateGraph();
+}
+
+function updateGraph() {
+  const ctx = document.getElementById("radar-graph").getContext("2d");
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+  ctx.beginPath();
+  ctx.strokeStyle = "#007bff";
+  ctx.lineWidth = 2;
+
+  radarTimeline.forEach((frame, idx) => {
+    const y = 100 - (idx % 10) * 10; // fake data
+    ctx.lineTo(idx * 10, y);
+  });
+
+  ctx.stroke();
+}
+
+initRadar();
