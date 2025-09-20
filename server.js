@@ -3,7 +3,7 @@
 // Gestion des alertes météo TINSFLASH (free / premium / pro / pro+)
 // -------------------------
 import fetch from "node-fetch";
-
+console.log("🚀 Initialisation serveur TINSFLASH...");
 // ✅ Simule une API météo radar pour la pluie
 async function checkRain(lat, lon) {
   return {
