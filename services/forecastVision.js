@@ -1,53 +1,40 @@
 // services/forecastVision.js
-// -------------------------
-// 🌍 forecastVision.js
-// Comparateur externe des prévisions météo
-// -------------------------
 
-import fs from "fs";
+import { seasonalNorms } from "../utils/seasonalNorms.js";
 
-const MANUAL_FILE = "./data/manual_forecasts.json";
-
-// Chargement des prévisions manuelles (FB, WhatsApp, etc.)
-function loadManualForecasts() {
-  try {
-    if (fs.existsSync(MANUAL_FILE)) {
-      return JSON.parse(fs.readFileSync(MANUAL_FILE, "utf-8"));
-    }
-    return [];
-  } catch (err) {
-    return [];
-  }
-}
-
-// Ajout manuel depuis admin-pp
-export function addManualForecast(source, forecast) {
-  const data = loadManualForecasts();
-  data.push({ source, forecast, timestamp: new Date() });
-  fs.writeFileSync(MANUAL_FILE, JSON.stringify(data, null, 2));
-  return true;
-}
-
-// Fusionner avec les prévisions manuelles
-export function mergeWithManual(forecast) {
-  const manuals = loadManualForecasts();
-  if (manuals.length > 0) {
-    forecast.manuals = manuals;
-  }
-  return forecast;
-}
-
-// 📊 Détection d’anomalies saisonnières
+// Détection d’anomalies saisonnières
 export function detectSeasonalAnomaly(forecast) {
-  // Exemple simple : détection de conditions extrêmes
-  if (forecast.temperature_max > 35) {
-    return { type: "heatwave", message: "🌡️ Anomalie : canicule détectée" };
+  if (!forecast || !forecast.temperature_max) return null;
+
+  const season = getSeason();
+  const norm = seasonalNorms[season];
+
+  if (!norm) return null;
+
+  if (forecast.temperature_max > norm.max + 5) {
+    return { type: "chaleur", message: "Anomalie : chaleur exceptionnelle" };
   }
-  if (forecast.temperature_min < -10) {
-    return { type: "coldwave", message: "❄️ Anomalie : vague de froid détectée" };
+  if (forecast.temperature_min < norm.min - 5) {
+    return { type: "froid", message: "Anomalie : froid exceptionnel" };
   }
-  if (forecast.precipitation > 50) {
-    return { type: "rain", message: "🌧️ Anomalie : fortes précipitations" };
-  }
-  return null; // pas d’anomalie détectée
+
+  return null;
+}
+
+// Détection manuelle (déjà présent)
+export function addManualForecast(source, forecast) {
+  return { source, ...forecast };
+}
+
+export function resetManualForecasts() {
+  return [];
+}
+
+// Utilitaire interne
+function getSeason() {
+  const m = new Date().getMonth() + 1;
+  if ([12, 1, 2].includes(m)) return "winter";
+  if ([3, 4, 5].includes(m)) return "spring";
+  if ([6, 7, 8].includes(m)) return "summer";
+  return "autumn";
 }
