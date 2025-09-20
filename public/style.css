@@ -1,205 +1,114 @@
-/* ============================
-   🌍 Global
-============================ */
 body {
   margin: 0;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  background: #0a0a1a;
-  color: #f1f1f1;
-  line-height: 1.6;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f8fbff;
+  color: #222;
 }
 
-h1, h2 {
-  margin: 0 0 10px;
-  font-weight: bold;
-  color: #00d9ff;
-}
-
-/* ============================
-   🎬 Intro vidéo
-============================ */
-.intro-video {
+/* HEADER vidéo */
+.hero {
   position: relative;
-  width: 100%;
-  max-height: 400px;
+  height: 300px;
   overflow: hidden;
 }
-
-.intro-video video {
+.hero video {
   width: 100%;
-  height: auto;
-  max-height: 400px;
+  height: 100%;
   object-fit: cover;
-  display: block;
 }
-
-.intro-overlay {
+.hero-overlay {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  background: rgba(0,0,0,0.6);
-  padding: 15px 20px;
-  border-radius: 10px;
-  color: #fff;
-}
-
-.intro-overlay h1 {
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-.intro-buttons {
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.intro-buttons button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 5px;
-  background: #00d9ff;
-  color: black;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.2s;
-}
-.intro-buttons button:hover {
-  background: #00aacc;
-}
-
-/* ============================
-   📰 Header
-============================ */
-header {
-  background: linear-gradient(90deg, #0033cc, #000);
-  color: white;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
   text-align: center;
-  padding: 1rem;
+}
+.hero-overlay h1 {
+  font-size: 1.8rem;
+  margin: 0 0 10px;
+}
+.hero-overlay button {
+  background: #00bfff;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.hero-overlay button:hover {
+  background: #0099cc;
 }
 
-/* ============================
-   🌤️ Sections météo
-============================ */
-.forecast-section {
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background: #12122b;
-  border-radius: 12px;
-  box-shadow: 0 0 25px rgba(0, 217, 255, 0.2);
-  max-width: 1200px;
-}
-
-.forecast-section h2 {
-  font-size: 1.4rem;
-  margin-bottom: 1rem;
-  color: #00d9ff;
-  border-left: 4px solid #00d9ff;
-  padding-left: 8px;
-}
-
-.forecast-box {
-  padding: 1.2rem;
-  background: #1a1a3a;
-  border-radius: 10px;
-  min-height: 100px;
+/* NAVBAR */
+.navbar {
   display: flex;
   justify-content: center;
-  align-items: center;
-  color: #ccc;
-  text-align: center;
+  gap: 20px;
+  background: #ffffff;
+  border-bottom: 2px solid #00bfff;
+  padding: 12px;
+}
+.navbar a {
+  text-decoration: none;
+  font-weight: bold;
+  color: #333;
+}
+.navbar a.active,
+.navbar a:hover {
+  color: #00bfff;
 }
 
-/* Effet futuriste */
-.neon-card {
-  border: 1px solid rgba(0, 217, 255, 0.3);
-  box-shadow: 0 0 10px rgba(0, 217, 255, 0.3),
-              inset 0 0 10px rgba(0, 217, 255, 0.1);
-  transition: transform 0.2s ease-in-out;
-}
-.neon-card:hover {
-  transform: scale(1.02);
+/* CONTENU */
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
 }
 
-/* ============================
-   📅 Prévisions 7 jours
-============================ */
+.card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+}
+
+.card.wide {
+  grid-column: span 2;
+}
+
 .days-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
+  gap: 10px;
 }
 
-.days-grid .day-card {
-  background: #222244;
-  border: 1px solid rgba(0, 217, 255, 0.3);
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  color: #fff;
-  transition: 0.2s;
-}
-.days-grid .day-card:hover {
-  background: #2a2a55;
-  transform: translateY(-3px);
-}
-#forecast-text {
-  text-align: left;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: #e6faff;
-  white-space: pre-line; /* pour garder les sauts de ligne */
-}
-
-
-/* ============================
-   🛰️ Radar
-============================ */
-#radar-content {
-  width: 100%;
-  height: 500px;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-top: 1rem;
-  border: 1px solid rgba(0, 217, 255, 0.3);
-  box-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
-}
-
-/* ============================
-   📢 Pub
-============================ */
-.ads {
-  margin: 1rem auto;
-  text-align: center;
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 0.5rem;
-  border-radius: 8px;
-  color: #000;
-  max-width: 800px;
-}
-
-/* ============================
-   📩 Footer
-============================ */
-footer {
-  background: #003;
+.footer {
+  background: #00bfff;
   color: white;
   text-align: center;
-  padding: 1rem;
-  margin-top: 1rem;
+  padding: 15px;
+  margin-top: 20px;
 }
 
-/* ============================
-   🔁 Animations
-============================ */
-.loader-text {
-  font-family: monospace;
-  color: #00ffea;
-  animation: pulseText 2s infinite;
+/* ADS */
+.ad {
+  text-align: center;
+  margin: 15px 0;
 }
 
-@keyframes pulseText {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+/* RESPONSIVE */
+@media(max-width: 768px) {
+  .hero-overlay h1 {
+    font-size: 1.3rem;
+  }
+  .navbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }
