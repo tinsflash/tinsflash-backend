@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH Météo – Prévisions et Radar</title>
+  <title>TinsFlash Météo – Gratuit + Radar amélioré</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
@@ -12,17 +12,53 @@
   <!-- Styles globaux -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- Leaflet pour radar -->
+  <!-- Leaflet (Radar) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <!-- Scripts -->
   <script defer src="app.js"></script>
   <script defer src="radar.js"></script>
+
+  <style>
+    /* ✅ Bandeau vidéo */
+    .video-banner {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      overflow: hidden;
+      border-bottom: 4px solid #00eaff;
+    }
+    .video-banner video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .video-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    .video-controls button {
+      background: #00eaff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 6px;
+    }
+    .video-controls button:hover {
+      background: #009bb5;
+    }
+  </style>
 </head>
 <body>
+  <!-- ✅ Navbar modernisée -->
   <header class="navbar">
-    <div class="logo">🌩️ TinsFlash</div>
+    <div class="logo">🌩️ <b>TinsFlash</b></div>
     <nav>
       <a href="index.html" class="active">Accueil</a>
       <a href="premium.html">Premium</a>
@@ -33,15 +69,28 @@
     </nav>
   </header>
 
+  <!-- ✅ Bandeau vidéo -->
+  <div class="video-banner">
+    <video id="intro-video" autoplay muted loop>
+      <source src="intro-jean.mp4" type="video/mp4">
+      Votre navigateur ne supporte pas la vidéo.
+    </video>
+    <div class="video-controls">
+      <button onclick="playVideo()">▶️ Play</button>
+      <button onclick="pauseVideo()">⏸ Pause</button>
+    </div>
+  </div>
+
+  <!-- ✅ Contenu -->
   <main class="container">
 
-    <!-- Prévisions locales (dernière run stockée) -->
+    <!-- Prévisions locales -->
     <section class="card" id="local">
       <h2>📍 Prévisions locales</h2>
       <div id="local-content">⏳ Chargement...</div>
     </section>
 
-    <!-- Prévisions nationales (vue moyenne pays) -->
+    <!-- Prévisions nationales -->
     <section class="card" id="national">
       <h2>🇧🇪 Prévisions nationales</h2>
       <div id="national-content">⏳ Chargement...</div>
@@ -59,9 +108,9 @@
       <pre id="forecast-text">⏳ Génération...</pre>
     </section>
 
-    <!-- Radar -->
+    <!-- Radar météo -->
     <section class="card wide" id="radar">
-      <h2>🛰️ Radar en direct</h2>
+      <h2>🛰️ Radar en direct (pluie/neige/vent)</h2>
       <div id="radar-map" style="height:400px;border-radius:10px;">⏳ Radar...</div>
     </section>
 
@@ -77,57 +126,29 @@
       <div id="podcast-container">⏳ Génération...</div>
     </section>
 
+    <!-- ✅ Google Ads -->
+    <section class="card">
+      <h2>💰 Publicité</h2>
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-6828365665232268"
+           data-ad-slot="1234567890"
+           data-ad-format="auto"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </section>
   </main>
 
   <footer class="footer">
-    <p>© 2025 TinsFlash – La météo qui vous protège ⚡</p>
+    <p>© 2025 TinsFlash – La météo gratuite, précise et commerciale ⚡</p>
   </footer>
 
   <script>
-    // Charger les prévisions depuis la dernière run stockée
-    async function loadForecast() {
-      try {
-        const res = await fetch("/api/forecast/latest");
-        const data = await res.json();
-
-        if (data.error) {
-          document.getElementById("local-content").innerText = "❌ " + data.error;
-          return;
-        }
-
-        // Prévision locale
-        document.getElementById("local-content").innerText =
-          `🌡️ ${data.temperature_min}°C - ${data.temperature_max}°C | ` +
-          `Vent ${data.wind} km/h | Précipitations ${data.precipitation} mm | ` +
-          `Fiabilité ${data.reliability}%`;
-
-        // Prévision nationale (simplifiée)
-        document.getElementById("national-content").innerText =
-          `🇧🇪 ${data.description || "Résumé indisponible"}`;
-
-        // Prévisions 7 jours → simulation
-        const daysContainer = document.getElementById("days-container");
-        daysContainer.innerHTML = "";
-        const now = new Date();
-        for (let i = 0; i < 7; i++) {
-          const d = new Date();
-          d.setDate(now.getDate() + i);
-          const dayBox = document.createElement("div");
-          dayBox.className = "card";
-          dayBox.innerText = `${d.toLocaleDateString("fr-FR", { weekday: "long" })} :
-            ${data.temperature_min}°C - ${data.temperature_max}°C, Vent ${data.wind} km/h`;
-          daysContainer.appendChild(dayBox);
-        }
-
-        // Bulletin texte IA
-        document.getElementById("forecast-text").innerText =
-          data.description || "Analyse météo indisponible.";
-      } catch (err) {
-        document.getElementById("local-content").innerText = "❌ Erreur chargement prévisions";
-      }
+    function playVideo() {
+      document.getElementById("intro-video").play();
     }
-
-    document.addEventListener("DOMContentLoaded", loadForecast);
+    function pauseVideo() {
+      document.getElementById("intro-video").pause();
+    }
   </script>
 </body>
 </html>
