@@ -1,15 +1,11 @@
 // -------------------------
-// 🌍 superForecast.js
-// Moteur nucléaire météo TINSFLASH
-// - Croise toutes les sources disponibles
-// - Applique IA pour consolidation
-// - Corrige via facteurs locaux, relief, climat
-// - Détecte anomalies saisonnières
+// 🌍 services/superForecast.js
+// Super moteur météo TINSFLASH
+// Multi-modèles + IA + pondérations dynamiques
 // -------------------------
 
 import { getMeteomatics } from "../hiddensources/meteomatics.js";
 import { getOpenWeather } from "../hiddensources/openweather.js";
-import { getIconDwd } from "../hiddensources/iconDwd.js";
 import { compareSources } from "../hiddensources/comparator.js";
 import { parseWetterzentraleData } from "./wetterzentrale.js";
 import { adjustWithLocalFactors } from "./localFactors.js";
@@ -18,62 +14,66 @@ import { applyGeoFactors } from "./geoFactors.js";
 import { getNorm } from "../utils/seasonalNorms.js";
 import { askOpenAI } from "../utils/openai.js";
 
+// -------------------------
+// Pondérations par modèle
+// -------------------------
+const MODEL_WEIGHTS = {
+  GFS: 40,
+  ECMWF: 25,
+  ICON: 20,
+  ARPEGE: 10,
+  LOCAL: 5,
+};
+
+// -------------------------
+// Super moteur météo
+// -------------------------
 export async function runSuperForecast(lat, lon, country = "BE") {
   const sources = [];
   const errors = [];
 
-  // 1️⃣ Charger toutes les sources météo
-  try {
-    const meteomatics = await getMeteomatics(lat, lon);
-    meteomatics.error ? errors.push(meteomatics.error) : sources.push(meteomatics);
-  } catch (err) {
-    errors.push("Meteomatics: " + err.message);
-  }
+  // 1️⃣ Charger différentes sources
+  const meteomatics = await getMeteomatics(lat, lon);
+  meteomatics.error ? errors.push(meteomatics.error) : sources.push(meteomatics);
 
-  try {
-    const openweather = await getOpenWeather(lat, lon);
-    openweather.error ? errors.push(openweather.error) : sources.push(openweather);
-  } catch (err) {
-    errors.push("OpenWeather: " + err.message);
-  }
+  const openweather = await getOpenWeather(lat, lon);
+  openweather.error ? errors.push(openweather.error) : sources.push(openweather);
 
-  try {
-    const icon = await getIconDwd(lat, lon);
-    icon.error ? errors.push(icon.error) : sources.push(icon);
-  } catch (err) {
-    errors.push("ICON-DWD: " + err.message);
-  }
+  const comparator = await compareSources(lat, lon);
+  sources.push(...comparator);
 
+  // Wetterzentrale (si disponible)
   try {
-    const cmp = await compareSources(lat, lon);
-    if (Array.isArray(cmp)) sources.push(...cmp);
-    else sources.push(cmp);
-  } catch (err) {
-    errors.push("Comparator: " + err.message);
-  }
-
-  // Wetterzentrale (si dispo)
-  try {
-    const wz = parseWetterzentraleData({ temp: 12, wind: 15, desc: "Couvert" });
-    sources.push({ ...wz, source: "Wetterzentrale" });
+    const wz = parseWetterzentraleData({
+      temp: 14, // ⚠️ à remplacer par fetch réel
+      wind: 20,
+      desc: "Nuageux avec éclaircies",
+    });
+    if (!wz.error) sources.push({ ...wz, source: "Wetterzentrale" });
   } catch (err) {
     errors.push("Wetterzentrale: " + err.message);
   }
 
-  // 2️⃣ IA → consolidation
+  // 2️⃣ Fusion pondérée (IA + pondérations fixes)
   let aiSummary = null;
   try {
     const prompt = `
-      Tu es expert météo de niveau NASA.
-      Voici des prévisions issues de plusieurs modèles pour lat=${lat}, lon=${lon}.
-      Sources:
+      Voici des prévisions météo de plusieurs modèles pour lat=${lat}, lon=${lon}.
+      Sources :
       ${JSON.stringify(sources, null, 2)}
 
-      Mission:
-      - Détecter incohérences
-      - Produire une prévision finale (temperature_min, temperature_max, wind, precipitation, description)
-      - Calculer un indice de fiabilité (0-100)
-      - Retourne uniquement en JSON
+      Pondérations (influence dans le calcul final) :
+      - GFS: ${MODEL_WEIGHTS.GFS}%
+      - ECMWF: ${MODEL_WEIGHTS.ECMWF}%
+      - ICON: ${MODEL_WEIGHTS.ICON}%
+      - ARPEGE: ${MODEL_WEIGHTS.ARPEGE}%
+      - Local/Wetterzentrale: ${MODEL_WEIGHTS.LOCAL}%
+
+      Ta mission :
+      - Applique les pondérations pour fusionner les données
+      - Détecte et corrige les incohérences
+      - Sors une prévision finale réaliste en JSON avec :
+        { temperature_min, temperature_max, wind, precipitation, description, reliability, code }
     `;
     const aiResponse = await askOpenAI(prompt);
     aiSummary = JSON.parse(aiResponse);
@@ -81,13 +81,13 @@ export async function runSuperForecast(lat, lon, country = "BE") {
     errors.push("Erreur IA: " + err.message);
   }
 
-  // 3️⃣ Corrections locales et géographiques
+  // 3️⃣ Corrections locales & géographiques
   let forecast = aiSummary || sources[0] || {};
   forecast = adjustWithLocalFactors(forecast, country);
   forecast = applyTrullemansAdjustments(forecast);
   forecast = await applyGeoFactors(forecast, lat, lon);
 
-  // 4️⃣ Normes saisonnières
+  // 4️⃣ Vérifier normes saisonnières
   const season = getSeason(new Date());
   const norm = getNorm(season);
   if (forecast.temperature_max > norm.temp_max + 10) {
@@ -102,10 +102,14 @@ export async function runSuperForecast(lat, lon, country = "BE") {
     country,
     forecast,
     errors,
-    sources: sources.map(s => s.source || "unknown"),
+    sources: sources.map((s) => s.source || "unknown"),
+    weights: MODEL_WEIGHTS,
   };
 }
 
+// -------------------------
+// Helpers
+// -------------------------
 function getSeason(date) {
   const m = date.getMonth() + 1;
   if (m >= 3 && m <= 5) return "spring";
