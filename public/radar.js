@@ -1,71 +1,32 @@
-// -------------------------
-// 🌍 radar.js
-// Radar météo mondial connecté à forecastService
-// -------------------------
+// Radar interactif basé sur Rainviewer et Leaflet
 
-const API_BASE = "https://tinsflash-backend.onrender.com/api"; // adapte si besoin
-let map;
+async function loadRadar() {
+  const map = L.map("radar-map").setView([50.85, 4.35], 6);
 
-async function initRadar() {
-  const container = document.getElementById("radar-content");
-  container.innerHTML = ""; // reset
-
-  // Initialisation carte Leaflet
-  map = L.map("radar-content").setView([50.5, 4.5], 5);
-
-  // Fond OpenStreetMap
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap",
+    attribution: "© OpenStreetMap contributors"
   }).addTo(map);
 
-  // Couches météo dynamiques
-  const precip = L.tileLayer(
-    "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=" +
-      OPENWEATHER_KEY,
-    { opacity: 0.6 }
-  );
-  const snow = L.tileLayer(
-    "https://tile.openweathermap.org/map/snow/{z}/{x}/{y}.png?appid=" +
-      OPENWEATHER_KEY,
-    { opacity: 0.6 }
-  );
-  const wind = L.tileLayer(
-    "https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=" +
-      OPENWEATHER_KEY,
-    { opacity: 0.5 }
-  );
-
-  const overlays = {
-    "🌧️ Pluie": precip,
-    "❄️ Neige": snow,
-    "💨 Vent": wind,
-  };
-
-  precip.addTo(map);
-  L.control.layers(null, overlays).addTo(map);
-
-  // Loader style NASA
-  const loader = document.createElement("div");
-  loader.className = "radar-loader";
-  loader.innerHTML = "⏳ Analyse des modèles météo en cours...";
-  container.appendChild(loader);
-
-  // Récup fiabilité depuis ton backend
   try {
-    const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
+    const res = await fetch("/api/radar");
     const data = await res.json();
 
-    loader.remove();
+    if (data.layers && data.layers.length > 0) {
+      const timestamps = await (await fetch("https://api.rainviewer.com/public/maps.json")).json();
+      const last = timestamps[timestamps.length - 1];
 
-    const reliability = document.createElement("div");
-    reliability.className = "radar-reliability";
-    reliability.innerHTML = `Indice de fiabilité : ${data.reliability || 90}%`;
-    container.appendChild(reliability);
+      data.layers.forEach(layer => {
+        const radarLayer = L.tileLayer(layer.url.replace("{time}", last), {
+          attribution: layer.attribution,
+          tileSize: 256,
+          opacity: 0.6
+        });
+        radarLayer.addTo(map);
+      });
+    }
   } catch (err) {
-    loader.innerHTML = "❌ Erreur chargement fiabilité";
+    console.error("Erreur radar:", err);
   }
 }
 
-window.addEventListener("load", () => {
-  initRadar();
-});
+document.addEventListener("DOMContentLoaded", loadRadar);
