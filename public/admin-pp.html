@@ -2,172 +2,92 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>⚡ Admin Pro+ – TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Console Admin – TinsFlash</title>
+  <link rel="stylesheet" href="/css/admin.css">
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #0c1a2b;
-      color: #eee;
+      background-color: #0d1b2a;
+      color: #fff;
       margin: 0;
       padding: 0;
     }
     header {
-      background: #132a44;
-      padding: 20px;
-      text-align: center;
-      color: #00eaff;
-    }
-    main {
-      padding: 20px;
-      max-width: 900px;
-      margin: auto;
-    }
-    section {
-      background: #1e2f47;
+      background: #1b263b;
       padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      box-shadow: 0 0 10px rgba(0,234,255,0.2);
+      text-align: center;
     }
+    h1 { margin: 0; color: #f9c74f; }
+    main { padding: 20px; }
     button {
-      padding: 10px 20px;
-      background: #00eaff;
+      background: #43aa8b;
+      color: #fff;
       border: none;
+      padding: 12px 20px;
+      font-size: 16px;
       border-radius: 6px;
-      font-weight: bold;
       cursor: pointer;
     }
-    button:hover {
-      background: #00bcd4;
-    }
-    .progress-bar {
+    button:hover { background: #90be6d; }
+    #progressContainer {
       width: 100%;
-      background: #333;
-      border-radius: 6px;
+      background: #2a2a2a;
+      height: 20px;
+      border-radius: 10px;
+      margin: 15px 0;
       overflow: hidden;
-      margin: 10px 0;
-      height: 22px;
     }
-    .progress-fill {
-      background: #00eaff;
+    #progressBar {
       height: 100%;
       width: 0%;
-      text-align: center;
-      color: #000;
-      font-size: 12px;
+      background: #f9c74f;
+      transition: width 0.3s ease;
+    }
+    #status {
+      margin: 10px 0;
       font-weight: bold;
     }
     pre {
-      background: #0a1a2a;
+      background: #1b263b;
       padding: 10px;
-      border-radius: 6px;
-      white-space: pre-wrap;
+      border-radius: 5px;
+      max-height: 300px;
+      overflow-y: auto;
     }
+    section {
+      background: #162447;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
+    h2 { color: #4cc9f0; }
   </style>
 </head>
 <body>
   <header>
-    <h1>⚡ Admin Pro+ – Centrale météo</h1>
+    <h1>🔒 Console Admin – Gestion des alertes & runs</h1>
   </header>
 
   <main>
-    <!-- Mot de passe -->
-    <section id="login-section">
-      <h2>🔐 Accès sécurisé</h2>
-      <input type="password" id="password" placeholder="Mot de passe">
-      <button onclick="checkPassword()">Entrer</button>
-      <p id="login-error" style="color:red;"></p>
+    <section class="supercalc">
+      <h2>⚡ Supercalculateur météo</h2>
+      <button id="runBtn">▶️ Générer les prévisions</button>
+      
+      <div id="progressContainer">
+        <div id="progressBar"></div>
+      </div>
+
+      <div id="status">⏳ En attente...</div>
+      <pre id="logs"></pre>
     </section>
 
-    <!-- Console admin -->
-    <section id="console-section" style="display:none;">
-      <h2>🚀 Supercalculateur</h2>
-      <button onclick="launchRun()">▶️ Lancer un run</button>
-
-      <div class="progress-bar">
-        <div class="progress-fill" id="progress-fill">0%</div>
-      </div>
-      <p id="progress-status">En attente...</p>
-
-      <h3>📜 Logs récents</h3>
-      <div id="logs">⏳ Chargement...</div>
+    <section class="alerts">
+      <h2>⚠️ Alertes météo</h2>
+      <div id="alerts">⏳ Chargement...</div>
     </section>
   </main>
 
-  <script>
-    const ADMIN_PASSWORD = "202679";
-
-    function checkPassword() {
-      const input = document.getElementById("password").value;
-      if (input === ADMIN_PASSWORD) {
-        document.getElementById("login-section").style.display = "none";
-        document.getElementById("console-section").style.display = "block";
-        loadLogs();
-      } else {
-        document.getElementById("login-error").innerText = "❌ Mot de passe incorrect";
-      }
-    }
-
-    async function launchRun() {
-      document.getElementById("progress-status").innerText = "🚀 Run en cours...";
-      updateProgress();
-
-      try {
-        const res = await fetch("/api/supercalc/run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({})
-        });
-        const data = await res.json();
-        document.getElementById("progress-status").innerText = data.status || "✅ Terminé";
-        loadLogs();
-      } catch (err) {
-        document.getElementById("progress-status").innerText = "❌ Erreur run: " + err.message;
-      }
-    }
-
-    async function updateProgress() {
-      const fill = document.getElementById("progress-fill");
-      const status = document.getElementById("progress-status");
-
-      const interval = setInterval(async () => {
-        try {
-          const res = await fetch("/api/supercalc/progress");
-          const data = await res.json();
-          const percent = Math.round((data.step / data.total) * 100);
-          fill.style.width = percent + "%";
-          fill.innerText = percent + "%";
-          status.innerText = "⏳ " + data.status;
-
-          if (data.status === "done" || data.status === "error") {
-            clearInterval(interval);
-          }
-        } catch {
-          clearInterval(interval);
-          status.innerText = "❌ Erreur progression";
-        }
-      }, 2000);
-    }
-
-    async function loadLogs() {
-      try {
-        const res = await fetch("/api/supercalc/logs");
-        const data = await res.json();
-        document.getElementById("logs").innerHTML = data.map(run => `
-          <pre>
-⏰ ${run.time}
-📊 ${run.status}
-🌡️ ${run.forecast?.temperature_min}°C → ${run.forecast?.temperature_max}°C
-💨 Vent: ${run.forecast?.wind} km/h
-🌧️ Pluie: ${run.forecast?.precipitation} mm
-${run.forecast?.description || ""}
-          </pre>
-        `).join("");
-      } catch {
-        document.getElementById("logs").innerText = "❌ Erreur chargement logs";
-      }
-    }
-  </script>
+  <script src="/js/admin.js"></script>
 </body>
 </html>
