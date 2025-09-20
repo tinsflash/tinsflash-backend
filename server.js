@@ -139,10 +139,32 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
+// ✅ Radar interactif
 app.get("/api/radar", async (req, res) => {
   try {
-    const layers = await getRadarLayers();
-    res.json({ layers });
+    res.json({
+      layers: [
+        {
+          name: "🌧️ Précipitations",
+          type: "rain",
+          url: "https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png",
+          attribution: "Radar RainViewer"
+        },
+        {
+          name: "❄️ Neige",
+          type: "snow",
+          url: "https://tilecache.rainviewer.com/v2/snow/{time}/256/{z}/{x}/{y}/2/1_1.png",
+          attribution: "Radar RainViewer"
+        },
+        {
+          name: "🌬️ Vent",
+          type: "wind",
+          url: "https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02",
+          attribution: "Vent OpenWeatherMap (demo)"
+        }
+      ],
+      timestampsUrl: "https://api.rainviewer.com/public/maps.json"
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
