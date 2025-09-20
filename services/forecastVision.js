@@ -1,3 +1,4 @@
+// services/forecastVision.js
 // -------------------------
 // 🌍 forecastVision.js
 // Comparateur externe des prévisions météo
@@ -22,38 +23,31 @@ function loadManualForecasts() {
 // Ajout manuel depuis admin-pp
 export function addManualForecast(source, forecast) {
   const data = loadManualForecasts();
-  data.push({
-    source,
-    forecast,
-    timestamp: new Date().toISOString()
-  });
+  data.push({ source, forecast, timestamp: new Date() });
   fs.writeFileSync(MANUAL_FILE, JSON.stringify(data, null, 2));
-  return { status: "ok", message: "Prévision ajoutée", count: data.length };
+  return true;
 }
 
-// Comparateur TINSFLASH vs autres
-export async function getForecastVision(tinsflashForecast, location = "Namur") {
-  const manual = loadManualForecasts();
-
-  return {
-    location,
-    date: new Date().toISOString().split("T")[0],
-    tinsflash: tinsflashForecast,
-    comparisons: [
-      { source: "IRM (officiel)", forecast: "24°C, partiellement nuageux" },
-      { source: "Modèle ALARO", forecast: "25°C, instable avec averses" },
-      { source: "MétéoBelgique", forecast: "23°C, risque d’averses" },
-      { source: "Trullemans", forecast: "26°C, soleil avec voile Sahara" },
-      ...manual.map(m => ({
-        source: `${m.source} (manuel ${m.timestamp})`,
-        forecast: m.forecast
-      }))
-    ]
-  };
+// Fusionner avec les prévisions manuelles
+export function mergeWithManual(forecast) {
+  const manuals = loadManualForecasts();
+  if (manuals.length > 0) {
+    forecast.manuals = manuals;
+  }
+  return forecast;
 }
 
-// Réinitialisation (après update automatique 7h10/12h10/19h10)
-export function resetManualForecasts() {
-  fs.writeFileSync(MANUAL_FILE, JSON.stringify([], null, 2));
-  return { status: "ok", message: "Prévisions manuelles réinitialisées" };
+// 📊 Détection d’anomalies saisonnières
+export function detectSeasonalAnomaly(forecast) {
+  // Exemple simple : détection de conditions extrêmes
+  if (forecast.temperature_max > 35) {
+    return { type: "heatwave", message: "🌡️ Anomalie : canicule détectée" };
+  }
+  if (forecast.temperature_min < -10) {
+    return { type: "coldwave", message: "❄️ Anomalie : vague de froid détectée" };
+  }
+  if (forecast.precipitation > 50) {
+    return { type: "rain", message: "🌧️ Anomalie : fortes précipitations" };
+  }
+  return null; // pas d’anomalie détectée
 }
