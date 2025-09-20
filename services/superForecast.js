@@ -10,7 +10,7 @@ import { getNorm } from "../utils/seasonalNorms.js";
 import { askOpenAI } from "../utils/openai.js";
 
 /**
- * Super moteur météo TINSFLASH
+ * 🚀 Super moteur météo TINSFLASH
  * - croise plusieurs modèles
  * - applique IA pour corriger incohérences
  * - ajoute ajustements locaux + géographiques
