@@ -1,14 +1,10 @@
-// -------------------------
-// 🌍 localFactors.js
-// Ajustements météo locaux (relief, eau, urbain…)
-// -------------------------
-export function applyLocalFactors(lat, lon, { temp, wind, rain }) {
-  // Exemple simple : en vrai, tu relies à une base relief / zones urbaines
-  if (lat > 45 && lat < 55 && lon > 3 && lon < 8) {
-    // Belgique
-    temp += 1; // îlot urbain / densité
-    wind += 2; // relief vallonné
+// services/localFactors.js
+export function adjustWithLocalFactors(forecast, region = "BE") {
+  if (region === "BE") {
+    forecast.reliability = Math.min(100, forecast.reliability + 5);
   }
-
-  return { temp, wind, rain };
+  if (region === "FR") {
+    forecast.temperature_max += 1;
+  }
+  return forecast;
 }
