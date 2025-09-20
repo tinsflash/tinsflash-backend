@@ -1,4 +1,5 @@
 // services/superForecast.js
+// services/superForecast.js
 import { getMeteomatics } from "../hiddensources/meteomatics.js";
 import { getOpenWeather } from "../hiddensources/openweather.js";
 import { compareSources } from "../hiddensources/comparator.js";
@@ -8,7 +9,6 @@ import { applyTrullemansAdjustments } from "./trullemans.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { getNorm } from "../utils/seasonalNorms.js";
 import { askOpenAI } from "../utils/openai.js";
-
 /**
  * 🚀 Super moteur météo TINSFLASH
  * - croise plusieurs modèles
