@@ -2,221 +2,70 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🛰️ Console Admin TINSFLASH</title>
+  <title>🚀 Admin Pro+ – TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <style>
-    body { font-family:'Segoe UI',Arial,sans-serif; background:#0c1a2b; color:#fff; margin:0; padding:0; }
-    h1 { text-align:center; margin:20px; color:#00eaff; text-shadow:0 0 12px #00eaff; }
-    .container { padding:20px; max-width:1200px; margin:auto; }
-    .card { background:#132a44; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:0 0 15px rgba(0,234,255,0.2); }
-    .btn { padding:10px 15px; margin:5px; background:linear-gradient(135deg,#1e90ff,#00eaff); border:none; border-radius:8px; color:white; font-weight:bold; cursor:pointer; }
-    .btn:hover { background:linear-gradient(135deg,#0c75d4,#00b3cc); }
-    textarea,input,select { width:100%; padding:10px; margin:6px 0; border-radius:8px; border:none; font-size:14px; }
-    #logs { background:#000; color:#0f0; font-family:monospace; padding:12px; height:200px; border-radius:8px; overflow-y:auto; }
-    .status { margin-top:10px; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05); font-size:0.95rem; white-space:pre-line; }
-    .ok { color:#0f0; }
-    .warn { color:#ffb400; }
-    .err { color:#ff4444; }
-  </style>
-</head>
-<body>
-  <h1>🛰️ Console Administrateur – TINSFLASH</h1>
-  <div class="container">
 
-    <!-- Supercalculateur -->
-    <div class="card">
-      <h2>⚡ Supercalculateur Météo</h2>
-      <button class="btn" onclick="runForecast('07h10')">🌅 Run 07h10</button>
-      <button class="btn" onclick="runForecast('12h10')">☀️ Run 12h10</button>
-      <button class="btn" onclick="runForecast('19h10')">🌙 Run 19h10</button>
-      <div id="forecast-status" class="status">⏳ En attente de lancement...</div>
-    </div>
+  <!-- 🚫 Empêcher indexation Google -->
+  <meta name="robots" content="noindex,nofollow">
 
-    <!-- Logs -->
-    <div class="card">
-      <h2>📡 Logs Supercalculateur</h2>
-      <button class="btn" onclick="loadLogs()">🔄 Rafraîchir</button>
-      <div id="logs">⏳ Logs en attente...</div>
-    </div>
-
-    <!-- ForecastVision -->
-    <div class="card">
-      <h2>🔍 ForecastVision</h2>
-      <button class="btn" onclick="loadComparisons()">📊 Charger Comparateur</button>
-      <div id="comparisons" class="status">⏳ Aucune donnée encore...</div>
-    </div>
-
-    <!-- Ajout Source Externe -->
-    <div class="card">
-      <h2>📝 Ajout Source Externe</h2>
-      <form id="externalForm">
-        <input type="text" name="source" placeholder="Source (Facebook, WhatsApp...)" required>
-        <textarea name="text" rows="3" placeholder="Texte capturé" required></textarea>
-        <button type="submit" class="btn">💾 Enregistrer</button>
-      </form>
-      <div id="external-status" class="status">⏳ Aucun ajout.</div>
-    </div>
-
-    <!-- Monitoring Alertes -->
-    <div class="card">
-      <h2>⚠️ Monitoring Alertes</h2>
-      <button class="btn" onclick="loadAlerts()">📢 Charger Alertes</button>
-      <div id="alerts-status" class="status">⏳ En attente...</div>
-    </div>
-
-    <!-- Podcasts -->
-    <div class="card">
-      <h2>🎙️ Podcasts météo</h2>
-      <button class="btn" onclick="generatePodcast('daily')">📆 Podcast du jour</button>
-      <button class="btn" onclick="generatePodcast('weekly')">📅 Podcast semaine</button>
-      <div id="podcast-status" class="status">⏳ Aucun podcast généré.</div>
-    </div>
-
-    <!-- Codes -->
-    <div class="card">
-      <h2>🔑 Abonnements & Codes</h2>
-      <select id="subscription-type">
-        <option value="premium">Premium</option>
-        <option value="pro">Pro</option>
-        <option value="proplus">Pro+</option>
-      </select>
-      <button class="btn" onclick="generateCode()">🎟️ Générer Code</button>
-      <div id="code-result" class="status">⏳ Aucun code généré.</div>
-    </div>
-
-  </div>
-
-  <script>
-    const API_BASE = "https://tinsflash-backend.onrender.com/api";
-
-    // Supercalculateur
-    async function runForecast(time) {
-      const statusEl = document.getElementById("forecast-status");
-      statusEl.innerText = "⏳ Calcul en cours...";
+  <link rel="stylesheet" href="style.css">
+  <script defer>
+    async function runSupercalc() {
+      const el = document.getElementById("supercalc-result");
+      el.innerText = "⏳ Exécution du moteur...";
       try {
-        const res = await fetch(`${API_BASE}/supercalc/run`, {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ time, country:"BE" })
+        const res = await fetch("/api/supercalc/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ country: "BE" })
         });
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
-
-        let msg = "";
-        if (data.status.includes("100%")) {
-          msg += "✅ " + data.status + "\n";
-        } else if (data.status.includes("partiel")) {
-          msg += "⚠️ " + data.status + "\n";
-        } else {
-          msg += "❌ " + data.status + "\n";
-        }
-
-        msg += `Prévisions: ${data.forecast.temperature_min}°C à ${data.forecast.temperature_max}°C, `;
-        msg += `vent ${data.forecast.wind || "?"} km/h, précipitations ${data.forecast.precipitation || 0} mm.\n`;
-        msg += `Fiabilité: ${data.forecast.reliability}%`;
-
-        if (data.errors && data.errors.length > 0) {
-          msg += `\n⚠️ Erreurs: ${data.errors.join(" | ")}`;
-        }
-
-        statusEl.innerText = msg;
-      } catch {
-        statusEl.innerText = "❌ Erreur lancement forecast";
+        el.innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        el.innerText = "❌ Erreur: " + err.message;
       }
     }
 
     async function loadLogs() {
-      const logsEl = document.getElementById("logs");
-      logsEl.innerText = "⏳ Chargement logs...";
+      const el = document.getElementById("supercalc-logs");
+      el.innerText = "⏳ Chargement logs...";
       try {
-        const res = await fetch(`${API_BASE}/supercalc/logs`);
+        const res = await fetch("/api/supercalc/logs");
         const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) {
-          logsEl.innerHTML = "<span class='warn'>⚠️ Aucun log disponible</span>";
-          return;
-        }
-        logsEl.innerText = data.map(r =>
-          `${r.time} → ${r.status} | Temp: ${r.forecast.temperature}°C | Fiabilité: ${r.forecast.reliability}%`
-        ).join("\n");
-      } catch {
-        logsEl.innerHTML = "<span class='err'>❌ Erreur logs</span>";
+        el.innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        el.innerText = "❌ Erreur logs: " + err.message;
       }
     }
 
-    // ForecastVision
-    async function loadComparisons() {
-      const cmpEl = document.getElementById("comparisons");
-      cmpEl.innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch(`${API_BASE}/forecastvision`);
-        const data = await res.json();
-        cmpEl.innerHTML = data.map(d => `<div>📌 ${d.source}: ${d.summary}</div>`).join("");
-      } catch {
-        cmpEl.innerText = "❌ Erreur comparateur";
-      }
-    }
-
-    document.getElementById("externalForm").addEventListener("submit", async (e)=>{
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const body = Object.fromEntries(formData);
-      body.timestamp = new Date().toISOString();
-      try {
-        const res = await fetch(`${API_BASE}/forecastvision/add`, {
-          method:"POST", headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        document.getElementById("external-status").innerText = "✅ Source ajoutée : " + data.source;
-      } catch {
-        document.getElementById("external-status").innerText = "❌ Erreur ajout source";
-      }
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("btn-run").addEventListener("click", runSupercalc);
+      document.getElementById("btn-logs").addEventListener("click", loadLogs);
     });
-
-    // Alertes
-    async function loadAlerts() {
-      const alEl = document.getElementById("alerts-status");
-      alEl.innerText = "⏳ Chargement alertes...";
-      try {
-        const res = await fetch(`${API_BASE}/alerts`);
-        const data = await res.json();
-        alEl.innerText = data.map(a => `⚠️ ${a.level.toUpperCase()} - ${a.message} (Fiabilité: ${a.reliability}%)`).join("\n");
-      } catch {
-        alEl.innerText = "❌ Erreur alertes";
-      }
-    }
-
-    // Podcasts
-    async function generatePodcast(type) {
-      const podEl = document.getElementById("podcast-status");
-      podEl.innerText = "⏳ Génération...";
-      try {
-        const res = await fetch(`${API_BASE}/podcast/generate`, {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ type })
-        });
-        const data = await res.json();
-        podEl.innerHTML = `✅ ${data.title || "Podcast généré"}<br><audio controls src="${data.url}"></audio>`;
-      } catch {
-        podEl.innerText = "❌ Erreur podcast";
-      }
-    }
-
-    // Codes
-    async function generateCode() {
-      const type = document.getElementById("subscription-type").value;
-      const codeEl = document.getElementById("code-result");
-      codeEl.innerText = "⏳ Génération code...";
-      try {
-        const res = await fetch(`${API_BASE}/codes/generate?type=${type}`);
-        const data = await res.json();
-        codeEl.innerText = `🎟️ Code ${type}: ${data.code}`;
-      } catch {
-        codeEl.innerText = "❌ Erreur code";
-      }
-    }
   </script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">🌩️ TINSFLASH – Admin Pro+</div>
+    <!-- 🚫 pas de menu pour éviter découverte -->
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>🚀 Supercalculateur météo</h2>
+      <button id="btn-run">▶️ Lancer un run</button>
+      <pre id="supercalc-result">⏳ En attente...</pre>
+    </section>
+
+    <section class="card">
+      <h2>📜 Logs récents</h2>
+      <button id="btn-logs">🔄 Recharger logs</button>
+      <pre id="supercalc-logs">⏳ En attente...</pre>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 TINSFLASH – Console Pro+</p>
+  </footer>
 </body>
 </html>
