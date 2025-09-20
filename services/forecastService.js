@@ -1,174 +1,74 @@
-// -------------------------
-// 🌍 forecastService.js
-// Fusion multi-modèles + IA + MongoDB stockage
-// -------------------------
-import { detectAnomaly } from "../utils/seasonalNorms.js";
-import { getTrullemansData } from "./trullemans.js";
-import { getWetterzentraleData } from "./wetterzentrale.js";
-import { getNasaSatData } from "./nasaSat.js";
-import { applyLocalFactors } from "./localFactors.js";
-import Forecast from "../models/Forecast.js";
+import { getMeteomatics } from "../hiddensources/meteomatics.js";
+import { getOpenWeather } from "../hiddensources/openweather.js";
+import { compareSources } from "../hiddensources/comparator.js";
+import { adjustWithLocalFactors } from "./localFactors.js";
+import { applyTrullemansAdjustments } from "./trullemans.js";
+import { getNorm } from "../utils/seasonalNorms.js";
+
+function analyseFiabilite(results, errors) {
+  let score = (results.length / (results.length + errors.length + 1)) * 100;
+
+  // Bonus si sources concordent
+  const temps = results.map(r => r.temperature).filter(Boolean);
+  if (temps.length > 1) {
+    const ecart = Math.max(...temps) - Math.min(...temps);
+    if (ecart < 2) score += 10; // concordance = +fiabilité
+    if (ecart > 8) score -= 15; // gros écart = -fiabilité
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
 
 export async function getForecast(lat, lon, country = "BE") {
-  const results = { sources: {}, combined: {}, errors: [] };
+  const results = [];
+  const errors = [];
 
-  try {
-    // -------------------------
-    // 1. Sources officielles
-    // -------------------------
-    try {
-      const user = process.env.METEOMATICS_USER;
-      const pass = process.env.METEOMATICS_PASS;
-      if (!user || !pass) throw new Error("Identifiants Meteomatics manquants !");
+  // OpenWeather
+  const ow = await getOpenWeather(lat, lon);
+  ow.error ? errors.push(ow.error) : results.push(ow);
 
-      const now = new Date().toISOString().split(".")[0] + "Z";
-      const future =
-        new Date(Date.now() + 24 * 3600 * 1000).toISOString().split(".")[0] + "Z";
+  // Meteomatics
+  const meteo = await getMeteomatics(lat, lon);
+  meteo.error ? errors.push(meteo.error) : results.push(meteo);
 
-      const url = `https://api.meteomatics.com/${now}--${future}:PT1H/t_2m:C,precip_1h:mm,wind_speed_10m:kmh/${lat},${lon}/json`;
+  // Open-Meteo (backup comparator)
+  const cmp = await compareSources(lat, lon);
+  cmp.error ? errors.push(cmp.error) : results.push(cmp);
 
-      const res = await fetch(url, {
-        headers: {
-          Authorization:
-            "Basic " + Buffer.from(`${user}:${pass}`).toString("base64"),
-        },
-      });
+  // Fusion brute
+  const combined = {
+    temperature_min: Math.min(...results.map(r => r.temperature ?? 99)),
+    temperature_max: Math.max(...results.map(r => r.temperature ?? -99)),
+    precipitation: results.map(r => r.precipitation || 0).reduce((a, b) => a + b, 0),
+    wind: Math.max(...results.map(r => r.wind || 0)),
+    description: results.map(r => r.description || r.source).join(" | "),
+  };
 
-      if (!res.ok) throw new Error(`Erreur Meteomatics: ${res.statusText}`);
-      results.sources.meteomatics = await res.json();
-    } catch (err) {
-      results.sources.meteomatics = { error: err.message };
-      results.errors.push("meteomatics: " + err.message);
-    }
+  // Application des ajustements locaux
+  let adjusted = adjustWithLocalFactors(combined, country);
+  adjusted = applyTrullemansAdjustments(adjusted);
 
-    try {
-      const apiKey = process.env.OPENWEATHER_KEY;
-      if (!apiKey) throw new Error("Clé OPENWEATHER_KEY manquante");
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
-      const res = await fetch(url);
-      results.sources.openweather = await res.json();
-    } catch (err) {
-      results.sources.openweather = { error: err.message };
-      results.errors.push("openweather: " + err.message);
-    }
+  // Comparaison aux normes saisonnières
+  const month = new Date().getMonth();
+  const season =
+    month <= 1 || month === 11 ? "winter" :
+    month >= 2 && month <= 4 ? "spring" :
+    month >= 5 && month <= 7 ? "summer" : "autumn";
+  const norm = getNorm(season);
 
-    try {
-      const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
-      results.sources.gfs = await (await fetch(url)).json();
-    } catch (err) {
-      results.sources.gfs = { error: err.message };
-      results.errors.push("gfs: " + err.message);
-    }
-
-    try {
-      const url = `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`;
-      results.sources.icon = await (await fetch(url)).json();
-    } catch (err) {
-      results.sources.icon = { error: err.message };
-      results.errors.push("icon: " + err.message);
-    }
-
-    // -------------------------
-    // 2. Sources pirates
-    // -------------------------
-    try {
-      results.sources.trullemans = await getTrullemansData(lat, lon);
-    } catch (err) {
-      results.sources.trullemans = { error: err.message };
-      results.errors.push("trullemans: " + err.message);
-    }
-
-    try {
-      results.sources.wetterzentrale = await getWetterzentraleData(lat, lon);
-    } catch (err) {
-      results.sources.wetterzentrale = { error: err.message };
-      results.errors.push("wetterzentrale: " + err.message);
-    }
-
-    try {
-      results.sources.nasa = await getNasaSatData(lat, lon);
-    } catch (err) {
-      results.sources.nasa = { error: err.message };
-      results.errors.push("nasa: " + err.message);
-    }
-
-    // -------------------------
-    // 3. Fusion des données
-    // -------------------------
-    const temps = [];
-    const winds = [];
-    const rains = [];
-
-    for (const src of Object.values(results.sources)) {
-      if (src?.temperature) temps.push(src.temperature);
-      if (src?.wind) winds.push(src.wind);
-      if (src?.precipitation) rains.push(src.precipitation);
-    }
-
-    const avg = (arr) =>
-      arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-
-    let temp = Math.round(avg(temps));
-    let wind = Math.round(avg(winds));
-    let rain = Math.round(avg(rains) * 10) / 10;
-
-    // -------------------------
-    // 4. Facteurs locaux
-    // -------------------------
-    ({ temp, wind, rain } = applyLocalFactors(lat, lon, { temp, wind, rain }));
-
-    // -------------------------
-    // 5. Anomalies saisonnières
-    // -------------------------
-    const anomaly = detectAnomaly(temp, country);
-
-    // -------------------------
-    // 6. Fiabilité
-    // -------------------------
-    const variance = temps.length ? Math.max(...temps) - Math.min(...temps) : 0;
-    let reliability = 98 - variance;
-    if (reliability < 60) reliability = 60;
-    if (reliability > 99) reliability = 99;
-
-    // -------------------------
-    // 7. Résultat combiné
-    // -------------------------
-    results.combined = {
-      temperature: temp,
-      temperature_min: temp - 2,
-      temperature_max: temp + 2,
-      wind,
-      precipitation: rain,
-      description:
-        "Prévisions issues d'une fusion multi-modèles + IA + facteurs locaux",
-      reliability,
-      anomaly,
-      sources: Object.keys(results.sources),
-      bulletin: `
-        Prévisions : températures entre ${temp - 2}°C et ${temp + 2}°C,
-        vent ${wind} km/h, précipitations ${rain} mm.
-        ${anomaly?.message || ""}
-        Fiabilité : ${reliability}%.
-      `,
-    };
-
-    // -------------------------
-    // 8. Sauvegarde MongoDB
-    // -------------------------
-    const forecastDoc = new Forecast({
-      time: new Date().toISOString(),
-      forecast: results.combined,
-      errors: results.errors,
-      status:
-        results.errors.length > 0
-          ? `⚠️ Run partiel : ${results.errors.length} erreurs`
-          : "✅ Run 100% réussi",
-    });
-
-    await forecastDoc.save();
-
-    return results;
-  } catch (err) {
-    throw new Error("Erreur fusion prévisions : " + err.message);
+  let anomaly = null;
+  if (adjusted.temperature_max > norm.temp_max + 5) {
+    anomaly = { type: "chaud", message: "Anomalie : températures très élevées" };
+  } else if (adjusted.temperature_min < norm.temp_min - 5) {
+    anomaly = { type: "froid", message: "Anomalie : froid inhabituel" };
   }
+
+  // Calcul de fiabilité
+  const reliability = analyseFiabilite(results, errors);
+
+  return {
+    combined: { ...adjusted, reliability, anomaly },
+    errors,
+    successCount: results.length,
+  };
 }
