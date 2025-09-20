@@ -1,17 +1,21 @@
-// db.js
 import mongoose from "mongoose";
+
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/tinsflash";
+
+mongoose.set("strictQuery", false);
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
+    console.log("⏳ Connexion MongoDB...");
+    await mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000, // timeout clair
     });
-
-    console.log(`✅ MongoDB connecté : ${conn.connection.host}`);
-  } catch (error) {
-    console.error("❌ Erreur connexion MongoDB :", error.message);
-    process.exit(1); // stoppe le serveur si DB KO
+    console.log("✅ MongoDB connecté avec succès !");
+  } catch (err) {
+    console.error("❌ Erreur connexion MongoDB:", err.message);
+    process.exit(1);
   }
 };
 
