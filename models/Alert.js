@@ -1,20 +1,19 @@
-// models/Alert.js
+// models/Alerts.js
 import mongoose from "mongoose";
 
 const alertSchema = new mongoose.Schema(
   {
     time: { type: Date, required: true },
-    reliability: { type: Number, default: 0 },
-    status: { type: String },
+    status: { type: String, default: "active" },
     forecast: {
-      temperature: Number,
-      precipitation: Number,
-      wind: Number,
-      description: String,
-      anomaly: String,
+      temperature: { type: Number, default: 0 },
+      precipitation: { type: Number, default: 0 },
+      wind: { type: Number, default: 0 },
+      description: { type: String, default: "Non défini" },
+      anomaly: { type: String, default: "Normale" },
     },
     message: { type: String, required: true },
-    radarImage: { type: String },
+    radarImage: { type: String, default: "" },
     validationRequired: { type: Boolean, default: false },
     autoSend: { type: Boolean, default: false },
     validated: { type: Boolean, default: false },
