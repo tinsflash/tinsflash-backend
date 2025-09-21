@@ -1,7 +1,7 @@
 {
-  "name": "super-meteo-backend",
+  "name": "tinsflash-backend",
   "version": "1.0.0",
-  "description": "🚀 Machine de guerre météo 1000% réelle et fonctionnelle",
+  "description": "🚀 Centrale nucléaire météo 100% réelle, 100% connectée – Tinsflash",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -12,11 +12,13 @@
     "axios": "^1.6.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.21.2",
     "mongoose": "^8.3.2",
     "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
-    "stripe": "^14.21.0"
+    "stripe": "^14.21.0",
+    "grib2json": "^0.8.0",
+    "cdsapi": "^0.5.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -30,7 +32,11 @@
     "ai",
     "radar",
     "alerts",
-    "podcast"
+    "podcast",
+    "climate",
+    "copernicus",
+    "nasa",
+    "superforecast"
   ],
   "author": "Tinsflash & Co",
   "license": "MIT"
