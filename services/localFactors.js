@@ -1,42 +1,34 @@
-// services/localFactors.js
+// src/services/localFactors.js
 
-/**
- * Ajuste les prévisions avec des facteurs locaux spécifiques
- * (ex : microclimat, zone urbaine, effet local empirique).
- */
-export async function applyLocalFactors(forecast, countryCode = "BE") {
-  const adjusted = { ...forecast };
+// Applique des ajustements spécifiques à une région (ex : Belgique, France, etc.)
+function applyLocalFactors(lat, lon, forecast) {
+  if (!forecast) return forecast;
+  let adjusted = { ...forecast };
 
-  switch (countryCode) {
-    case "BE":
-      // Belgique → ajustement pluie empirique (surévaluation habituelle)
-      adjusted.precipitation = Math.max(0, (adjusted.precipitation || 0) * 0.9);
-      break;
+  // Exemple : Belgique → pluie +10% (microclimat humide)
+  if (lat >= 49 && lat <= 51.5 && lon >= 2 && lon <= 6) {
+    adjusted.rain = (adjusted.rain || 0) * 1.1;
+  }
 
-    case "FR":
-      // France → mistral / tramontane (vent accentué dans le sud)
-      if (adjusted.wind && adjusted.wind > 20) {
-        adjusted.wind = adjusted.wind + 5;
-      }
-      break;
-
-    default:
-      // Par défaut → pas d’ajustement
-      break;
+  // Exemple : Espagne sud → chaleur amplifiée
+  if (lat >= 36 && lat <= 38 && lon >= -6 && lon <= -2) {
+    adjusted.temp = (adjusted.temp || 25) + 2;
   }
 
   return adjusted;
 }
 
-/**
- * Variante : applique plusieurs couches de facteurs locaux
- */
-export async function adjustWithLocalFactors(forecast, lat, lon) {
-  let result = { ...forecast };
+// Version plus générale (appelée dans SuperForecast)
+function adjustWithLocalFactors(lat, lon, forecast) {
+  let result = applyLocalFactors(lat, lon, forecast);
 
-  // Exemple futur → ajustement via base MongoDB (observations locales)
-  // TODO: connecter Netatmo / Météociel / stations locales
-  result = await applyLocalFactors(result, forecast.countryCode);
+  // Règles locales supplémentaires (extensibles)
+  if (lat >= 40 && lat <= 42 && lon >= -1 && lon <= 3) {
+    // Exemple : climat méditerranéen → vent mistral
+    result.wind = (result.wind || 15) + 5;
+  }
 
   return result;
 }
+
+export default { applyLocalFactors, adjustWithLocalFactors };
