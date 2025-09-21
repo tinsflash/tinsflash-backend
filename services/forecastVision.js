@@ -1,31 +1,28 @@
 // services/forecastVision.js
 
 /**
- * Détection des anomalies saisonnières sur une prévision
- * Exemple : température trop haute/basse pour la saison
+ * Détection des anomalies saisonnières
+ * Compare les prévisions avec les moyennes attendues
  */
 function detectSeasonalAnomaly(forecast) {
   try {
-    const { temperature, precipitation } = forecast;
+    console.log("🔎 Analyse anomalies saisonnières");
 
-    // Simple exemple d'anomalie (tu pourras enrichir avec Copernicus)
-    let anomaly = null;
-
-    if (temperature > 35) {
-      anomaly = "🌡️ Canicule détectée";
-    } else if (temperature < -15) {
-      anomaly = "❄️ Froid extrême détecté";
+    if (!forecast || !forecast.temperature) {
+      return null;
     }
 
-    if (precipitation > 100) {
-      anomaly = anomaly
-        ? `${anomaly} + 🌧️ Pluie extrême`
-        : "🌧️ Pluie extrême détectée";
-    }
+    const avgTemp = forecast.temperature.reduce((a, b) => a + b, 0) / forecast.temperature.length;
+    const seasonalNorm = 15; // ⚠️ simplifié, à remplacer par Copernicus
 
-    return anomaly;
+    const anomaly = avgTemp - seasonalNorm;
+
+    return {
+      type: anomaly > 2 ? "Chaud" : anomaly < -2 ? "Froid" : "Normal",
+      value: anomaly.toFixed(2),
+    };
   } catch (err) {
-    console.error("❌ Erreur forecastVision:", err.message);
+    console.error("❌ Erreur detectSeasonalAnomaly:", err.message);
     return null;
   }
 }
