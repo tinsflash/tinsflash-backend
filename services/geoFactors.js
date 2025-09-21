@@ -1,30 +1,28 @@
-import fetch from "node-fetch";
+// services/geoFactors.js
 
-async function applyGeoFactors(forecast, lat, lon) {
-  try {
-    console.log("⛰ Application facteurs géographiques");
+/**
+ * Applique des facteurs géographiques (altitude, relief, proximité de la mer)
+ * pour affiner les prévisions météo brutes.
+ */
+export function applyGeoFactors(forecast, location) {
+  let adjusted = { ...forecast };
 
-    // Altitude via Open-Elevation
-    const elevRes = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
-    const elevData = await elevRes.json();
-    const elevation = elevData.results?.[0]?.elevation || 0;
-
-    if (elevation > 500) {
-      forecast.temperature -= Math.round(elevation / 200); // correction montagne
-      forecast.description += " (influence montagne)";
-    }
-
-    // Proximité mer → simple check longitude/latitude (optionnel: API bathymétrie)
-    if (lon > -5 && lon < 10 && lat > 40 && lat < 52) {
-      forecast.temperature += 1; // effet tempérant mer
-      forecast.description += " (influence maritime)";
-    }
-
-    return forecast;
-  } catch (err) {
-    console.error("❌ Erreur geoFactors:", err.message);
-    return forecast;
+  // Exemple simple : altitude
+  if (location.altitude && forecast.temperature) {
+    // -0.65 °C tous les 100m
+    adjusted.temperature =
+      forecast.temperature - (location.altitude / 100) * 0.65;
   }
-}
 
-export default { applyGeoFactors };
+  // Exemple : proximité mer → humidité +10%
+  if (location.isCoastal && forecast.precipitation) {
+    adjusted.precipitation = forecast.precipitation * 1.1;
+  }
+
+  // Exemple : zones montagneuses → vent amplifié
+  if (location.isMountain && forecast.wind) {
+    adjusted.wind = forecast.wind * 1.2;
+  }
+
+  return adjusted;
+}
