@@ -1,30 +1,45 @@
 // services/ecmwf.js
-import cdsapi from "cdsapi";
+import axios from "axios";
 
-const client = new cdsapi();
+const CDS_API_URL = process.env.CDS_API_URL || "https://cds.climate.copernicus.eu/api";
+const CDS_API_KEY = process.env.CDS_API_KEY;
 
 /**
- * Récupère les données ECMWF pour une localisation donnée
+ * Récupère les données ECMWF ERA5 via Copernicus CDS
+ * @param {number} lat - latitude
+ * @param {number} lon - longitude
+ * @param {string} date - au format YYYY-MM-DD
  */
-export default async function ecmwf(location) {
+export default async function ecmwf(lat, lon, date) {
   try {
-    const result = await client.retrieve("reanalysis-era5-single-levels", {
-      product_type: "reanalysis",
-      variable: ["2m_temperature", "total_precipitation", "10m_u_component_of_wind", "10m_v_component_of_wind"],
-      year: new Date().getFullYear().toString(),
-      month: new Date().getMonth() + 1,
-      day: new Date().getDate(),
-      time: ["00:00", "06:00", "12:00", "18:00"],
-      area: [location.lat + 0.5, location.lon - 0.5, location.lat - 0.5, location.lon + 0.5],
-      format: "netcdf",
-    });
+    const response = await axios.post(
+      `${CDS_API_URL}/resources/reanalysis-era5-single-levels`,
+      {
+        variable: [
+          "2m_temperature",
+          "10m_u_component_of_wind",
+          "10m_v_component_of_wind",
+          "total_precipitation",
+        ],
+        product_type: "reanalysis",
+        year: date.split("-")[0],
+        month: date.split("-")[1],
+        day: date.split("-")[2],
+        time: ["00:00", "06:00", "12:00", "18:00"],
+        area: [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25], // bbox 0.25°
+        format: "netcdf",
+      },
+      {
+        headers: { Authorization: `Bearer ${CDS_API_KEY}` },
+      }
+    );
 
     return {
-      source: "ECMWF",
-      data: result
+      source: "ECMWF ERA5 (Copernicus)",
+      raw: response.data,
     };
   } catch (error) {
     console.error("❌ Erreur récupération ECMWF:", error.message);
-    return null;
+    return { source: "ECMWF", error: error.message };
   }
 }
