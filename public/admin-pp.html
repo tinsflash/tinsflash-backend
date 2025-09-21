@@ -1,113 +1,118 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>🛰 Tinsflash – Console Admin</title>
+  <meta charset="UTF-8">
+  <title>⚡ Centrale Nucléaire Météo – Admin Pro+</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #111; color: #eee; }
-    h1, h2 { color: #00d4ff; }
-    .section { margin-bottom: 30px; padding: 15px; border: 1px solid #444; border-radius: 8px; background: #1c1c1c; }
-    button { padding: 8px 12px; background: #00d4ff; border: none; color: #000; border-radius: 6px; cursor: pointer; }
-    button:hover { background: #00aacc; }
-    .alert { padding: 10px; margin: 5px 0; border-radius: 6px; background: #222; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; }
+    h1 { background: #222; padding: 10px; }
+    .section { margin: 20px 0; padding: 15px; border-radius: 10px; }
+    .ok { color: #4CAF50; }
+    .warn { color: #FFC107; }
+    .err { color: #F44336; }
+    .logs { background: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: auto; }
+    button { padding: 8px 15px; border: none; border-radius: 8px; cursor: pointer; }
+    .btn { background: #2196F3; color: white; }
+    .alert-block { background: #222; padding: 10px; margin: 10px 0; border-radius: 8px; }
   </style>
 </head>
 <body>
   <h1>🌍 Console Admin Pro+</h1>
 
-  <!-- SECTION RUN MANUEL -->
-  <div class="section">
+  <!-- Lancer un run -->
+  <div class="section" style="background:#1e1e1e;">
     <h2>🚀 Lancer un Run complet</h2>
-    <button onclick="launchRun()">Lancer maintenant</button>
-    <div id="run-status"></div>
+    <button id="runBtn" class="btn">Lancer maintenant</button>
+    <p id="runStatus">[En attente d’un run...]</p>
+    <div class="logs" id="runLogs"></div>
   </div>
 
-  <!-- SECTION ALERTES -->
-  <div class="section">
-    <h2>⚠️ Alertes en attente (70–89 %)</h2>
-    <div id="pending-alerts">Chargement...</div>
+  <!-- Alertes automatiques -->
+  <div class="section" style="background:#2e2e2e;">
+    <h2>✅ Alertes validées automatiquement (≥90 %)</h2>
+    <div id="autoAlerts"></div>
   </div>
 
-  <!-- SECTION STATS UTILISATEURS -->
-  <div class="section">
-    <h2>👥 Utilisateurs par zone</h2>
-    <div id="users-zones">Chargement...</div>
+  <!-- Alertes manuelles -->
+  <div class="section" style="background:#3e3e1e;">
+    <h2>⚠️ Alertes en attente de validation (70–89 %)</h2>
+    <div id="manualAlerts"></div>
   </div>
 
-  <!-- SECTION STATS GLOBALES -->
-  <div class="section">
+  <!-- Statistiques -->
+  <div class="section" style="background:#1e2e3e;">
     <h2>📊 Statistiques Système</h2>
-    <div id="stats">Chargement...</div>
+    <p id="stats">Chargement...</p>
   </div>
 
   <script>
-  async function launchRun() {
-    document.getElementById("run-status").innerText = "🚀 Lancement du run...";
-    const res = await fetch("/api/admin/runBatch", { method: "POST" });
-    const data = await res.json();
-    if (data.success) {
-      document.getElementById("run-status").innerText = "✅ Run terminé avec succès";
-    } else {
-      document.getElementById("run-status").innerText = "❌ Erreur: " + data.error;
+    async function lancerRun() {
+      document.getElementById("runStatus").textContent = "🚀 Lancement du run...";
+      document.getElementById("runLogs").innerHTML = "";
+
+      try {
+        const res = await fetch("/api/supercalc/run", { method: "POST" });
+        const data = await res.json();
+
+        if (data.error) {
+          document.getElementById("runStatus").textContent = "❌ Erreur: " + data.error;
+          return;
+        }
+
+        // Log d’évolution
+        logRun("🔎 Sources météo fusionnées...");
+        logRun("🤖 IA en cours d’analyse...");
+        logRun("⚡ Détection des alertes météo...");
+        logRun("✅ Run terminé avec succès !");
+
+        // Remplissage alertes
+        afficherAlertes(data.alerts);
+
+        // Stats
+        chargerStats();
+
+      } catch (err) {
+        document.getElementById("runStatus").textContent = "❌ Erreur run: " + err.message;
+      }
     }
-  }
 
-  async function loadPendingAlerts() {
-    const res = await fetch("/api/admin/alerts/pending");
-    const alerts = await res.json();
-    const container = document.getElementById("pending-alerts");
-    if (!alerts.length) {
-      container.innerHTML = "<p>✅ Aucune alerte en attente</p>";
-      return;
+    function logRun(msg) {
+      const logs = document.getElementById("runLogs");
+      logs.innerHTML += msg + "<br>";
+      logs.scrollTop = logs.scrollHeight;
     }
-    container.innerHTML = alerts
-      .map(
-        (a) => `
-        <div class="alert">
-          <b>${a.type}</b> (${a.confidence}%)
-          <button onclick="validateAlert('${a._id}')">Valider</button>
-        </div>`
-      )
-      .join("");
-  }
 
-  async function validateAlert(id) {
-    await fetch("/api/admin/alerts/validate/" + id, { method: "PUT" });
-    loadPendingAlerts();
-  }
+    function afficherAlertes(alerts) {
+      const autoDiv = document.getElementById("autoAlerts");
+      const manualDiv = document.getElementById("manualAlerts");
+      autoDiv.innerHTML = "";
+      manualDiv.innerHTML = "";
 
-  async function loadUsersZones() {
-    const res = await fetch("/api/admin/users/zones");
-    const data = await res.json();
-    let html = `
-      <h3>Zones couvertes (Europe + USA)</h3>
-      <p>Gratuits: ${data.covered.free} | Premium: ${data.covered.premium} | Pro: ${data.covered.pro} | Pro+: ${data.covered.proPlus}</p>
-      <h3>Zones non couvertes</h3>
-      <p>Gratuits: ${data.nonCovered.free} | Premium: ${data.nonCovered.premium} | Pro: ${data.nonCovered.pro} | Pro+: ${data.nonCovered.proPlus}</p>
-    `;
-    if (data.nonCovered.premium > 0) {
-      html += `<p style="color:orange;">⚠️ Attention: Premium hors zone détecté → Décision d’extension requise</p>`;
+      alerts.forEach(a => {
+        const div = document.createElement("div");
+        div.className = "alert-block";
+        div.innerHTML = `<b>${a.type}</b> - ${a.value} (Confiance: ${a.confidence}%)`;
+
+        if (a.action === "AUTO") {
+          autoDiv.appendChild(div);
+        } else {
+          manualDiv.appendChild(div);
+        }
+      });
     }
-    document.getElementById("users-zones").innerHTML = html;
-  }
 
-  async function loadStats() {
-    const res = await fetch("/api/admin/stats");
-    const data = await res.json();
-    document.getElementById("stats").innerHTML = `
-      <p>Prévisions en base: ${data.forecasts}</p>
-      <p>Alertes en base: ${data.alerts}</p>
-      <p>Uptime serveur: ${Math.round(data.uptime / 60)} min</p>
-    `;
-  }
+    async function chargerStats() {
+      const res = await fetch("/api/admin/stats");
+      const stats = await res.json();
+      document.getElementById("stats").textContent =
+        `Prévisions: ${stats.forecasts} | Alertes: ${stats.alerts} | Uptime: ${Math.round(stats.uptime/60)} min`;
+    }
 
-  // Auto-refresh
-  loadPendingAlerts();
-  loadUsersZones();
-  loadStats();
-  setInterval(loadPendingAlerts, 60000);
-  setInterval(loadUsersZones, 120000);
-  setInterval(loadStats, 120000);
+    document.getElementById("runBtn").addEventListener("click", lancerRun);
+
+    // Auto-refresh stats toutes les 30s
+    setInterval(chargerStats, 30000);
+    chargerStats();
   </script>
 </body>
 </html>
