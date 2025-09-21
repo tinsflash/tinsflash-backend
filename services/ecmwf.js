@@ -1,45 +1,16 @@
 // services/ecmwf.js
-import axios from "axios";
+import { fetchMeteomatics } from "../utils/meteomatics.js";
 
-const CDS_API_URL = process.env.CDS_API_URL || "https://cds.climate.copernicus.eu/api";
-const CDS_API_KEY = process.env.CDS_API_KEY;
+export default async function ecmwf(lat, lon) {
+  const params = ["t_2m:C", "precip_1h:mm", "wind_speed_10m:ms"];
+  const data = await fetchMeteomatics(params, lat, lon, "ecmwf-ifs");
 
-/**
- * Récupère les données ECMWF ERA5 via Copernicus CDS
- * @param {number} lat - latitude
- * @param {number} lon - longitude
- * @param {string} date - au format YYYY-MM-DD
- */
-export default async function ecmwf(lat, lon, date) {
-  try {
-    const response = await axios.post(
-      `${CDS_API_URL}/resources/reanalysis-era5-single-levels`,
-      {
-        variable: [
-          "2m_temperature",
-          "10m_u_component_of_wind",
-          "10m_v_component_of_wind",
-          "total_precipitation",
-        ],
-        product_type: "reanalysis",
-        year: date.split("-")[0],
-        month: date.split("-")[1],
-        day: date.split("-")[2],
-        time: ["00:00", "06:00", "12:00", "18:00"],
-        area: [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25], // bbox 0.25°
-        format: "netcdf",
-      },
-      {
-        headers: { Authorization: `Bearer ${CDS_API_KEY}` },
-      }
-    );
+  if (!data) return { source: "ECMWF (Meteomatics)", error: "Pas de données" };
 
-    return {
-      source: "ECMWF ERA5 (Copernicus)",
-      raw: response.data,
-    };
-  } catch (error) {
-    console.error("❌ Erreur récupération ECMWF:", error.message);
-    return { source: "ECMWF", error: error.message };
-  }
+  return {
+    source: "ECMWF (Meteomatics)",
+    temperature: data["t_2m:C"] || [],
+    precipitation: data["precip_1h:mm"] || [],
+    wind: data["wind_speed_10m:ms"] || []
+  };
 }
