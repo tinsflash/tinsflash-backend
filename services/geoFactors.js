@@ -1,8 +1,7 @@
 // services/geoFactors.js
 import axios from "axios";
 
-// Ajuste les prévisions selon altitude, relief, mer
-export async function applyGeoFactors(forecast, lat, lon) {
+async function applyGeoFactors(forecast, lat, lon) {
   if (!forecast) return forecast;
 
   try {
@@ -11,12 +10,15 @@ export async function applyGeoFactors(forecast, lat, lon) {
     );
     const elevation = res.data.results[0].elevation;
 
+    // Ajustement altitude
     if (elevation > 500) {
       forecast.temperature_min -= 2;
       forecast.temperature_max -= 2;
     }
+
+    // Ajustement proximité Atlantique (simplifié)
     if (lon > -5 && lon < 10) {
-      forecast.reliability += 3; // proximité Atlantique = plus stable
+      forecast.reliability += 3;
     }
   } catch (err) {
     console.warn("⚠️ GeoFactors API error:", err.message);
@@ -24,3 +26,5 @@ export async function applyGeoFactors(forecast, lat, lon) {
 
   return forecast;
 }
+
+export default { applyGeoFactors };
