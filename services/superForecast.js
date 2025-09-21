@@ -1,57 +1,82 @@
-// src/services/superForecast.js
-
-import meteomatics from "../hiddensources/meteomatics.js";
+// === SOURCES BRUTES (hiddensources) ===
 import openweather from "../hiddensources/openweather.js";
+import meteomatics from "../hiddensources/meteomatics.js";
 import iconDwd from "../hiddensources/iconDwd.js";
+import trullemans from "../hiddensources/trullemans.js";
 import wetterzentrale from "../hiddensources/wetterzentrale.js";
-import trullemans from "../services/trullemans.js";
 
-import comparator from "../hiddensources/comparator.js";
-import geoFactors from "../services/geoFactors.js";
-import localFactors from "../services/localFactors.js";
-import forecastVision from "../services/forecastVision.js"; // anomalies Copernicus
+// === SERVICES MÉTÉO (services) ===
+import comparator from "./comparator.js";
+import geoFactors from "./geoFactors.js";
+import localFactors from "./localFactors.js";
+import forecastVision from "./forecastVision.js";
+import copernicusService from "./copernicusService.js";
 
-// Fonction principale SuperForecast
-async function runSuperForecast(lat, lon) {
+// === MODELS ===
+import Forecast from "../models/Forecast.js";
+
+async function runSuperForecast(lat = 50.5, lon = 4.7) {
   try {
-    // 📥 1. Récupérer les prévisions de chaque source
-    const [meteo, owm, icon, wz, tru] = await Promise.all([
-      meteomatics.getForecast(lat, lon),
+    console.log(`🚀 SuperForecast lancé pour lat=${lat}, lon=${lon}`);
+
+    // 1. 📡 Collecte des données brutes
+    const [ow, mm, icon, trull, wzt, copernicus] = await Promise.all([
       openweather.getForecast(lat, lon),
+      meteomatics.getForecast(lat, lon),
       iconDwd.getForecast(lat, lon),
-      wetterzentrale.getForecast(lat, lon),
       trullemans.getForecast(lat, lon),
+      wetterzentrale.getForecast(lat, lon),
+      copernicusService.getForecast(lat, lon)
     ]);
 
-    // 🧮 2. Fusion des modèles
-    let mergedForecast = comparator.mergeForecasts([meteo, owm, icon, wz, tru]);
+    const sources = [ow, mm, icon, trull, wzt, copernicus].filter(Boolean);
 
-    // 🌍 3. Ajustements géographiques
-    mergedForecast = geoFactors.applyGeoFactors(lat, lon, mergedForecast);
+    if (!sources.length) {
+      throw new Error("❌ Aucune source météo disponible");
+    }
 
-    // 🏘️ 4. Ajustements locaux
-    mergedForecast = localFactors.adjustWithLocalFactors(lat, lon, mergedForecast);
+    console.log(`✅ ${sources.length} sources collectées`);
 
-    // 🚨 5. Détection d’anomalies saisonnières via Copernicus
-    const anomaly = await forecastVision.detectSeasonalAnomaly(
-      lat,
-      lon,
-      "2m_temperature"
-    );
+    // 2. ⚖️ Fusion des prévisions
+    let merged = comparator.mergeForecasts(sources);
+    console.log("✅ Fusion effectuée");
 
-    // Ajouter anomalies au résultat final
-    mergedForecast.anomalies = anomaly;
+    // 3. 🌍 Ajustements géographiques
+    merged = geoFactors.applyGeoFactors(merged, lat, lon);
+    console.log("✅ Facteurs géographiques appliqués");
 
-    // ✅ Retourner l’objet complet
-    return {
-      location: { lat, lon },
+    // 4. 🏘 Ajustements locaux
+    merged = localFactors.applyLocalFactors(merged, lat, lon);
+    console.log("✅ Facteurs locaux appliqués");
+
+    // 5. 📊 Détection anomalies saisonnières (Copernicus ERA5)
+    const anomaly = await forecastVision.detectSeasonalAnomaly(lat, lon, merged);
+    merged.anomaly = anomaly || null;
+    if (anomaly) {
+      console.log("⚠️ Anomalie détectée:", anomaly);
+    }
+
+    // 6. 🗄 Sauvegarde MongoDB
+    const forecastDoc = new Forecast({
       timestamp: new Date(),
-      sources: { meteo, owm, icon, wz, tru },
-      mergedForecast,
+      location: { lat, lon },
+      data: merged,
+      sources: sources.map((s) => s.source || "unknown"),
+    });
+
+    await forecastDoc.save();
+    console.log("💾 Sauvegarde en base réussie");
+
+    // 7. ✅ Retour final
+    return {
+      success: true,
+      forecast: merged,
+      sources: sources.length,
+      anomaly,
     };
-  } catch (error) {
-    console.error("Erreur SuperForecast:", error);
-    throw error;
+  } catch (err) {
+    console.error("❌ Erreur SuperForecast:", err);
+    return { success: false, error: err.message };
   }
 }
 
