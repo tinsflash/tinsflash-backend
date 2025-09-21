@@ -8,7 +8,7 @@ import comparator from "./comparator.js";
 
 import { applyGeoFactors } from "./geoFactors.js";
 import localFactors from "./localFactors.js";
-import { detectSeasonalAnomaly } from "./forecastVision.js";
+import forecastVision from "./forecastVision.js";
 
 import Forecast from "../models/Forecast.js";
 
@@ -29,7 +29,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
       openweather.getForecast(lat, lon),
       nasaSat(lat, lon),
       trullemans.getForecast(lat, lon),
-      wetterzentrale.getForecast(lat, lon)
+      wetterzentrale.getForecast(lat, lon),
     ]);
 
     const sources = [...meteomaticsSources, ow, nasa, trul, wett].filter(Boolean);
@@ -48,7 +48,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
     merged = localFactors.applyLocalFactors(merged, lat, lon);
 
     // 5. Détection anomalies saisonnières
-    const anomaly = detectSeasonalAnomaly(merged);
+    const anomaly = forecastVision.detectSeasonalAnomaly(merged);
     merged.anomaly = anomaly || null;
 
     // 6. Sauvegarde en MongoDB
@@ -56,7 +56,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
       timestamp: new Date(),
       location: { lat, lon },
       data: merged,
-      sources: sources.map(s => s.source || "unknown")
+      sources: sources.map(s => s.source || "unknown"),
     });
 
     await forecastDoc.save();
@@ -67,7 +67,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
       success: true,
       forecast: merged,
       sources: sources.map(s => s.source),
-      anomaly
+      anomaly,
     };
   } catch (err) {
     console.error("❌ Erreur SuperForecast:", err.message);
