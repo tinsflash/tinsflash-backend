@@ -1,29 +1,37 @@
+// services/wetterzentrale.js
 import axios from "axios";
 
-export default async function wetterzentrale(location, options = {}) {
-  const { lat, lon } = location;
+const WETTERZENTRALE_API = "https://www.wetterzentrale.de/api/forecast"; 
+// ⚠️ URL indicative → à remplacer si on a un vrai endpoint utilisable
 
+/**
+ * Récupère les prévisions Wetterzentrale (comparaison externe uniquement)
+ */
+async function getForecast(lat, lon) {
   try {
-    const response = await axios.get("https://api.open-meteo.com/v1/gfs", {
-      params: {
-        latitude: lat,
-        longitude: lon,
-        hourly: "temperature_2m,precipitation,wind_speed_10m",
-        forecast_days: 1,
-        timezone: "auto"
-      }
+    const response = await axios.get(WETTERZENTRALE_API, {
+      params: { lat, lon },
+      timeout: 8000,
     });
 
-    const data = response.data;
+    const data = response.data || {};
 
     return {
-      temperature: data.hourly.temperature_2m[0],
-      precipitation: data.hourly.precipitation[0],
-      wind: data.hourly.wind_speed_10m[0],
-      source: "Wetterzentrale (via GFS API réelle)"
+      temperature: data.temperature ?? [],
+      precipitation: data.precipitation ?? [],
+      wind: data.wind ?? [],
+      source: "Wetterzentrale",
     };
   } catch (error) {
-    console.error("Erreur Wetterzentrale:", error.message);
-    throw new Error("Impossible de récupérer les données Wetterzentrale");
+    console.error("⚠️ Wetterzentrale indisponible:", error.message);
+    return {
+      temperature: [],
+      precipitation: [],
+      wind: [],
+      source: "Wetterzentrale",
+      error: error.message,
+    };
   }
 }
+
+export default { getForecast };
