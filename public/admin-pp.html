@@ -1,55 +1,113 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>⚡ Centrale Météo Admin Pro+</title>
+  <meta charset="UTF-8" />
+  <title>🛰 Tinsflash – Console Admin</title>
   <style>
-    body { font-family: Arial; background:#111; color:#eee; }
-    .card { background:#222; padding:15px; margin:10px; border-radius:8px; }
-    .btn { background:#0a84ff; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; }
-    #logs { background:#000; padding:10px; height:250px; overflow-y:auto; }
-    .ok { color:lightgreen; }
-    .error { color:red; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #111; color: #eee; }
+    h1, h2 { color: #00d4ff; }
+    .section { margin-bottom: 30px; padding: 15px; border: 1px solid #444; border-radius: 8px; background: #1c1c1c; }
+    button { padding: 8px 12px; background: #00d4ff; border: none; color: #000; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #00aacc; }
+    .alert { padding: 10px; margin: 5px 0; border-radius: 6px; background: #222; }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Admin Pro+</h1>
+  <h1>🌍 Console Admin Pro+</h1>
 
-  <div class="card">
-    <h2>🚀 Lancer un run global</h2>
-    <button class="btn" onclick="launchRun()">Lancer le run complet</button>
+  <!-- SECTION RUN MANUEL -->
+  <div class="section">
+    <h2>🚀 Lancer un Run complet</h2>
+    <button onclick="launchRun()">Lancer maintenant</button>
+    <div id="run-status"></div>
   </div>
 
-  <div class="card">
-    <h2>📜 Logs en direct</h2>
-    <div id="logs">[En attente d’un run...]</div>
+  <!-- SECTION ALERTES -->
+  <div class="section">
+    <h2>⚠️ Alertes en attente (70–89 %)</h2>
+    <div id="pending-alerts">Chargement...</div>
   </div>
 
-  <div class="card">
-    <h2>⚠️ Alertes</h2>
-    <div id="alerts">Chargement...</div>
+  <!-- SECTION STATS UTILISATEURS -->
+  <div class="section">
+    <h2>👥 Utilisateurs par zone</h2>
+    <div id="users-zones">Chargement...</div>
   </div>
 
-  <div class="card">
-    <h2>👥 Utilisateurs</h2>
-    <div id="users">Chargement...</div>
+  <!-- SECTION STATS GLOBALES -->
+  <div class="section">
+    <h2>📊 Statistiques Système</h2>
+    <div id="stats">Chargement...</div>
   </div>
 
   <script>
-    async function launchRun() {
-      await fetch("/api/manual/run", { method:"POST" });
+  async function launchRun() {
+    document.getElementById("run-status").innerText = "🚀 Lancement du run...";
+    const res = await fetch("/api/admin/runBatch", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById("run-status").innerText = "✅ Run terminé avec succès";
+    } else {
+      document.getElementById("run-status").innerText = "❌ Erreur: " + data.error;
     }
+  }
 
-    async function refreshLogs() {
-      const res = await fetch("/api/admin/logs");
-      const logs = await res.json();
-      const div = document.getElementById("logs");
-      div.innerHTML = logs.map(l => 
-        `<div class="${l.type==='error'?'error':'ok'}">[${l.timestamp}] ${l.msg}</div>`
-      ).join("");
+  async function loadPendingAlerts() {
+    const res = await fetch("/api/admin/alerts/pending");
+    const alerts = await res.json();
+    const container = document.getElementById("pending-alerts");
+    if (!alerts.length) {
+      container.innerHTML = "<p>✅ Aucune alerte en attente</p>";
+      return;
     }
+    container.innerHTML = alerts
+      .map(
+        (a) => `
+        <div class="alert">
+          <b>${a.type}</b> (${a.confidence}%)
+          <button onclick="validateAlert('${a._id}')">Valider</button>
+        </div>`
+      )
+      .join("");
+  }
 
-    setInterval(refreshLogs, 2000);
+  async function validateAlert(id) {
+    await fetch("/api/admin/alerts/validate/" + id, { method: "PUT" });
+    loadPendingAlerts();
+  }
+
+  async function loadUsersZones() {
+    const res = await fetch("/api/admin/users/zones");
+    const data = await res.json();
+    let html = `
+      <h3>Zones couvertes (Europe + USA)</h3>
+      <p>Gratuits: ${data.covered.free} | Premium: ${data.covered.premium} | Pro: ${data.covered.pro} | Pro+: ${data.covered.proPlus}</p>
+      <h3>Zones non couvertes</h3>
+      <p>Gratuits: ${data.nonCovered.free} | Premium: ${data.nonCovered.premium} | Pro: ${data.nonCovered.pro} | Pro+: ${data.nonCovered.proPlus}</p>
+    `;
+    if (data.nonCovered.premium > 0) {
+      html += `<p style="color:orange;">⚠️ Attention: Premium hors zone détecté → Décision d’extension requise</p>`;
+    }
+    document.getElementById("users-zones").innerHTML = html;
+  }
+
+  async function loadStats() {
+    const res = await fetch("/api/admin/stats");
+    const data = await res.json();
+    document.getElementById("stats").innerHTML = `
+      <p>Prévisions en base: ${data.forecasts}</p>
+      <p>Alertes en base: ${data.alerts}</p>
+      <p>Uptime serveur: ${Math.round(data.uptime / 60)} min</p>
+    `;
+  }
+
+  // Auto-refresh
+  loadPendingAlerts();
+  loadUsersZones();
+  loadStats();
+  setInterval(loadPendingAlerts, 60000);
+  setInterval(loadUsersZones, 120000);
+  setInterval(loadStats, 120000);
   </script>
 </body>
 </html>
