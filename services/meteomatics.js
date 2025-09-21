@@ -1,32 +1,28 @@
-// hiddensources/meteomatics.js
-import axios from "axios";
+import fetch from 'node-fetch';
 
-async function getForecast(lat, lon) {
-  try {
-    const res = await axios.get(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=auto`
-    );
+const METEOMATICS_USER = process.env.METEOMATICS_USER;
+const METEOMATICS_PASS = process.env.METEOMATICS_PASS;
 
-    return {
-      source: "Meteomatics",
-      temperature_min: Math.min(...res.data.hourly.temperature_2m),
-      temperature_max: Math.max(...res.data.hourly.temperature_2m),
-      wind: Math.max(...res.data.hourly.wind_speed_10m),
-      precipitation: res.data.hourly.precipitation.reduce((a, b) => a + b, 0),
-      reliability: 75
-    };
-  } catch (err) {
-    console.error("❌ Meteomatics error:", err.message);
-    return {
-      source: "Meteomatics",
-      temperature_min: 0,
-      temperature_max: 0,
-      wind: 0,
-      precipitation: 0,
-      reliability: 0,
-      error: err.message
-    };
+export default async function meteomatics(location, options = {}) {
+  const { lat, lon } = location; // latitude & longitude nécessaires
+  const url = `https://api.meteomatics.com/now/t_2m:C,precip_1h:mm,wind_speed_10m:ms/${lat},${lon}/json`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`${METEOMATICS_USER}:${METEOMATICS_PASS}`).toString('base64')
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`[Meteomatics] Erreur API: ${response.statusText}`);
   }
-}
 
-export default { getForecast };
+  const data = await response.json();
+
+  return {
+    temperature: data.data[0].coordinates[0].dates[0].value,
+    precipitation: data.data[1].coordinates[0].dates[0].value,
+    wind: data.data[2].coordinates[0].dates[0].value,
+    source: 'Meteomatics'
+  };
+}
