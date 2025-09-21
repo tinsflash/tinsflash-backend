@@ -14,7 +14,7 @@ import chatService from "./services/chatService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js";   // ✅ corrigé
+import Alert from "./models/Alert.js";
 
 dotenv.config();
 
@@ -41,7 +41,12 @@ app.post("/api/supercalc/run", async (req, res) => {
     const result = await superForecast.runFullForecast(lat, lon);
 
     if (!result.success) {
+      pushAdminNotification(`❌ Run échoué sur lat=${lat}, lon=${lon} → ${result.error}`);
       throw new Error(result.error || "Echec SuperForecast");
+    }
+
+    if (result.anomaly) {
+      pushAdminNotification(`⚠️ Anomalie détectée sur lat=${lat}, lon=${lon} → ${result.anomaly.message}`);
     }
 
     res.json({ success: true, result });
@@ -119,6 +124,36 @@ app.post("/api/chat", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ==============================
+// 📜 LOGS SUPERFORECAST
+// ==============================
+app.get("/api/supercalc/logs", async (req, res) => {
+  try {
+    const logs = await Forecast.find().sort({ timestamp: -1 }).limit(10);
+    res.json(logs);
+  } catch (err) {
+    console.error("❌ Erreur récupération logs:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================
+// ⚠️ NOTIFICATIONS ADMIN
+// ==============================
+let adminNotifications = [];
+
+export function pushAdminNotification(message) {
+  adminNotifications.push({
+    message,
+    timestamp: new Date()
+  });
+  console.log("⚠️ [ADMIN] " + message);
+}
+
+app.get("/api/admin/notifications", (req, res) => {
+  res.json(adminNotifications);
 });
 
 // ==============================
