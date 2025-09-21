@@ -7,20 +7,23 @@ import wetterzentrale from "./wetterzentrale.js";
 import comparator from "./comparator.js";
 
 import { applyGeoFactors } from "./geoFactors.js";
-import { applyLocalFactors } from "./localFactors.js";
+import localFactors from "./localFactors.js";
 import { detectSeasonalAnomaly } from "./forecastVision.js";
 
 import Forecast from "../models/Forecast.js";
 
 /**
- * Récupère la prévision locale
+ * Service de prévisions standard (sans IA avancée)
+ * Fusionne quelques sources de base
  */
-async function getLocalForecast(lat, lon) {
+async function runBasicForecast(lat = 50.5, lon = 4.7) {
   try {
-    // 1. Sources principales via MeteoManager
+    console.log(`🌍 Lancement ForecastService pour lat=${lat}, lon=${lon}`);
+
+    // 1. Sources Meteomatics (via meteoManager)
     const meteomaticsSources = await meteoManager(lat, lon);
 
-    // 2. Autres sources externes
+    // 2. Autres sources externes (OpenWeather, NASA, Trullemans, Wetterzentrale)
     const [ow, nasa, trul, wett] = await Promise.all([
       openweather.getForecast(lat, lon),
       nasaSat(lat, lon),
@@ -31,17 +34,19 @@ async function getLocalForecast(lat, lon) {
     const sources = [...meteomaticsSources, ow, nasa, trul, wett].filter(Boolean);
 
     if (!sources.length) {
-      throw new Error("Aucune source disponible pour les prévisions locales");
+      throw new Error("Aucune source météo disponible (forecastService)");
     }
 
-    // 3. Fusion intelligente des modèles
+    console.log(`📡 Sources intégrées (forecastService): ${sources.map(s => s.source).join(", ")}`);
+
+    // 3. Fusion simple
     let merged = comparator.mergeForecasts(sources);
 
-    // 4. Ajustements
+    // 4. Ajustements (facteurs géographiques et locaux)
     merged = applyGeoFactors(merged, lat, lon);
-    merged = applyLocalFactors(merged, lat, lon);
+    merged = localFactors.applyLocalFactors(merged, lat, lon);
 
-    // 5. Détection des anomalies saisonnières
+    // 5. Détection anomalies saisonnières
     const anomaly = detectSeasonalAnomaly(merged);
     merged.anomaly = anomaly || null;
 
@@ -55,69 +60,18 @@ async function getLocalForecast(lat, lon) {
 
     await forecastDoc.save();
 
+    console.log("✅ ForecastService sauvegardé en base");
+
     return {
-      combined: merged,
+      success: true,
+      forecast: merged,
       sources: sources.map(s => s.source),
       anomaly
     };
   } catch (err) {
-    console.error("❌ Erreur getLocalForecast:", err.message);
-    return { error: err.message };
+    console.error("❌ Erreur ForecastService:", err.message);
+    return { success: false, error: err.message };
   }
 }
 
-/**
- * Prévision nationale (agrégation par pays)
- */
-async function getNationalForecast(country) {
-  try {
-    // TODO : améliorer avec des points de référence nationaux
-    const refLatLon = {
-      BE: [50.85, 4.35], // Bruxelles
-      FR: [48.85, 2.35], // Paris
-      US: [38.9, -77.0]  // Washington
-    };
-
-    const coords = refLatLon[country] || [50.85, 4.35];
-    return await getLocalForecast(coords[0], coords[1]);
-  } catch (err) {
-    console.error("❌ Erreur getNationalForecast:", err.message);
-    return { error: err.message };
-  }
-}
-
-/**
- * Prévisions 7 jours (simplifiées)
- */
-async function get7DayForecast(lat, lon) {
-  try {
-    const forecast = await getLocalForecast(lat, lon);
-    const days = [];
-
-    if (forecast?.combined?.temperature) {
-      for (let i = 0; i < 7; i++) {
-        days.push({
-          jour: `Jour ${i + 1}`,
-          description: forecast.combined.description || "Prévisions en cours...",
-          temperature_min: forecast.combined.temperature_min || null,
-          temperature_max: forecast.combined.temperature_max || null,
-          vent: forecast.combined.wind || null,
-          precipitation: forecast.combined.precipitation || null,
-          fiabilité: forecast.combined.reliability || null,
-          anomalie: forecast.combined.anomaly?.message || "Conditions normales"
-        });
-      }
-    }
-
-    return { days };
-  } catch (err) {
-    console.error("❌ Erreur get7DayForecast:", err.message);
-    return { error: err.message };
-  }
-}
-
-export default {
-  getLocalForecast,
-  getNationalForecast,
-  get7DayForecast
-};
+export default { runBasicForecast };
