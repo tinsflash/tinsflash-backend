@@ -6,24 +6,24 @@ import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
 import comparator from "./comparator.js";
 
-import { applyGeoFactors } from "./geoFactors.js";
+import geoFactors from "./geoFactors.js";
 import localFactors from "./localFactors.js";
-import { detectSeasonalAnomaly } from "./forecastVision.js";
+import forecastVision from "./forecastVision.js";
 
 import Forecast from "../models/Forecast.js";
 
 /**
- * Service de prévisions standard (sans IA avancée)
- * Fusionne quelques sources de base
+ * Service principal de prévision météo
+ * Fusionne plusieurs sources et applique corrections IA
  */
-async function runBasicForecast(lat = 50.5, lon = 4.7) {
+async function runForecast(lat = 50.5, lon = 4.7) {
   try {
     console.log(`🌍 Lancement ForecastService pour lat=${lat}, lon=${lon}`);
 
     // 1. Sources Meteomatics (via meteoManager)
     const meteomaticsSources = await meteoManager(lat, lon);
 
-    // 2. Autres sources externes (OpenWeather, NASA, Trullemans, Wetterzentrale)
+    // 2. Autres sources externes
     const [ow, nasa, trul, wett] = await Promise.all([
       openweather.getForecast(lat, lon),
       nasaSat(lat, lon),
@@ -34,20 +34,20 @@ async function runBasicForecast(lat = 50.5, lon = 4.7) {
     const sources = [...meteomaticsSources, ow, nasa, trul, wett].filter(Boolean);
 
     if (!sources.length) {
-      throw new Error("Aucune source météo disponible (forecastService)");
+      throw new Error("Aucune source météo disponible");
     }
 
-    console.log(`📡 Sources intégrées (forecastService): ${sources.map(s => s.source).join(", ")}`);
+    console.log(`📡 Sources intégrées: ${sources.map(s => s.source).join(", ")}`);
 
-    // 3. Fusion simple
+    // 3. Fusion intelligente
     let merged = comparator.mergeForecasts(sources);
 
-    // 4. Ajustements (facteurs géographiques et locaux)
-    merged = applyGeoFactors(merged, lat, lon);
+    // 4. Ajustements (géographiques + locaux)
+    merged = geoFactors.applyGeoFactors(merged, lat, lon);
     merged = localFactors.applyLocalFactors(merged, lat, lon);
 
     // 5. Détection anomalies saisonnières
-    const anomaly = detectSeasonalAnomaly(merged);
+    const anomaly = forecastVision.detectSeasonalAnomaly(merged);
     merged.anomaly = anomaly || null;
 
     // 6. Sauvegarde MongoDB
@@ -60,7 +60,7 @@ async function runBasicForecast(lat = 50.5, lon = 4.7) {
 
     await forecastDoc.save();
 
-    console.log("✅ ForecastService sauvegardé en base");
+    console.log("✅ Forecast sauvegardé en base");
 
     return {
       success: true,
@@ -74,4 +74,4 @@ async function runBasicForecast(lat = 50.5, lon = 4.7) {
   }
 }
 
-export default { runBasicForecast };
+export default { runForecast };
