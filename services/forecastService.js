@@ -1,81 +1,123 @@
 // services/forecastService.js
-import ecmwf from "./ecmwf.js";
-import gfs from "./gfs.js";
-import icon from "./iconDwd.js";
-import copernicus from "./copernicusService.js";
+import meteoManager from "./meteoManager.js";
 import openweather from "./openweather.js";
-import meteomatics from "../utils/meteomatics.js";
 import nasaSat from "./nasaSat.js";
+import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
-import trullemans from "./trullemans.js"; // ✅ correction casse Linux
-import fusion from "../utils/fusion.js";
-import logger from "../utils/logger.js";
+import comparator from "./comparator.js";
+
+import { applyGeoFactors } from "./geoFactors.js";
+import { applyLocalFactors } from "./localFactors.js";
+import { detectSeasonalAnomaly } from "./forecastVision.js";
+
+import Forecast from "../models/Forecast.js";
 
 /**
- * Récupère et fusionne les prévisions multi-modèles
- * @param {Object} location { lat, lon }
- * @param {Object} options
+ * Récupère la prévision locale
  */
-export default async function forecastService(location, options = {}) {
+async function getLocalForecast(lat, lon) {
   try {
-    logger.info(`📡 Récupération prévisions pour ${location.lat},${location.lon}`);
+    // 1. Sources principales via MeteoManager
+    const meteomaticsSources = await meteoManager(lat, lon);
 
-    // Collecte en parallèle pour rapidité
-    const [
-      ecmwfData,
-      gfsData,
-      iconData,
-      copernicusData,
-      openweatherData,
-      meteomaticsData,
-      nasaData,
-      wetterData,
-      trullemansData
-    ] = await Promise.allSettled([
-      ecmwf(location),
-      gfs(location),
-      icon(location),
-      copernicus(location),
-      openweather(location),
-      meteomatics(location),
-      nasaSat(location.lat, location.lon),
-      wetterzentrale(location),
-      trullemans(location)
+    // 2. Autres sources externes
+    const [ow, nasa, trul, wett] = await Promise.all([
+      openweather.getForecast(lat, lon),
+      nasaSat(lat, lon),
+      trullemans.getForecast(lat, lon),
+      wetterzentrale.getForecast(lat, lon)
     ]);
 
-    // On nettoie les résultats (on garde uniquement les succès)
-    const sources = [
-      ecmwfData.value,
-      gfsData.value,
-      iconData.value,
-      copernicusData.value,
-      openweatherData.value,
-      meteomaticsData.value,
-      nasaData.value,
-      wetterData.value,
-      trullemansData.value
-    ].filter(Boolean);
+    const sources = [...meteomaticsSources, ow, nasa, trul, wett].filter(Boolean);
 
     if (!sources.length) {
-      throw new Error("❌ Aucune donnée météo disponible !");
+      throw new Error("Aucune source disponible pour les prévisions locales");
     }
 
-    // Fusion et pondération des modèles
-    const forecast = fusion(sources, {
-      priority: ["ECMWF", "ICON", "GFS", "Meteomatics", "NASA", "Copernicus", "OpenWeather", "Wetterzentrale", "Trullemans"]
+    // 3. Fusion intelligente des modèles
+    let merged = comparator.mergeForecasts(sources);
+
+    // 4. Ajustements
+    merged = applyGeoFactors(merged, lat, lon);
+    merged = applyLocalFactors(merged, lat, lon);
+
+    // 5. Détection des anomalies saisonnières
+    const anomaly = detectSeasonalAnomaly(merged);
+    merged.anomaly = anomaly || null;
+
+    // 6. Sauvegarde MongoDB
+    const forecastDoc = new Forecast({
+      timestamp: new Date(),
+      location: { lat, lon },
+      data: merged,
+      sources: sources.map(s => s.source || "unknown")
     });
 
-    logger.info(`✅ Fusion complétée avec ${sources.length} modèles`);
+    await forecastDoc.save();
 
     return {
-      location,
-      timestamp: new Date().toISOString(),
+      combined: merged,
       sources: sources.map(s => s.source),
-      forecast
+      anomaly
     };
-
-  } catch (error) {
-    logger.error("❌ Erreur forecastService:", error.message);
-    return { error: "Impossible de générer les prévisions" };
+  } catch (err) {
+    console.error("❌ Erreur getLocalForecast:", err.message);
+    return { error: err.message };
   }
 }
+
+/**
+ * Prévision nationale (agrégation par pays)
+ */
+async function getNationalForecast(country) {
+  try {
+    // TODO : améliorer avec des points de référence nationaux
+    const refLatLon = {
+      BE: [50.85, 4.35], // Bruxelles
+      FR: [48.85, 2.35], // Paris
+      US: [38.9, -77.0]  // Washington
+    };
+
+    const coords = refLatLon[country] || [50.85, 4.35];
+    return await getLocalForecast(coords[0], coords[1]);
+  } catch (err) {
+    console.error("❌ Erreur getNationalForecast:", err.message);
+    return { error: err.message };
+  }
+}
+
+/**
+ * Prévisions 7 jours (simplifiées)
+ */
+async function get7DayForecast(lat, lon) {
+  try {
+    const forecast = await getLocalForecast(lat, lon);
+    const days = [];
+
+    if (forecast?.combined?.temperature) {
+      for (let i = 0; i < 7; i++) {
+        days.push({
+          jour: `Jour ${i + 1}`,
+          description: forecast.combined.description || "Prévisions en cours...",
+          temperature_min: forecast.combined.temperature_min || null,
+          temperature_max: forecast.combined.temperature_max || null,
+          vent: forecast.combined.wind || null,
+          precipitation: forecast.combined.precipitation || null,
+          fiabilité: forecast.combined.reliability || null,
+          anomalie: forecast.combined.anomaly?.message || "Conditions normales"
+        });
+      }
+    }
+
+    return { days };
+  } catch (err) {
+    console.error("❌ Erreur get7DayForecast:", err.message);
+    return { error: err.message };
+  }
+}
+
+export default {
+  getLocalForecast,
+  getNationalForecast,
+  get7DayForecast
+};
