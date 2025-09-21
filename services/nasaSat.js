@@ -7,7 +7,7 @@ const NASA_API_URL = "https://power.larc.nasa.gov/api/temporal/daily/point";
  * Récupère les données météo NASA POWER pour un point (lat/lon)
  * Compatible avec SuperForecast
  */
-async function getForecast(lat, lon, start = "20220101", end = "20221231") {
+async function nasaSat(lat, lon, start = "20220101", end = "20221231") {
   try {
     const response = await axios.get(NASA_API_URL, {
       params: {
@@ -41,4 +41,4 @@ async function getForecast(lat, lon, start = "20220101", end = "20221231") {
   }
 }
 
-export default { getForecast };
+export default nasaSat; // ✅ export direct de la fonction
