@@ -4,37 +4,38 @@ import axios from "axios";
 const GFS_BASE_URL = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl";
 
 /**
- * Récupère les prévisions GFS pour une localisation donnée
- * @param {Object} location - { lat, lon }
- * @param {Object} options - paramètres supplémentaires (ex: variables météo)
+ * Récupère un extrait GFS via NOAA NOMADS (résolution 0.25°)
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {string} date - Date du run (YYYYMMDD)
+ * @param {string} cycle - Cycle horaire (00, 06, 12, 18)
+ * @returns {Object} prévisions brutes NOAA
  */
-export default async function gfs(location, options = {}) {
+export async function getGFS(lat, lon, date, cycle = "00") {
   try {
-    // Exemple : température à 2m, précipitations et vent à 10m
     const params = {
-      file: "gfs.t00z.pgrb2.0p25.f000",
+      file: `gfs.t${cycle}z.pgrb2.0p25.f000`,
       lev_2_m_above_ground: "on",
-      lev_10_m_above_ground: "on",
-      var_TMP: "on",
-      var_APCP: "on",
-      var_UGRD: "on",
-      var_VGRD: "on",
-      leftlon: location.lon - 0.25,
-      rightlon: location.lon + 0.25,
-      toplat: location.lat + 0.25,
-      bottomlat: location.lat - 0.25,
-      dir: "/gfs.20240921/00/atmos", // ⚠️ À ajuster dynamiquement en fonction de la date/heure UTC
-      ...options,
+      var_TMP: "on", // Température
+      var_UGRD: "on", // Vent zonal
+      var_VGRD: "on", // Vent méridien
+      subregion: "",
+      leftlon: lon - 1,
+      rightlon: lon + 1,
+      toplat: lat + 1,
+      bottomlat: lat - 1,
+      dir: `/gfs.${date}/${cycle}/atmos`
     };
 
-    const response = await axios.get(GFS_BASE_URL, { params });
+    const response = await axios.get(GFS_BASE_URL, { params, responseType: "arraybuffer" });
 
     return {
-      source: "GFS (NOAA)",
-      rawData: response.data, // ⚠️ renvoie GRIB2 binaire → prévoir parser GRIB2 côté utils
+      success: true,
+      message: "✅ Données GFS récupérées depuis NOAA",
+      raw: response.data, // encore en GRIB2 binaire → à convertir plus tard si besoin
     };
   } catch (error) {
-    console.error("❌ Erreur récupération GFS:", error.message);
-    return { source: "GFS", rawData: null, error: error.message };
+    console.error("❌ Erreur récupération GFS NOAA:", error.message);
+    return { success: false, message: error.message };
   }
 }
