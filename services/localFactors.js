@@ -1,6 +1,8 @@
+// services/localFactors.js
+
 function applyLocalFactors(forecast, lat, lon) {
   try {
-    console.log("🏘 Application facteurs locaux");
+    console.log("🌍 Application facteurs locaux");
 
     // Exemple: Belgique = climat océanique tempéré
     if (lat >= 49 && lat <= 51.5 && lon >= 2 && lon <= 6) {
@@ -21,4 +23,5 @@ function applyLocalFactors(forecast, lat, lon) {
   }
 }
 
-export default { applyLocalFactors };
+// ✅ Export nommé (plus de confusion avec default)
+export { applyLocalFactors };
