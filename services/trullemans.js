@@ -1,31 +1,34 @@
 // services/trullemans.js
+import axios from "axios";
 
-function getForecast(lat, lon) {
+const TRULLEMANS_API = "https://www.meteo-trullemans.be/api/forecast"; // 🔧 URL fictive, à remplacer si besoin
+
+/**
+ * Récupère la prévision Trullemans (comparaison interne uniquement)
+ */
+async function getForecast(lat, lon) {
   try {
-    let forecast = {
-      source: "Trullemans",
-      temperature_min: 6,
-      temperature_max: 16,
-      wind: 12,
-      precipitation: 8,
-      reliability: 65
-    };
+    const response = await axios.get(TRULLEMANS_API, {
+      params: { lat, lon },
+      timeout: 8000, // sécurité
+    });
 
-    if (forecast.precipitation > 20) {
-      forecast.temperature_max -= 1;
-    }
+    const data = response.data || {};
 
-    return forecast;
-  } catch (err) {
-    console.error("❌ Trullemans error:", err.message);
     return {
+      temperature: data.temperature ?? [],
+      precipitation: data.precipitation ?? [],
+      wind: data.wind ?? [],
       source: "Trullemans",
-      temperature_min: 0,
-      temperature_max: 0,
-      wind: 0,
-      precipitation: 0,
-      reliability: 0,
-      error: err.message
+    };
+  } catch (error) {
+    console.error("⚠️ Trullemans indisponible:", error.message);
+    return {
+      temperature: [],
+      precipitation: [],
+      wind: [],
+      source: "Trullemans",
+      error: error.message,
     };
   }
 }
