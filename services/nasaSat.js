@@ -1,23 +1,33 @@
-// -------------------------
-// 🌍 nasaSat.js
-// Images satellites NASA / NOAA
-// -------------------------
-export async function getNasaSatData(lat, lon) {
-  try {
-    const url = "https://api.satellite.imagery.nasa.gov"; // (exemple, adapter selon endpoint)
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Impossible d’accéder aux données NASA");
+// services/nasaSat.js
+import axios from "axios";
 
-    const data = await res.json();
+const NASA_API_URL = "https://power.larc.nasa.gov/api/temporal/daily/point";
+
+/**
+ * Récupère les données météo NASA POWER pour un point
+ */
+export default async function nasaSat(lat, lon, start = "20220101", end = "20221231") {
+  try {
+    const response = await axios.get(NASA_API_URL, {
+      params: {
+        parameters: "T2M,PRECTOTCORR,WS10M",
+        community: "RE",
+        longitude: lon,
+        latitude: lat,
+        start,
+        end,
+        format: "JSON",
+      },
+    });
+
     return {
-      source: "NASA",
-      temperature: null,
-      wind: null,
-      precipitation: null,
-      notes: "Imagerie satellite brute",
-      raw: data
+      temperature: response.data.properties?.parameter?.T2M || [],
+      precipitation: response.data.properties?.parameter?.PRECTOTCORR || [],
+      wind: response.data.properties?.parameter?.WS10M || [],
+      source: "NASA POWER",
     };
-  } catch (err) {
-    return { error: err.message };
+  } catch (error) {
+    console.error("❌ Erreur récupération NASA POWER:", error.message);
+    return { temperature: [], precipitation: [], wind: [], source: "NASA POWER" };
   }
 }
