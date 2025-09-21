@@ -1,52 +1,29 @@
-// services/wetterzentrale.js
+import axios from "axios";
 
-function parseWetterzentraleData(raw) {
+export default async function wetterzentrale(location, options = {}) {
+  const { lat, lon } = location;
+
   try {
+    const response = await axios.get("https://api.open-meteo.com/v1/gfs", {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        hourly: "temperature_2m,precipitation,wind_speed_10m",
+        forecast_days: 1,
+        timezone: "auto"
+      }
+    });
+
+    const data = response.data;
+
     return {
-      source: "Wetterzentrale",
-      temperature_min: raw.temp_min || raw.temp || 0,
-      temperature_max: raw.temp_max || raw.temp || 0,
-      wind: raw.wind || 0,
-      precipitation: raw.precipitation || 0,
-      description: raw.desc || "Pas de description",
-      reliability: 60
+      temperature: data.hourly.temperature_2m[0],
+      precipitation: data.hourly.precipitation[0],
+      wind: data.hourly.wind_speed_10m[0],
+      source: "Wetterzentrale (via GFS API réelle)"
     };
-  } catch (err) {
-    console.error("❌ Wetterzentrale parse error:", err.message);
-    return {
-      source: "Wetterzentrale",
-      temperature_min: 0,
-      temperature_max: 0,
-      wind: 0,
-      precipitation: 0,
-      reliability: 0,
-      error: err.message
-    };
+  } catch (error) {
+    console.error("Erreur Wetterzentrale:", error.message);
+    throw new Error("Impossible de récupérer les données Wetterzentrale");
   }
 }
-
-async function getForecast(lat, lon) {
-  try {
-    // Exemple brut simulé → à remplacer par vrai scraping API Wetterzentrale
-    const raw = {
-      temp: 12,
-      wind: 15,
-      precipitation: 2,
-      desc: "Ciel variable"
-    };
-    return parseWetterzentraleData(raw);
-  } catch (err) {
-    console.error("❌ Wetterzentrale error:", err.message);
-    return {
-      source: "Wetterzentrale",
-      temperature_min: 0,
-      temperature_max: 0,
-      wind: 0,
-      precipitation: 0,
-      reliability: 0,
-      error: err.message
-    };
-  }
-}
-
-export default { getForecast };
