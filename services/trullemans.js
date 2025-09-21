@@ -1,10 +1,7 @@
 // services/trullemans.js
 
-// 🔮 Modèle Trullemans (ajustements empiriques locaux)
-// Simulation simple pour compléter les autres sources météo
 function getForecast(lat, lon) {
   try {
-    // Données de base fictives (ajuster si tu veux des règles plus fines)
     let forecast = {
       source: "Trullemans",
       temperature_min: 6,
@@ -14,7 +11,6 @@ function getForecast(lat, lon) {
       reliability: 65
     };
 
-    // Ajustement Trullemans : fortes pluies → baisse température max
     if (forecast.precipitation > 20) {
       forecast.temperature_max -= 1;
     }
@@ -34,5 +30,4 @@ function getForecast(lat, lon) {
   }
 }
 
-// ✅ Export par défaut
 export default { getForecast };
