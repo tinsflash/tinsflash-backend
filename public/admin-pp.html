@@ -6,32 +6,84 @@
   <title>Console Admin – Centrale Nucléaire Météo</title>
   <link rel="stylesheet" href="admin-pp.css">
   <style>
-    /* Style spécifique pour le bouton Run */
+    body {
+      background: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      padding: 10px;
+    }
+    h1 {
+      text-align: center;
+      color: #00bcd4;
+      font-size: 1.5rem;
+    }
+    .card {
+      background: #1e1e1e;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+    .card h2 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: #00bcd4;
+    }
     .run-button {
       background-color: #0288d1;
       color: white;
       border: none;
-      padding: 16px 24px;   /* bouton plus grand */
+      padding: 16px 24px;
       border-radius: 10px;
       cursor: pointer;
-      font-size: 1.2rem;    /* texte plus grand */
+      font-size: 1.2rem;
       font-weight: bold;
-      width: 100%;          /* prend toute la largeur */
+      width: 100%;
       margin-top: 10px;
-      display: block;
       text-align: center;
     }
-
     .run-button:hover {
       background-color: #0277bd;
-      transform: scale(1.02); /* léger zoom */
+      transform: scale(1.02);
     }
-
-    /* États dynamiques (optionnel pour plus tard) */
-    .run-ready { background-color: #0288d1; }
-    .run-progress { background-color: #fbc02d; }
-    .run-error { background-color: #d32f2f; }
-    .run-success { background-color: #388e3c; }
+    pre {
+      background: black;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 6px;
+      height: 150px;
+      overflow-y: auto;
+    }
+    #chatBox {
+      background: black;
+      padding: 10px;
+      height: 150px;
+      overflow-y: auto;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    #chatInput {
+      width: 70%;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+    }
+    #chatSend {
+      width: 25%;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      background: #00bcd4;
+      color: white;
+      cursor: pointer;
+    }
+    #chatSend:hover {
+      background: #0097a7;
+    }
   </style>
 </head>
 <body>
@@ -78,6 +130,74 @@
     </div>
   </div>
 
-  <script src="admin-pp.js"></script>
+  <script>
+    // Bouton Run
+    document.getElementById("runBtn").addEventListener("click", async () => {
+      document.getElementById("runStatus").innerText = "🚀 Lancement du run...";
+      try {
+        const res = await fetch("/api/supercalc/run", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById("runStatus").innerText = "✅ Run terminé";
+        } else {
+          document.getElementById("runStatus").innerText = "❌ Erreur: " + data.error;
+        }
+      } catch (err) {
+        document.getElementById("runStatus").innerText = "❌ Erreur de connexion";
+      }
+    });
+
+    // Rafraîchissement auto
+    async function refreshData() {
+      try {
+        let res, data;
+
+        res = await fetch("/api/logs"); // si tu as une route logs
+        if (res.ok) document.getElementById("logs").innerText = await res.text();
+
+        res = await fetch("/api/alerts");
+        data = await res.json();
+        document.getElementById("alerts").innerText = JSON.stringify(data, null, 2);
+
+        res = await fetch("/api/admin/stats");
+        data = await res.json();
+        document.getElementById("stats").innerText =
+          `Prévisions: ${data.forecasts}, Alertes: ${data.alerts}, Uptime: ${Math.round(data.uptime/60)} min`;
+
+        // utilisateurs (exemple si route existe)
+        res = await fetch("/api/users");
+        if (res.ok) document.getElementById("users").innerText = await res.text();
+
+      } catch (err) {
+        console.error("Erreur refresh:", err);
+      }
+    }
+    setInterval(refreshData, 5000);
+
+    // Chat J.E.A.N
+    document.getElementById("chatSend").addEventListener("click", async () => {
+      const input = document.getElementById("chatInput");
+      const message = input.value.trim();
+      if (!message) return;
+
+      const chatBox = document.getElementById("chatBox");
+      chatBox.innerHTML += `<div><b>Moi:</b> ${message}</div>`;
+
+      input.value = "";
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        chatBox.innerHTML += `<div><b>J.E.A.N:</b> ${data.response || data.error}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (err) {
+        chatBox.innerHTML += `<div style="color:red;"><b>Erreur connexion à J.E.A.N.</b></div>`;
+      }
+    });
+  </script>
 </body>
 </html>
