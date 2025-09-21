@@ -16,8 +16,7 @@
     "mongoose": "^8.3.2",
     "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
-    "stripe": "^14.21.0",
-    "grib2json": "0.0.5"
+    "stripe": "^14.21.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
