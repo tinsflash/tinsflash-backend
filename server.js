@@ -1,105 +1,136 @@
-// src/server.js
-
 import express from "express";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
+// === Services ===
 import superForecast from "./services/superForecast.js";
-import radarService from "./services/radarService.js";
+import forecastService from "./services/forecastService.js";
 import alertsService from "./services/alertsService.js";
+import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
-import forecastVision from "./services/forecastVision.js";
+
+// === DB Models ===
+import Forecast from "./models/Forecast.js";
+import Alert from "./models/Alert.js"; // ✅ corrigé
 
 dotenv.config();
+
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
-const PORT = process.env.PORT || 3000;
+// === MongoDB connection ===
+mongoose
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// --- ROUTES ---
+// ==============================
+// 📡 API ROUTES
+// ==============================
 
-// SuperForecast (fusion multi-modèles)
-app.get("/api/supercalc/run", async (req, res) => {
+// Supercalculateur météo
+app.post("/api/supercalc/run", async (req, res) => {
   try {
-    const { lat, lon } = req.query;
-    const forecast = await superForecast.runSuperForecast(lat, lon);
-    res.json(forecast);
+    const result = await superForecast.runFullForecast(
+      req.body.lat || 50.5,
+      req.body.lon || 4.7
+    );
+    res.json({ success: true, result });
   } catch (err) {
-    res.status(500).json({ error: "Erreur SuperForecast", details: err.message });
+    console.error("❌ Supercalc error:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Forecast local (simplifié)
+// Prévisions locales
 app.get("/api/forecast/local", async (req, res) => {
   try {
-    const { lat, lon } = req.query;
-    const forecast = await superForecast.runSuperForecast(lat, lon);
-    res.json(forecast.mergedForecast);
+    const forecast = await forecastService.getLocalForecast(req.query.lat, req.query.lon);
+    res.json(forecast);
   } catch (err) {
-    res.status(500).json({ error: "Erreur forecast local", details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Radar
+// Prévisions nationales
+app.get("/api/forecast/national", async (req, res) => {
+  try {
+    const forecast = await forecastService.getNationalForecast(req.query.country);
+    res.json(forecast);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Prévisions 7 jours
+app.get("/api/forecast/7days", async (req, res) => {
+  try {
+    const forecast = await forecastService.get7DayForecast(req.query.lat, req.query.lon);
+    res.json(forecast);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Radar météo multi-niveaux
 app.get("/api/radar", async (req, res) => {
   try {
-    const radar = await radarService.getRadar();
+    const radar = await radarService.getRadar(
+      req.query.lat || 50.85,
+      req.query.lon || 4.35,
+      req.query.tier || "free"
+    );
     res.json(radar);
   } catch (err) {
-    res.status(500).json({ error: "Erreur radar", details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Alertes
+// Alertes météo
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await alertsService.getAlerts();
     res.json(alerts);
   } catch (err) {
-    res.status(500).json({ error: "Erreur alerts", details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Podcasts météo
+// Podcast météo
 app.post("/api/podcast/generate", async (req, res) => {
   try {
-    const { text } = req.body;
-    const podcast = await podcastService.generatePodcast(text);
+    const podcast = await podcastService.generatePodcast(req.body.text);
     res.json(podcast);
   } catch (err) {
-    res.status(500).json({ error: "Erreur podcast", details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Chat IA (Jean)
+// Chat IA
 app.post("/api/chat", async (req, res) => {
   try {
-    const { question } = req.body;
-    const answer = await chatService.askJean(question);
-    res.json(answer);
+    const response = await chatService.askJean(req.body.message);
+    res.json(response);
   } catch (err) {
-    res.status(500).json({ error: "Erreur chat", details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // Anomalies saisonnières (Copernicus ERA5)
 app.get("/api/anomalies/seasonal", async (req, res) => {
   try {
-    const { lat, lon, variable } = req.query;
-    const anomaly = await forecastVision.detectSeasonalAnomaly(
-      lat,
-      lon,
-      variable || "2m_temperature"
-    );
+    const anomaly = await forecastService.getSeasonalAnomaly(req.query.lat, req.query.lon);
     res.json(anomaly);
   } catch (err) {
-    res.status(500).json({ error: "Erreur anomalies", details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- START SERVER ---
-app.listen(PORT, () => {
-  console.log(`✅ Serveur météo lancé sur http://localhost:${PORT}`);
-});
+// ==============================
+// 🚀 START SERVER
+// ==============================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
