@@ -7,7 +7,7 @@ import wetterzentrale from "./wetterzentrale.js";
 import comparator from "./comparator.js";
 
 import { applyGeoFactors } from "./geoFactors.js";
-import { applyLocalFactors } from "./localFactors.js";
+import applyLocalFactors from "./localFactors.js";
 import { detectSeasonalAnomaly } from "./forecastVision.js";
 
 import Forecast from "../models/Forecast.js";
