@@ -1,38 +1,20 @@
-// hiddensources/openweather.js
-import axios from "axios";
+import fetch from 'node-fetch';
 
-const API_KEY = process.env.OPENWEATHER_KEY || "demo";
+const OPENWEATHER_KEY = process.env.OPENWEATHER_KEY;
 
-async function getForecast(lat, lon) {
-  try {
-    const res = await axios.get(
-      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=fr`
-    );
+export default async function openweather(location, options = {}) {
+  const url = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${OPENWEATHER_KEY}&units=metric`;
 
-    const temps = res.data.list.map(d => d.main.temp);
-    const wind = res.data.list.map(d => d.wind.speed);
-    const rain = res.data.list.map(d => (d.rain ? d.rain["3h"] || 0 : 0));
-
-    return {
-      source: "OpenWeather",
-      temperature_min: Math.min(...temps),
-      temperature_max: Math.max(...temps),
-      wind: Math.max(...wind),
-      precipitation: rain.reduce((a, b) => a + b, 0),
-      reliability: 70
-    };
-  } catch (err) {
-    console.error("❌ OpenWeather error:", err.message);
-    return {
-      source: "OpenWeather",
-      temperature_min: 0,
-      temperature_max: 0,
-      wind: 0,
-      precipitation: 0,
-      reliability: 0,
-      error: err.message
-    };
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`[OpenWeather] Erreur API: ${response.statusText}`);
   }
-}
 
-export default { getForecast };
+  const data = await response.json();
+  return {
+    temperature: data.main.temp,
+    precipitation: data.rain ? data.rain['1h'] || 0 : 0,
+    wind: data.wind.speed,
+    source: 'OpenWeather'
+  };
+}
