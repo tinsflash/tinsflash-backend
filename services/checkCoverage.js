@@ -2,6 +2,7 @@
 import { COVERAGE } from "../utils/zones.js";
 import User from "../models/User.js";
 import { addLog } from "./adminLogs.js";
+import User from "../models/User.js";
 
 export default async function checkCoverage(req, res, next) {
   try {
