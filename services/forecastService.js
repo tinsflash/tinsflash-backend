@@ -1,29 +1,58 @@
 // services/forecastService.js
-import Forecast from "../models/Forecast.js";
 
-/**
- * Récupère la dernière prévision enregistrée en base.
- * Utilisé par la version publique (index, cockpit…).
- */
-export async function getLatestForecast() {
+async function getLocalForecast(lat, lon) {
   try {
-    const last = await Forecast.findOne().sort({ createdAt: -1 });
-    if (!last) {
-      return { error: "Aucune prévision disponible" };
-    }
-    return last.forecast;
+    return {
+      description: "Prévisions locales en cours",
+      temperature: 22,
+      temperature_min: 18,
+      temperature_max: 25,
+      wind: 12,
+      precipitation: 0,
+      reliability: 85,
+      anomaly: null
+    };
   } catch (err) {
-    return { error: "Erreur DB: " + err.message };
+    console.error("❌ LocalForecast error:", err.message);
+    return null;
   }
 }
 
-/**
- * Récupère les X derniers runs stockés (logs).
- */
-export async function getForecastLogs(limit = 10) {
+async function getNationalForecast(country) {
   try {
-    return await Forecast.find().sort({ createdAt: -1 }).limit(limit);
+    return {
+      description: `Prévisions nationales pour ${country}`,
+      temperature: 20,
+      temperature_min: 15,
+      temperature_max: 24,
+      wind: 15,
+      precipitation: 2,
+      reliability: 78,
+      anomaly: null
+    };
   } catch (err) {
-    return [{ error: "Erreur DB: " + err.message }];
+    console.error("❌ NationalForecast error:", err.message);
+    return null;
   }
 }
+
+async function get7DayForecast(lat, lon) {
+  try {
+    const days = Array.from({ length: 7 }, (_, i) => ({
+      jour: `Jour ${i + 1}`,
+      description: "Variable",
+      temperature_min: 15 + i,
+      temperature_max: 20 + i,
+      vent: 10 + i,
+      precipitation: 2 * i,
+      fiabilité: 70 + i,
+      anomalie: i % 2 === 0 ? "Aucune" : "Légère instabilité"
+    }));
+    return { days };
+  } catch (err) {
+    console.error("❌ 7DayForecast error:", err.message);
+    return { days: [] };
+  }
+}
+
+export default { getLocalForecast, getNationalForecast, get7DayForecast };
