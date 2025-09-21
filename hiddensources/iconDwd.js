@@ -1,7 +1,6 @@
 // hiddensources/iconDwd.js
 import axios from "axios";
 
-// 🔗 API ICON (DWD)
 async function getForecast(lat, lon) {
   try {
     const res = await axios.get(
@@ -18,7 +17,15 @@ async function getForecast(lat, lon) {
     };
   } catch (err) {
     console.error("❌ ICON-DWD error:", err.message);
-    return null;
+    return {
+      source: "ICON-DWD",
+      temperature_min: 0,
+      temperature_max: 0,
+      wind: 0,
+      precipitation: 0,
+      reliability: 0,
+      error: err.message
+    };
   }
 }
 
