@@ -1,5 +1,5 @@
 // services/icon.js
-import { fetchMeteomatics } from "../utils/meteomatics.js";
+import { fetchMeteomatics } from "../services/meteomatics.js";
 
 export default async function icon(lat, lon) {
   const params = ["t_2m:C", "precip_1h:mm", "wind_speed_10m:ms"];
