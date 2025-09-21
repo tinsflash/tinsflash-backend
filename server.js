@@ -21,7 +21,7 @@ import Alert from "./models/Alert.js";
 import User from "./models/User.js"; // doit exister dans /models/User.js
 
 // Logger
-import { logInfo, logError } from "./utils/logger.js";";
+import { logInfo, logError } from "./utils/logger.js";
 
 dotenv.config();
 const app = express();
