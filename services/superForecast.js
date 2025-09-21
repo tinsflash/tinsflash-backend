@@ -8,7 +8,7 @@ import comparator from "./comparator.js";
 
 import { applyGeoFactors } from "./geoFactors.js";
 import localFactors from "./localFactors.js";
-import forecastVision from "./forecastVision.js";
+import { detectSeasonalAnomaly } from "./forecastVision.js";
 
 import Forecast from "../models/Forecast.js";
 
@@ -48,7 +48,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
     merged = localFactors.applyLocalFactors(merged, lat, lon);
 
     // 5. Détection anomalies saisonnières
-    const anomaly = forecastVision.detectSeasonalAnomaly(merged);
+    const anomaly = detectSeasonalAnomaly(merged);
     merged.anomaly = anomaly || null;
 
     // 6. Sauvegarde en MongoDB
