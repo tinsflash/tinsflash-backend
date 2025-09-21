@@ -23,5 +23,5 @@ function applyLocalFactors(forecast, lat, lon) {
   }
 }
 
-// ✅ Export nommé (plus de confusion avec default)
-export { applyLocalFactors };
+// ✅ On exporte directement la fonction (pas un objet)
+export default applyLocalFactors;
