@@ -5,8 +5,7 @@
  * - altitude (via OpenElevation)
  * - proximité mer / montagne
  */
-async function applyGeoFactors(forecast, lat, lon) {
-  // Exemple d'ajustement basique → à enrichir plus tard
+export async function applyGeoFactors(forecast, lat, lon) {
   const adjusted = { ...forecast };
 
   // Ajustement altitude : si > 500m → T° -3°C
@@ -21,5 +20,3 @@ async function applyGeoFactors(forecast, lat, lon) {
 
   return adjusted;
 }
-
-export default { applyGeoFactors };
