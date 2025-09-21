@@ -1,7 +1,7 @@
 // hiddensources/openweather.js
 import axios from "axios";
 
-const API_KEY = process.env.OPENWEATHER_KEY || "demo"; // ⚠️ ajoute ta clé dans .env
+const API_KEY = process.env.OPENWEATHER_KEY || "demo";
 
 async function getForecast(lat, lon) {
   try {
@@ -23,7 +23,15 @@ async function getForecast(lat, lon) {
     };
   } catch (err) {
     console.error("❌ OpenWeather error:", err.message);
-    return null;
+    return {
+      source: "OpenWeather",
+      temperature_min: 0,
+      temperature_max: 0,
+      wind: 0,
+      precipitation: 0,
+      reliability: 0,
+      error: err.message
+    };
   }
 }
 
