@@ -2,98 +2,82 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Console Admin – Centrale Nucléaire Météo</title>
+  <link rel="stylesheet" href="admin-pp.css">
   <style>
-    body {
-      background-color: #121212;
-      color: #e0e0e0;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-
-    h1, h2 {
-      text-align: center;
-      margin: 10px 0;
-      color: #00bcd4;
-    }
-
-    .section {
-      margin: 10px;
-      padding: 12px;
-      border-radius: 8px;
-      background-color: #1e1e1e;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    }
-
-    .section h2 {
-      font-size: 1.1rem;
-      line-height: 1.4rem; /* Permet de caser 2 lignes sans tasser */
-      text-align: center;
-      word-wrap: break-word;
-      white-space: normal;
-    }
-
-    button {
+    /* Style spécifique pour le bouton Run */
+    .run-button {
       background-color: #0288d1;
       color: white;
       border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
+      padding: 16px 24px;   /* bouton plus grand */
+      border-radius: 10px;
       cursor: pointer;
+      font-size: 1.2rem;    /* texte plus grand */
+      font-weight: bold;
+      width: 100%;          /* prend toute la largeur */
+      margin-top: 10px;
+      display: block;
+      text-align: center;
     }
 
-    button:hover {
+    .run-button:hover {
       background-color: #0277bd;
+      transform: scale(1.02); /* léger zoom */
     }
 
-    #chat {
-      margin-top: 12px;
-      padding: 8px;
-      background-color: #222;
-      border-radius: 6px;
-      height: 150px;
-      overflow-y: auto;
-    }
-
-    #chatInput {
-      width: 100%;
-      padding: 8px;
-      border: none;
-      border-radius: 4px;
-      margin-top: 6px;
-    }
+    /* États dynamiques (optionnel pour plus tard) */
+    .run-ready { background-color: #0288d1; }
+    .run-progress { background-color: #fbc02d; }
+    .run-error { background-color: #d32f2f; }
+    .run-success { background-color: #388e3c; }
   </style>
 </head>
 <body>
-  <h1>📡 Console Admin<br> Centrale Nucléaire Météo</h1>
+  <div class="container">
+    <h1>📡 Console Admin<br> Centrale Nucléaire Météo</h1>
 
-  <div class="section">
-    <h2>⚡ Lancer un Run<br>SuperForecast</h2>
-    <button onclick="launchRun()">Lancer le Run (Europe & USA)</button>
-    <div id="runStatus">[En attente...]</div>
+    <!-- Lancer un Run -->
+    <div class="card">
+      <h2>⚡ Lancer un Run<br> SuperForecast</h2>
+      <button id="runBtn" class="run-button">🚀 Lancer le Run (Europe & USA)</button>
+      <div id="runStatus">[En attente...]</div>
+    </div>
+
+    <!-- Logs -->
+    <div class="card">
+      <h2>📜 Logs<br> en temps réel</h2>
+      <pre id="logs">Chargement...</pre>
+    </div>
+
+    <!-- Alertes -->
+    <div class="card">
+      <h2>⚠️ Alertes<br> Météo</h2>
+      <div id="alerts">Chargement...</div>
+    </div>
+
+    <!-- Utilisateurs -->
+    <div class="card">
+      <h2>👥 Utilisateurs<br> par zone</h2>
+      <div id="users">Chargement...</div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="card">
+      <h2>📊 Statistiques<br> Système</h2>
+      <div id="stats">Chargement...</div>
+    </div>
+
+    <!-- Chat IA J.E.A.N -->
+    <div class="card">
+      <h2>💬 Discussion<br> avec J.E.A.N.</h2>
+      <div id="chatBox"></div>
+      <input type="text" id="chatInput" placeholder="Parler avec J.E.A.N. (IA météo)...">
+      <button id="chatSend">Envoyer</button>
+    </div>
   </div>
 
-  <div class="section">
-    <h2>📜 Logs<br>en temps réel</h2>
-    <div id="logs">Chargement...</div>
-  </div>
-
-  <div class="section">
-    <h2>⚠️ Alertes<br>Météo</h2>
-    <div id="alerts">Chargement...</div>
-  </div>
-
-  <div class="section">
-    <h2>👥 Utilisateurs<br>par zone</h2>
-    <div id="users">Chargement...</div>
-  </div>
-
-  <div class="section">
-    <h2>📊 Statistiques<br>Système</h2>
-    <div id="stats">Chargement...</div>
-  </div>
-
-  <div class="section">
-    <h2>💬 Discussion<br>avec J.E.A.N.</h2>
-    <div id="chat"></div>
+  <script src="admin-pp.js"></script>
+</body>
+</html>
