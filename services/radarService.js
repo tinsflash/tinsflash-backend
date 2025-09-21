@@ -1,6 +1,5 @@
 // services/radarService.js
 
-// Exemple basé sur RainViewer API
 async function getRadar(type = "rain") {
   try {
     const res = await fetch("https://api.rainviewer.com/public/weather-maps.json");
@@ -18,5 +17,4 @@ async function getRadar(type = "rain") {
   }
 }
 
-// ✅ Export par défaut
 export default { getRadar };
