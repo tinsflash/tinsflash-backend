@@ -1,44 +1,33 @@
 // services/forecastVision.js
 
 /**
- * Détection des anomalies saisonnières
- * Analyse les données de prévision et signale les écarts significatifs
+ * Détection des anomalies saisonnières sur une prévision
+ * Exemple : température trop haute/basse pour la saison
  */
 function detectSeasonalAnomaly(forecast) {
   try {
-    console.log("🔎 Analyse anomalies saisonnières...");
+    const { temperature, precipitation } = forecast;
 
-    if (!forecast || !forecast.temperature) {
-      return null;
+    // Simple exemple d'anomalie (tu pourras enrichir avec Copernicus)
+    let anomaly = null;
+
+    if (temperature > 35) {
+      anomaly = "🌡️ Canicule détectée";
+    } else if (temperature < -15) {
+      anomaly = "❄️ Froid extrême détecté";
     }
 
-    const avgTemp = (forecast.temperature_min + forecast.temperature_max) / 2;
-
-    // Exemple : si température > 35°C en Europe → anomalie
-    if (forecast.location && forecast.location.lat >= 35 && forecast.location.lat <= 60) {
-      if (avgTemp > 35) {
-        return {
-          type: "heatwave",
-          severity: "high",
-          message: "🌡️ Anomalie détectée : vague de chaleur inhabituelle"
-        };
-      }
+    if (precipitation > 100) {
+      anomaly = anomaly
+        ? `${anomaly} + 🌧️ Pluie extrême`
+        : "🌧️ Pluie extrême détectée";
     }
 
-    // Exemple : précipitations > 100 mm/jour → anomalie
-    if (forecast.precipitation && forecast.precipitation > 100) {
-      return {
-        type: "flood_risk",
-        severity: "high",
-        message: "🌊 Anomalie détectée : précipitations extrêmes"
-      };
-    }
-
-    return null;
+    return anomaly;
   } catch (err) {
-    console.error("❌ Erreur analyse anomalies:", err.message);
+    console.error("❌ Erreur forecastVision:", err.message);
     return null;
   }
 }
 
-export { detectSeasonalAnomaly };
+export default { detectSeasonalAnomaly };
