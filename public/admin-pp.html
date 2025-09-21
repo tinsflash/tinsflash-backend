@@ -1,124 +1,55 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Pro+ – TinsFlash</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <title>⚡ Centrale Météo Admin Pro+</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#f4f4f9; }
-    header { background:#222; color:#fff; padding:1em; text-align:center; }
-    .container { max-width:1200px; margin:20px auto; padding:20px; background:#fff; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2); }
-    .btn { background:#007bff; color:#fff; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; }
-    .btn:hover { background:#0056b3; }
-    #logs { background:#111; color:#0f0; font-family:monospace; padding:10px; height:250px; overflow-y:auto; border-radius:5px; margin-top:15px; }
-    #history { margin-top:20px; }
-    .card { border:1px solid #ddd; border-radius:5px; padding:10px; margin:5px 0; }
-    .alert { color:#d9534f; font-weight:bold; }
+    body { font-family: Arial; background:#111; color:#eee; }
+    .card { background:#222; padding:15px; margin:10px; border-radius:8px; }
+    .btn { background:#0a84ff; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; }
+    #logs { background:#000; padding:10px; height:250px; overflow-y:auto; }
+    .ok { color:lightgreen; }
+    .error { color:red; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>⚡ Centrale Nucléaire Météo – Admin Pro+</h1>
-  </header>
+  <h1>⚡ Centrale Nucléaire Météo – Admin Pro+</h1>
 
-  <div class="container">
-    <h2>🚀 Lancer un run SuperForecast</h2>
-    <p>Choisis un point précis (par défaut Bruxelles) :</p>
-    <input type="number" id="lat" value="50.85" step="0.01" /> Lat
-    <input type="number" id="lon" value="4.35" step="0.01" /> Lon
-    <button class="btn" onclick="runSuperForecast()">Lancer Run</button>
+  <div class="card">
+    <h2>🚀 Lancer un run global</h2>
+    <button class="btn" onclick="launchRun()">Lancer le run complet</button>
+  </div>
 
-    <h3>📜 Logs en direct</h3>
+  <div class="card">
+    <h2>📜 Logs en direct</h2>
     <div id="logs">[En attente d’un run...]</div>
+  </div>
 
-    <h3>🗂 Historique des runs</h3>
-    <div id="history">⏳ Chargement...</div>
+  <div class="card">
+    <h2>⚠️ Alertes</h2>
+    <div id="alerts">Chargement...</div>
+  </div>
 
-    <h3>⚠️ Notifications Admin</h3>
-    <div id="notifications">✅ Aucune alerte admin pour l’instant.</div>
+  <div class="card">
+    <h2>👥 Utilisateurs</h2>
+    <div id="users">Chargement...</div>
   </div>
 
   <script>
-    const API_BASE = "https://tinsflash-backend.onrender.com/api";
-
-    async function runSuperForecast() {
-      const lat = document.getElementById("lat").value;
-      const lon = document.getElementById("lon").value;
-
-      log(`[RUN] Lancement SuperForecast lat=${lat}, lon=${lon}...`);
-
-      try {
-        const res = await fetch(`${API_BASE}/supercalc/run`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat, lon })
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          log("✅ Run terminé avec succès");
-          log("Sources utilisées: " + data.result.sources.join(", "));
-          if (data.result.anomaly) {
-            log("⚠️ Anomalie détectée: " + data.result.anomaly.message);
-          }
-          loadHistory();
-        } else {
-          log("❌ Erreur run: " + (data.error || "inconnue"));
-        }
-      } catch (err) {
-        log("❌ Exception: " + err.message);
-      }
+    async function launchRun() {
+      await fetch("/api/manual/run", { method:"POST" });
     }
 
-    function log(msg) {
-      const logs = document.getElementById("logs");
-      logs.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
-      logs.scrollTop = logs.scrollHeight;
+    async function refreshLogs() {
+      const res = await fetch("/api/admin/logs");
+      const logs = await res.json();
+      const div = document.getElementById("logs");
+      div.innerHTML = logs.map(l => 
+        `<div class="${l.type==='error'?'error':'ok'}">[${l.timestamp}] ${l.msg}</div>`
+      ).join("");
     }
 
-    async function loadHistory() {
-      try {
-        const res = await fetch(`${API_BASE}/supercalc/logs`);
-        const data = await res.json();
-
-        const history = document.getElementById("history");
-        history.innerHTML = data.map(run => `
-          <div class="card">
-            <strong>${new Date(run.timestamp).toLocaleString()}</strong><br>
-            Lat: ${run.location.lat}, Lon: ${run.location.lon}<br>
-            Sources: ${run.sources.join(", ")}<br>
-            ${run.data.anomaly ? "<span class='alert'>⚠️ Anomalie détectée</span>" : "✅ Normal"}
-          </div>
-        `).join("");
-      } catch (err) {
-        document.getElementById("history").innerText = "❌ Erreur chargement historique";
-      }
-    }
-
-    async function loadNotifications() {
-      try {
-        const res = await fetch(`${API_BASE}/admin/notifications`);
-        const data = await res.json();
-
-        const notif = document.getElementById("notifications");
-        if (!data.length) {
-          notif.innerHTML = "✅ Aucune alerte admin pour l’instant.";
-        } else {
-          notif.innerHTML = data.map(n => `
-            <div class="card alert">⚠️ ${n.message}</div>
-          `).join("");
-        }
-      } catch (err) {
-        document.getElementById("notifications").innerText = "❌ Erreur notifications admin";
-      }
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      loadHistory();
-      loadNotifications();
-    });
+    setInterval(refreshLogs, 2000);
   </script>
 </body>
 </html>
