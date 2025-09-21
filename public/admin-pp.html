@@ -2,53 +2,198 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Console Admin Pro+</title>
+  <title>🛰️ Console Admin – Centrale Nucléaire Météo</title>
   <style>
-    body { background: #111; color: #eee; font-family: Arial; padding: 20px; }
-    h1 { color: #0ff; }
-    .box { margin: 15px 0; padding: 15px; background: #222; border-radius: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1f1f1f;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      color: #00e5ff;
+    }
+    section {
+      padding: 15px;
+      border-bottom: 1px solid #333;
+    }
+    h2 {
+      color: #ffcc00;
+      margin-top: 0;
+    }
+    button {
+      background: #00e5ff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px 0;
+    }
+    button:hover {
+      background: #00bcd4;
+    }
+    #logs, #alerts, #users, #chat {
+      background: #1f1f1f;
+      padding: 10px;
+      border-radius: 8px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
+    .alert {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 5px;
+    }
+    .alert.red { background: #b71c1c; color: #fff; }
+    .alert.orange { background: #e65100; color: #fff; }
+    .alert.yellow { background: #fbc02d; color: #000; }
+    .alert.green { background: #2e7d32; color: #fff; }
+    #chat-box {
+      display: flex;
+      flex-direction: column;
+      height: 250px;
+    }
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      background: #2a2a2a;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    #chat-messages p {
+      margin: 5px 0;
+    }
+    .user { color: #00e5ff; }
+    .jean { color: #ffcc00; }
+    #chat-input {
+      display: flex;
+    }
+    #chat-input input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 5px 0 0 5px;
+      border: none;
+    }
+    #chat-input button {
+      border-radius: 0 5px 5px 0;
+    }
   </style>
 </head>
 <body>
-  <h1>🌍 Console Admin Pro+</h1>
-  <div class="box">
-    <h2>🚀 Lancer un Run complet</h2>
-    <button onclick="startRun()">Lancer maintenant</button>
-    <p id="runStatus">[En attente...]</p>
-  </div>
-  <div class="box">
-    <h2>⚠️ Alertes en attente (70–89 %)</h2>
-    <div id="alerts">Chargement...</div>
-  </div>
-  <div class="box">
-    <h2>👥 Utilisateurs par zone</h2>
+  <header>🛰️ Console Admin – Centrale Nucléaire Météo</header>
+
+  <!-- Bouton Run -->
+  <section>
+    <h2>⚡ Lancer un Run SuperForecast</h2>
+    <button onclick="launchRun()">🚀 Lancer le Run (Europe & USA)</button>
+  </section>
+
+  <!-- Logs -->
+  <section>
+    <h2>📜 Logs en temps réel</h2>
+    <div id="logs">Chargement...</div>
+  </section>
+
+  <!-- Alertes -->
+  <section>
+    <h2>⚠️ Alertes Météo</h2>
+    <h3>Zones couvertes (Europe & USA)</h3>
+    <div id="alerts-covered">Chargement...</div>
+    <h3>Zones non couvertes (Monde élargi)</h3>
+    <div id="alerts-uncovered">Chargement...</div>
+  </section>
+
+  <!-- Utilisateurs -->
+  <section>
+    <h2>👥 Utilisateurs</h2>
     <div id="users">Chargement...</div>
-  </div>
-  <div class="box">
-    <h2>📊 Statistiques Système</h2>
-    <div id="stats">Chargement...</div>
-  </div>
+  </section>
+
+  <!-- Chat avec J.E.A.N. -->
+  <section>
+    <h2>🤖 Chat avec J.E.A.N.</h2>
+    <div id="chat-box">
+      <div id="chat-messages"></div>
+      <div id="chat-input">
+        <input type="text" id="chat-text" placeholder="Parler avec J.E.A.N. (IA météo)...">
+        <button onclick="sendMessage()">Envoyer</button>
+      </div>
+    </div>
+  </section>
 
   <script>
-    async function startRun() {
-      document.getElementById("runStatus").innerText = "🚀 Lancement du run...";
-      const res = await fetch("/api/supercalc/run", { method: "POST" });
+    let autoRefresh = true;
+
+    async function launchRun() {
+      const res = await fetch("/api/supercalc/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat: 50.5, lon: 4.7 }) // Belgique par défaut
+      });
       const data = await res.json();
-      document.getElementById("runStatus").innerText = "✅ Run terminé : " + JSON.stringify(data);
+      alert("Run lancé : " + (data.success ? "OK" : "Erreur"));
     }
 
-    async function loadStats() {
+    async function loadLogs() {
+      if (!autoRefresh) return;
+      const res = await fetch("/api/logs");
+      const logs = await res.json();
+      document.getElementById("logs").innerHTML = logs.map(l => `<div>${l}</div>`).join("");
+    }
+
+    async function loadAlerts() {
+      if (!autoRefresh) return;
+      const res = await fetch("/api/alerts");
+      const alerts = await res.json();
+      document.getElementById("alerts-covered").innerHTML = alerts.covered.map(a =>
+        `<div class="alert ${a.level}">[${a.zone}] ${a.type} (${a.certainty}%)</div>`
+      ).join("");
+      document.getElementById("alerts-uncovered").innerHTML = alerts.uncovered.map(a =>
+        `<div class="alert ${a.level}">[${a.zone}] ${a.type} (${a.certainty}%)</div>`
+      ).join("");
+    }
+
+    async function loadUsers() {
+      if (!autoRefresh) return;
       const res = await fetch("/api/admin/stats");
       const stats = await res.json();
-      document.getElementById("stats").innerText =
-        `Prévisions en base: ${stats.forecasts}\n` +
-        `Alertes en base: ${stats.alerts}\n` +
-        `Uptime serveur: ${Math.round(stats.uptime / 60)} min`;
+      document.getElementById("users").innerHTML = `
+        <p>Forecasts: ${stats.forecasts}</p>
+        <p>Alertes: ${stats.alerts}</p>
+        <p>Uptime: ${Math.round(stats.uptime/60)} min</p>
+      `;
     }
 
-    setInterval(loadStats, 5000);
-    loadStats();
+    async function sendMessage() {
+      autoRefresh = false;
+      const text = document.getElementById("chat-text").value;
+      document.getElementById("chat-text").value = "";
+      document.getElementById("chat-messages").innerHTML += `<p class="user">👤 Toi: ${text}</p>`;
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await res.json();
+      document.getElementById("chat-messages").innerHTML += `<p class="jean">🤖 J.E.A.N.: ${data.reply}</p>`;
+      document.getElementById("chat-messages").scrollTop = document.getElementById("chat-messages").scrollHeight;
+      autoRefresh = true;
+    }
+
+    setInterval(() => {
+      loadLogs();
+      loadAlerts();
+      loadUsers();
+    }, 5000);
   </script>
 </body>
 </html>
