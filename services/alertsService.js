@@ -1,11 +1,6 @@
 // services/alertsService.js
 import Alert from "../models/Alert.js";
 
-// ==============================
-// ⚠️ Gestion des alertes météo
-// ==============================
-
-// Récupérer toutes les alertes
 async function getAlerts() {
   try {
     return await Alert.find().sort({ createdAt: -1 });
@@ -15,7 +10,6 @@ async function getAlerts() {
   }
 }
 
-// Ajouter une alerte
 async function addAlert(level, message, reliability = 50) {
   try {
     const alert = new Alert({
@@ -32,7 +26,6 @@ async function addAlert(level, message, reliability = 50) {
   }
 }
 
-// Supprimer une alerte
 async function deleteAlert(id) {
   try {
     return await Alert.findByIdAndDelete(id);
@@ -42,5 +35,4 @@ async function deleteAlert(id) {
   }
 }
 
-// ✅ Export par défaut attendu par server.js
 export default { getAlerts, addAlert, deleteAlert };
