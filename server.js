@@ -3,6 +3,8 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Services
 import superForecast from "./services/superForecast.js";
@@ -18,8 +20,8 @@ import checkCoverage from "./services/checkCoverage.js";
 // Models
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
-import User from "./models/User.js"; // modèle pour gérer zones & rôles
 
+// Config
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -34,11 +36,19 @@ mongoose
   .then(() => console.log("✅ MongoDB connecté"))
   .catch((err) => console.error("❌ Erreur MongoDB:", err.message));
 
-/**
- * ROUTES API
- */
+// -----------------------------
+// Sert les fichiers statiques (console admin, index, etc.)
+// -----------------------------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// 🔥 Run complet SuperForecast (IA + multi-modèles)
+app.use(express.static(path.join(__dirname, "public")));
+
+// -----------------------------
+// ROUTES API
+// -----------------------------
+
+// 🔥 Run complet SuperForecast
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
@@ -86,7 +96,7 @@ app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
   }
 });
 
-// 🌍 Radar météo (pluie, neige, vent)
+// 🌍 Radar météo
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
@@ -155,83 +165,6 @@ app.post("/api/chat", async (req, res) => {
 /**
  * ADMIN PRO+
  */
-
-// 🚀 Run batch complet (depuis admin-pp bouton)
-app.post("/api/admin/runBatch", async (req, res) => {
-  try {
-    console.log("🚀 Run batch lancé manuellement depuis admin");
-    const zones = [
-      { lat: 50.5, lon: 4.7, name: "Europe" },
-      { lat: 40.7, lon: -74.0, name: "USA" }
-    ];
-
-    const results = [];
-    for (const z of zones) {
-      const result = await superForecast.runFullForecast(z.lat, z.lon);
-      results.push({ zone: z.name, ...result });
-    }
-
-    res.json({ success: true, results });
-  } catch (err) {
-    console.error("❌ Erreur runBatch:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ⚠️ Alertes en attente (70–89 %)
-app.get("/api/admin/alerts/pending", async (req, res) => {
-  try {
-    const alerts = await Alert.find({
-      confidence: { $gte: 70, $lt: 90 },
-      validated: false
-    });
-    res.json(alerts);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Validation manuelle d’alerte
-app.put("/api/admin/alerts/validate/:id", async (req, res) => {
-  try {
-    const alert = await Alert.findByIdAndUpdate(
-      req.params.id,
-      { validated: true },
-      { new: true }
-    );
-    res.json(alert);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 👥 Statistiques utilisateurs par zones
-app.get("/api/admin/users/zones", async (req, res) => {
-  try {
-    const users = await User.find();
-
-    const stats = {
-      covered: { free: 0, premium: 0, pro: 0, proPlus: 0 },
-      nonCovered: { free: 0, premium: 0, pro: 0, proPlus: 0 }
-    };
-
-    users.forEach((u) => {
-      const isCovered = ["europe", "usa"].includes(u.zone?.toLowerCase());
-      const target = isCovered ? stats.covered : stats.nonCovered;
-
-      if (u.role === "free") target.free++;
-      if (u.role === "premium") target.premium++;
-      if (u.role === "pro") target.pro++;
-      if (u.role === "proplus") target.proPlus++;
-    });
-
-    res.json(stats);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 📊 Statistiques globales
 app.get("/api/admin/stats", async (req, res) => {
   try {
     const forecasts = await Forecast.countDocuments();
