@@ -3,6 +3,8 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Services
 import superForecast from "./services/superForecast.js";
@@ -24,7 +26,16 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// MongoDB Connection
+// -------------------------
+// Servir les fichiers statiques (HTML, CSS, JS du dossier public)
+// -------------------------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
+
+// -------------------------
+// Connexion MongoDB
+// -------------------------
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -37,7 +48,7 @@ mongoose
  * ROUTES API
  */
 
-// 🔥 Run complet SuperForecast (IA + multi-modèles)
+// 🔥 Run complet SuperForecast
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
@@ -85,7 +96,7 @@ app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
   }
 });
 
-// 🌍 Radar météo (pluie, neige, vent)
+// 🌍 Radar météo
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
