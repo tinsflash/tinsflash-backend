@@ -11,60 +11,52 @@ import localFactors from "./localFactors.js";
 import forecastVision from "./forecastVision.js";
 
 import Forecast from "../models/Forecast.js";
-import { logInfo, logError } from "../utils/logger.js";
 
-/**
- * Run complet SuperForecast
- * Fusionne GFS + ECMWF + ICON (Meteomatics) + autres sources
- * Sauvegarde en MongoDB + détecte anomalies
- */
 async function runFullForecast(lat = 50.5, lon = 4.7) {
   try {
-    logInfo(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
+    console.log(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
 
-    // 1. Sources Meteomatics (GFS, ECMWF, ICON)
+    // 1. Meteomatics
     const meteomaticsSources = await meteoManager(lat, lon);
-    logInfo(`✅ Données Meteomatics récupérées (${meteomaticsSources.length})`);
+    console.log(`📡 Meteomatics: ${meteomaticsSources?.length || 0} sources`);
 
-    // 2. Autres sources externes
-    const [ow, nasa, trul, wett] = await Promise.allSettled([
+    // 2. Autres sources
+    let [ow, nasa, trul, wett] = await Promise.allSettled([
       openweather.getForecast(lat, lon),
       nasaSat(lat, lon),
       trullemans.getForecast(lat, lon),
       wetterzentrale.getForecast(lat, lon),
     ]);
 
-    const sources = [
-      ...meteomaticsSources,
-      ow.value,
-      nasa.value,
-      trul.value,
-      wett.value,
-    ].filter(Boolean);
+    ow = ow.status === "fulfilled" ? ow.value : null;
+    nasa = nasa.status === "fulfilled" ? nasa.value : null;
+    trul = trul.status === "fulfilled" ? trul.value : null;
+    wett = wett.status === "fulfilled" ? wett.value : null;
+
+    console.log("🌍 Résultats intégration :");
+    console.log(`   OpenWeather: ${ow ? "OK" : "FAIL"}`);
+    console.log(`   NASA: ${nasa ? "OK" : "FAIL"}`);
+    console.log(`   Trullemans: ${trul ? "OK" : "FAIL"}`);
+    console.log(`   Wetterzentrale: ${wett ? "OK" : "FAIL"}`);
+
+    const sources = [...(meteomaticsSources || []), ow, nasa, trul, wett].filter(Boolean);
 
     if (!sources.length) {
       throw new Error("Aucune source météo disponible");
     }
 
-    logInfo(`📡 Sources intégrées: ${sources.map(s => s.source).join(", ")}`);
-
-    // 3. Fusion intelligente
+    // 3. Fusion
     let merged = comparator.mergeForecasts(sources);
-    logInfo("🔀 Fusion intelligente des modèles effectuée");
 
-    // 4. Ajustements géographiques et locaux
+    // 4. Ajustements
     merged = applyGeoFactors(merged, lat, lon);
     merged = localFactors.applyLocalFactors(merged, lat, lon);
-    logInfo("⚙️ Ajustements géographiques et locaux appliqués");
 
-    // 5. Détection anomalies saisonnières
+    // 5. Détection anomalies
     const anomaly = forecastVision.detectSeasonalAnomaly(merged);
-    if (anomaly) {
-      logInfo(`⚠️ Anomalie saisonnière détectée: ${JSON.stringify(anomaly)}`);
-      merged.anomaly = anomaly;
-    }
+    merged.anomaly = anomaly || null;
 
-    // 6. Sauvegarde en MongoDB
+    // 6. Sauvegarde MongoDB
     const forecastDoc = new Forecast({
       timestamp: new Date(),
       location: { lat, lon },
@@ -73,7 +65,8 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
     });
 
     await forecastDoc.save();
-    logInfo("✅ SuperForecast sauvegardé en base");
+
+    console.log("✅ SuperForecast sauvegardé en base");
 
     return {
       success: true,
@@ -82,7 +75,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
       anomaly,
     };
   } catch (err) {
-    logError("❌ Erreur SuperForecast: " + err.message);
+    console.error("❌ Erreur SuperForecast:", err.message);
     return { success: false, error: err.message };
   }
 }
