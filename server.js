@@ -3,8 +3,6 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // Services
 import superForecast from "./services/superForecast.js";
@@ -21,21 +19,18 @@ import checkCoverage from "./services/checkCoverage.js";
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
 
+// Admin + Logs
+import { runForecastBatch } from "./admin/manualForecast.js";
+import { logInfo, logError } from "./utils/logger.js";
+
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// -------------------------
-// Servir les fichiers statiques (HTML, CSS, JS du dossier public)
-// -------------------------
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, "public")));
-
-// -------------------------
-// Connexion MongoDB
-// -------------------------
+// ------------------
+// MongoDB Connection
+// ------------------
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -44,18 +39,42 @@ mongoose
   .then(() => console.log("✅ MongoDB connecté"))
   .catch((err) => console.error("❌ Erreur MongoDB:", err.message));
 
-/**
- * ROUTES API
- */
+// ------------------
+// Gestion Logs
+// ------------------
+let lastLogs = [];
 
-// 🔥 Run complet SuperForecast
+function pushLog(type, msg) {
+  const entry = {
+    type,
+    msg,
+    timestamp: new Date().toISOString()
+  };
+  lastLogs.push(entry);
+  if (lastLogs.length > 200) lastLogs.shift(); // garder 200 max
+}
+
+global.logInfo = (msg) => {
+  logInfo(msg);
+  pushLog("info", msg);
+};
+global.logError = (msg) => {
+  logError(msg);
+  pushLog("error", msg);
+};
+
+// ------------------
+// ROUTES API
+// ------------------
+
+// 🔥 Run complet SuperForecast (point unique)
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
     const result = await superForecast.runFullForecast(lat, lon);
     res.json(result);
   } catch (err) {
-    console.error("❌ Erreur supercalc/run:", err.message);
+    logError("Erreur supercalc/run: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -67,7 +86,7 @@ app.get("/api/forecast/local", checkCoverage, async (req, res) => {
     const data = await forecastService.getLocalForecast(lat, lon);
     res.json(data);
   } catch (err) {
-    console.error("❌ Erreur forecast/local:", err.message);
+    logError("Erreur forecast/local: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -79,7 +98,7 @@ app.get("/api/forecast/national", checkCoverage, async (req, res) => {
     const data = await forecastService.getNationalForecast(country);
     res.json(data);
   } catch (err) {
-    console.error("❌ Erreur forecast/national:", err.message);
+    logError("Erreur forecast/national: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -91,7 +110,7 @@ app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
     const data = await forecastService.get7DayForecast(lat, lon);
     res.json(data);
   } catch (err) {
-    console.error("❌ Erreur forecast/7days:", err.message);
+    logError("Erreur forecast/7days: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -102,7 +121,7 @@ app.get("/api/radar", async (req, res) => {
     const radar = await radarService.getRadar();
     res.json(radar);
   } catch (err) {
-    console.error("❌ Erreur radar:", err.message);
+    logError("Erreur radar: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -113,7 +132,7 @@ app.get("/api/alerts", async (req, res) => {
     const alerts = await alertsService.getAlerts();
     res.json(alerts);
   } catch (err) {
-    console.error("❌ Erreur alerts:", err.message);
+    logError("Erreur alerts: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -123,7 +142,7 @@ app.post("/api/alerts", async (req, res) => {
     const alert = await alertsService.addAlert(req.body);
     res.json(alert);
   } catch (err) {
-    console.error("❌ Erreur ajout alerte:", err.message);
+    logError("Erreur ajout alerte: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -133,7 +152,7 @@ app.delete("/api/alerts/:id", async (req, res) => {
     const result = await alertsService.deleteAlert(req.params.id);
     res.json(result);
   } catch (err) {
-    console.error("❌ Erreur suppression alerte:", err.message);
+    logError("Erreur suppression alerte: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -145,26 +164,46 @@ app.post("/api/podcast/generate", async (req, res) => {
     const file = await podcastService.generatePodcast(text);
     res.json(file);
   } catch (err) {
-    console.error("❌ Erreur podcast:", err.message);
+    logError("Erreur podcast: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 🤖 JEAN (IA météo explicative)
+// 🤖 Chat IA météo
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
     const response = await chatService.askJean(message);
     res.json(response);
   } catch (err) {
-    console.error("❌ Erreur chat:", err.message);
+    logError("Erreur chat: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * ADMIN PRO+
- */
+// ------------------
+// ADMIN PRO+
+// ------------------
+
+// Lancer un run global depuis admin
+app.post("/api/manual/run", async (req, res) => {
+  try {
+    logInfo("🚀 Début du run batch depuis Admin");
+    await runForecastBatch();
+    logInfo("✅ Run batch terminé avec succès");
+    res.json({ success: true });
+  } catch (err) {
+    logError("Erreur run batch admin: " + err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Récupérer les logs en direct
+app.get("/api/admin/logs", (req, res) => {
+  res.json(lastLogs);
+});
+
+// Stats admin
 app.get("/api/admin/stats", async (req, res) => {
   try {
     const forecasts = await Forecast.countDocuments();
@@ -175,12 +214,14 @@ app.get("/api/admin/stats", async (req, res) => {
       uptime: process.uptime()
     });
   } catch (err) {
-    console.error("❌ Erreur admin/stats:", err.message);
+    logError("Erreur admin/stats: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 🚀 Lancement serveur
+// ------------------
+// Démarrage Serveur
+// ------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
