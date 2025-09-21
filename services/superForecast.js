@@ -1,57 +1,80 @@
 // services/superForecast.js
+import forecastService from "./forecastService.js";
+import radarService from "./radarService.js";
+import textGenService from "./textGenService.js";
+import alertsService from "./alertsService.js";
 
-import forecastVision from "./forecastVision.js";
-import geoFactors from "./geoFactors.js";
-import localFactors from "./localFactors.js";
-import { getSeasonalNorms } from "../utils/seasonalNorms.js";
+/**
+ * 🔥 SuperForecast :
+ * Combine la prévision météo consolidée avec radar + génération de texte + alertes
+ * pour produire un package complet destiné aux utilisateurs Premium.
+ */
 
-export default async function superForecast(location, options = {}) {
+/**
+ * Récupère une super-prévision complète
+ */
+export async function getSuperForecast(location, options = {}) {
   try {
-    // 1. ForecastVision = données croisées multi-sources
-    const vision = await forecastVision(location, options);
+    // 1️⃣ Récupération des prévisions multi-sources (centrale nucléaire météo)
+    const forecast = await forecastService.getForecast(location);
 
-    // 2. Facteurs géographiques et locaux
-    const geo = await geoFactors(location);
-    const local = await localFactors(location);
+    // 2️⃣ Radar temps réel (pluie, neige, vent)
+    const radar = await radarService(location);
 
-    // 3. Normes saisonnières (vraies données historiques)
-    const norms = await getSeasonalNorms(location);
+    // 3️⃣ Génération d’un résumé IA (textGen)
+    const summary = await textGenService({
+      forecast,
+      radar,
+      location,
+      premium: options.premium || false,
+    });
 
-    // 4. Fusion finale : prévision "centrale nucléaire météo"
-    const result = {
-      temperature: refineWithAI(vision.temperature, geo, local, norms.temperature),
-      precipitation: refineWithAI(vision.precipitation, geo, local, norms.precipitation),
-      wind: refineWithAI(vision.wind, geo, local, norms.wind),
-      base: vision,
-      factors: { geo, local, norms }
+    // 4️⃣ Vérification des alertes météo
+    const alerts = await alertsService(location, forecast);
+
+    // 5️⃣ Pack final complet
+    return {
+      location,
+      forecast,
+      radar,
+      alerts,
+      summary,
+      generatedAt: new Date().toISOString(),
     };
-
-    return result;
-  } catch (error) {
-    console.error("Erreur dans superForecast:", error);
-    throw error;
+  } catch (err) {
+    console.error("❌ Erreur dans getSuperForecast:", err.message);
+    return { error: "Impossible de générer la super prévision" };
   }
 }
 
-// --- Utils internes ---
+/**
+ * Récupère une super-prévision pour une plage de dates
+ */
+export async function getSuperForecastRange(location, start, end, options = {}) {
+  try {
+    const results = [];
+    let current = new Date(start);
 
-function refineWithAI(value, geo, local, norm) {
-  let refined = value;
+    while (current <= new Date(end)) {
+      const daily = await getSuperForecast(
+        { ...location, date: current.toISOString().split("T")[0] },
+        options
+      );
+      results.push(daily);
 
-  // Ajustements géographiques
-  if (geo && geo.adjustment) {
-    refined += geo.adjustment;
+      // avancer d’un jour
+      current.setDate(current.getDate() + 1);
+    }
+
+    return results;
+  } catch (err) {
+    console.error("❌ Erreur dans getSuperForecastRange:", err.message);
+    return [];
   }
-
-  // Ajustements locaux (urbain, relief, microclimat…)
-  if (local && local.adjustment) {
-    refined += local.adjustment;
-  }
-
-  // Pondération par les normes saisonnières réelles
-  if (typeof norm === "number") {
-    refined = (refined * 0.7) + (norm * 0.3); // pondération 70/30
-  }
-
-  return refined;
 }
+
+// ✅ Export par défaut
+export default {
+  getSuperForecast,
+  getSuperForecastRange,
+};
