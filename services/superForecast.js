@@ -1,68 +1,58 @@
-// services/superForecast.js
+// src/services/superForecast.js
 
 import meteomatics from "../hiddensources/meteomatics.js";
 import openweather from "../hiddensources/openweather.js";
 import iconDwd from "../hiddensources/iconDwd.js";
-import comparator from "../hiddensources/comparator.js";
-
-import wetterzentrale from "../services/wetterzentrale.js";
+import wetterzentrale from "../hiddensources/wetterzentrale.js";
 import trullemans from "../services/trullemans.js";
 
-import { applyGeoFactors } from "../services/geoFactors.js";
-import { applyLocalFactors } from "../services/localFactors.js";
-import { detectSeasonalAnomaly } from "../services/forecastVision.js";
+import comparator from "../hiddensources/comparator.js";
+import geoFactors from "../services/geoFactors.js";
+import localFactors from "../services/localFactors.js";
+import forecastVision from "../services/forecastVision.js"; // anomalies Copernicus
 
-import Forecast from "../models/Forecast.js";
-
-async function runFullForecast(lat = 50.5, lon = 4.7) {
+// Fonction principale SuperForecast
+async function runSuperForecast(lat, lon) {
   try {
-    // 📡 Récupération des données brutes depuis chaque source météo
-    const [meteoData, openData, wetterData, trulData, iconData] = await Promise.all([
+    // 📥 1. Récupérer les prévisions de chaque source
+    const [meteo, owm, icon, wz, tru] = await Promise.all([
       meteomatics.getForecast(lat, lon),
       openweather.getForecast(lat, lon),
+      iconDwd.getForecast(lat, lon),
       wetterzentrale.getForecast(lat, lon),
       trullemans.getForecast(lat, lon),
-      iconDwd.getForecast(lat, lon),
     ]);
 
-    // Filtrer les sources valides
-    const sources = [meteoData, openData, wetterData, trulData, iconData].filter(Boolean);
+    // 🧮 2. Fusion des modèles
+    let mergedForecast = comparator.mergeForecasts([meteo, owm, icon, wz, tru]);
 
-    if (!sources.length) {
-      throw new Error("Aucune source météo disponible");
-    }
+    // 🌍 3. Ajustements géographiques
+    mergedForecast = geoFactors.applyGeoFactors(lat, lon, mergedForecast);
 
-    // ⚖️ Fusion intelligente des prévisions
-    let merged = comparator.mergeForecasts(sources);
+    // 🏘️ 4. Ajustements locaux
+    mergedForecast = localFactors.adjustWithLocalFactors(lat, lon, mergedForecast);
 
-    // 🌍 Ajustements géographiques et locaux
-    merged = applyGeoFactors(merged, lat, lon);
-    merged = applyLocalFactors(merged, lat, lon);
+    // 🚨 5. Détection d’anomalies saisonnières via Copernicus
+    const anomaly = await forecastVision.detectSeasonalAnomaly(
+      lat,
+      lon,
+      "2m_temperature"
+    );
 
-    // 📊 Détection anomalies saisonnières
-    const anomaly = detectSeasonalAnomaly(merged);
-    merged.anomaly = anomaly || null;
+    // Ajouter anomalies au résultat final
+    mergedForecast.anomalies = anomaly;
 
-    // 🔐 Sauvegarde en base Mongo
-    const forecastDoc = new Forecast({
-      timestamp: new Date(),
-      location: { lat, lon },
-      data: merged,
-      sources: sources.map((s) => s.source || "unknown"),
-    });
-
-    await forecastDoc.save();
-
+    // ✅ Retourner l’objet complet
     return {
-      success: true,
-      forecast: merged,
-      sources: sources.length,
-      anomaly,
+      location: { lat, lon },
+      timestamp: new Date(),
+      sources: { meteo, owm, icon, wz, tru },
+      mergedForecast,
     };
-  } catch (err) {
-    console.error("❌ Erreur superForecast:", err);
-    return { success: false, error: err.message };
+  } catch (error) {
+    console.error("Erreur SuperForecast:", error);
+    throw error;
   }
 }
 
-export default { runFullForecast };
+export default { runSuperForecast };
