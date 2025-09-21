@@ -1,52 +1,44 @@
 // services/forecastVision.js
-import axios from "axios";
-
-const ERA5_API = "https://cds.climate.copernicus.eu/api/v2";
 
 /**
- * Détecte les anomalies saisonnières via Copernicus ERA5
- * Compare prévisions actuelles aux normales saisonnières
+ * Détection des anomalies saisonnières
+ * Analyse les données de prévision et signale les écarts significatifs
  */
-async function detectSeasonalAnomaly(forecast) {
+function detectSeasonalAnomaly(forecast) {
   try {
-    if (!forecast || !forecast.temperature) return null;
+    console.log("🔎 Analyse anomalies saisonnières...");
 
-    // Exemple : moyenne de la prévision actuelle
-    const avgTemp =
-      forecast.temperature.reduce((a, b) => a + b, 0) /
-      (forecast.temperature.length || 1);
+    if (!forecast || !forecast.temperature) {
+      return null;
+    }
 
-    // ⚡ Simulation d’appel Copernicus ERA5 (normal saisonnier)
-    const response = await axios.get(ERA5_API, {
-      params: {
-        variable: "2m_temperature",
-        product_type: "monthly_averaged_reanalysis",
-        year: new Date().getFullYear() - 1,
-        month: new Date().getMonth() + 1,
-        format: "json",
-      },
-      timeout: 10000,
-    });
+    const avgTemp = (forecast.temperature_min + forecast.temperature_max) / 2;
 
-    const seasonalNorm =
-      response.data?.seasonal_average ?? avgTemp; // fallback auto
+    // Exemple : si température > 35°C en Europe → anomalie
+    if (forecast.location && forecast.location.lat >= 35 && forecast.location.lat <= 60) {
+      if (avgTemp > 35) {
+        return {
+          type: "heatwave",
+          severity: "high",
+          message: "🌡️ Anomalie détectée : vague de chaleur inhabituelle"
+        };
+      }
+    }
 
-    const diff = avgTemp - seasonalNorm;
-    const anomalyDetected = Math.abs(diff) > 3; // seuil arbitraire ±3°C
+    // Exemple : précipitations > 100 mm/jour → anomalie
+    if (forecast.precipitation && forecast.precipitation > 100) {
+      return {
+        type: "flood_risk",
+        severity: "high",
+        message: "🌊 Anomalie détectée : précipitations extrêmes"
+      };
+    }
 
-    return anomalyDetected
-      ? {
-          anomaly: true,
-          deviation: diff.toFixed(2),
-          message: `⚠️ Anomalie saisonnière détectée : écart de ${diff.toFixed(
-            1
-          )}°C par rapport aux normales.`,
-        }
-      : null;
-  } catch (error) {
-    console.error("⚠️ forecastVision ERA5 indisponible:", error.message);
-    return null; // ⚡ Pas de blocage, juste pas d’anomalie
+    return null;
+  } catch (err) {
+    console.error("❌ Erreur analyse anomalies:", err.message);
+    return null;
   }
 }
 
-export default { detectSeasonalAnomaly };
+export { detectSeasonalAnomaly };
