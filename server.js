@@ -20,8 +20,8 @@ import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
 import User from "./models/User.js"; // doit exister dans /models/User.js
 
-// Logger central
-import logger from "./services/logger.js";
+// Logger
+import { logInfo, logError } from "./utils/logger.js";";
 
 dotenv.config();
 const app = express();
