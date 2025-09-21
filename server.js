@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -10,10 +11,11 @@ import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
+import checkCoverage from "./services/checkCoverage.js"; // ✅ ajout
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js"; // ✅ corrigé
+import Alert from "./models/Alert.js";
 
 dotenv.config();
 
@@ -31,13 +33,10 @@ mongoose
 // 📡 API ROUTES
 // ==============================
 
-// Supercalculateur météo
-app.post("/api/supercalc/run", async (req, res) => {
+// Supercalculateur météo (protégé par coverage)
+app.post("/api/supercalc/run", checkCoverage, async (req, res) => {
   try {
-    const result = await superForecast.runFullForecast(
-      req.body.lat || 50.5,
-      req.body.lon || 4.7
-    );
+    const result = await superForecast.runFullForecast(req.query.lat, req.query.lon);
     res.json({ success: true, result });
   } catch (err) {
     console.error("❌ Supercalc error:", err);
@@ -46,7 +45,7 @@ app.post("/api/supercalc/run", async (req, res) => {
 });
 
 // Prévisions locales
-app.get("/api/forecast/local", async (req, res) => {
+app.get("/api/forecast/local", checkCoverage, async (req, res) => {
   try {
     const forecast = await forecastService.getLocalForecast(req.query.lat, req.query.lon);
     res.json(forecast);
@@ -56,7 +55,7 @@ app.get("/api/forecast/local", async (req, res) => {
 });
 
 // Prévisions nationales
-app.get("/api/forecast/national", async (req, res) => {
+app.get("/api/forecast/national", checkCoverage, async (req, res) => {
   try {
     const forecast = await forecastService.getNationalForecast(req.query.country);
     res.json(forecast);
@@ -66,7 +65,7 @@ app.get("/api/forecast/national", async (req, res) => {
 });
 
 // Prévisions 7 jours
-app.get("/api/forecast/7days", async (req, res) => {
+app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
   try {
     const forecast = await forecastService.get7DayForecast(req.query.lat, req.query.lon);
     res.json(forecast);
@@ -75,14 +74,10 @@ app.get("/api/forecast/7days", async (req, res) => {
   }
 });
 
-// Radar météo multi-niveaux
+// Radar météo (pas besoin de coverage → mondial par défaut)
 app.get("/api/radar", async (req, res) => {
   try {
-    const radar = await radarService.getRadar(
-      req.query.lat || 50.85,
-      req.query.lon || 4.35,
-      req.query.tier || "free"
-    );
+    const radar = await radarService.getRadar(req.query.type || "rain");
     res.json(radar);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -114,16 +109,6 @@ app.post("/api/chat", async (req, res) => {
   try {
     const response = await chatService.askJean(req.body.message);
     res.json(response);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Anomalies saisonnières (Copernicus ERA5)
-app.get("/api/anomalies/seasonal", async (req, res) => {
-  try {
-    const anomaly = await forecastService.getSeasonalAnomaly(req.query.lat, req.query.lon);
-    res.json(anomaly);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
