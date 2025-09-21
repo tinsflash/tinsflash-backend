@@ -5,7 +5,7 @@ import geoFactors from "./geoFactors.js";
 import localFactors from "./localFactors.js";
 import openweather from "./openweather.js";
 import meteomatics from "./meteomatics.js";
-import iconDwd from "./iconDwd.js";
+import iconDwd from "./icon.js";
 import nasaSat from "./nasaSat.js";
 import trulleMans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
