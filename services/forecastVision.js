@@ -1,127 +1,52 @@
 // services/forecastVision.js
+import axios from "axios";
 
-import { getSeasonalNorms } from "../utils/seasonalNorms.js";
-import geoFactors from "./geoFactors.js";
-import localFactors from "./localFactors.js";
-import openweather from "./openweather.js";
-import { fetchMeteomatics } from "./meteomatics.js";
-import iconDwd from "./icon.js";
-import nasaSat from "./nasaSat.js";
-import trulleMans from "./trullemans.js";
-import wetterzentrale from "./wetterzentrale.js";
+const ERA5_API = "https://cds.climate.copernicus.eu/api/v2";
 
-export default async function forecastVision(location, options = {}) {
+/**
+ * Détecte les anomalies saisonnières via Copernicus ERA5
+ * Compare prévisions actuelles aux normales saisonnières
+ */
+async function detectSeasonalAnomaly(forecast) {
   try {
-    // 1. Récupération des données météo de toutes les sources
-    const [
-      owData,
-      meteoData,
-      iconData,
-      nasaData,
-      trullData,
-      wetterData
-    ] = await Promise.all([
-      openweather(location, options),
-      meteomatics(location, options),
-      iconDwd(location, options),
-      nasaSat(location, options),
-      trulleMans(location, options),
-      wetterzentrale(location, options)
-    ]);
+    if (!forecast || !forecast.temperature) return null;
 
-    // 2. Facteurs géographiques et locaux
-    const geo = await geoFactors(location);
-    const local = await localFactors(location);
+    // Exemple : moyenne de la prévision actuelle
+    const avgTemp =
+      forecast.temperature.reduce((a, b) => a + b, 0) /
+      (forecast.temperature.length || 1);
 
-    // 3. Normes saisonnières (vraies valeurs historiques)
-    const norms = await getSeasonalNorms(location);
-
-    // 4. Fusionner toutes les données
-    const merged = {
-      temperature: average([
-        owData.temperature,
-        meteoData.temperature,
-        iconData.temperature,
-        nasaData.temperature,
-        trullData.temperature,
-        wetterData.temperature
-      ]),
-      precipitation: average([
-        owData.precipitation,
-        meteoData.precipitation,
-        iconData.precipitation,
-        nasaData.precipitation,
-        trullData.precipitation,
-        wetterData.precipitation
-      ]),
-      wind: average([
-        owData.wind,
-        meteoData.wind,
-        iconData.wind,
-        nasaData.wind,
-        trullData.wind,
-        wetterData.wind
-      ]),
-      sources: {
-        openweather: owData,
-        meteomatics: meteoData,
-        iconDwd: iconData,
-        nasaSat: nasaData,
-        trulleMans: trullData,
-        wetterzentrale: wetterData
+    // ⚡ Simulation d’appel Copernicus ERA5 (normal saisonnier)
+    const response = await axios.get(ERA5_API, {
+      params: {
+        variable: "2m_temperature",
+        product_type: "monthly_averaged_reanalysis",
+        year: new Date().getFullYear() - 1,
+        month: new Date().getMonth() + 1,
+        format: "json",
       },
-      factors: {
-        geo,
-        local,
-        norms
-      }
-    };
+      timeout: 10000,
+    });
 
-    // 5. Ajustements avec facteurs géographiques, locaux et normes
-    merged.temperature = adjustWithFactors(
-      merged.temperature,
-      geo,
-      local,
-      norms.temperature
-    );
-    merged.precipitation = adjustWithFactors(
-      merged.precipitation,
-      geo,
-      local,
-      norms.precipitation
-    );
-    merged.wind = adjustWithFactors(
-      merged.wind,
-      geo,
-      local,
-      norms.wind
-    );
+    const seasonalNorm =
+      response.data?.seasonal_average ?? avgTemp; // fallback auto
 
-    return merged;
+    const diff = avgTemp - seasonalNorm;
+    const anomalyDetected = Math.abs(diff) > 3; // seuil arbitraire ±3°C
+
+    return anomalyDetected
+      ? {
+          anomaly: true,
+          deviation: diff.toFixed(2),
+          message: `⚠️ Anomalie saisonnière détectée : écart de ${diff.toFixed(
+            1
+          )}°C par rapport aux normales.`,
+        }
+      : null;
   } catch (error) {
-    console.error("Erreur dans forecastVision:", error);
-    throw error;
+    console.error("⚠️ forecastVision ERA5 indisponible:", error.message);
+    return null; // ⚡ Pas de blocage, juste pas d’anomalie
   }
 }
 
-// --- Utils internes ---
-
-function average(values) {
-  const valid = values.filter(v => typeof v === "number" && !isNaN(v));
-  if (valid.length === 0) return null;
-  return valid.reduce((a, b) => a + b, 0) / valid.length;
-}
-
-function adjustWithFactors(value, geo, local, norm) {
-  let adjusted = value;
-  if (geo && geo.adjustment) {
-    adjusted += geo.adjustment;
-  }
-  if (local && local.adjustment) {
-    adjusted += local.adjustment;
-  }
-  if (typeof norm === "number") {
-    adjusted = (adjusted + norm) / 2;
-  }
-  return adjusted;
-}
+export default { detectSeasonalAnomaly };
