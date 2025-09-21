@@ -1,6 +1,5 @@
 // services/podcastService.js
 
-// Génération fictive d’un podcast météo (placeholder)
 async function generatePodcast(text) {
   try {
     return {
@@ -14,5 +13,4 @@ async function generatePodcast(text) {
   }
 }
 
-// ✅ Export par défaut
 export default { generatePodcast };
