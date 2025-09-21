@@ -103,6 +103,12 @@ app.post("/api/podcast/generate", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+import { getLogs } from "./services/adminLogs.js";
+
+// Route pour consulter les logs admin
+app.get("/api/admin/logs", (req, res) => {
+  res.json(getLogs());
+});
 
 // Chat IA
 app.post("/api/chat", async (req, res) => {
