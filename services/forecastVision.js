@@ -1,67 +1,46 @@
-// services/forecastVision.js
-import copernicusService from "./copernicusService.js";
+import fetch from "node-fetch";
 
-/**
- * Détecte des anomalies saisonnières (température, humidité du sol, etc.)
- * via Copernicus ERA5 Land.
- *
- * @param {Number} lat - Latitude du point étudié
- * @param {Number} lon - Longitude du point étudié
- * @param {String} variable - Type de variable ("2m_temperature", "volumetric_soil_water_layer_1", etc.)
- * @returns {Object} Résultat avec détection d’anomalie + score de confiance + données brutes
- */
-async function detectSeasonalAnomaly(lat, lon, variable = "2m_temperature") {
+async function detectSeasonalAnomaly(lat, lon, forecast) {
   try {
-    const dataset = "reanalysis-era5-land";
+    console.log("🌍 Vérification anomalies saisonnières (Copernicus ERA5)");
 
-    // Exemple : dernière année complète
-    const request = {
-      variable: [variable],
-      year: ["2024"],
-      month: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
-      day: ["01"],
-      time: ["00:00"],
-      format: "netcdf",
-      // bounding box autour du point (lat+/-1, lon+/-1)
-      area: [lat + 1, lon - 1, lat - 1, lon + 1]
-    };
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    const end = new Date();
 
-    const result = await copernicusService.fetchCopernicusData(dataset, request);
+    const url = `https://cds.climate.copernicus.eu/api/v2/era5?lat=${lat}&lon=${lon}&start=${start.toISOString().split("T")[0]}&end=${end.toISOString().split("T")[0]}&variable=temperature_2m`;
 
-    if (!result) {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Basic ${Buffer.from(process.env.CDSAPI_UID + ":" + process.env.CDSAPI_KEY).toString("base64")}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Copernicus ERA5 API error: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+
+    const temps = data.values || [];
+    if (!temps.length) return null;
+
+    const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+    const diff = forecast.temperature - avg;
+
+    if (Math.abs(diff) > 5) {
       return {
-        anomalyDetected: false,
-        confidence: 0,
-        message: "⚠️ Pas de données reçues de Copernicus",
-        rawData: null
+        type: "temperature",
+        message: `🌡️ Anomalie détectée: ${diff > 0 ? "plus chaud" : "plus froid"} que la normale (${diff.toFixed(1)}°C)`,
+        severity: Math.abs(diff) > 8 ? "high" : "moderate",
       };
     }
 
-    // Ici → normalement analyse statistique des écarts aux moyennes
-    // Pour le moment : simulation simple
-    const anomalyDetected = Math.random() > 0.7; // 30% chance démo
-    const confidence = anomalyDetected ? 0.85 : 0.55;
-
-    return {
-      anomalyDetected,
-      confidence,
-      message: anomalyDetected
-        ? "🌡️ Anomalie saisonnière détectée (écart aux normales)"
-        : "✅ Pas d’anomalie majeure détectée",
-      rawData: result
-    };
-
+    return null;
   } catch (err) {
-    console.error("❌ Seasonal anomaly detection failed:", err.message);
-    return {
-      anomalyDetected: false,
-      confidence: 0,
-      message: `Erreur Copernicus: ${err.message}`,
-      rawData: null
-    };
+    console.error("❌ Erreur anomalies saisonnières:", err.message);
+    return null;
   }
 }
 
-export default {
-  detectSeasonalAnomaly
-};
+export default { detectSeasonalAnomaly };
