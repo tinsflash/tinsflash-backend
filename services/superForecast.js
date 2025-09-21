@@ -1,80 +1,78 @@
 // services/superForecast.js
-import forecastService from "./forecastService.js";
-import radarService from "./radarService.js";
-import textGenService from "./textGenService.js";
-import alertsService from "./alertsService.js";
+import meteoManager from "./meteoManager.js";
+import openweather from "./openweather.js";
+import nasaSat from "./nasaSat.js";
+import trullemans from "./trullemans.js";
+import wetterzentrale from "./wetterzentrale.js";
+import comparator from "./comparator.js";
+
+import { applyGeoFactors } from "./geoFactors.js";
+import { applyLocalFactors } from "./localFactors.js";
+import { detectSeasonalAnomaly } from "./forecastVision.js";
+
+import Forecast from "../models/Forecast.js";
 
 /**
- * 🔥 SuperForecast :
- * Combine la prévision météo consolidée avec radar + génération de texte + alertes
- * pour produire un package complet destiné aux utilisateurs Premium.
+ * Run complet SuperForecast
+ * Fusionne GFS + ECMWF + ICON (Meteomatics) + autres sources
+ * Sauvegarde en MongoDB + détecte anomalies
  */
-
-/**
- * Récupère une super-prévision complète
- */
-export async function getSuperForecast(location, options = {}) {
+async function runFullForecast(lat = 50.5, lon = 4.7) {
   try {
-    // 1️⃣ Récupération des prévisions multi-sources (centrale nucléaire météo)
-    const forecast = await forecastService.getForecast(location);
+    console.log(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
 
-    // 2️⃣ Radar temps réel (pluie, neige, vent)
-    const radar = await radarService(location);
+    // 1. Sources Meteomatics (GFS, ECMWF, ICON)
+    const meteomaticsSources = await meteoManager(lat, lon);
 
-    // 3️⃣ Génération d’un résumé IA (textGen)
-    const summary = await textGenService({
-      forecast,
-      radar,
-      location,
-      premium: options.premium || false,
-    });
+    // 2. Autres sources externes (OpenWeather, NASA, Trullemans, Wetterzentrale)
+    const [ow, nasa, trul, wett] = await Promise.all([
+      openweather.getForecast(lat, lon),
+      nasaSat(lat, lon),
+      trullemans.getForecast(lat, lon),
+      wetterzentrale.getForecast(lat, lon)
+    ]);
 
-    // 4️⃣ Vérification des alertes météo
-    const alerts = await alertsService(location, forecast);
+    const sources = [...meteomaticsSources, ow, nasa, trul, wett].filter(Boolean);
 
-    // 5️⃣ Pack final complet
-    return {
-      location,
-      forecast,
-      radar,
-      alerts,
-      summary,
-      generatedAt: new Date().toISOString(),
-    };
-  } catch (err) {
-    console.error("❌ Erreur dans getSuperForecast:", err.message);
-    return { error: "Impossible de générer la super prévision" };
-  }
-}
-
-/**
- * Récupère une super-prévision pour une plage de dates
- */
-export async function getSuperForecastRange(location, start, end, options = {}) {
-  try {
-    const results = [];
-    let current = new Date(start);
-
-    while (current <= new Date(end)) {
-      const daily = await getSuperForecast(
-        { ...location, date: current.toISOString().split("T")[0] },
-        options
-      );
-      results.push(daily);
-
-      // avancer d’un jour
-      current.setDate(current.getDate() + 1);
+    if (!sources.length) {
+      throw new Error("Aucune source météo disponible");
     }
 
-    return results;
+    console.log(`📡 Sources intégrées: ${sources.map(s => s.source).join(", ")}`);
+
+    // 3. Fusion intelligente
+    let merged = comparator.mergeForecasts(sources);
+
+    // 4. Ajustements
+    merged = applyGeoFactors(merged, lat, lon);
+    merged = applyLocalFactors(merged, lat, lon);
+
+    // 5. Détection anomalies saisonnières
+    const anomaly = detectSeasonalAnomaly(merged);
+    merged.anomaly = anomaly || null;
+
+    // 6. Sauvegarde en MongoDB
+    const forecastDoc = new Forecast({
+      timestamp: new Date(),
+      location: { lat, lon },
+      data: merged,
+      sources: sources.map(s => s.source || "unknown")
+    });
+
+    await forecastDoc.save();
+
+    console.log("✅ SuperForecast sauvegardé en base");
+
+    return {
+      success: true,
+      forecast: merged,
+      sources: sources.map(s => s.source),
+      anomaly
+    };
   } catch (err) {
-    console.error("❌ Erreur dans getSuperForecastRange:", err.message);
-    return [];
+    console.error("❌ Erreur SuperForecast:", err.message);
+    return { success: false, error: err.message };
   }
 }
 
-// ✅ Export par défaut
-export default {
-  getSuperForecast,
-  getSuperForecastRange,
-};
+export default { runFullForecast };
