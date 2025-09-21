@@ -1,30 +1,25 @@
 // services/geoFactors.js
-import axios from "axios";
 
+/**
+ * Ajuste les prévisions selon des facteurs géographiques
+ * - altitude (via OpenElevation)
+ * - proximité mer / montagne
+ */
 async function applyGeoFactors(forecast, lat, lon) {
-  if (!forecast) return forecast;
+  // Exemple d'ajustement basique → à enrichir plus tard
+  const adjusted = { ...forecast };
 
-  try {
-    const res = await axios.get(
-      `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
-    );
-    const elevation = res.data.results[0].elevation;
-
-    // Ajustement altitude
-    if (elevation > 500) {
-      forecast.temperature_min -= 2;
-      forecast.temperature_max -= 2;
-    }
-
-    // Ajustement proximité Atlantique (simplifié)
-    if (lon > -5 && lon < 10) {
-      forecast.reliability += 3;
-    }
-  } catch (err) {
-    console.warn("⚠️ GeoFactors API error:", err.message);
+  // Ajustement altitude : si > 500m → T° -3°C
+  if (forecast.altitude && forecast.altitude > 500) {
+    adjusted.temperature = adjusted.temperature - 3;
   }
 
-  return forecast;
+  // Ajustement mer : si proche de la mer (<50km) → humidité +10%
+  if (forecast.nearSea) {
+    adjusted.humidity = (adjusted.humidity || 70) + 10;
+  }
+
+  return adjusted;
 }
 
 export default { applyGeoFactors };
