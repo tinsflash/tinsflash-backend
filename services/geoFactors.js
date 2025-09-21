@@ -26,3 +26,6 @@ export function applyGeoFactors(forecast, location) {
 
   return adjusted;
 }
+
+// ✅ Export par défaut pour compatibilité
+export default applyGeoFactors;
