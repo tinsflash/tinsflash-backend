@@ -11,6 +11,7 @@ import localFactors from "./localFactors.js";
 import forecastVision from "./forecastVision.js";
 
 import Forecast from "../models/Forecast.js";
+import { logInfo, logError } from "../utils/logger.js";
 
 /**
  * Run complet SuperForecast
@@ -19,37 +20,49 @@ import Forecast from "../models/Forecast.js";
  */
 async function runFullForecast(lat = 50.5, lon = 4.7) {
   try {
-    console.log(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
+    logInfo(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
 
     // 1. Sources Meteomatics (GFS, ECMWF, ICON)
     const meteomaticsSources = await meteoManager(lat, lon);
+    logInfo(`✅ Données Meteomatics récupérées (${meteomaticsSources.length})`);
 
-    // 2. Autres sources externes (OpenWeather, NASA, Trullemans, Wetterzentrale)
-    const [ow, nasa, trul, wett] = await Promise.all([
+    // 2. Autres sources externes
+    const [ow, nasa, trul, wett] = await Promise.allSettled([
       openweather.getForecast(lat, lon),
       nasaSat(lat, lon),
       trullemans.getForecast(lat, lon),
       wetterzentrale.getForecast(lat, lon),
     ]);
 
-    const sources = [...meteomaticsSources, ow, nasa, trul, wett].filter(Boolean);
+    const sources = [
+      ...meteomaticsSources,
+      ow.value,
+      nasa.value,
+      trul.value,
+      wett.value,
+    ].filter(Boolean);
 
     if (!sources.length) {
       throw new Error("Aucune source météo disponible");
     }
 
-    console.log(`📡 Sources intégrées: ${sources.map(s => s.source).join(", ")}`);
+    logInfo(`📡 Sources intégrées: ${sources.map(s => s.source).join(", ")}`);
 
     // 3. Fusion intelligente
     let merged = comparator.mergeForecasts(sources);
+    logInfo("🔀 Fusion intelligente des modèles effectuée");
 
-    // 4. Ajustements
+    // 4. Ajustements géographiques et locaux
     merged = applyGeoFactors(merged, lat, lon);
     merged = localFactors.applyLocalFactors(merged, lat, lon);
+    logInfo("⚙️ Ajustements géographiques et locaux appliqués");
 
     // 5. Détection anomalies saisonnières
     const anomaly = forecastVision.detectSeasonalAnomaly(merged);
-    merged.anomaly = anomaly || null;
+    if (anomaly) {
+      logInfo(`⚠️ Anomalie saisonnière détectée: ${JSON.stringify(anomaly)}`);
+      merged.anomaly = anomaly;
+    }
 
     // 6. Sauvegarde en MongoDB
     const forecastDoc = new Forecast({
@@ -60,8 +73,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
     });
 
     await forecastDoc.save();
-
-    console.log("✅ SuperForecast sauvegardé en base");
+    logInfo("✅ SuperForecast sauvegardé en base");
 
     return {
       success: true,
@@ -70,7 +82,7 @@ async function runFullForecast(lat = 50.5, lon = 4.7) {
       anomaly,
     };
   } catch (err) {
-    console.error("❌ Erreur SuperForecast:", err.message);
+    logError("❌ Erreur SuperForecast: " + err.message);
     return { success: false, error: err.message };
   }
 }
