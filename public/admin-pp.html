@@ -14,6 +14,10 @@
     button { padding: 8px 15px; border: none; border-radius: 8px; cursor: pointer; }
     .btn { background: #2196F3; color: white; }
     .alert-block { background: #222; padding: 10px; margin: 10px 0; border-radius: 8px; }
+    .chat-box { background: #1e1e1e; padding: 10px; border-radius: 10px; height: 250px; overflow-y: auto; }
+    .chat-msg { margin: 5px 0; }
+    .user { color: #4FC3F7; }
+    .jean { color: #81C784; }
   </style>
 </head>
 <body>
@@ -45,6 +49,14 @@
     <p id="stats">Chargement...</p>
   </div>
 
+  <!-- Chat JEAN -->
+  <div class="section" style="background:#222;">
+    <h2>🤖 Chat avec J.E.A.N.</h2>
+    <div id="chatBox" class="chat-box"></div>
+    <input type="text" id="chatInput" placeholder="Pose ta question à JEAN..." style="width:80%; padding:5px;">
+    <button id="chatBtn" class="btn">Envoyer</button>
+  </div>
+
   <script>
     async function lancerRun() {
       document.getElementById("runStatus").textContent = "🚀 Lancement du run...";
@@ -65,7 +77,7 @@
         logRun("⚡ Détection des alertes météo...");
         logRun("✅ Run terminé avec succès !");
 
-        // Remplissage alertes
+        // Afficher alertes
         afficherAlertes(data.alerts);
 
         // Stats
@@ -96,6 +108,19 @@
         if (a.action === "AUTO") {
           autoDiv.appendChild(div);
         } else {
+          const btn = document.createElement("button");
+          btn.className = "btn";
+          btn.textContent = "Valider";
+          btn.onclick = async () => {
+            await fetch("/api/alerts/validate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: a.id })
+            });
+            btn.disabled = true;
+            btn.textContent = "✔ Validée";
+          };
+          div.appendChild(btn);
           manualDiv.appendChild(div);
         }
       });
@@ -108,7 +133,35 @@
         `Prévisions: ${stats.forecasts} | Alertes: ${stats.alerts} | Uptime: ${Math.round(stats.uptime/60)} min`;
     }
 
+    async function envoyerChat() {
+      const input = document.getElementById("chatInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      afficherChat("user", msg);
+      input.value = "";
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+
+      afficherChat("jean", data.reply || "Pas de réponse.");
+    }
+
+    function afficherChat(who, text) {
+      const chatBox = document.getElementById("chatBox");
+      const div = document.createElement("div");
+      div.className = "chat-msg " + who;
+      div.textContent = (who === "user" ? "👤 Toi: " : "🤖 JEAN: ") + text;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
     document.getElementById("runBtn").addEventListener("click", lancerRun);
+    document.getElementById("chatBtn").addEventListener("click", envoyerChat);
 
     // Auto-refresh stats toutes les 30s
     setInterval(chargerStats, 30000);
