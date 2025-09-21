@@ -1,219 +1,54 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tinsflash - Admin Pro+</title>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Console Admin Pro+</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: #f0f6fc;
-      display: flex;
-      height: 100vh;
-    }
-    .left, .right {
-      padding: 20px;
-      overflow-y: auto;
-    }
-    .left {
-      flex: 2;
-      border-right: 2px solid #30363d;
-    }
-    .right {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    h2 {
-      margin-top: 20px;
-      border-bottom: 1px solid #30363d;
-      padding-bottom: 5px;
-    }
-    button {
-      background: #238636;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      margin: 5px 0;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #2ea043;
-    }
-    .log, .error, .alerts, .stats {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    .chat-box {
-      flex: 1;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-    }
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      margin-bottom: 10px;
-    }
-    .chat-input {
-      display: flex;
-    }
-    .chat-input input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 6px 0 0 6px;
-      border: 1px solid #30363d;
-      background: #0d1117;
-      color: white;
-    }
-    .chat-input button {
-      border-radius: 0 6px 6px 0;
-    }
+    body { background: #111; color: #eee; font-family: Arial; padding: 20px; }
+    h1 { color: #0ff; }
+    .box { margin: 15px 0; padding: 15px; background: #222; border-radius: 10px; }
   </style>
 </head>
 <body>
-  <div class="left">
-    <h1>⚡ Admin Pro+ – Tinsflash</h1>
-    <button onclick="launchRun()">🚀 Lancer Run SuperForecast</button>
-
-    <h2>📋 Logs</h2>
-    <div id="logs" class="log">Chargement...</div>
-
-    <h2>❌ Erreurs</h2>
-    <div id="errors" class="error">Aucune erreur</div>
-
-    <h2>⚠️ Alertes</h2>
-    <div id="alertsValidated" class="alerts">Validées automatiquement (≥90%)</div>
-    <div id="alertsPending" class="alerts">À valider manuellement (70–89%)</div>
-
-    <h2>👥 Utilisateurs</h2>
-    <div id="users" class="stats">Chargement...</div>
+  <h1>🌍 Console Admin Pro+</h1>
+  <div class="box">
+    <h2>🚀 Lancer un Run complet</h2>
+    <button onclick="startRun()">Lancer maintenant</button>
+    <p id="runStatus">[En attente...]</p>
+  </div>
+  <div class="box">
+    <h2>⚠️ Alertes en attente (70–89 %)</h2>
+    <div id="alerts">Chargement...</div>
+  </div>
+  <div class="box">
+    <h2>👥 Utilisateurs par zone</h2>
+    <div id="users">Chargement...</div>
+  </div>
+  <div class="box">
+    <h2>📊 Statistiques Système</h2>
+    <div id="stats">Chargement...</div>
   </div>
 
-  <div class="right">
-    <h2>🤖 Chat J.E.A.N.</h2>
-    <div class="chat-box">
-      <div id="chatMessages" class="chat-messages"></div>
-      <div class="chat-input">
-        <input id="chatInput" type="text" placeholder="Posez une question à J.E.A.N..." />
-        <button onclick="sendChat()">Envoyer</button>
-      </div>
-    </div>
-  </div>
+  <script>
+    async function startRun() {
+      document.getElementById("runStatus").innerText = "🚀 Lancement du run...";
+      const res = await fetch("/api/supercalc/run", { method: "POST" });
+      const data = await res.json();
+      document.getElementById("runStatus").innerText = "✅ Run terminé : " + JSON.stringify(data);
+    }
 
-<script>
-async function launchRun() {
-  const res = await fetch("/api/supercalc/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ zone: "EU+US" })
-  });
-  const data = await res.json();
-  alert("Run lancé ✅ Vérifiez les logs.");
-}
+    async function loadStats() {
+      const res = await fetch("/api/admin/stats");
+      const stats = await res.json();
+      document.getElementById("stats").innerText =
+        `Prévisions en base: ${stats.forecasts}\n` +
+        `Alertes en base: ${stats.alerts}\n` +
+        `Uptime serveur: ${Math.round(stats.uptime / 60)} min`;
+    }
 
-async function refreshLogs() {
-  try {
-    const res = await fetch("/api/logs");
-    const data = await res.json();
-    document.getElementById("logs").innerText = data.join("\n") || "Aucun log";
-  } catch {
-    document.getElementById("logs").innerText = "Erreur de récupération logs";
-  }
-}
-
-async function refreshAlerts() {
-  try {
-    const res = await fetch("/api/alerts");
-    const alerts = await res.json();
-    let validated = "", pending = "";
-
-    alerts.forEach(a => {
-      if (a.confidence >= 90) {
-        validated += `✅ ${a.type} (${a.confidence}%) - ${a.location}\n`;
-      } else if (a.confidence >= 70) {
-        pending += `
-          ⚠️ ${a.type} (${a.confidence}%) - ${a.location}
-          <button onclick="validateAlert('${a._id}')">Valider</button>
-          <button onclick="askJean('${a._id}')">Demander analyse IA</button>
-          <br/>`;
-      }
-    });
-
-    document.getElementById("alertsValidated").innerHTML = validated || "Aucune alerte validée";
-    document.getElementById("alertsPending").innerHTML = pending || "Aucune alerte à valider";
-  } catch {
-    document.getElementById("alertsPending").innerText = "Erreur récupération alertes";
-  }
-}
-
-async function validateAlert(id) {
-  await fetch(`/api/alerts/validate/${id}`, { method: "POST" });
-  refreshAlerts();
-}
-
-async function askJean(alertId) {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: `Analyse l'alerte ${alertId}` })
-  });
-  const data = await res.json();
-  addMessage("JEAN", data.reply);
-}
-
-async function refreshUsers() {
-  try {
-    const res = await fetch("/api/admin/users");
-    const data = await res.json();
-    document.getElementById("users").innerText = 
-      `Europe/USA: ${data.eu_us}\nHors zone: ${data.outside}`;
-  } catch {
-    document.getElementById("users").innerText = "Erreur récupération utilisateurs";
-  }
-}
-
-function addMessage(sender, text) {
-  const chat = document.getElementById("chatMessages");
-  chat.innerHTML += `<b>${sender}:</b> ${text}<br/>`;
-  chat.scrollTop = chat.scrollHeight;
-}
-
-async function sendChat() {
-  const input = document.getElementById("chatInput");
-  const message = input.value;
-  input.value = "";
-  addMessage("Moi", message);
-
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
-  });
-  const data = await res.json();
-  addMessage("JEAN", data.reply);
-}
-
-// Refresh auto toutes les 5 sec
-setInterval(() => {
-  refreshLogs();
-  refreshAlerts();
-  refreshUsers();
-}, 5000);
-
-refreshLogs();
-refreshAlerts();
-refreshUsers();
-</script>
+    setInterval(loadStats, 5000);
+    loadStats();
+  </script>
 </body>
 </html>
