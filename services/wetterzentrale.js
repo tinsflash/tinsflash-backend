@@ -1,6 +1,5 @@
 // services/wetterzentrale.js
 
-// Parseur Wetterzentrale (brut → structuré)
 function parseWetterzentraleData(raw) {
   try {
     return {
@@ -26,10 +25,9 @@ function parseWetterzentraleData(raw) {
   }
 }
 
-// Simulation → ici on attendrait d’appeler un vrai parser HTML
 async function getForecast(lat, lon) {
   try {
-    // Exemple brut
+    // Exemple brut simulé → à remplacer par vrai scraping API Wetterzentrale
     const raw = {
       temp: 12,
       wind: 15,
@@ -51,5 +49,4 @@ async function getForecast(lat, lon) {
   }
 }
 
-// ✅ Export par défaut
 export default { getForecast };
