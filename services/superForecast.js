@@ -1,61 +1,57 @@
-import trullemans from './trullemans.js';
-import wetterzentrale from './wetterzentrale.js';
-import openweather from './openweather.js';
-import meteomatics from './meteomatics.js';
-import copernicusService from './copernicusService.js';
-import localFactors from './localFactors.js';
-import geoFactors from './geoFactors.js';
+// services/superForecast.js
 
-export async function getSuperForecast(location, options = {}) {
+import forecastVision from "./forecastVision.js";
+import geoFactors from "./geoFactors.js";
+import localFactors from "./localFactors.js";
+import { getSeasonalNorms } from "../utils/seasonalNorms.js";
+
+export default async function superForecast(location, options = {}) {
   try {
-    const [
-      trullemansData,
-      wetterzentraleData,
-      openweatherData,
-      meteomaticsData,
-      copernicusData,
-      localAdjust,
-      geoAdjust
-    ] = await Promise.all([
-      trullemans(location, options),
-      wetterzentrale(location, options),
-      openweather(location, options),
-      meteomatics(location, options),
-      copernicusService(location, options),
-      localFactors(location, options),
-      geoFactors(location, options)
-    ]);
+    // 1. ForecastVision = données croisées multi-sources
+    const vision = await forecastVision(location, options);
 
-    // Fusionner les résultats (pondération simple ou algo ML plus avancé)
-    const forecast = {
-      location,
-      temperature: (
-        (trullemansData.temperature +
-          wetterzentraleData.temperature +
-          openweatherData.temperature +
-          meteomaticsData.temperature +
-          copernicusData.temperature) / 5
-      ) + localAdjust.temperature + geoAdjust.temperature,
-      precipitation: (
-        (trullemansData.precipitation +
-          wetterzentraleData.precipitation +
-          openweatherData.precipitation +
-          meteomaticsData.precipitation +
-          copernicusData.precipitation) / 5
-      ) + localAdjust.precipitation + geoAdjust.precipitation,
-      wind: (
-        (trullemansData.wind +
-          wetterzentraleData.wind +
-          openweatherData.wind +
-          meteomaticsData.wind +
-          copernicusData.wind) / 5
-      ) + localAdjust.wind + geoAdjust.wind,
-      updated: new Date().toISOString()
+    // 2. Facteurs géographiques et locaux
+    const geo = await geoFactors(location);
+    const local = await localFactors(location);
+
+    // 3. Normes saisonnières (vraies données historiques)
+    const norms = await getSeasonalNorms(location);
+
+    // 4. Fusion finale : prévision "centrale nucléaire météo"
+    const result = {
+      temperature: refineWithAI(vision.temperature, geo, local, norms.temperature),
+      precipitation: refineWithAI(vision.precipitation, geo, local, norms.precipitation),
+      wind: refineWithAI(vision.wind, geo, local, norms.wind),
+      base: vision,
+      factors: { geo, local, norms }
     };
 
-    return forecast;
+    return result;
   } catch (error) {
-    console.error('[SuperForecast] Erreur lors de la fusion des modèles :', error);
+    console.error("Erreur dans superForecast:", error);
     throw error;
   }
+}
+
+// --- Utils internes ---
+
+function refineWithAI(value, geo, local, norm) {
+  let refined = value;
+
+  // Ajustements géographiques
+  if (geo && geo.adjustment) {
+    refined += geo.adjustment;
+  }
+
+  // Ajustements locaux (urbain, relief, microclimat…)
+  if (local && local.adjustment) {
+    refined += local.adjustment;
+  }
+
+  // Pondération par les normes saisonnières réelles
+  if (typeof norm === "number") {
+    refined = (refined * 0.7) + (norm * 0.3); // pondération 70/30
+  }
+
+  return refined;
 }
