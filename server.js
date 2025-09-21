@@ -3,8 +3,6 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // Services
 import superForecast from "./services/superForecast.js";
@@ -21,7 +19,6 @@ import checkCoverage from "./services/checkCoverage.js";
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
 
-// Config
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -31,28 +28,26 @@ app.use(cors());
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
   })
   .then(() => console.log("✅ MongoDB connecté"))
   .catch((err) => console.error("❌ Erreur MongoDB:", err.message));
 
-// -----------------------------
-// Sert les fichiers statiques (console admin, index, etc.)
-// -----------------------------
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+/**
+ * ROUTES API
+ */
 
-app.use(express.static(path.join(__dirname, "public")));
-
-// -----------------------------
-// ROUTES API
-// -----------------------------
-
-// 🔥 Run complet SuperForecast
+// 🔥 Run complet SuperForecast (IA + multi-modèles)
 app.post("/api/supercalc/run", async (req, res) => {
   try {
+    console.log("🚀 Lancement du run SuperForecast...");
     const { lat, lon } = req.body;
     const result = await superForecast.runFullForecast(lat, lon);
+
+    // 🔔 Log pour l’admin
+    console.log("📡 Sources utilisées:", result.sources);
+    console.log("🌍 Anomalie détectée:", result.anomaly);
+
     res.json(result);
   } catch (err) {
     console.error("❌ Erreur supercalc/run:", err.message);
@@ -96,7 +91,7 @@ app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
   }
 });
 
-// 🌍 Radar météo
+// 🌍 Radar météo (pluie, neige, vent)
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
@@ -107,7 +102,7 @@ app.get("/api/radar", async (req, res) => {
   }
 });
 
-// ⚠️ Alertes météo
+// ⚠️ Alertes météo – récupération
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await alertsService.getAlerts();
@@ -118,9 +113,11 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
+// ⚠️ Alertes météo – ajout
 app.post("/api/alerts", async (req, res) => {
   try {
     const alert = await alertsService.addAlert(req.body);
+    console.log("⚠️ Nouvelle alerte ajoutée:", alert);
     res.json(alert);
   } catch (err) {
     console.error("❌ Erreur ajout alerte:", err.message);
@@ -128,12 +125,27 @@ app.post("/api/alerts", async (req, res) => {
   }
 });
 
+// ⚠️ Alertes météo – suppression
 app.delete("/api/alerts/:id", async (req, res) => {
   try {
     const result = await alertsService.deleteAlert(req.params.id);
+    console.log("🗑 Alerte supprimée:", req.params.id);
     res.json(result);
   } catch (err) {
     console.error("❌ Erreur suppression alerte:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ⚠️ Alertes météo – validation manuelle (70–89 %)
+app.post("/api/alerts/validate/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await alertsService.validateAlert(id);
+    console.log("✅ Alerte validée manuellement:", id);
+    res.json(updated);
+  } catch (err) {
+    console.error("❌ Erreur validation alerte:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -150,11 +162,12 @@ app.post("/api/podcast/generate", async (req, res) => {
   }
 });
 
-// 🤖 JEAN (IA météo explicative)
+// 🤖 Chat JEAN (IA météo explicative et décisionnelle)
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
     const response = await chatService.askJean(message);
+    console.log("🤖 JEAN répondu:", response);
     res.json(response);
   } catch (err) {
     console.error("❌ Erreur chat:", err.message);
@@ -172,7 +185,7 @@ app.get("/api/admin/stats", async (req, res) => {
     res.json({
       forecasts,
       alerts,
-      uptime: process.uptime()
+      uptime: process.uptime(),
     });
   } catch (err) {
     console.error("❌ Erreur admin/stats:", err.message);
