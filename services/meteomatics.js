@@ -1,28 +1,39 @@
-import fetch from 'node-fetch';
+// utils/meteomatics.js
+import axios from "axios";
 
-const METEOMATICS_USER = process.env.METEOMATICS_USER;
-const METEOMATICS_PASS = process.env.METEOMATICS_PASS;
+const METEO_BASE_URL = "https://api.meteomatics.com";
+const USER = process.env.METEOMATICS_USER;
+const PASS = process.env.METEOMATICS_PASS;
 
-export default async function meteomatics(location, options = {}) {
-  const { lat, lon } = location; // latitude & longitude nécessaires
-  const url = `https://api.meteomatics.com/now/t_2m:C,precip_1h:mm,wind_speed_10m:ms/${lat},${lon}/json`;
+/**
+ * Appel générique Meteomatics
+ * @param {Array} parameters - ex: ["t_2m:C","precip_1h:mm","wind_speed_10m:ms"]
+ * @param {number} lat
+ * @param {number} lon
+ * @param {string} model - "ecmwf", "gfs", "icon"...
+ */
+export async function fetchMeteomatics(parameters, lat, lon, model = "gfs") {
+  try {
+    const now = new Date();
+    const start = now.toISOString().split(".")[0] + "Z";
+    const end = new Date(now.getTime() + 24 * 3600 * 1000).toISOString().split(".")[0] + "Z"; // +1 jour
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: 'Basic ' + Buffer.from(`${METEOMATICS_USER}:${METEOMATICS_PASS}`).toString('base64')
-    }
-  });
+    const paramStr = parameters.join(",");
+    const url = `${METEO_BASE_URL}/${start}--${end}:PT1H/${paramStr}/${lat},${lon}/json?model=${model}`;
 
-  if (!response.ok) {
-    throw new Error(`[Meteomatics] Erreur API: ${response.statusText}`);
+    const res = await axios.get(url, {
+      auth: { username: USER, password: PASS }
+    });
+
+    return res.data.data.reduce((acc, cur) => {
+      acc[cur.parameter] = cur.coordinates[0].dates.map(d => ({
+        date: d.date,
+        value: d.value
+      }));
+      return acc;
+    }, {});
+  } catch (err) {
+    console.error(`❌ Meteomatics ${model} error:`, err.message);
+    return null;
   }
-
-  const data = await response.json();
-
-  return {
-    temperature: data.data[0].coordinates[0].dates[0].value,
-    precipitation: data.data[1].coordinates[0].dates[0].value,
-    wind: data.data[2].coordinates[0].dates[0].value,
-    source: 'Meteomatics'
-  };
 }
