@@ -1,34 +1,24 @@
-// src/services/localFactors.js
+function applyLocalFactors(forecast, lat, lon) {
+  try {
+    console.log("🏘 Application facteurs locaux");
 
-// Applique des ajustements spécifiques à une région (ex : Belgique, France, etc.)
-function applyLocalFactors(lat, lon, forecast) {
-  if (!forecast) return forecast;
-  let adjusted = { ...forecast };
+    // Exemple: Belgique = climat océanique tempéré
+    if (lat >= 49 && lat <= 51.5 && lon >= 2 && lon <= 6) {
+      forecast.reliability = (forecast.reliability || 80) - 5;
+      forecast.description += " (ajustement climat belge)";
+    }
 
-  // Exemple : Belgique → pluie +10% (microclimat humide)
-  if (lat >= 49 && lat <= 51.5 && lon >= 2 && lon <= 6) {
-    adjusted.rain = (adjusted.rain || 0) * 1.1;
+    // Exemple: zones méditerranéennes
+    if (lat >= 40 && lat <= 44 && lon >= 5 && lon <= 10) {
+      forecast.precipitation *= 0.7;
+      forecast.description += " (influence méditerranéenne)";
+    }
+
+    return forecast;
+  } catch (err) {
+    console.error("❌ Erreur localFactors:", err.message);
+    return forecast;
   }
-
-  // Exemple : Espagne sud → chaleur amplifiée
-  if (lat >= 36 && lat <= 38 && lon >= -6 && lon <= -2) {
-    adjusted.temp = (adjusted.temp || 25) + 2;
-  }
-
-  return adjusted;
 }
 
-// Version plus générale (appelée dans SuperForecast)
-function adjustWithLocalFactors(lat, lon, forecast) {
-  let result = applyLocalFactors(lat, lon, forecast);
-
-  // Règles locales supplémentaires (extensibles)
-  if (lat >= 40 && lat <= 42 && lon >= -1 && lon <= 3) {
-    // Exemple : climat méditerranéen → vent mistral
-    result.wind = (result.wind || 15) + 5;
-  }
-
-  return result;
-}
-
-export default { applyLocalFactors, adjustWithLocalFactors };
+export default { applyLocalFactors };
