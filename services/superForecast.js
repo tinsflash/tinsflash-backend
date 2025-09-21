@@ -1,83 +1,61 @@
-// === SOURCES BRUTES (hiddensources) ===
-import openweather from "../hiddensources/openweather.js";
-import meteomatics from "../hiddensources/meteomatics.js";
-import iconDwd from "../hiddensources/iconDwd.js";
-import trullemans from "../hiddensources/trullemans.js";
-import wetterzentrale from "../hiddensources/wetterzentrale.js";
+import trullemans from './trullemans.js';
+import wetterzentrale from './wetterzentrale.js';
+import openweather from './openweather.js';
+import meteomatics from './meteomatics.js';
+import copernicusService from './copernicusService.js';
+import localFactors from './localFactors.js';
+import geoFactors from './geoFactors.js';
 
-// === SERVICES MÉTÉO (services) ===
-import comparator from "./comparator.js";
-import geoFactors from "./geoFactors.js";
-import localFactors from "./localFactors.js";
-import forecastVision from "./forecastVision.js";
-import copernicusService from "./copernicusService.js";
-
-// === MODELS ===
-import Forecast from "../models/Forecast.js";
-
-async function runSuperForecast(lat = 50.5, lon = 4.7) {
+export async function getSuperForecast(location, options = {}) {
   try {
-    console.log(`🚀 SuperForecast lancé pour lat=${lat}, lon=${lon}`);
-
-    // 1. 📡 Collecte des données brutes
-    const [ow, mm, icon, trull, wzt, copernicus] = await Promise.all([
-      openweather.getForecast(lat, lon),
-      meteomatics.getForecast(lat, lon),
-      iconDwd.getForecast(lat, lon),
-      trullemans.getForecast(lat, lon),
-      wetterzentrale.getForecast(lat, lon),
-      copernicusService.getForecast(lat, lon)
+    const [
+      trullemansData,
+      wetterzentraleData,
+      openweatherData,
+      meteomaticsData,
+      copernicusData,
+      localAdjust,
+      geoAdjust
+    ] = await Promise.all([
+      trullemans(location, options),
+      wetterzentrale(location, options),
+      openweather(location, options),
+      meteomatics(location, options),
+      copernicusService(location, options),
+      localFactors(location, options),
+      geoFactors(location, options)
     ]);
 
-    const sources = [ow, mm, icon, trull, wzt, copernicus].filter(Boolean);
-
-    if (!sources.length) {
-      throw new Error("❌ Aucune source météo disponible");
-    }
-
-    console.log(`✅ ${sources.length} sources collectées`);
-
-    // 2. ⚖️ Fusion des prévisions
-    let merged = comparator.mergeForecasts(sources);
-    console.log("✅ Fusion effectuée");
-
-    // 3. 🌍 Ajustements géographiques
-    merged = geoFactors.applyGeoFactors(merged, lat, lon);
-    console.log("✅ Facteurs géographiques appliqués");
-
-    // 4. 🏘 Ajustements locaux
-    merged = localFactors.applyLocalFactors(merged, lat, lon);
-    console.log("✅ Facteurs locaux appliqués");
-
-    // 5. 📊 Détection anomalies saisonnières (Copernicus ERA5)
-    const anomaly = await forecastVision.detectSeasonalAnomaly(lat, lon, merged);
-    merged.anomaly = anomaly || null;
-    if (anomaly) {
-      console.log("⚠️ Anomalie détectée:", anomaly);
-    }
-
-    // 6. 🗄 Sauvegarde MongoDB
-    const forecastDoc = new Forecast({
-      timestamp: new Date(),
-      location: { lat, lon },
-      data: merged,
-      sources: sources.map((s) => s.source || "unknown"),
-    });
-
-    await forecastDoc.save();
-    console.log("💾 Sauvegarde en base réussie");
-
-    // 7. ✅ Retour final
-    return {
-      success: true,
-      forecast: merged,
-      sources: sources.length,
-      anomaly,
+    // Fusionner les résultats (pondération simple ou algo ML plus avancé)
+    const forecast = {
+      location,
+      temperature: (
+        (trullemansData.temperature +
+          wetterzentraleData.temperature +
+          openweatherData.temperature +
+          meteomaticsData.temperature +
+          copernicusData.temperature) / 5
+      ) + localAdjust.temperature + geoAdjust.temperature,
+      precipitation: (
+        (trullemansData.precipitation +
+          wetterzentraleData.precipitation +
+          openweatherData.precipitation +
+          meteomaticsData.precipitation +
+          copernicusData.precipitation) / 5
+      ) + localAdjust.precipitation + geoAdjust.precipitation,
+      wind: (
+        (trullemansData.wind +
+          wetterzentraleData.wind +
+          openweatherData.wind +
+          meteomaticsData.wind +
+          copernicusData.wind) / 5
+      ) + localAdjust.wind + geoAdjust.wind,
+      updated: new Date().toISOString()
     };
-  } catch (err) {
-    console.error("❌ Erreur SuperForecast:", err);
-    return { success: false, error: err.message };
+
+    return forecast;
+  } catch (error) {
+    console.error('[SuperForecast] Erreur lors de la fusion des modèles :', error);
+    throw error;
   }
 }
-
-export default { runSuperForecast };
