@@ -1,68 +1,64 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🌍 Console Admin – Tinsflash Centrale Météo</title>
-  <meta name="robots" content="noindex, nofollow">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       background: #0a0a0a;
       color: #f0f0f0;
       font-family: Arial, sans-serif;
+      text-align: center;
       margin: 0;
       padding: 0;
     }
-    header {
-      background: #1e1e1e;
-      padding: 15px;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: bold;
+    h1 {
       color: cyan;
+      margin: 20px 0;
     }
-    main {
-      padding: 15px;
+    .card {
+      background: #1a1a1a;
+      margin: 15px auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 800px;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+      text-align: left;
     }
     h2 {
-      margin-top: 20px;
-      font-size: 1.2rem;
-      color: cyan;
-      text-align: center;
+      color: #00e6e6;
+      margin-bottom: 10px;
     }
     button {
-      display: block;
-      margin: 15px auto;
-      padding: 15px 25px;
-      font-size: 1.1rem;
-      background: cyan;
+      padding: 12px 24px;
       border: none;
       border-radius: 8px;
-      color: #000;
       cursor: pointer;
+      background: cyan;
+      color: #000;
       font-weight: bold;
+      transition: 0.3s;
+      margin: 5px;
     }
     button:hover {
-      background: #00e6e6;
-    }
-    section {
-      margin-bottom: 30px;
-      background: #1e1e1e;
-      padding: 15px;
-      border-radius: 10px;
+      background: #00cccc;
     }
     pre {
       background: #000;
       padding: 10px;
-      border-radius: 5px;
-      max-height: 300px;
+      text-align: left;
       overflow-y: auto;
-      font-size: 0.9rem;
+      max-height: 250px;
+      border-radius: 5px;
       white-space: pre-wrap;
+      font-size: 0.9rem;
     }
     .chat-box {
       display: flex;
       flex-direction: column;
+      gap: 10px;
     }
     .chat-log {
       background: #000;
@@ -70,14 +66,12 @@
       height: 250px;
       overflow-y: auto;
       border-radius: 5px;
-      margin-bottom: 10px;
     }
     .chat-message {
       margin: 5px 0;
     }
-    .chat-message b {
-      color: cyan;
-    }
+    .chat-message.admin { color: cyan; font-weight: bold; }
+    .chat-message.jean { color: #ffcc00; }
     .chat-input {
       display: flex;
       gap: 10px;
@@ -96,39 +90,44 @@
   </style>
 </head>
 <body>
-  <header>🌍 Console Admin – Tinsflash Centrale Météo</header>
-  <main>
-    <section>
-      <h2>⚡ Lancer un Run SuperForecast</h2>
-      <button onclick="launchRun()">🚀 Lancer le Run</button>
-    </section>
+  <h1>🌍 Console Admin – Tinsflash Centrale Météo</h1>
 
-    <section>
-      <h2>📜 Logs en temps réel</h2>
-      <pre id="logs">En attente de logs...</pre>
-    </section>
+  <!-- Run + Refresh -->
+  <div class="card">
+    <h2>⚡ Pilotage des Runs</h2>
+    <button onclick="launchRun()">🚀 Lancer un Run</button>
+    <button id="refreshBtn">🔄 Rafraîchir maintenant</button>
+  </div>
 
-    <section>
-      <h2>⚠️ Alertes générées</h2>
-      <pre id="alerts">Chargement...</pre>
-    </section>
+  <!-- Logs -->
+  <div class="card">
+    <h2>📜 Logs en temps réel</h2>
+    <pre id="logs">En attente de logs...</pre>
+  </div>
 
-    <section>
-      <h2>👥 Utilisateurs par catégorie</h2>
-      <pre id="users">Chargement...</pre>
-    </section>
+  <!-- Alertes -->
+  <div class="card">
+    <h2>⚠️ Alertes générées</h2>
+    <pre id="alerts">Chargement...</pre>
+  </div>
 
-    <section>
-      <h2>🤖 Chat avec J.E.A.N.</h2>
-      <div class="chat-box">
-        <div class="chat-log" id="chatLog"></div>
-        <div class="chat-input">
-          <input type="text" id="chatInput" placeholder="Posez une question à J.E.A.N.">
-          <button id="chatSend">Envoyer</button>
-        </div>
+  <!-- Utilisateurs -->
+  <div class="card">
+    <h2>👥 Utilisateurs par catégorie</h2>
+    <pre id="users">Chargement...</pre>
+  </div>
+
+  <!-- Chat J.E.A.N -->
+  <div class="card">
+    <h2>🤖 Chat avec J.E.A.N. (IA météo)</h2>
+    <div class="chat-box">
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Posez une question à J.E.A.N.">
+        <button id="chatSend">Envoyer</button>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
 
   <script src="admin.js"></script>
 </body>
