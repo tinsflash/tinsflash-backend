@@ -8,11 +8,10 @@ import bodyParser from "body-parser";
 // ✅ Imports internes (présents dans ton ZIP)
 import { addLog, getLogs } from "./services/logsService.js";
 import { chatWithJean } from "./services/chatService.js";
-import forecastRoutes from "./routes/forecast.js";   // prévisions
-import alertsRoutes from "./routes/alerts.js";       // alertes
-import adminRoutes from "./routes/admin.js";         // console admin
-import userRoutes from "./routes/user.js";           // ⚠️ CORRIGÉ (fichier = user.js)
-import supercalcRoutes from "./routes/supercalc.js"; // supercalc/superforecast
+import forecastRoutes from "./routes/forecast.js";   // présent
+import alertsRoutes from "./routes/alerts.js";       // présent
+import adminRoutes from "./routes/admin.js";         // présent
+import usersRoutes from "./routes/user.js";          // corrigé (singulier !)
 
 dotenv.config();
 
@@ -25,10 +24,7 @@ app.use(express.static("public"));
 // 🌍 Connexion MongoDB
 // -------------------------
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => addLog("✅ Connecté à MongoDB"))
   .catch((err) => addLog("❌ Erreur MongoDB: " + err.message));
 
@@ -36,12 +32,12 @@ mongoose
 // 🌍 Routes principales
 // -------------------------
 
-// ✅ Healthcheck
+// Healthcheck
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", service: "Tinsflash Centrale Météo 🚀" });
 });
 
-// ✅ Logs en temps réel
+// Logs en temps réel
 app.get("/api/admin/logs", async (req, res) => {
   try {
     const logs = await getLogs();
@@ -51,7 +47,7 @@ app.get("/api/admin/logs", async (req, res) => {
   }
 });
 
-// ✅ Chat IA J.E.A.N.
+// Chat IA J.E.A.N.
 app.post("/api/admin/chat", async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: "Message manquant" });
@@ -73,8 +69,7 @@ app.post("/api/admin/chat", async (req, res) => {
 app.use("/api/forecast", forecastRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/users", userRoutes); // ⚠️ corrigé pour "user.js"
-app.use("/api/supercalc", supercalcRoutes);
+app.use("/api/users", usersRoutes);
 
 // -------------------------
 // 🌍 Lancement serveur
