@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import cron from "node-cron"; // 🔥 Ajout pour les runs auto
 
 // Services
 import superForecast from "./services/superForecast.js";
@@ -35,7 +36,7 @@ const __dirname = path.dirname(__filename);
 // Servir les fichiers statiques (public/)
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Protection admin-pp.html ---
+// --- Protection admin-pp.html --- //
 app.get("/admin-pp.html", (req, res) => {
   const pass = req.query.pass;
   if (pass === "202679") {
@@ -51,7 +52,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- Connexion MongoDB ---
+// --- Connexion MongoDB --- //
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -64,15 +65,16 @@ mongoose
  * ROUTES API
  */
 
-// --- SuperForecast (Run complet) ---
+// --- SuperForecast (Run complet manuel) ---
 app.post("/api/supercalc/run", async (req, res) => {
   try {
-    addLog("🚀 Run SuperForecast lancé");
-    const result = await superForecast.runFullForecast();
-    addLog("✅ Run SuperForecast terminé");
+    const { lat, lon } = req.body;
+    addLog("🚀 Run manuel SuperForecast lancé");
+    const result = await superForecast.runFullForecast(lat, lon);
+    addLog("✅ Run manuel SuperForecast terminé");
     res.json(result);
   } catch (err) {
-    addLog("❌ Erreur run SuperForecast: " + err.message);
+    addLog("❌ Erreur run manuel SuperForecast: " + err.message);
     logError("❌ Erreur supercalc/run: " + err.message);
     res.status(500).json({ error: err.message });
   }
@@ -203,10 +205,28 @@ app.get("/api/admin/logs", (req, res) => {
 
 // --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
+  // ⚠️ À remplacer par vraie DB Users plus tard
   res.json({
-    covered: { free: 0, premium: 0, pro: 0, proPlus: 0 },
-    nonCovered: { free: 0, premium: 0, pro: 0, proPlus: 0 },
+    covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
+    nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
   });
+});
+
+/**
+ * CRON JOBS – Run automatique 3x par jour (heure belge)
+ * 07h10 – 12h10 – 19h30
+ */
+cron.schedule("10 6 * * *", async () => { // 07h10 CET = 06h10 UTC
+  addLog("🕖 CRON → Run auto SuperForecast (matin)");
+  await superForecast.runFullForecast();
+});
+cron.schedule("10 11 * * *", async () => { // 12h10 CET = 11h10 UTC
+  addLog("🕛 CRON → Run auto SuperForecast (midi)");
+  await superForecast.runFullForecast();
+});
+cron.schedule("30 18 * * *", async () => { // 19h30 CET = 18h30 UTC
+  addLog("🕖 CRON → Run auto SuperForecast (soir)");
+  await superForecast.runFullForecast();
 });
 
 // 🚀 Lancement serveur
