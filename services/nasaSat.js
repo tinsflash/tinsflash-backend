@@ -1,44 +1,30 @@
 // services/nasaSat.js
 import axios from "axios";
 
-const NASA_API_URL = "https://power.larc.nasa.gov/api/temporal/daily/point";
-
 /**
- * Récupère les données météo NASA POWER pour un point (lat/lon)
- * Compatible avec SuperForecast
+ * Récupère données satellites NASA POWER
+ * @param {number} lat
+ * @param {number} lon
  */
-async function nasaSat(lat, lon, start = "20220101", end = "20221231") {
+async function nasaSat(lat, lon) {
   try {
-    const response = await axios.get(NASA_API_URL, {
-      params: {
-        parameters: "T2M,PRECTOTCORR,WS10M",
-        community: "RE", // Renewable Energy
-        longitude: lon,
-        latitude: lat,
-        start,
-        end,
-        format: "JSON",
-      },
-    });
+    const url = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOT,WS2M&community=RE&longitude=${lon}&latitude=${lat}&start=20240101&end=20240107&format=JSON`;
 
-    const parameters = response.data?.properties?.parameter || {};
+    const res = await axios.get(url);
+    const data = res.data?.properties?.parameter;
+
+    if (!data) throw new Error("Données NASA indisponibles");
 
     return {
-      temperature: parameters.T2M ?? [],
-      precipitation: parameters.PRECTOTCORR ?? [],
-      wind: parameters.WS10M ?? [],
       source: "NASA POWER",
+      temperature: data.T2M,
+      precipitation: data.PRECTOT,
+      wind: data.WS2M,
     };
-  } catch (error) {
-    console.error("❌ Erreur récupération NASA POWER:", error.message);
-    return {
-      temperature: [],
-      precipitation: [],
-      wind: [],
-      source: "NASA POWER",
-      error: error.message,
-    };
+  } catch (err) {
+    console.error("❌ Erreur NASA POWER:", err.message);
+    return null;
   }
 }
 
-export default nasaSat; // ✅ export direct de la fonction
+export default nasaSat;
