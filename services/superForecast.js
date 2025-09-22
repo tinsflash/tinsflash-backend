@@ -14,19 +14,20 @@ import Forecast from "../models/Forecast.js";
 
 /**
  * Run complet SuperForecast
+ * Fusion multi-modèles (Meteomatics, OpenWeather, NASA, Trullemans, Wetterzentrale)
+ * Ajustements IA + détection anomalies + stockage DB
  */
-async function runFullForecast(lat = 50.5, lon = 4.7, pushLog = () => {}) {
+async function runFullForecast(lat = 50.5, lon = 4.7) {
   try {
-    pushLog(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
+    console.log(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
 
     // 1. Sources Meteomatics
     const meteomaticsSources = await meteoManager(lat, lon);
-    pushLog("✅ Sources Meteomatics récupérées");
 
     // 2. Autres sources externes
     const [ow, nasa, trul, wett] = await Promise.all([
       openweather.getForecast(lat, lon),
-      nasaSat.getForecast(lat, lon),
+      nasaSat(lat, lon),
       trullemans.getForecast(lat, lon),
       wetterzentrale.getForecast(lat, lon),
     ]);
@@ -37,44 +38,39 @@ async function runFullForecast(lat = 50.5, lon = 4.7, pushLog = () => {}) {
       throw new Error("Aucune source météo disponible");
     }
 
-    pushLog(`📡 Sources intégrées: ${sources.map((s) => s.source).join(", ")}`);
+    console.log(`📡 Sources intégrées: ${sources.map(s => s.source).join(", ")}`);
 
-    // 3. Fusion intelligente
+    // 3. Fusion IA
     let merged = comparator.mergeForecasts(sources);
-    pushLog("🔀 Fusion intelligente terminée");
 
-    // 4. Ajustements
+    // 4. Ajustements (relief, microclimats)
     merged = applyGeoFactors(merged, lat, lon);
     merged = localFactors.applyLocalFactors(merged, lat, lon);
-    pushLog("⚙️ Ajustements géographiques appliqués");
 
-    // 5. Détection anomalies saisonnières
+    // 5. Anomalies saisonnières
     const anomaly = forecastVision.detectSeasonalAnomaly(merged);
     merged.anomaly = anomaly || null;
-    if (anomaly) {
-      pushLog("🚨 Anomalie saisonnière détectée !");
-    }
 
-    // 6. Sauvegarde en MongoDB
+    // 6. Sauvegarde MongoDB
     const forecastDoc = new Forecast({
       timestamp: new Date(),
       location: { lat, lon },
       data: merged,
-      sources: sources.map((s) => s.source || "unknown"),
+      sources: sources.map(s => s.source || "unknown"),
     });
 
     await forecastDoc.save();
-    pushLog("💾 SuperForecast sauvegardé en base");
+
+    console.log("✅ SuperForecast sauvegardé en base");
 
     return {
       success: true,
       forecast: merged,
-      sources: sources.map((s) => s.source),
+      sources: sources.map(s => s.source),
       anomaly,
     };
   } catch (err) {
     console.error("❌ Erreur SuperForecast:", err.message);
-    pushLog("❌ Erreur SuperForecast: " + err.message);
     return { success: false, error: err.message };
   }
 }
