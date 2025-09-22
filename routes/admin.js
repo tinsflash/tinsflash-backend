@@ -4,23 +4,23 @@ import { askJean } from "../services/jeanService.js";
 
 const router = express.Router();
 
-// Exemple console admin
+// 📊 Stats admin
 router.get("/stats", (req, res) => {
   res.json({
     system: "OK",
-    users: 2500,
+    users: 2500, // ⚠️ À remplacer par vraie DB Users
     activeAlerts: 12,
     podcasts: 56,
   });
 });
 
-// Validation d’alertes (70%–90%)
+// ✅ Validation d’alertes (70%–90%)
 router.post("/validate-alert", (req, res) => {
   const { id, action } = req.body; // action = accept/refuse/escalate
   res.json({ success: true, id, action });
 });
 
-// Chat avec J.E.A.N.
+// 💬 Chat avec J.E.A.N.
 router.post("/chat", async (req, res) => {
   try {
     const { question } = req.body;
