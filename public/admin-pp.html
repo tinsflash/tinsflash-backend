@@ -2,19 +2,109 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Tinsflash – Console Admin</title>
+  <title>Console Admin – Tinsflash</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #f1f1f1; margin: 0; padding: 0; }
-    header { background: #1e1e1e; padding: 15px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #00e0ff; }
-    main { padding: 15px; }
-    h2 { margin-top: 20px; font-size: 1.2rem; color: #00e0ff; text-align: center; line-height: 1.4; }
-    button { display: block; margin: 15px auto; padding: 15px 25px; font-size: 1.1rem; background: #00e0ff; border: none; border-radius: 8px; color: #121212; cursor: pointer; font-weight: bold; }
-    button:hover { background: #00c0d9; }
-    section { margin-bottom: 30px; background: #1e1e1e; padding: 15px; border-radius: 10px; }
-    pre { background: #000; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-size: 0.9rem; }
-    textarea { width: 100%; height: 150px; border-radius: 5px; padding: 10px; font-size: 1rem; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #1e1e1e;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #00e0ff;
+    }
+    main {
+      padding: 15px;
+    }
+    h2 {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: #00e0ff;
+      text-align: center;
+      line-height: 1.4;
+    }
+    button {
+      display: inline-block;
+      margin: 10px 5px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      background: #00e0ff;
+      border: none;
+      border-radius: 8px;
+      color: #121212;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #00c0d9;
+    }
+    section {
+      margin-bottom: 30px;
+      background: #1e1e1e;
+      padding: 15px;
+      border-radius: 10px;
+    }
+    pre {
+      background: #000;
+      padding: 10px;
+      border-radius: 5px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      background: #000;
+      color: #f1f1f1;
+      border: 1px solid #333;
+      border-radius: 5px;
+      padding: 10px;
+      resize: vertical;
+      font-size: 0.95rem;
+    }
+    .chat-box {
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-log {
+      background: #000;
+      padding: 10px;
+      height: 250px;
+      overflow-y: auto;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .chat-message {
+      margin: 5px 0;
+    }
+    .chat-message.admin { color: #00e0ff; font-weight: bold; }
+    .chat-message.jean { color: #ffcc00; }
+    .chat-input {
+      display: flex;
+      gap: 10px;
+    }
+    .chat-input textarea {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      font-size: 1rem;
+      resize: none;
+      height: 60px;
+    }
+    .chat-input button {
+      padding: 10px 15px;
+      font-size: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -39,9 +129,21 @@
     </section>
 
     <section>
-      <h2>📝 Prévisions rédigées (FR)</h2>
+      <h2>📜 Prévisions texte (édition avant publication)</h2>
       <textarea id="forecastText"></textarea>
-      <button id="saveForecast">💾 Sauvegarder & Rafraîchir Index</button>
+      <button id="saveForecast">💾 Sauvegarder texte</button>
+      <button id="refreshIndex">🔄 Rafraîchir Index</button>
+    </section>
+
+    <section>
+      <h2>🤖 Chat avec J.E.A.N.</h2>
+      <div class="chat-box">
+        <div class="chat-log" id="chatLog"></div>
+        <div class="chat-input">
+          <textarea id="chatInput" placeholder="Posez une question à J.E.A.N."></textarea>
+          <button id="chatSend">Envoyer</button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -50,8 +152,10 @@
       try {
         const res = await fetch("/api/admin/logs");
         const data = await res.json();
-        document.getElementById("logs").textContent = data.logs?.join("\n") || "Aucun log disponible.";
-      } catch { document.getElementById("logs").textContent = "❌ Erreur chargement logs"; }
+        document.getElementById("logs").textContent = data.logs?.join("\\n") || "Aucun log disponible.";
+      } catch {
+        document.getElementById("logs").textContent = "❌ Erreur chargement logs";
+      }
     }
 
     async function fetchAlerts() {
@@ -59,7 +163,9 @@
         const res = await fetch("/api/alerts");
         const data = await res.json();
         document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
-      } catch { document.getElementById("alerts").textContent = "❌ Erreur chargement alertes"; }
+      } catch {
+        document.getElementById("alerts").textContent = "❌ Erreur chargement alertes";
+      }
     }
 
     async function fetchUsers() {
@@ -67,7 +173,42 @@
         const res = await fetch("/api/admin/users");
         const data = await res.json();
         document.getElementById("users").textContent = JSON.stringify(data, null, 2);
-      } catch { document.getElementById("users").textContent = "❌ Erreur chargement utilisateurs"; }
+      } catch {
+        document.getElementById("users").textContent = "❌ Erreur chargement utilisateurs";
+      }
+    }
+
+    async function fetchForecastText() {
+      try {
+        const res = await fetch("/index-data.json?_=" + Date.now());
+        const data = await res.json();
+        document.getElementById("forecastText").value = data.forecastTextFr || "";
+      } catch {
+        document.getElementById("forecastText").value = "❌ Erreur chargement texte";
+      }
+    }
+
+    async function saveForecastText() {
+      const text = document.getElementById("forecastText").value;
+      try {
+        await fetch("/api/admin/update-forecast-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ forecastTextFr: text })
+        });
+        alert("✅ Texte sauvegardé !");
+      } catch {
+        alert("❌ Erreur sauvegarde texte");
+      }
+    }
+
+    async function refreshIndexPage() {
+      try {
+        await fetch("/api/admin/refresh-index", { method: "POST" });
+        alert("🔄 Index mis à jour !");
+      } catch {
+        alert("❌ Erreur rafraîchissement index");
+      }
     }
 
     document.getElementById("runBtn").addEventListener("click", async () => {
@@ -76,30 +217,48 @@
         const data = await res.json();
         alert("✅ Run lancé – vérifiez les logs !");
         console.log(data);
-      } catch { alert("❌ Erreur lancement Run"); }
+      } catch {
+        alert("❌ Erreur lancement Run");
+      }
     });
 
-    document.getElementById("saveForecast").addEventListener("click", async () => {
-      const text = document.getElementById("forecastText").value;
+    document.getElementById("saveForecast").addEventListener("click", saveForecastText);
+    document.getElementById("refreshIndex").addEventListener("click", refreshIndexPage);
+
+    document.getElementById("chatSend").addEventListener("click", async () => {
+      const input = document.getElementById("chatInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const log = document.getElementById("chatLog");
+      log.innerHTML += `<div class="chat-message admin">👤 Admin: ${msg}</div>`;
+      input.value = "";
+
       try {
-        const res = await fetch("/api/admin/refresh-index", {
+        const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ forecastTextFr: text })
+          body: JSON.stringify({ message: msg })
         });
         const data = await res.json();
-        alert("✅ Prévisions sauvegardées et Index rafraîchi !");
-        console.log(data);
-      } catch { alert("❌ Erreur sauvegarde prévisions"); }
+        const reply = data.reply || JSON.stringify(data);
+        log.innerHTML += `<div class="chat-message jean">🤖 J.E.A.N.: ${reply}</div>`;
+        log.scrollTop = log.scrollHeight;
+      } catch {
+        log.innerHTML += `<div class="chat-message jean">❌ Erreur réponse JEAN</div>`;
+      }
     });
 
+    // Rafraîchissements auto
     setInterval(fetchLogs, 5000);
     setInterval(fetchAlerts, 5000);
     setInterval(fetchUsers, 10000);
 
+    // Chargement initial
     fetchLogs();
     fetchAlerts();
     fetchUsers();
+    fetchForecastText();
   </script>
 </body>
 </html>
