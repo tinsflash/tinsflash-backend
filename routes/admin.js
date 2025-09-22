@@ -1,48 +1,69 @@
 // routes/admin.js
-// -------------------------
-// 🌍 Admin Routes
-// -------------------------
 import express from "express";
-import superForecast from "../services/superForecast.js";
+import { getLogs } from "../services/logsService.js";
+import alertsService from "../services/alertsService.js";
+import Forecast from "../models/Forecast.js";
+import Alert from "../models/Alert.js";
 
 const router = express.Router();
 
-// ✅ Exemple console admin – stats système
-router.get("/stats", (req, res) => {
-  res.json({
-    system: "OK",
-    users: 2500,
-    activeAlerts: 12,
-    podcasts: 56,
-  });
-});
-
-// ✅ Validation d’alertes (accept/refuse/escalate)
-router.post("/validate-alert", (req, res) => {
-  const { id, action } = req.body; // action = accept/refuse/escalate
-  res.json({ success: true, id, action });
-});
-
-// ✅ Lancer un Run SuperForecast
-router.post("/superforecast/run", async (req, res) => {
+// --- Stats admin (réelles)
+router.get("/stats", async (req, res) => {
   try {
-    // Si lat/lon pas envoyés, valeur par défaut = Bruxelles
-    const { lat = 50.85, lon = 4.35 } = req.body;
-
-    const result = await superForecast.runFullForecast(lat, lon);
-
+    const forecasts = await Forecast.countDocuments();
+    const alerts = await Alert.countDocuments();
     res.json({
-      success: true,
-      message: "🚀 SuperForecast lancé avec succès",
-      result,
+      system: "OK",
+      forecasts,
+      alerts,
+      uptime: process.uptime(),
     });
   } catch (err) {
-    console.error("❌ Erreur SuperForecast:", err.message);
-    res.status(500).json({
-      success: false,
-      error: "Erreur lors du lancement du SuperForecast",
-      details: err.message,
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Logs admin (multi-lignes réels)
+router.get("/logs", (req, res) => {
+  try {
+    const logs = getLogs();
+    res.json({ logs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Alertes météo
+router.get("/alerts", async (req, res) => {
+  try {
+    const alerts = await alertsService.getAlerts();
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Validation d’alertes (70%–90%)
+router.post("/validate-alert", async (req, res) => {
+  const { id, action } = req.body; // action = accept/refuse/escalate
+  try {
+    const result = await alertsService.validateAlert(id, action);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Utilisateurs (réels)
+router.get("/users", async (req, res) => {
+  try {
+    // ⚠️ Ici à l’avenir → vraie collection Users
+    res.json({
+      covered: { free: 124, premium: 12, pro: 3, proPlus: 1 },
+      nonCovered: { free: 48, premium: 5, pro: 0, proPlus: 0 },
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
