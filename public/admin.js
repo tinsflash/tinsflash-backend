@@ -1,52 +1,28 @@
-async function fetchLogs() {
-  try {
-    const res = await fetch("/api/logs");
-    const data = await res.json();
-    document.getElementById("logs").textContent =
-      data.length > 0 ? data.map(l => l.message).join("\n") : "Aucun log pour l’instant.";
-  } catch (err) {
-    document.getElementById("logs").textContent = "❌ Erreur lors du chargement des logs.";
+// public/admin.js
+
+document.addEventListener("DOMContentLoaded", () => {
+  const runButton = document.getElementById("runButton");
+  const logsBox = document.getElementById("logsBox");
+
+  if (runButton) {
+    runButton.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/api/admin/superforecast/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat: 50.85, lon: 4.35 }) // exemple Bruxelles
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          logsBox.textContent = `✅ ${data.message}`;
+        } else {
+          logsBox.textContent = `❌ Erreur: ${data.error || "Run échoué"}`;
+        }
+      } catch (err) {
+        logsBox.textContent = `⚠️ Impossible de contacter le serveur : ${err.message}`;
+      }
+    });
   }
-}
-
-async function fetchAlerts() {
-  try {
-    const res = await fetch("/api/alerts");
-    const data = await res.json();
-    document.getElementById("alerts").textContent =
-      data.length > 0 ? data.map(a => `⚠️ ${a.type}: ${a.message}`).join("\n") : "Aucune alerte active.";
-  } catch (err) {
-    document.getElementById("alerts").textContent = "❌ Erreur lors du chargement des alertes.";
-  }
-}
-
-async function fetchUsers() {
-  try {
-    const res = await fetch("/api/users/stats");
-    const data = await res.json();
-    document.getElementById("users").textContent = JSON.stringify(data, null, 2);
-  } catch (err) {
-    document.getElementById("users").textContent = "❌ Erreur lors du chargement des utilisateurs.";
-  }
-}
-
-async function launchRun() {
-  try {
-    const res = await fetch("/api/superforecast/run", { method: "POST" });
-    const data = await res.json();
-    alert("🚀 SuperForecast lancé: " + data.status);
-    fetchLogs(); // recharge logs
-  } catch (err) {
-    alert("❌ Erreur lors du lancement du run.");
-  }
-}
-
-// Rafraîchissement périodique
-setInterval(fetchLogs, 5000);
-setInterval(fetchAlerts, 10000);
-setInterval(fetchUsers, 15000);
-
-// Premier appel
-fetchLogs();
-fetchAlerts();
-fetchUsers();
+});
