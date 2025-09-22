@@ -4,8 +4,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
-import cron from "node-cron"; // 🔥 Ajout pour les runs auto
 
 // Services
 import superForecast from "./services/superForecast.js";
@@ -29,14 +29,14 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Fix pour __dirname en ES modules
+// Fix __dirname (ESM)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Servir les fichiers statiques (public/)
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Protection admin-pp.html --- //
+// --- Protection admin-pp.html ---
 app.get("/admin-pp.html", (req, res) => {
   const pass = req.query.pass;
   if (pass === "202679") {
@@ -46,13 +46,13 @@ app.get("/admin-pp.html", (req, res) => {
   }
 });
 
-// Désactiver l’indexation Google
+// Désactiver indexation Google
 app.use((req, res, next) => {
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
   next();
 });
 
-// --- Connexion MongoDB --- //
+// --- Connexion MongoDB ---
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -65,16 +65,16 @@ mongoose
  * ROUTES API
  */
 
-// --- SuperForecast (Run complet manuel) ---
+// --- SuperForecast (Run complet) ---
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
-    addLog("🚀 Run manuel SuperForecast lancé");
+    addLog("🚀 Run SuperForecast lancé");
     const result = await superForecast.runFullForecast(lat, lon);
-    addLog("✅ Run manuel SuperForecast terminé");
+    addLog("✅ Run SuperForecast terminé");
     res.json(result);
   } catch (err) {
-    addLog("❌ Erreur run manuel SuperForecast: " + err.message);
+    addLog("❌ Erreur run SuperForecast: " + err.message);
     logError("❌ Erreur supercalc/run: " + err.message);
     res.status(500).json({ error: err.message });
   }
@@ -205,28 +205,35 @@ app.get("/api/admin/logs", (req, res) => {
 
 // --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
-  // ⚠️ À remplacer par vraie DB Users plus tard
+  // ⚠️ Exemple : à remplacer par vraie DB Users
   res.json({
     covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
     nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
   });
 });
 
-/**
- * CRON JOBS – Run automatique 3x par jour (heure belge)
- * 07h10 – 12h10 – 19h30
- */
-cron.schedule("10 6 * * *", async () => { // 07h10 CET = 06h10 UTC
-  addLog("🕖 CRON → Run auto SuperForecast (matin)");
-  await superForecast.runFullForecast();
-});
-cron.schedule("10 11 * * *", async () => { // 12h10 CET = 11h10 UTC
-  addLog("🕛 CRON → Run auto SuperForecast (midi)");
-  await superForecast.runFullForecast();
-});
-cron.schedule("30 18 * * *", async () => { // 19h30 CET = 18h30 UTC
-  addLog("🕖 CRON → Run auto SuperForecast (soir)");
-  await superForecast.runFullForecast();
+// --- Refresh Index (prévisions modifiées) ---
+app.post("/api/admin/refresh-index", async (req, res) => {
+  try {
+    const { forecastTextFr } = req.body;
+
+    const indexData = {
+      timestamp: new Date(),
+      forecastTextFr,
+      alerts: await alertsService.getAlerts(),
+    };
+
+    fs.writeFileSync(
+      path.join(__dirname, "public", "index-data.json"),
+      JSON.stringify(indexData, null, 2)
+    );
+
+    addLog("🔄 Index public mis à jour par l’admin");
+    res.json({ success: true, message: "Index mis à jour", data: indexData });
+  } catch (err) {
+    logError("❌ Erreur refresh-index: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 🚀 Lancement serveur
