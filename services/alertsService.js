@@ -1,56 +1,37 @@
 // services/alertsService.js
 import Alert from "../models/Alert.js";
-import { addLog } from "./logsService.js";
 
-/**
- * Récupère toutes les alertes
- */
-export async function getAlerts() {
-  try {
-    addLog("📡 Récupération des alertes depuis MongoDB");
-    const alerts = await Alert.find().sort({ createdAt: -1 });
-    return alerts;
-  } catch (err) {
-    addLog("❌ Erreur récupération alertes: " + err.message);
-    throw err;
-  }
+// Récupérer toutes les alertes
+async function getAlerts() {
+  return await Alert.find().sort({ createdAt: -1 }).limit(50);
 }
 
-/**
- * Ajoute une alerte
- */
-export async function addAlert(data) {
-  try {
-    const alert = new Alert(data);
-    await alert.save();
-
-    if (alert.certainty >= 90) {
-      addLog(`⚠️ Alerte publiée automatiquement (>90%) : ${alert.type} ${alert.zone}`);
-    } else if (alert.certainty >= 70) {
-      addLog(`🟠 Alerte en attente validation (70–89%) : ${alert.type} ${alert.zone}`);
-    } else {
-      addLog(`ℹ️ Alerte ignorée (<70%) : ${alert.type} ${alert.zone}`);
-    }
-
-    return alert;
-  } catch (err) {
-    addLog("❌ Erreur ajout alerte: " + err.message);
-    throw err;
+// Ajouter une nouvelle alerte
+async function addAlert(data) {
+  if (!data.type || !data.zone || !data.certainty) {
+    throw new Error("Champs obligatoires manquants pour l’alerte");
   }
+
+  const severity =
+    data.certainty >= 90 ? "rouge" :
+    data.certainty >= 70 ? "orange" : "jaune";
+
+  const alert = new Alert({
+    type: data.type,
+    description: data.description || "",
+    zone: data.zone,
+    certainty: data.certainty,
+    severity,
+    source: data.source || "Tinsflash AI"
+  });
+
+  await alert.save();
+  return alert;
 }
 
-/**
- * Supprime une alerte
- */
-export async function deleteAlert(id) {
-  try {
-    const result = await Alert.findByIdAndDelete(id);
-    if (result) {
-      addLog(`🗑️ Alerte supprimée : ${result.type} ${result.zone}`);
-    }
-    return { success: !!result };
-  } catch (err) {
-    addLog("❌ Erreur suppression alerte: " + err.message);
-    throw err;
-  }
+// Supprimer une alerte
+async function deleteAlert(id) {
+  return await Alert.findByIdAndDelete(id);
 }
+
+export default { getAlerts, addAlert, deleteAlert };
