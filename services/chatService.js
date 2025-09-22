@@ -1,22 +1,25 @@
 // services/chatService.js
-import openai from "./openai.js";
+import { askJean } from "./openai.js";
 
 /**
- * Pose une question à J.E.A.N. (IA météo)
+ * Service de discussion avec J.E.A.N.
+ * @param {string} message - Le message envoyé par l’utilisateur
+ * @returns {Promise<string>} - Réponse de J.E.A.N.
  */
-async function askJean(message) {
+export async function chatWithJean(message) {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: message }],
-    });
+    if (!message || message.trim().length === 0) {
+      return "⚠️ Message vide. Merci de poser une question à J.E.A.N.";
+    }
 
-    // ✅ Retourne bien le contenu texte
-    return response.choices[0].message.content.trim();
-  } catch (err) {
-    console.error("❌ Erreur J.E.A.N.:", err.message);
-    return "Erreur IA J.E.A.N.";
+    // Appel de l’IA via openai.js
+    const response = await askJean(message);
+
+    return response || "⚠️ JEAN n’a pas de réponse pour le moment.";
+  } catch (error) {
+    console.error("Erreur dans chatService:", error.message);
+    return "❌ Erreur interne J.E.A.N. : " + error.message;
   }
 }
 
-export default { askJean };
+export default { chatWithJean };
