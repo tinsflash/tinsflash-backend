@@ -205,33 +205,44 @@ app.get("/api/admin/logs", (req, res) => {
 
 // --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
-  // ⚠️ À connecter avec vraie DB Users
+  // ⚠️ À remplacer par vraie DB Users → ici données fictives
   res.json({
     covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
     nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
   });
 });
 
-// --- Mettre à jour texte prévisions FR ---
-app.post("/api/admin/update-forecast-text", async (req, res) => {
+// --- Sauvegarde du texte des prévisions (Admin) ---
+app.post("/api/admin/update-forecast-text", (req, res) => {
   try {
-    const { forecastTextFr } = req.body;
-    if (!forecastTextFr) {
-      return res.status(400).json({ error: "Texte prévisions manquant" });
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: "Texte manquant" });
     }
 
     const filePath = path.join(__dirname, "public", "index-data.json");
-    let data = {};
-    if (fs.existsSync(filePath)) {
-      data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    fs.writeFileSync(filePath, JSON.stringify({ forecastText: text }, null, 2));
+
+    addLog("📝 Texte prévisions mis à jour par l’admin.");
+    res.json({ success: true, message: "Texte mis à jour" });
+  } catch (err) {
+    logError("❌ Erreur update forecast-text: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Rafraîchissement du texte pour l’index ---
+app.get("/api/admin/refresh-index", (req, res) => {
+  try {
+    const filePath = path.join(__dirname, "public", "index-data.json");
+    if (!fs.existsSync(filePath)) {
+      return res.json({ forecastText: "⚠️ Aucun texte disponible." });
     }
 
-    data.forecastTextFr = forecastTextFr;
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-
-    res.json({ success: true, forecastTextFr });
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    res.json(data);
   } catch (err) {
-    logError("❌ Erreur update forecast text: " + err.message);
+    logError("❌ Erreur refresh-index: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
