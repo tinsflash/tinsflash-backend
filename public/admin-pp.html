@@ -1,253 +1,55 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Tinsflash – Console Admin</title>
-  <meta name="robots" content="noindex, nofollow">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>🌍 Console Admin – Tinsflash Centrale Météo</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #121212;
-      color: #f1f1f1;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #1e1e1e;
-      padding: 15px;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #00e0ff;
-    }
-    main {
-      padding: 15px;
-    }
-    h2 {
-      margin-top: 20px;
-      font-size: 1.2rem;
-      color: #00e0ff;
-      text-align: center;
-      line-height: 1.4;
-    }
-    button {
-      display: block;
-      margin: 15px auto;
-      padding: 15px 25px;
-      font-size: 1.2rem;
-      background: #00e0ff;
-      border: none;
-      border-radius: 8px;
-      color: #121212;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #00c0d9;
-    }
-    section {
-      margin-bottom: 30px;
-      background: #1e1e1e;
-      padding: 15px;
-      border-radius: 10px;
-    }
-    pre {
-      background: #000;
-      padding: 10px;
-      border-radius: 5px;
-      max-height: 300px;
-      overflow-y: auto;
-      font-size: 0.9rem;
-    }
-    textarea {
-      width: 100%;
-      height: 200px;
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      resize: vertical;
-      font-size: 1rem;
-      background: #000;
-      color: #f1f1f1;
-    }
-    .chat-box {
-      display: flex;
-      flex-direction: column;
-    }
-    .chat-log {
-      background: #000;
-      padding: 10px;
-      height: 250px;
-      overflow-y: auto;
-      border-radius: 5px;
-      margin-bottom: 10px;
-    }
-    .chat-message {
-      margin: 5px 0;
-    }
-    .chat-message.admin { color: #00e0ff; font-weight: bold; }
-    .chat-message.jean { color: #ffcc00; }
-    .chat-input {
-      display: flex;
-      gap: 10px;
-    }
-    .chat-input input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      font-size: 1rem;
-    }
-    .chat-input button {
-      padding: 10px 15px;
-      font-size: 1rem;
-    }
+    body { background:#111; color:#0ff; font-family:Arial, sans-serif; }
+    h2 { color:#0ff; }
+    textarea { width:100%; min-height:120px; background:#000; color:#0f0; }
+    button { background:#0ff; border:none; padding:10px; margin:5px; font-size:1rem; border-radius:8px; cursor:pointer; }
+    .logBox, .alertBox, .bulletinBox { background:#222; padding:10px; margin:10px 0; border-radius:10px; }
   </style>
 </head>
 <body>
-  <header>🌍 Console Admin – Tinsflash Centrale Météo</header>
-  <main>
-    <h2>⚡ Lancer un Run SuperForecast<br>(Europe & USA)</h2>
-    <button id="runBtn">🚀 Lancer le Run</button>
+  <h1>🌍 Console Admin – Tinsflash Centrale Météo</h1>
 
-    <section>
-      <h2>📜 Logs en temps réel</h2>
-      <pre id="logs">En attente de logs...</pre>
-    </section>
+  <h2>⚡ Lancer un Run SuperForecast (Europe + USA)</h2>
+  <button onclick="launchRun()">🚀 Lancer le Run</button>
 
-    <section>
-      <h2>⚠️ Alertes générées</h2>
-      <pre id="alerts">Chargement...</pre>
-    </section>
+  <div class="logBox">
+    <h2>📜 Logs en temps réel</h2>
+    <pre id="logs">Aucun log disponible.</pre>
+  </div>
 
-    <section>
-      <h2>👥 Utilisateurs par catégorie</h2>
-      <pre id="users">Chargement...</pre>
-    </section>
+  <div class="alertBox">
+    <h2>⚠️ Alertes générées</h2>
+    <div id="alerts"></div>
+  </div>
 
-    <section>
-      <h2>📰 Bulletin météo (éditable)</h2>
-      <textarea id="bulletin"></textarea>
-      <button id="saveBulletin">💾 Sauvegarder & Rafraîchir Index</button>
-    </section>
-
-    <section>
-      <h2>🤖 Chat avec J.E.A.N.</h2>
-      <div class="chat-box">
-        <div class="chat-log" id="chatLog"></div>
-        <div class="chat-input">
-          <input type="text" id="chatInput" placeholder="Posez une question à J.E.A.N.">
-          <button id="chatSend">Envoyer</button>
-        </div>
-      </div>
-    </section>
-  </main>
+  <div class="bulletinBox">
+    <h2>📰 Bulletin météo généré (édition avant publication)</h2>
+    <textarea id="bulletinText">En attente de génération...</textarea><br>
+    <button onclick="saveBulletin()">💾 Sauvegarder & Rafraîchir Index</button>
+  </div>
 
   <script>
-    async function fetchLogs() {
-      try {
-        const res = await fetch("/api/admin/logs");
-        const data = await res.json();
-        document.getElementById("logs").textContent = data.logs?.join("\n") || "Aucun log disponible.";
-      } catch (err) {
-        document.getElementById("logs").textContent = "❌ Erreur chargement logs";
-      }
+    async function launchRun() {
+      const res = await fetch("/api/run-superforecast");
+      const data = await res.json();
+      document.getElementById("logs").textContent = data.logs.join("\n");
+      document.getElementById("bulletinText").value = data.bulletin || "⚠️ Aucun bulletin généré";
     }
 
-    async function fetchAlerts() {
-      try {
-        const res = await fetch("/api/alerts");
-        const data = await res.json();
-        document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("alerts").textContent = "❌ Erreur chargement alertes";
-      }
+    async function saveBulletin() {
+      const txt = document.getElementById("bulletinText").value;
+      await fetch("/api/save-bulletin", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ text: txt })
+      });
+      alert("✅ Bulletin sauvegardé et index rafraîchi !");
     }
-
-    async function fetchUsers() {
-      try {
-        const res = await fetch("/api/admin/users");
-        const data = await res.json();
-        document.getElementById("users").textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("users").textContent = "❌ Erreur chargement utilisateurs";
-      }
-    }
-
-    async function fetchBulletin() {
-      try {
-        const res = await fetch("/api/bulletin");
-        const data = await res.json();
-        document.getElementById("bulletin").value = data.text || "Aucun bulletin pour le moment.";
-      } catch (err) {
-        document.getElementById("bulletin").value = "❌ Erreur chargement bulletin";
-      }
-    }
-
-    document.getElementById("runBtn").addEventListener("click", async () => {
-      try {
-        const res = await fetch("/api/supercalc/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-        const data = await res.json();
-        alert("✅ Run lancé – vérifiez les logs !");
-        console.log(data);
-      } catch (err) {
-        alert("❌ Erreur lancement Run");
-      }
-    });
-
-    document.getElementById("saveBulletin").addEventListener("click", async () => {
-      const text = document.getElementById("bulletin").value;
-      try {
-        const res = await fetch("/api/bulletin/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text })
-        });
-        if (res.ok) {
-          alert("✅ Bulletin sauvegardé et index mis à jour !");
-        } else {
-          alert("❌ Erreur sauvegarde bulletin");
-        }
-      } catch (err) {
-        alert("❌ Erreur envoi bulletin");
-      }
-    });
-
-    document.getElementById("chatSend").addEventListener("click", async () => {
-      const input = document.getElementById("chatInput");
-      const msg = input.value.trim();
-      if (!msg) return;
-
-      const log = document.getElementById("chatLog");
-      log.innerHTML += `<div class="chat-message admin">👤 Admin: ${msg}</div>`;
-      input.value = "";
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: msg })
-        });
-        const data = await res.json();
-        const reply = data.reply || JSON.stringify(data);
-        log.innerHTML += `<div class="chat-message jean">🤖 J.E.A.N.: ${reply}</div>`;
-        log.scrollTop = log.scrollHeight;
-      } catch (err) {
-        log.innerHTML += `<div class="chat-message jean">❌ Erreur réponse JEAN</div>`;
-      }
-    });
-
-    // Rafraîchissement auto
-    setInterval(fetchLogs, 5000);
-    setInterval(fetchAlerts, 5000);
-    setInterval(fetchUsers, 10000);
-
-    // Chargement initial
-    fetchLogs();
-    fetchAlerts();
-    fetchUsers();
-    fetchBulletin();
   </script>
 </body>
 </html>
