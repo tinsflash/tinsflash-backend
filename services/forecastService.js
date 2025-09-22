@@ -20,7 +20,7 @@ function generateNationalBulletin(forecast, country) {
   return `Prévisions nationales (${country}): tendance générale ${forecast.condition}, températures moyennes autour de ${forecast.temp}°C.`;
 }
 
-export async function getLocalForecast(lat, lon, country = "Europe/USA") {
+async function getLocalForecast(lat, lon, country = "Europe/USA") {
   try {
     addLog("📍 Récupération prévisions locales...");
     const forecast = await Forecast.findOne().sort({ timestamp: -1 });
@@ -34,7 +34,7 @@ export async function getLocalForecast(lat, lon, country = "Europe/USA") {
   }
 }
 
-export async function getNationalForecast(country = "Europe/USA") {
+async function getNationalForecast(country = "Europe/USA") {
   try {
     addLog("🌍 Récupération prévisions nationales...");
     const forecast = await Forecast.findOne().sort({ timestamp: -1 });
@@ -48,7 +48,7 @@ export async function getNationalForecast(country = "Europe/USA") {
   }
 }
 
-export async function get7DayForecast(lat, lon, country = "Europe/USA") {
+async function get7DayForecast(lat, lon, country = "Europe/USA") {
   try {
     addLog("📅 Récupération prévisions 7 jours...");
     const forecasts = await Forecast.find().sort({ timestamp: -1 }).limit(7);
@@ -66,3 +66,14 @@ export async function get7DayForecast(lat, lon, country = "Europe/USA") {
     throw err;
   }
 }
+
+/**
+ * ✅ Export complet (default + fonctions nommées)
+ */
+export default {
+  getLocalForecast,
+  getNationalForecast,
+  get7DayForecast
+};
+
+export { getLocalForecast, getNationalForecast, get7DayForecast };
