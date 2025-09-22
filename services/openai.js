@@ -2,7 +2,7 @@
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // clé stockée dans Render (Dashboard → Environment)
+  apiKey: process.env.OPENAI_API_KEY, // clé stockée dans Render
 });
 
 /**
