@@ -35,7 +35,7 @@ const __dirname = path.dirname(__filename);
 // Servir les fichiers statiques (public/)
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Protection admin-pp.html --- //
+// --- Protection admin-pp.html ---
 app.get("/admin-pp.html", (req, res) => {
   const pass = req.query.pass;
   if (pass === "202679") {
@@ -51,7 +51,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- Connexion MongoDB --- //
+// --- Connexion MongoDB ---
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -67,9 +67,8 @@ mongoose
 // --- SuperForecast (Run complet) ---
 app.post("/api/supercalc/run", async (req, res) => {
   try {
-    const { lat, lon } = req.body;
     addLog("🚀 Run SuperForecast lancé");
-    const result = await superForecast.runFullForecast(lat, lon);
+    const result = await superForecast.runFullForecast();
     addLog("✅ Run SuperForecast terminé");
     res.json(result);
   } catch (err) {
@@ -204,10 +203,9 @@ app.get("/api/admin/logs", (req, res) => {
 
 // --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
-  // ⚠️ Mock simple pour débloquer admin-pp (à remplacer par vraie DB Users)
   res.json({
-    covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
-    nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
+    covered: { free: 0, premium: 0, pro: 0, proPlus: 0 },
+    nonCovered: { free: 0, premium: 0, pro: 0, proPlus: 0 },
   });
 });
 
