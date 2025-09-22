@@ -1,101 +1,93 @@
 // services/chatService.js
+import OpenAI from "openai";
 import fetch from "node-fetch";
+import { addLog } from "./logsService.js";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const HF_API_KEY = process.env.HF_API_KEY;
-
-/**
- * Fonction pour appeler GPT-5 (OpenAI)
- */
-async function callOpenAI(messages) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-5", // ✅ Ton moteur atomique météo
-      messages,
-      temperature: 0.3,
-      max_tokens: 800
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI error: ${response.status}`);
-  }
-  const data = await response.json();
-  return data.choices[0].message.content;
-}
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 /**
- * Fonction pour appeler Gemini (Google)
+ * 🤖 Chat avec J.E.A.N. (GPT-5 → fallback Gemini → fallback HuggingFace)
  */
-async function callGemini(messages) {
-  const prompt = messages.map(m => `${m.role}: ${m.content}`).join("\n");
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }]}]
-      })
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Gemini error: ${response.status}`);
-  }
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "❌ Pas de réponse Gemini.";
-}
-
-/**
- * Fonction pour appeler HuggingFace (Mistral-7B)
- */
-async function callHuggingFace(messages) {
-  const prompt = messages.map(m => `${m.role}: ${m.content}`).join("\n");
-  const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${HF_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ inputs: prompt })
-  });
-
-  if (!response.ok) {
-    throw new Error(`HuggingFace error: ${response.status}`);
-  }
-  const data = await response.json();
-  return data[0]?.generated_text || "❌ Pas de réponse HuggingFace.";
-}
-
-/**
- * Fonction principale → cascade IA
- */
-export async function chatWithJean(messages) {
+export async function chatWithJean(message) {
   try {
-    if (OPENAI_API_KEY) {
-      return await callOpenAI(messages);
-    } else if (GEMINI_API_KEY) {
-      return await callGemini(messages);
-    } else if (HF_API_KEY) {
-      return await callHuggingFace(messages);
-    } else {
-      return "❌ Aucune clé API disponible. Configurez OPENAI_API_KEY, GEMINI_API_KEY ou HF_API_KEY.";
+    // --- GPT-5 (OpenAI) ---
+    addLog("⚡ Tentative réponse avec GPT-5...");
+    const gpt = await openai.chat.completions.create({
+      model: "gpt-5", // 🚨 ton moteur météo nucléaire
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo mondiale. " +
+            "Tu es expert en météorologie, climatologie et mathématiques. " +
+            "Explique toujours de manière claire, fiable et précise les prévisions et alertes.",
+        },
+        { role: "user", content: message },
+      ],
+    });
+
+    const reply = gpt.choices[0].message.content;
+    addLog("✅ Réponse obtenue via GPT-5");
+    return { engine: "GPT-5", text: reply };
+  } catch (err) {
+    addLog("⚠️ GPT-5 indisponible: " + err.message);
+  }
+
+  try {
+    // --- Gemini (Google AI Studio) ---
+    addLog("⚡ Tentative réponse avec Gemini...");
+    const gemini = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: message }] }],
+        }),
+      }
+    );
+
+    const geminiData = await gemini.json();
+    const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (reply) {
+      addLog("✅ Réponse obtenue via Gemini");
+      return { engine: "Gemini", text: reply };
     }
   } catch (err) {
-    console.error("Erreur chatWithJean:", err.message);
-
-    // Fallback si une IA échoue
-    if (GEMINI_API_KEY) {
-      try { return await callGemini(messages); } catch {}
-    }
-    if (HF_API_KEY) {
-      try { return await callHuggingFace(messages); } catch {}
-    }
-
-    return "❌ Toutes les IA sont indisponibles.";
+    addLog("⚠️ Gemini indisponible: " + err.message);
   }
+
+  try {
+    // --- HuggingFace ---
+    addLog("⚡ Tentative réponse avec HuggingFace...");
+    const hf = await fetch("https://api-inference.huggingface.co/models/gpt2", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.HF_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ inputs: message }),
+    });
+
+    const hfData = await hf.json();
+    const reply = hfData[0]?.generated_text;
+
+    if (reply) {
+      addLog("✅ Réponse obtenue via HuggingFace");
+      return { engine: "HuggingFace", text: reply };
+    }
+  } catch (err) {
+    addLog("⚠️ HuggingFace indisponible: " + err.message);
+  }
+
+  // --- Fallback ultime ---
+  return {
+    engine: "Fallback",
+    text: "❌ Aucune IA disponible actuellement. Vérifiez vos clés API.",
+  };
 }
+
+export default { chatWithJean };
