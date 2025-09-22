@@ -1,16 +1,16 @@
-// --- Fetch Logs ---
+// public/admin.js
+
 async function fetchLogs() {
   try {
     const res = await fetch("/api/admin/logs");
     const data = await res.json();
-    document.getElementById("logs").textContent =
-      (data.logs && data.logs.join("\n")) || "Aucun log disponible.";
+    const logs = document.getElementById("logs");
+    logs.textContent = (data.logs || []).join("\n");
   } catch (err) {
     document.getElementById("logs").textContent = "❌ Erreur chargement logs";
   }
 }
 
-// --- Fetch Alerts ---
 async function fetchAlerts() {
   try {
     const res = await fetch("/api/alerts");
@@ -21,7 +21,6 @@ async function fetchAlerts() {
   }
 }
 
-// --- Fetch Users ---
 async function fetchUsers() {
   try {
     const res = await fetch("/api/admin/users");
@@ -32,53 +31,21 @@ async function fetchUsers() {
   }
 }
 
-// --- Launch Run ---
 async function launchRun() {
   try {
     const res = await fetch("/api/supercalc/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat: 50.5, lon: 4.7 }), // centre Europe
+      body: JSON.stringify({ lat: 50.5, lon: 4.7 }), // exemple Belgique
     });
     const data = await res.json();
-    alert("✅ Run lancé – suivez les logs !");
-    console.log("Run:", data);
-    fetchLogs();
+    alert("✅ Run lancé – vérifiez les logs !");
+    console.log(data);
   } catch (err) {
     alert("❌ Erreur lancement Run");
   }
 }
 
-// --- Refresh Index ---
-async function refreshIndex() {
-  try {
-    const res = await fetch("/api/admin/refresh-index", { method: "POST" });
-    const data = await res.json();
-    alert("✅ Index rafraîchi !");
-    console.log("Index:", data);
-  } catch (err) {
-    alert("❌ Erreur rafraîchissement index");
-  }
-}
-
-// --- Bulletin ---
-async function saveBulletin() {
-  const txt = document.getElementById("bulletin").value;
-  try {
-    const res = await fetch("/api/admin/bulletin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: txt }),
-    });
-    const data = await res.json();
-    alert("✅ Bulletin sauvegardé !");
-    console.log("Bulletin:", data);
-  } catch (err) {
-    alert("❌ Erreur sauvegarde bulletin");
-  }
-}
-
-// --- Chat ---
 async function sendChat() {
   const input = document.getElementById("chatInput");
   const msg = input.value.trim();
@@ -95,19 +62,20 @@ async function sendChat() {
       body: JSON.stringify({ message: msg }),
     });
     const data = await res.json();
-    log.innerHTML += `<div class="chat-message jean">🤖 J.E.A.N.: ${data.reply || "..."}</div>`;
+    const reply = data.reply || JSON.stringify(data);
+    log.innerHTML += `<div class="chat-message jean">🤖 J.E.A.N.: ${reply}</div>`;
     log.scrollTop = log.scrollHeight;
-  } catch {
+  } catch (err) {
     log.innerHTML += `<div class="chat-message jean">❌ Erreur réponse JEAN</div>`;
   }
 }
 
-// --- Auto Refresh ---
+// Rafraîchissement auto
 setInterval(fetchLogs, 5000);
-setInterval(fetchAlerts, 10000);
-setInterval(fetchUsers, 15000);
+setInterval(fetchAlerts, 7000);
+setInterval(fetchUsers, 10000);
 
-// Initial Load
+// Init
 fetchLogs();
 fetchAlerts();
 fetchUsers();
