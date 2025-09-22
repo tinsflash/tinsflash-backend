@@ -3,19 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌍 Console Admin – Tinsflash</title>
+  <title>🌍 Console Admin – Tinsflash Centrale Météo</title>
+  <link rel="stylesheet" href="styles.css" />
   <style>
-    body { background: #0a0a0a; color: #f0f0f0; font-family: Arial, sans-serif; text-align: center; }
-    h1 { color: cyan; margin-bottom: 20px; }
-    .card { background: #1a1a1a; margin: 15px auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 800px; box-shadow: 0 0 10px rgba(0,255,255,0.3); }
-    button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; background: cyan; color: #000; font-weight: bold; transition: 0.3s; }
+    body { background: #0a0a0a; color: #f0f0f0; font-family: Arial, sans-serif; }
+    h1 { color: cyan; text-align: center; }
+    .card {
+      background: #1a1a1a; margin: 15px auto; padding: 20px;
+      border-radius: 10px; width: 90%; max-width: 800px;
+      box-shadow: 0 0 10px rgba(0,255,255,0.3);
+    }
+    button { padding: 10px 20px; border: none; border-radius: 8px;
+      cursor: pointer; background: cyan; color: #000; font-weight: bold;
+    }
     button:hover { background: #00e6e6; }
-    pre { background: #000; padding: 10px; text-align: left; overflow-y: auto; max-height: 250px; border-radius: 5px; white-space: pre-wrap; }
-    textarea { width: 100%; height: 120px; margin-top: 10px; }
+    pre, textarea {
+      background: #000; color: #0f0; padding: 10px;
+      text-align: left; overflow-y: auto; border-radius: 5px;
+      max-height: 250px; width: 100%;
+    }
+    textarea { height: 200px; color: #fff; }
   </style>
 </head>
 <body>
-  <h1>🌍 Console Admin – Tinsflash</h1>
+  <h1>🌍 Console Admin – Tinsflash Centrale Météo</h1>
 
   <div class="card">
     <h2>⚡ Lancer un Run SuperForecast</h2>
@@ -38,75 +49,18 @@
   </div>
 
   <div class="card">
-    <h2>📰 Bulletins météo (FR/BE/LUX)</h2>
-    <div>
-      <h3>Belgique</h3>
-      <textarea id="bulletinBE"></textarea>
-      <button onclick="saveBulletin('BE')">💾 Sauver BE</button>
-    </div>
-    <div>
-      <h3>France</h3>
-      <textarea id="bulletinFR"></textarea>
-      <button onclick="saveBulletin('FR')">💾 Sauver FR</button>
-    </div>
-    <div>
-      <h3>Luxembourg</h3>
-      <textarea id="bulletinLUX"></textarea>
-      <button onclick="saveBulletin('LUX')">💾 Sauver LUX</button>
-    </div>
-    <button onclick="refreshIndex()">🔄 Rafraîchir l’Index</button>
+    <h2>📰 Bulletins météo (BE/FR/LU modifiables)</h2>
+    <textarea id="bulletins"></textarea><br />
+    <button onclick="saveBulletins()">💾 Sauvegarder</button>
   </div>
 
   <div class="card">
     <h2>🤖 Chat avec J.E.A.N.</h2>
-    <div id="chatLog" style="background:#000; padding:10px; height:200px; overflow:auto; border-radius:5px; margin-bottom:10px;"></div>
-    <input type="text" id="chatInput" placeholder="Posez une question" style="width:80%; padding:8px;">
-    <button onclick="sendChat()">Envoyer</button>
+    <pre id="jeanChat">Posez vos questions à J.E.A.N...</pre>
+    <input id="jeanInput" placeholder="Votre question..." style="width:80%" />
+    <button onclick="askJean()">Envoyer</button>
   </div>
 
-  <script>
-    async function fetchLogs() {
-      const res = await fetch("/api/admin/logs"); const data = await res.json();
-      document.getElementById("logs").textContent = data.logs.join("\n");
-    }
-    async function fetchAlerts() {
-      const res = await fetch("/api/alerts"); const data = await res.json();
-      document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
-    }
-    async function fetchUsers() {
-      const res = await fetch("/api/admin/users"); const data = await res.json();
-      document.getElementById("users").textContent = JSON.stringify(data, null, 2);
-    }
-    async function fetchBulletins() {
-      const res = await fetch("/api/admin/bulletins"); const data = await res.json();
-      document.getElementById("bulletinBE").value = data.BE || "";
-      document.getElementById("bulletinFR").value = data.FR || "";
-      document.getElementById("bulletinLUX").value = data.LUX || "";
-    }
-    async function saveBulletin(country) {
-      const text = document.getElementById("bulletin"+country).value;
-      await fetch("/api/admin/bulletins", { method:"POST", headers:{ "Content-Type":"application/json"}, body: JSON.stringify({ country, text }) });
-      alert("✅ Bulletin " + country + " sauvegardé !");
-    }
-    async function refreshIndex() {
-      alert("🔄 Index sera rafraîchi (ajout back plus tard)");
-    }
-    async function launchRun() {
-      await fetch("/api/supercalc/run", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ lat:50.5, lon:4.7 }) });
-      alert("✅ Run lancé !");
-    }
-    async function sendChat() {
-      const msg = document.getElementById("chatInput").value; if(!msg) return;
-      const log = document.getElementById("chatLog"); log.innerHTML += `<div style="color:cyan;">👤 ${msg}</div>`;
-      const res = await fetch("/api/chat",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ message: msg })});
-      const data = await res.json();
-      log.innerHTML += `<div style="color:yellow;">🤖 ${data.reply}</div>`;
-      log.scrollTop = log.scrollHeight;
-    }
-    setInterval(fetchLogs, 5000);
-    setInterval(fetchAlerts, 5000);
-    setInterval(fetchUsers, 10000);
-    fetchLogs(); fetchAlerts(); fetchUsers(); fetchBulletins();
-  </script>
+  <script src="admin.js"></script>
 </body>
 </html>
