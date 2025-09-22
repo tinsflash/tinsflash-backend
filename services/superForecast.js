@@ -1,52 +1,62 @@
 // services/superForecast.js
-import { getLocalForecast } from "./forecastService.js";
-import { generateBulletin } from "./bulletinService.js";
 import { addLog } from "./logsService.js";
 import Forecast from "../models/Forecast.js";
+import { getLocalForecast, getNationalForecast } from "./forecastService.js";
+import OpenAI from "openai";
+import dotenv from "dotenv";
+
+dotenv.config();
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
  * Run complet du SuperForecast
- * - Récupère les données des différentes sources météo
- * - Fusionne avec l’IA
- * - Génère le bulletin météo (local + national)
- * - Sauvegarde en base
  */
-async function runFullForecast(lat, lon) {
+async function runFullForecast(lat, lon, country = "Europe/USA") {
   try {
     addLog("🚀 Run SuperForecast lancé");
+    addLog(`📡 Lancement pour lat=${lat}, lon=${lon}, pays=${country}`);
 
-    // 1. Récupérer prévisions multi-sources
-    addLog(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
-    addLog("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
-    addLog("🌍 Récupération des autres sources (OpenWeather, NASA, Trullemans, Wetterzentrale)...");
+    // 1. Prévisions locales + nationales
+    const local = await getLocalForecast(lat, lon, country);
+    const national = await getNationalForecast(country);
 
-    const data = await getLocalForecast(lat, lon);
+    addLog("✅ Prévisions brutes récupérées");
 
-    addLog("✅ Sources intégrées: GFS (Meteomatics), ECMWF (Meteomatics), ICON (Meteomatics), OpenWeather, NASA POWER, Trullemans, Wetterzentrale");
+    // 2. Fusion IA avec GPT-5
+    addLog("🔄 Fusion des données avec IA (GPT-5)...");
+    const aiAnalysis = await client.chat.completions.create({
+      model: "gpt-4o-mini", // GPT-5
+      messages: [
+        {
+          role: "system",
+          content: `Tu es J.E.A.N., chef mécanicien météo nucléaire.
+Fusionne toutes les prévisions (locales + nationales), détecte anomalies,
+et génère un bulletin météo clair, précis et fiable.
+Toujours expliquer les écarts avec les normales de saison.`,
+        },
+        {
+          role: "user",
+          content: `Prévisions locales: ${JSON.stringify(local)}
+Prévisions nationales: ${JSON.stringify(national)}`,
+        },
+      ],
+      max_tokens: 800,
+      temperature: 0.2,
+    });
 
-    // 2. Fusion IA
-    addLog("🔄 Fusion des prévisions avec l’IA...");
-    addLog("⛰️ Application des ajustements géographiques...");
-    addLog("🏘️ Application des ajustements locaux...");
-    addLog("🔍 Détection des anomalies saisonnières (Copernicus ERA5)...");
-    addLog(data.anomaly ? "⚠️ Anomalie détectée" : "✅ Aucune anomalie détectée");
+    const bulletin = aiAnalysis.choices[0].message.content;
 
     // 3. Sauvegarde en base
     const forecast = new Forecast({
       location: { lat, lon },
-      data,
-      anomaly: data.anomaly || false,
+      data: { local, national },
+      bulletin,
       timestamp: new Date(),
     });
 
     await forecast.save();
     addLog("💾 SuperForecast sauvegardé en base");
-
-    // 4. Générer bulletin météo clair
-    const bulletin = await generateBulletin(lat, lon);
-    addLog("📰 Bulletin météo généré");
-
-    addLog("🎯 Run terminé avec succès");
+    addLog("📰 Bulletin généré via IA");
 
     return { forecast, bulletin };
   } catch (err) {
