@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Tinsflash – Prévisions météo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tinsflash – site et application en avance sur le monde dans les prévisions météo et alertes.">
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -11,125 +12,132 @@
       color: #f1f1f1;
       margin: 0;
       padding: 0;
-      line-height: 1.5;
+      line-height: 1.6;
     }
     header {
       background: #1e1e1e;
-      padding: 20px;
-      text-align: center;
-      font-size: 1.6rem;
-      font-weight: bold;
       color: #00e0ff;
+      text-align: center;
+      padding: 20px;
+      font-size: 1.5rem;
+      font-weight: bold;
     }
     main {
       padding: 20px;
-      max-width: 900px;
-      margin: auto;
-    }
-    h2 {
-      margin-top: 25px;
-      font-size: 1.3rem;
-      color: #00e0ff;
-      text-align: center;
     }
     section {
+      margin-bottom: 30px;
       background: #1e1e1e;
-      margin: 15px 0;
       padding: 15px;
       border-radius: 10px;
     }
+    h2 {
+      color: #00e0ff;
+      margin-bottom: 10px;
+    }
+    pre, .forecast-text {
+      background: #000;
+      padding: 10px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+    }
     button {
-      display: block;
-      margin: 15px auto;
-      padding: 12px 20px;
-      font-size: 1.1rem;
+      padding: 10px 15px;
+      font-size: 1rem;
       background: #00e0ff;
       border: none;
-      border-radius: 8px;
-      color: #121212;
+      border-radius: 5px;
       cursor: pointer;
       font-weight: bold;
+      color: #121212;
+      margin-top: 10px;
     }
     button:hover {
       background: #00c0d9;
     }
-    pre {
-      background: #000;
-      padding: 10px;
-      border-radius: 5px;
-      overflow-x: auto;
-      font-size: 0.95rem;
-      white-space: pre-wrap;
+    #google_translate_element {
+      margin: 20px 0;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <header>🌍 Tinsflash – Prévisions météo</header>
+  <header>🌍 Tinsflash – Prévisions & Alertes</header>
   <main>
-    <button id="refreshBtn">🔄 Rafraîchir les prévisions</button>
-
     <section>
-      <h2>📜 Prévisions</h2>
-      <pre id="forecast">Chargement...</pre>
+      <h2>📜 Prévisions météo (Texte officiel)</h2>
+      <div id="forecastText" class="forecast-text">Chargement des prévisions...</div>
+      <button onclick="refreshPage()">🔄 Rafraîchir la page</button>
     </section>
 
     <section>
-      <h2>⚠️ Alertes</h2>
-      <pre id="alerts">Chargement...</pre>
+      <h2>⚠️ Alertes météo</h2>
+      <pre id="alerts">Chargement des alertes...</pre>
+    </section>
+
+    <section>
+      <h2>📡 Radar (pluie, neige, vent – 30 min)</h2>
+      <div id="radar">Chargement radar...</div>
     </section>
 
     <section>
       <h2>🌐 Traduction automatique</h2>
-      <pre id="translated">Chargement traduction...</pre>
+      <div id="google_translate_element"></div>
     </section>
   </main>
 
   <script>
-    async function loadData() {
+    async function loadForecastText() {
       try {
-        const res = await fetch("/index-data.json");
-        if (!res.ok) throw new Error("Impossible de charger index-data.json");
+        const res = await fetch("/index-data.json?_=" + Date.now()); // éviter cache
+        if (!res.ok) throw new Error("Impossible de charger forecastText");
         const data = await res.json();
-
-        // Prévisions FR
-        document.getElementById("forecast").textContent =
-          data.forecastTextFr || "Pas de prévisions disponibles.";
-
-        // Alertes
-        document.getElementById("alerts").textContent =
-          JSON.stringify(data.alerts || [], null, 2);
-
-        // Traduction auto
-        const userLang = navigator.language.split("-")[0]; // ex: "en", "de"
-        if (userLang !== "fr") {
-          const translateRes = await fetch("https://libretranslate.de/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              q: data.forecastTextFr,
-              source: "fr",
-              target: userLang,
-              format: "text"
-            })
-          });
-          const translated = await translateRes.json();
-          document.getElementById("translated").textContent =
-            translated.translatedText || "Traduction indisponible.";
-        } else {
-          document.getElementById("translated").textContent =
-            "Déjà en français, traduction non nécessaire.";
-        }
+        document.getElementById("forecastText").textContent = data.forecastTextFr || "Aucune prévision disponible.";
       } catch (err) {
-        document.getElementById("forecast").textContent = "❌ Erreur chargement données.";
-        document.getElementById("alerts").textContent = err.message;
+        document.getElementById("forecastText").textContent = "❌ Erreur chargement texte prévisions";
       }
     }
 
-    // Bouton rafraîchir
-    document.getElementById("refreshBtn").addEventListener("click", loadData);
+    async function loadAlerts() {
+      try {
+        const res = await fetch("/api/alerts");
+        const data = await res.json();
+        document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("alerts").textContent = "❌ Erreur chargement alertes";
+      }
+    }
+
+    async function loadRadar() {
+      try {
+        const res = await fetch("/api/radar");
+        const data = await res.json();
+        document.getElementById("radar").textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("radar").textContent = "❌ Erreur chargement radar";
+      }
+    }
+
+    function refreshPage() {
+      loadForecastText();
+      loadAlerts();
+      loadRadar();
+    }
+
+    // Google Translate
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement(
+        { pageLanguage: "fr", includedLanguages: "en,es,de,it,nl,ru,zh,ja,ar,pt", layout: google.translate.TranslateElement.InlineLayout.SIMPLE },
+        "google_translate_element"
+      );
+    }
 
     // Chargement initial
-    loadData();
+    loadForecastText();
+    loadAlerts();
+    loadRadar();
   </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
