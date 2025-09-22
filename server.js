@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
-import fs from "fs";
 import { fileURLToPath } from "url";
 
 // Services
@@ -23,6 +22,7 @@ import { logInfo, logError } from "./utils/logger.js";
 // Models
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
+import User from "./models/User.js";
 
 dotenv.config();
 const app = express();
@@ -203,46 +203,28 @@ app.get("/api/admin/logs", (req, res) => {
   res.json(getLogs());
 });
 
-// --- Users admin ---
-app.get("/api/admin/users", (req, res) => {
-  // ⚠️ À remplacer par vraie DB Users → ici données fictives
-  res.json({
-    covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
-    nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
-  });
-});
-
-// --- Sauvegarde du texte des prévisions (Admin) ---
-app.post("/api/admin/update-forecast-text", (req, res) => {
+// --- Users admin (réels depuis Mongo) ---
+app.get("/api/admin/users", async (req, res) => {
   try {
-    const { text } = req.body;
-    if (!text) {
-      return res.status(400).json({ error: "Texte manquant" });
-    }
+    const covered = await User.find({ zone: "covered" });
+    const nonCovered = await User.find({ zone: "nonCovered" });
 
-    const filePath = path.join(__dirname, "public", "index-data.json");
-    fs.writeFileSync(filePath, JSON.stringify({ forecastText: text }, null, 2));
-
-    addLog("📝 Texte prévisions mis à jour par l’admin.");
-    res.json({ success: true, message: "Texte mis à jour" });
+    res.json({
+      covered: {
+        free: covered.filter(u => u.type === "free").length,
+        premium: covered.filter(u => u.type === "premium").length,
+        pro: covered.filter(u => u.type === "pro").length,
+        proPlus: covered.filter(u => u.type === "proPlus").length,
+      },
+      nonCovered: {
+        free: nonCovered.filter(u => u.type === "free").length,
+        premium: nonCovered.filter(u => u.type === "premium").length,
+        pro: nonCovered.filter(u => u.type === "pro").length,
+        proPlus: nonCovered.filter(u => u.type === "proPlus").length,
+      }
+    });
   } catch (err) {
-    logError("❌ Erreur update forecast-text: " + err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// --- Rafraîchissement du texte pour l’index ---
-app.get("/api/admin/refresh-index", (req, res) => {
-  try {
-    const filePath = path.join(__dirname, "public", "index-data.json");
-    if (!fs.existsSync(filePath)) {
-      return res.json({ forecastText: "⚠️ Aucun texte disponible." });
-    }
-
-    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    res.json(data);
-  } catch (err) {
-    logError("❌ Erreur refresh-index: " + err.message);
+    logError("❌ Erreur admin/users: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
