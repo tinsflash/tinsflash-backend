@@ -35,7 +35,7 @@ const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "public")));
 
 // --- Protection de admin-pp.html --- //
-app.get("/admin-pp.html", (req, res) => {
+app.get("/admin-pp.html", (req, res, next) => {
   const pass = req.query.pass;
   if (pass === "202679") {
     res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
@@ -54,35 +54,38 @@ app.use((req, res, next) => {
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
   })
   .then(() => logInfo("✅ MongoDB connecté"))
   .catch((err) => logError("❌ Erreur MongoDB: " + err.message));
+
+/**
+ * LOGS temps réel (buffer en mémoire)
+ */
+let logsBuffer = [];
+function pushLog(msg) {
+  const logEntry = { time: new Date(), message: msg };
+  logsBuffer.push(logEntry);
+  if (logsBuffer.length > 50) logsBuffer.shift(); // garde max 50
+  console.log("📝 LOG:", msg);
+}
+app.get("/api/admin/logs", (req, res) => {
+  res.json(logsBuffer);
+});
 
 /**
  * ROUTES API
  */
 app.post("/api/supercalc/run", async (req, res) => {
   try {
-    let { lat, lon } = req.body;
-
-    // Valeurs par défaut si non fournies
-    if (!lat || !lon) {
-      lat = 50.5; // Bruxelles
-      lon = 4.7;
-    }
-
-    logInfo(`⚡ SuperCalc lancé pour lat=${lat}, lon=${lon}`);
-
-    const result = await superForecast.runFullForecast(lat, lon);
-
-    if (!result.success) {
-      throw new Error(result.error || "Erreur inconnue");
-    }
-
+    const { lat, lon } = req.body;
+    pushLog(`⚡ SuperForecast lancé: lat=${lat}, lon=${lon}`);
+    const result = await superForecast.runFullForecast(lat, lon, pushLog);
+    pushLog("✅ SuperForecast terminé");
     res.json(result);
   } catch (err) {
     logError("❌ Erreur supercalc/run: " + err.message);
+    pushLog("❌ Erreur SuperForecast: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -140,6 +143,16 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
+// 🚨 Nouvel endpoint Admin Alerts
+app.get("/api/admin/alerts", async (req, res) => {
+  try {
+    const alerts = await Alert.find().sort({ createdAt: -1 }).limit(20);
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/alerts", async (req, res) => {
   try {
     const alert = await alertsService.addAlert(req.body);
@@ -175,7 +188,7 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
     const response = await chatService.askJean(message);
-    res.json(response);
+    res.json({ reply: response });
   } catch (err) {
     logError("❌ Erreur chat: " + err.message);
     res.status(500).json({ error: err.message });
@@ -189,7 +202,7 @@ app.get("/api/admin/stats", async (req, res) => {
     res.json({
       forecasts,
       alerts,
-      uptime: process.uptime()
+      uptime: process.uptime(),
     });
   } catch (err) {
     logError("❌ Erreur admin/stats: " + err.message);
