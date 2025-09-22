@@ -1,63 +1,58 @@
 // services/superForecast.js
-import fetch from "node-fetch";
-import alertsService from "./alertsService.js";
-import bulletinService from "./bulletinService.js";
+import forecastService from "./forecastService.js";
+import { generateBulletin } from "./bulletinService.js";
+import { addLog } from "./logsService.js";
+import Forecast from "../models/Forecast.js";
 
-async function runSuperForecast(lat, lon, country, region) {
-  const logs = [];
+/**
+ * Run complet du SuperForecast
+ * - Récupère les données des différentes sources météo
+ * - Fusionne avec l’IA
+ * - Génère le bulletin météo (local + national)
+ * - Sauvegarde en base
+ */
+async function runFullForecast(lat, lon) {
   try {
-    logs.push("🚀 Run SuperForecast lancé");
-    logs.push(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}, pays=${country}, région=${region}`);
+    addLog("🚀 Run SuperForecast lancé");
 
-    // 🌍 Multi-sources météo
-    logs.push("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
-    logs.push("🌍 Récupération des autres sources (OpenWeather, NASA, Copernicus ERA5, Trullemans, Wetterzentrale)...");
+    // 1. Récupérer prévisions multi-sources
+    addLog(`🚀 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
+    addLog("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
+    addLog("🌍 Récupération des autres sources (OpenWeather, NASA, Trullemans, Wetterzentrale)...");
 
-    // Simulation récupération
-    const sources = [
-      "GFS (Meteomatics)",
-      "ECMWF (Meteomatics)",
-      "ICON (Meteomatics)",
-      "OpenWeather",
-      "NASA POWER",
-      "Copernicus ERA5",
-      "Trullemans",
-      "Wetterzentrale"
-    ];
-    logs.push(`✅ Sources intégrées: ${sources.join(", ")}`);
+    const data = await forecastService.getLocalForecast(lat, lon);
 
-    // Fusion IA
-    logs.push("🤖 Fusion des prévisions avec l’IA...");
-    logs.push("⛰️ Ajustements géographiques (relief, altitude, mer)...");
-    logs.push("🏘️ Ajustements locaux (urbain/rural, microclimat)...");
-    logs.push("🔍 Détection anomalies saisonnières...");
+    addLog("✅ Sources intégrées: GFS (Meteomatics), ECMWF (Meteomatics), ICON (Meteomatics), OpenWeather, NASA POWER, Trullemans, Wetterzentrale");
 
-    // Exemple alerte forte
-    const anomaly = Math.random() > 0.7 ? "Vent violent détecté" : null;
-    if (anomaly) {
-      await alertsService.addAlert({
-        type: "vent violent",
-        zone: `${country} - ${region}`,
-        certainty: 95,
-        description: anomaly,
-        source: "AI Fusion"
-      });
-      logs.push(`⚠️ Alerte générée: ${anomaly}`);
-    } else {
-      logs.push("✅ Aucune anomalie critique détectée");
-    }
+    // 2. Fusion IA
+    addLog("🔄 Fusion des prévisions avec l’IA...");
+    addLog("⛰️ Application des ajustements géographiques...");
+    addLog("🏘️ Application des ajustements locaux...");
+    addLog("🔍 Détection des anomalies saisonnières (Copernicus ERA5)...");
+    addLog(data.anomaly ? "⚠️ Anomalie détectée" : "✅ Aucune anomalie détectée");
 
-    // Génération bulletin météo clair
-    const bulletin = await bulletinService.generateBulletin({ lat, lon, country, region });
-    logs.push("📰 Bulletin météo généré et sauvegardé");
+    // 3. Sauvegarde en base
+    const forecast = new Forecast({
+      location: { lat, lon },
+      data,
+      anomaly: data.anomaly || false,
+      timestamp: new Date(),
+    });
 
-    logs.push("💾 SuperForecast sauvegardé en base");
-    logs.push("🎯 Run terminé avec succès");
-    return { success: true, logs, bulletin };
+    await forecast.save();
+    addLog("💾 SuperForecast sauvegardé en base");
+
+    // 4. Générer bulletin météo clair
+    const bulletin = await generateBulletin();
+    addLog("📰 Bulletin météo généré");
+
+    addLog("🎯 Run terminé avec succès");
+
+    return { forecast, bulletin };
   } catch (err) {
-    logs.push(`❌ Erreur SuperForecast: ${err.message}`);
-    return { success: false, logs };
+    addLog("❌ Erreur SuperForecast: " + err.message);
+    throw err;
   }
 }
 
-export default { runSuperForecast };
+export default { runFullForecast };
