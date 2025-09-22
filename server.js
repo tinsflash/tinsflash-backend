@@ -7,7 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Services
-import superForecast from "./services/superForecast.js";
+import { runSuperForecast } from "./services/superForecast.js"; // ✅ import nommé corrigé
 import forecastService from "./services/forecastService.js";
 import radarService from "./services/radarService.js";
 import alertsService from "./services/alertsService.js";
@@ -69,7 +69,7 @@ app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
     addLog("🚀 Run SuperForecast lancé");
-    const result = await superForecast.runSuperForecast(lat, lon);
+    const result = await runSuperForecast({ lat, lon }); // ✅ appel corrigé
     addLog("✅ Run SuperForecast terminé");
     res.json(result);
   } catch (err) {
@@ -171,13 +171,10 @@ app.post("/api/podcast/generate", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    if (!message) return res.status(400).json({ error: "Message manquant" });
-
     addLog("💬 Question posée à J.E.A.N.: " + message);
     const response = await chatService.chatWithJean(message);
-
-    addLog(`🤖 Réponse J.E.A.N. (${response.engine}): ${response.text}`);
-    res.json(response); // ✅ format uniforme { engine, text }
+    addLog("🤖 Réponse J.E.A.N.: " + response.text);
+    res.json(response);
   } catch (err) {
     logError("❌ Erreur chat: " + err.message);
     res.status(500).json({ error: err.message });
