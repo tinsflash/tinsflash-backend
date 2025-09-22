@@ -1,36 +1,43 @@
 // public/admin.js
 
-// --- Logs ---
+// --- Rafraîchir les logs ---
 async function fetchLogs() {
   try {
     const res = await fetch("/api/admin/logs");
     const data = await res.json();
-    const logElement = document.getElementById("logs");
-    logElement.textContent = data.logs?.join("\n") || "Aucun log disponible.";
+
+    if (data.logs && Array.isArray(data.logs)) {
+      document.getElementById("logs").textContent = data.logs.join("\n");
+    } else {
+      document.getElementById("logs").textContent = "⚠️ Aucun log disponible.";
+    }
   } catch (err) {
-    document.getElementById("logs").textContent = "❌ Erreur chargement logs";
+    document.getElementById("logs").textContent =
+      "❌ Erreur chargement logs : " + err.message;
   }
 }
 
-// --- Alertes ---
+// --- Rafraîchir les alertes ---
 async function fetchAlerts() {
   try {
     const res = await fetch("/api/alerts");
     const data = await res.json();
     document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
   } catch (err) {
-    document.getElementById("alerts").textContent = "❌ Erreur chargement alertes";
+    document.getElementById("alerts").textContent =
+      "❌ Erreur chargement alertes : " + err.message;
   }
 }
 
-// --- Utilisateurs ---
+// --- Rafraîchir les utilisateurs ---
 async function fetchUsers() {
   try {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
     document.getElementById("users").textContent = JSON.stringify(data, null, 2);
   } catch (err) {
-    document.getElementById("users").textContent = "❌ Erreur chargement utilisateurs";
+    document.getElementById("users").textContent =
+      "❌ Erreur chargement utilisateurs : " + err.message;
   }
 }
 
@@ -40,60 +47,64 @@ async function launchRun() {
     const res = await fetch("/api/supercalc/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ lat: 50.5, lon: 4.7 }), // valeurs par défaut
     });
+
     const data = await res.json();
-    alert("✅ Run lancé – vérifiez les logs !");
-    console.log(data);
+    alert("✅ Run lancé – surveillez les logs !");
+    console.log("Résultat Run:", data);
+
+    // Forcer rafraîchissement des logs après lancement
+    fetchLogs();
   } catch (err) {
-    alert("❌ Erreur lancement Run");
+    alert("❌ Erreur lancement Run : " + err.message);
   }
 }
 
 // --- Chat avec J.E.A.N. ---
-function appendMessage(sender, text) {
-  const log = document.getElementById("chatLog");
-  const div = document.createElement("div");
-  div.className = "chat-message";
-  div.innerHTML = `<b>${sender}:</b> ${text}`;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-
-async function sendToJean() {
+async function sendChat() {
   const input = document.getElementById("chatInput");
-  const question = input.value.trim();
-  if (!question) return;
+  const msg = input.value.trim();
+  if (!msg) return;
 
-  appendMessage("👤 Admin", question);
+  const log = document.getElementById("chatLog");
+  log.innerHTML += `<div class="chat-message admin">👤 Admin: ${msg}</div>`;
   input.value = "";
 
   try {
-    const res = await fetch("/api/admin/chat", {
+    const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ message: msg }),
     });
 
     const data = await res.json();
-    if (data.answer) {
-      appendMessage("🤖 J.E.A.N.", data.answer);
-    } else {
-      appendMessage("⚠️", data.error || "Erreur JEAN");
-    }
+    const reply = data.reply || "⚠️ Pas de réponse de J.E.A.N.";
+
+    log.innerHTML += `<div class="chat-message jean">🤖 J.E.A.N.: ${reply}</div>`;
+    log.scrollTop = log.scrollHeight;
   } catch (err) {
-    appendMessage("⚠️", "Impossible de contacter JEAN: " + err.message);
+    log.innerHTML += `<div class="chat-message jean">❌ Erreur chat: ${err.message}</div>`;
   }
 }
 
-// --- Rafraîchissement automatique ---
-setInterval(fetchLogs, 5000);
-setInterval(fetchAlerts, 5000);
-setInterval(fetchUsers, 10000);
+// --- Rafraîchissement manuel ---
+function refreshAll() {
+  fetchLogs();
+  fetchAlerts();
+  fetchUsers();
+}
 
-// --- Initialisation ---
-fetchLogs();
-fetchAlerts();
-fetchUsers();
+// --- Rafraîchissement auto toutes les 10s ---
+setInterval(fetchLogs, 10000);
+setInterval(fetchAlerts, 15000);
+setInterval(fetchUsers, 20000);
 
-document.getElementById("chatSend")?.addEventListener("click", sendToJean);
+// --- Premier chargement ---
+refreshAll();
+
+// --- Brancher le bouton de chat ---
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("chatSend")?.addEventListener("click", sendChat);
+  document.getElementById("refreshBtn")?.addEventListener("click", refreshAll);
+});
