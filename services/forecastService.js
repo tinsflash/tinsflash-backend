@@ -1,76 +1,48 @@
 // services/forecastService.js
-import meteoManager from "./meteoManager.js";
-import openweather from "./openweather.js";
-import nasaSat from "./nasaSat.js";
-import trullemans from "./trullemans.js";
-import wetterzentrale from "./wetterzentrale.js";
-import comparator from "./comparator.js";
+import axios from "axios";
 
-import { applyGeoFactors } from "./geoFactors.js";
-import localFactors from "./localFactors.js";
-import forecastVision from "./forecastVision.js";
-
-import Forecast from "../models/Forecast.js";
+const OPENWEATHER_KEY = process.env.OPENWEATHER_KEY;
+const OPENWEATHER_URL = "https://api.openweathermap.org/data/2.5";
 
 /**
- * Service principal de prévision météo
+ * Prévisions locales (point GPS)
  */
-async function runForecast(lat = 50.5, lon = 4.7) {
+export async function getLocalForecast(lat, lon) {
   try {
-    console.log(`🌍 Lancement ForecastService pour lat=${lat}, lon=${lon}`);
-
-    // 1. Sources Meteomatics
-    const meteomaticsSources = await meteoManager(lat, lon);
-
-    // 2. Autres sources externes
-    const [ow, nasa, trul, wett] = await Promise.all([
-      openweather.getForecast(lat, lon),
-      nasaSat(lat, lon),
-      trullemans.getForecast(lat, lon),
-      wetterzentrale.getForecast(lat, lon),
-    ]);
-
-    const sources = [...meteomaticsSources, ow, nasa, trul, wett].filter(Boolean);
-
-    if (!sources.length) {
-      throw new Error("Aucune source météo disponible");
-    }
-
-    console.log(`📡 Sources intégrées: ${sources.map(s => s.source).join(", ")}`);
-
-    // 3. Fusion IA
-    let merged = comparator.mergeForecasts(sources);
-
-    // 4. Ajustements
-    merged = applyGeoFactors(merged, lat, lon);
-    merged = localFactors.applyLocalFactors(merged, lat, lon);
-
-    // 5. Anomalies saisonnières
-    const anomaly = forecastVision.detectSeasonalAnomaly(merged);
-    merged.anomaly = anomaly || null;
-
-    // 6. Sauvegarde MongoDB
-    const forecastDoc = new Forecast({
-      timestamp: new Date(),
-      location: { lat, lon },
-      data: merged,
-      sources: sources.map(s => s.source || "unknown"),
-    });
-
-    await forecastDoc.save();
-
-    console.log("✅ Forecast sauvegardé en base");
-
-    return {
-      success: true,
-      forecast: merged,
-      sources: sources.map(s => s.source),
-      anomaly,
-    };
+    const url = `${OPENWEATHER_URL}/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric&lang=fr`;
+    const res = await axios.get(url);
+    return res.data;
   } catch (err) {
-    console.error("❌ Erreur ForecastService:", err.message);
-    return { success: false, error: err.message };
+    console.error("❌ Erreur getLocalForecast:", err.message);
+    throw new Error("Impossible de récupérer la prévision locale.");
   }
 }
 
-export default { runForecast };
+/**
+ * Prévisions nationales (par pays)
+ * On utilise la météo capitale du pays comme proxy rapide
+ */
+export async function getNationalForecast(country) {
+  try {
+    const url = `${OPENWEATHER_URL}/forecast?q=${country}&appid=${OPENWEATHER_KEY}&units=metric&lang=fr`;
+    const res = await axios.get(url);
+    return res.data;
+  } catch (err) {
+    console.error("❌ Erreur getNationalForecast:", err.message);
+    throw new Error("Impossible de récupérer la prévision nationale.");
+  }
+}
+
+/**
+ * Prévisions sur 7 jours (GPS)
+ */
+export async function get7DayForecast(lat, lon) {
+  try {
+    const url = `${OPENWEATHER_URL}/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${OPENWEATHER_KEY}&units=metric&lang=fr`;
+    const res = await axios.get(url);
+    return res.data.daily; // uniquement les 7 jours
+  } catch (err) {
+    console.error("❌ Erreur get7DayForecast:", err.message);
+    throw new Error("Impossible de récupérer la prévision 7 jours.");
+  }
+}
