@@ -1,21 +1,14 @@
 // models/Alert.js
 import mongoose from "mongoose";
 
-const AlertSchema = new mongoose.Schema({
-  type: { type: String, required: true }, // pluie, vent, neige, etc.
-  severity: { type: String, enum: ["jaune", "orange", "rouge"], required: true },
-  confidence: { type: Number, required: true }, // pourcentage de certitude
-  description: { type: String },
-  issuedAt: { type: Date, default: Date.now },
-  validUntil: { type: Date },
-  location: {
-    lat: { type: Number, required: true },
-    lon: { type: Number, required: true },
-    city: { type: String },
-    country: { type: String }
-  },
-  source: { type: String, default: "Tinsflash AI" },
-  validated: { type: Boolean, default: false } // validé manuellement si entre 70 et 90%
+const alertSchema = new mongoose.Schema({
+  type: { type: String, required: true },         // ex: "Pluie forte", "Tempête", "Inondation"
+  description: { type: String, required: true },  // Détails explicatifs
+  zone: { type: String, required: true },         // Localisation précise ou "Afrique", "Asie"...
+  certainty: { type: Number, required: true },    // Pourcentage de certitude (0–100)
+  severity: { type: String, enum: ["rouge", "orange", "jaune", "vert"], default: "jaune" }, // Classification
+  source: { type: String, default: "Tinsflash AI" }, // Origine : IA, NASA, Trullemans...
+  createdAt: { type: Date, default: Date.now }
 });
 
-export default mongoose.model("Alert", AlertSchema);
+export default mongoose.model("Alert", alertSchema);
