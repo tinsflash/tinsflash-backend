@@ -2,22 +2,17 @@
 let logs = [];
 
 /**
- * Ajoute un log dans la mémoire + console Render
+ * Ajoute une entrée dans les logs
  * @param {string} message
  */
 export function addLog(message) {
   const timestamp = new Date().toISOString();
-  const entry = `[${timestamp}] ${message}`;
-  logs.push(entry);
-
-  // Garder uniquement les 200 derniers logs
-  if (logs.length > 200) logs.shift();
-
-  console.log(entry); // visible aussi dans les logs Render
+  logs.push(`[${timestamp}] ${message}`);
+  if (logs.length > 500) logs.shift(); // garder historique limité
 }
 
 /**
- * Retourne les logs stockés
+ * Récupère les logs actuels
  */
 export function getLogs() {
   return { logs };
