@@ -5,10 +5,14 @@ import dotenv from "dotenv";
 import cors from "cors";
 import bodyParser from "body-parser";
 
-// Services & Routes
+// ✅ Imports internes (présents dans ton ZIP)
 import { addLog, getLogs } from "./services/logsService.js";
 import { chatWithJean } from "./services/chatService.js";
-import adminRoutes from "./routes/admin.js";
+import forecastRoutes from "./routes/forecast.js";   // présent
+import alertsRoutes from "./routes/alerts.js";       // présent
+import adminRoutes from "./routes/admin.js";         // présent
+import usersRoutes from "./routes/users.js";         // présent
+import supercalcRoutes from "./routes/supercalc.js"; // présent
 
 dotenv.config();
 
@@ -60,8 +64,14 @@ app.post("/api/admin/chat", async (req, res) => {
   }
 });
 
-// Routes Admin (stats, alertes, etc.)
+// -------------------------
+// 🌍 Brancher toutes les routes
+// -------------------------
+app.use("/api/forecast", forecastRoutes);
+app.use("/api/alerts", alertsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/supercalc", supercalcRoutes);
 
 // -------------------------
 // 🌍 Lancement serveur
