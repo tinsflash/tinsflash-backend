@@ -5,142 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🌍 Console Admin – Tinsflash Centrale Météo</title>
   <style>
-    body {
-      background: #0a0a0a;
-      color: #f0f0f0;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    h1 {
-      color: cyan;
-      margin: 20px 0;
-    }
-    .card {
-      background: #1a1a1a;
-      margin: 15px auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 900px;
-      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-      text-align: left;
-    }
-    h2 {
-      color: #00e6e6;
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: cyan;
-      color: #000;
-      font-weight: bold;
-      transition: 0.3s;
-      margin: 5px;
-    }
-    button:hover {
-      background: #00cccc;
-    }
-    pre, textarea {
-      background: #000;
-      padding: 10px;
-      text-align: left;
-      overflow-y: auto;
-      max-height: 250px;
-      border-radius: 5px;
-      white-space: pre-wrap;
-      font-size: 0.9rem;
-      color: #f0f0f0;
-      width: 100%;
-    }
-    textarea {
-      resize: vertical;
-      min-height: 120px;
-    }
-    .chat-box {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .chat-log {
-      background: #000;
-      padding: 10px;
-      height: 250px;
-      overflow-y: auto;
-      border-radius: 5px;
-    }
-    .chat-message {
-      margin: 5px 0;
-    }
-    .chat-message.admin { color: cyan; font-weight: bold; }
-    .chat-message.jean { color: #ffcc00; }
-    .chat-input {
-      display: flex;
-      gap: 10px;
-    }
-    .chat-input input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      font-size: 1rem;
-    }
-    .chat-input button {
-      padding: 10px 15px;
-      font-size: 1rem;
-    }
+    body { background:#0a0a0a; color:#f0f0f0; font-family:Arial,sans-serif; margin:0; }
+    h1 { color:cyan; text-align:center; padding:15px; }
+    .card { background:#1a1a1a; margin:15px auto; padding:20px; border-radius:10px;
+            width:90%; max-width:800px; box-shadow:0 0 10px rgba(0,255,255,0.3); }
+    button { padding:10px 20px; border:none; border-radius:8px; cursor:pointer;
+             background:cyan; color:#000; font-weight:bold; margin:5px; }
+    button:hover { background:#00e6e6; }
+    pre, textarea { background:#000; color:#0f0; padding:10px; border-radius:5px;
+             text-align:left; overflow-y:auto; max-height:250px; font-size:0.9rem; width:100%; }
+    textarea { color:#fff; font-size:1rem; resize:vertical; height:120px; }
+    .chat-log { background:#000; padding:10px; border-radius:5px; height:250px; overflow-y:auto; margin-bottom:10px; }
+    .chat-message.admin { color:#00e0ff; font-weight:bold; }
+    .chat-message.jean { color:#ffcc00; }
   </style>
 </head>
 <body>
   <h1>🌍 Console Admin – Tinsflash Centrale Météo</h1>
 
-  <!-- Run + Refresh -->
   <div class="card">
-    <h2>⚡ Pilotage des Runs</h2>
-    <button onclick="launchRun()">🚀 Lancer un Run</button>
-    <button id="refreshBtn">🔄 Rafraîchir maintenant</button>
-  </div>
-
-  <!-- Logs -->
-  <div class="card">
-    <h2>📜 Logs en temps réel</h2>
-    <pre id="logs">En attente de logs...</pre>
-  </div>
-
-  <!-- Alertes -->
-  <div class="card">
-    <h2>⚠️ Alertes générées</h2>
-    <pre id="alerts">Chargement...</pre>
-  </div>
-
-  <!-- Utilisateurs -->
-  <div class="card">
-    <h2>👥 Utilisateurs par catégorie</h2>
-    <pre id="users">Chargement...</pre>
-  </div>
-
-  <!-- Bulletin météo -->
-  <div class="card">
-    <h2>📰 Bulletin météo – Belgique / France / Luxembourg</h2>
-    <textarea id="bulletinText">Chargement...</textarea>
-    <button onclick="saveBulletin()">💾 Sauvegarder le Bulletin</button>
+    <h2>⚡ SuperForecast</h2>
+    <button onclick="launchRun()">🚀 Lancer le Run</button>
     <button onclick="refreshIndex()">🔄 Rafraîchir Index</button>
   </div>
 
-  <!-- Chat J.E.A.N -->
   <div class="card">
-    <h2>🤖 Chat avec J.E.A.N. (IA météo)</h2>
-    <div class="chat-box">
-      <div class="chat-log" id="chatLog"></div>
-      <div class="chat-input">
-        <input type="text" id="chatInput" placeholder="Posez une question à J.E.A.N.">
-        <button id="chatSend">Envoyer</button>
-      </div>
-    </div>
+    <h2>📜 Logs</h2>
+    <pre id="logs">En attente de logs...</pre>
+  </div>
+
+  <div class="card">
+    <h2>⚠️ Alertes</h2>
+    <pre id="alerts">Chargement...</pre>
+  </div>
+
+  <div class="card">
+    <h2>👥 Utilisateurs</h2>
+    <pre id="users">Chargement...</pre>
+  </div>
+
+  <div class="card">
+    <h2>📰 Bulletin météo éditable (BE / FR / LU)</h2>
+    <textarea id="bulletin"></textarea>
+    <button onclick="saveBulletin()">💾 Sauvegarder</button>
+  </div>
+
+  <div class="card">
+    <h2>🤖 Chat avec J.E.A.N.</h2>
+    <div class="chat-log" id="chatLog"></div>
+    <input type="text" id="chatInput" placeholder="Posez une question à J.E.A.N." style="width:70%;padding:8px;">
+    <button onclick="sendChat()">Envoyer</button>
   </div>
 
   <script src="admin.js"></script>
