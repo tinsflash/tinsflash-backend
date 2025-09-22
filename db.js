@@ -1,38 +1,31 @@
-// -------------------------
-// 📦 db.js
-// Connexion MongoDB robuste avec fallback
-// -------------------------
+// db.js
 import mongoose from "mongoose";
+import Forecast from "./models/Forecast.js";
+import { logError, logInfo } from "./utils/logger.js";
 
-const MONGO_URI = process.env.MONGO_URI;
-
-async function connectDB() {
-  if (!MONGO_URI) {
-    console.warn("⚠️ Aucun MONGO_URI défini → le serveur tourne sans base de données !");
-    return;
-  }
-
+/**
+ * Sauvegarde une prévision météo en base MongoDB
+ */
+export async function saveForecast(forecastData) {
   try {
-    console.log("🔌 Tentative de connexion MongoDB...");
-    await mongoose.connect(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000, // 10s timeout
-    });
-
-    console.log("✅ Connexion MongoDB réussie !");
+    const forecast = new Forecast(forecastData);
+    await forecast.save();
+    logInfo("✅ Prévision sauvegardée en base");
+    return forecast;
   } catch (err) {
-    console.error("❌ Erreur de connexion MongoDB :", err.message);
-    console.warn("⚠️ Le serveur continue en mode SANS DB (backup mémoire locale).");
+    logError("❌ Erreur lors de la sauvegarde forecast: " + err.message);
+    throw err;
   }
-
-  mongoose.connection.on("disconnected", () => {
-    console.warn("⚠️ Déconnecté de MongoDB. Tentative de reconnexion automatique...");
-  });
-
-  mongoose.connection.on("reconnected", () => {
-    console.log("🔄 Reconnexion MongoDB réussie !");
-  });
 }
 
-export default connectDB;
+/**
+ * Récupère les dernières prévisions
+ */
+export async function getForecasts(limit = 10) {
+  try {
+    return await Forecast.find().sort({ timestamp: -1 }).limit(limit);
+  } catch (err) {
+    logError("❌ Erreur lors de la récupération forecasts: " + err.message);
+    throw err;
+  }
+}
