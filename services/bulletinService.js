@@ -8,9 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const bulletinPath = path.join(__dirname, "../public/data/bulletin.json");
 
-/**
- * Génère un bulletin météo clair et humain basé sur le dernier run IA
- */
+// Génération automatique du bulletin météo
 export async function generateBulletin() {
   try {
     const latest = await Forecast.findOne().sort({ timestamp: -1 });
@@ -20,30 +18,19 @@ export async function generateBulletin() {
 
     const { data, location } = latest;
 
-    // Bulletin local détaillé
-    const bulletinLocal = `
-📍 Prévisions locales (${location.city || location.lat + "," + location.lon})
-- 🌡️ Température : ${data.temp}°C (ressenti ${data.feels || data.temp}°C)
-- 💨 Vent : ${data.wind} km/h
-- 🌧️ Pluie : ${data.rain} mm
-- ❄️ Neige : ${data.snow || 0} mm
-- 🔍 Analyse IA : ${data.anomaly ? "⚠️ " + data.anomaly : "✅ Conditions normales"}
-    `.trim();
+    const bulletinLocal = `📍 Prévisions locales (${location.lat}, ${location.lon})
+🌡️ Température: ${data.temp}°C
+💨 Vent: ${data.wind} km/h
+🌧️ Pluie: ${data.rain} mm
+❄️ Neige: ${data.snow || 0} mm
+🔎 Analyse IA: ${data.anomaly ? "⚠️ Anomalie détectée" : "✅ Conditions normales"}`;
 
-    // Bulletin national (synthèse plus large)
-    const bulletinNational = `
-🇫🇷 Bulletin national (${location.country})
-Aujourd’hui, les conditions générales annoncent une moyenne de ${data.temp}°C,
-avec des vents de ${data.wind} km/h et environ ${data.rain} mm de précipitations.
-Analyse IA : ${data.anomaly ? "⚠️ " + data.anomaly : "✅ Aucune anomalie majeure détectée"}.
-    `.trim();
+    const bulletinNational = `🇫🇷 Bulletin national
+Les conditions globales annoncent une moyenne de ${data.temp}°C,
+avec des vents de ${data.wind} km/h et ${data.rain} mm de précipitations.
+Synthèse IA: ${data.anomaly ? "⚠️ Risque météo détecté" : "✅ Aucune anomalie majeure"}`;
 
-    const bulletin = {
-      local: bulletinLocal,
-      national: bulletinNational,
-      timestamp: new Date()
-    };
-
+    const bulletin = { local: bulletinLocal, national: bulletinNational, timestamp: new Date() };
     fs.writeFileSync(bulletinPath, JSON.stringify(bulletin, null, 2), "utf-8");
 
     return bulletin;
@@ -53,21 +40,19 @@ Analyse IA : ${data.anomaly ? "⚠️ " + data.anomaly : "✅ Aucune anomalie ma
   }
 }
 
-/**
- * Récupère le dernier bulletin sauvegardé
- */
+// Récupération du dernier bulletin
 export function getBulletin() {
   if (fs.existsSync(bulletinPath)) {
     return JSON.parse(fs.readFileSync(bulletinPath, "utf-8"));
   }
-  return { local: "Pas de bulletin", national: "Pas de bulletin" };
+  return { local: "⏳ En attente de génération", national: "⏳ En attente de génération" };
 }
 
-/**
- * Met à jour le bulletin via l’édition admin
- */
+// Mise à jour manuelle du bulletin
 export function updateBulletin(newBulletin) {
   const bulletin = { ...newBulletin, timestamp: new Date() };
   fs.writeFileSync(bulletinPath, JSON.stringify(bulletin, null, 2), "utf-8");
   return bulletin;
 }
+
+export default { generateBulletin, getBulletin, updateBulletin };
