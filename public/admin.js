@@ -1,107 +1,75 @@
 // public/admin.js
 
+// 🚀 Lancer un run
 async function launchRun() {
   try {
-    const res = await fetch("/api/supercalc/run", {
+    const res = await fetch("/api/admin/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat: 50.5, lon: 4.7 }), // Ex: Belgique
+      body: JSON.stringify({ lat: 50.85, lon: 4.35 }) // Bruxelles par défaut
     });
     const data = await res.json();
-    alert("✅ Run lancé, surveillez les logs !");
-    loadLogs();
+    if (data.success) {
+      alert("✅ Run lancé !");
+    } else {
+      alert("❌ Erreur lors du lancement du run");
+    }
   } catch (err) {
-    alert("❌ Erreur lancement run: " + err.message);
+    alert("❌ Erreur connexion serveur");
   }
 }
 
+// 📜 Charger les logs
 async function loadLogs() {
   try {
     const res = await fetch("/api/admin/logs");
-    const logs = await res.json();
-    document.getElementById("logs").textContent = logs.join("\n");
-  } catch {
-    document.getElementById("logs").textContent =
-      "⚠️ Impossible de charger les logs";
+    const data = await res.json();
+    document.getElementById("logs").textContent = data.join("\n");
+  } catch (err) {
+    document.getElementById("logs").textContent = "⚠️ Impossible de charger les logs";
   }
 }
 
+// ⚠️ Charger les alertes
 async function loadAlerts() {
   try {
-    const res = await fetch("/api/alerts");
-    const alerts = await res.json();
-    document.getElementById("alerts").textContent = JSON.stringify(alerts, null, 2);
-  } catch {
-    document.getElementById("alerts").textContent =
-      "⚠️ Impossible de charger les alertes";
+    const res = await fetch("/api/admin/alerts");
+    const data = await res.json();
+    document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    document.getElementById("alerts").textContent = "⚠️ Impossible de charger les alertes";
   }
 }
 
-async function loadUsers() {
-  try {
-    const res = await fetch("/api/admin/users");
-    const users = await res.json();
-    document.getElementById("users").textContent = JSON.stringify(users, null, 2);
-  } catch {
-    document.getElementById("users").textContent =
-      "⚠️ Impossible de charger les utilisateurs";
-  }
-}
+// 🤖 Chat avec J.E.A.N.
+async function sendMessage() {
+  const input = document.getElementById("chatInput").value;
+  const chatBox = document.getElementById("chatBox");
 
-async function askJean() {
-  const message = document.getElementById("jeanInput").value;
-  if (!message) return;
+  if (!input) return;
+
+  chatBox.innerHTML += `👤: ${input}\n`;
+
   try {
-    const res = await fetch("/api/chat", {
+    const res = await fetch("/api/admin/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ question: input })
     });
     const data = await res.json();
-    document.getElementById("jeanChat").textContent +=
-      "\n👤: " + message + "\n🤖: " + data.reply;
-    document.getElementById("jeanInput").value = "";
+
+    if (data.success) {
+      chatBox.innerHTML += `🤖 JEAN: ${data.answer}\n`;
+    } else {
+      chatBox.innerHTML += `⚠️ JEAN n’est pas dispo\n`;
+    }
   } catch {
-    document.getElementById("jeanChat").textContent +=
-      "\n⚠️ JEAN n’est pas disponible.";
+    chatBox.innerHTML += `⚠️ Erreur de connexion\n`;
   }
+
+  document.getElementById("chatInput").value = "";
 }
 
-async function loadBulletins() {
-  try {
-    const res = await fetch("/api/admin/bulletins");
-    const bulletins = await res.json();
-    document.getElementById("bulletins").value = JSON.stringify(bulletins, null, 2);
-  } catch {
-    document.getElementById("bulletins").value =
-      "⚠️ Impossible de charger les bulletins.";
-  }
-}
-
-async function saveBulletins() {
-  try {
-    const bulletins = JSON.parse(document.getElementById("bulletins").value);
-    await fetch("/api/admin/bulletins", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bulletins),
-    });
-    alert("✅ Bulletins sauvegardés");
-  } catch (err) {
-    alert("❌ Erreur sauvegarde bulletins: " + err.message);
-  }
-}
-
-// Auto-refresh
-setInterval(() => {
-  loadLogs();
-  loadAlerts();
-  loadUsers();
-}, 5000);
-
-window.onload = () => {
-  loadLogs();
-  loadAlerts();
-  loadUsers();
-  loadBulletins();
-};
+// Auto-refresh logs + alertes
+setInterval(loadLogs, 5000);
+setInterval(loadAlerts, 10000);
