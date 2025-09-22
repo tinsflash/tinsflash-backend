@@ -1,50 +1,33 @@
 // services/bulletinService.js
-import Bulletin from "../models/Bulletin.js";
-import { askJean } from "./openai.js";
-
-const COUNTRIES = ["BE", "FR", "LU"];
+import { getLocalForecast, getNationalForecast, get7DayForecast } from "./forecastService.js";
+import { addLog } from "./logsService.js";
 
 /**
- * Génère un bulletin météo clair et compréhensible via IA
+ * Génère un bulletin météo clair (local + national + 7 jours)
  */
-async function generateBulletin(country, type, forecastData) {
-  const prompt = `
-Rédige un bulletin météo clair, précis et compréhensible comme à la télévision
-pour le ${type === "local" ? "niveau local" : "niveau national"} en ${country}.
-Données météo : ${JSON.stringify(forecastData)}
-  `;
+export async function generateBulletin(lat = 50.85, lon = 4.35, country = "Europe/USA") {
+  try {
+    addLog("📰 Génération du bulletin météo...");
 
-  const text = await askJean(prompt);
+    // Local
+    const local = await getLocalForecast(lat, lon, country);
 
-  const bulletin = new Bulletin({
-    country,
-    type,
-    textGenerated: text
-  });
+    // National
+    const national = await getNationalForecast(country);
 
-  await bulletin.save();
-  return bulletin;
+    // 7 jours
+    const forecast7d = await get7DayForecast(lat, lon, country);
+
+    // On assemble tout
+    return `
+==== 🌍 BULLETIN MÉTÉO ====
+📍 ${local.bulletinLocal}
+🏛️ ${national.bulletinNational}
+📅 ${forecast7d.bulletin7days}
+============================
+    `;
+  } catch (err) {
+    addLog("❌ Erreur generateBulletin: " + err.message);
+    throw err;
+  }
 }
-
-/**
- * Récupère tous les bulletins du jour
- */
-async function getTodayBulletins() {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-
-  return await Bulletin.find({ date: { $gte: start } });
-}
-
-/**
- * Met à jour un bulletin modifié par l’admin
- */
-async function updateBulletin(id, newText) {
-  return await Bulletin.findByIdAndUpdate(
-    id,
-    { textEdited: newText },
-    { new: true }
-  );
-}
-
-export default { generateBulletin, getTodayBulletins, updateBulletin };
