@@ -1,66 +1,51 @@
 // routes/admin.js
 import express from "express";
-import Forecast from "../models/Forecast.js";
-import Alert from "../models/Alert.js";
+import { runFullForecast } from "../services/superForecast.js";
 import { getLogs } from "../services/logsService.js";
+import { getAlerts } from "../services/alertsService.js";
+import { askJean } from "../services/jeanService.js";
 
 const router = express.Router();
 
-// --- Stats ---
-router.get("/stats", async (req, res) => {
+// 🚀 Lancer un SuperForecast
+router.post("/run", async (req, res) => {
   try {
-    const forecasts = await Forecast.countDocuments();
-    const alerts = await Alert.countDocuments();
-    res.json({
-      forecasts,
-      alerts,
-      uptime: process.uptime(),
-    });
+    const { lat, lon } = req.body || { lat: 50.85, lon: 4.35 }; // par défaut Bruxelles
+    const result = await runFullForecast(lat, lon);
+    res.json({ success: true, message: "Run lancé avec succès", result });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: "Erreur lancement run", error: err.message });
   }
 });
 
-// --- Logs ---
-router.get("/logs", (req, res) => {
-  res.json(getLogs());
-});
-
-// --- Users ---
-router.get("/users", (req, res) => {
-  res.json({
-    covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
-    nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
-  });
-});
-
-// --- Bulletins (BE, FR, LU modifiables) ---
-router.get("/bulletins", async (req, res) => {
+// 📜 Récupérer les logs
+router.get("/logs", async (req, res) => {
   try {
-    const forecast = await Forecast.findOne().sort({ timestamp: -1 });
-    res.json({
-      belgium: forecast?.bulletinBelgium || "",
-      france: forecast?.bulletinFrance || "",
-      luxembourg: forecast?.bulletinLuxembourg || "",
-    });
+    const logs = await getLogs();
+    res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: "Impossible de charger les logs" });
   }
 });
 
-router.post("/bulletins", async (req, res) => {
+// ⚠️ Récupérer les alertes
+router.get("/alerts", async (req, res) => {
   try {
-    const { belgium, france, luxembourg } = req.body;
-    const forecast = await Forecast.findOne().sort({ timestamp: -1 });
-    if (forecast) {
-      forecast.bulletinBelgium = belgium;
-      forecast.bulletinFrance = france;
-      forecast.bulletinLuxembourg = luxembourg;
-      await forecast.save();
-    }
-    res.json({ success: true });
+    const alerts = await getAlerts();
+    res.json(alerts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: "Impossible de charger les alertes" });
+  }
+});
+
+// 🤖 Chat avec J.E.A.N.
+router.post("/chat", async (req, res) => {
+  try {
+    const { question } = req.body;
+    const answer = await askJean(question);
+    res.json({ success: true, answer });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "JEAN n’est pas dispo", error: err.message });
   }
 });
 
