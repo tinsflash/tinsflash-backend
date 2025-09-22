@@ -69,7 +69,7 @@ app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
     addLog("🚀 Run SuperForecast lancé");
-    const result = await superForecast.runFullForecast(lat, lon);
+    const result = await superForecast.runSuperForecast(lat, lon);
     addLog("✅ Run SuperForecast terminé");
     res.json(result);
   } catch (err) {
