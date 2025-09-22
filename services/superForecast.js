@@ -1,6 +1,6 @@
 // services/superForecast.js
 import { chatWithJean } from "./chatService.js";
-import { saveForecast } from "../utils/db.js";
+import { saveForecast } from "../db.js";
 
 export async function runSuperForecast(location) {
   const logs = [];
