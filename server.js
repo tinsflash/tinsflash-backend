@@ -14,7 +14,6 @@ import alertsService from "./services/alertsService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
 import { addLog, getLogs } from "./services/logsService.js";
-import bulletinService from "./services/bulletinService.js";
 
 // Middleware
 import checkCoverage from "./services/checkCoverage.js";
@@ -72,13 +71,6 @@ app.post("/api/supercalc/run", async (req, res) => {
     addLog("🚀 Run SuperForecast lancé");
     const result = await superForecast.runFullForecast(lat, lon);
     addLog("✅ Run SuperForecast terminé");
-
-    // 🔥 Générer bulletins BE / FR / LU après chaque run
-    for (const c of ["BE", "FR", "LU"]) {
-      await bulletinService.generateBulletin(c, "local", result.forecast);
-      await bulletinService.generateBulletin(c, "national", result.forecast);
-    }
-
     res.json(result);
   } catch (err) {
     addLog("❌ Erreur run SuperForecast: " + err.message);
@@ -90,8 +82,8 @@ app.post("/api/supercalc/run", async (req, res) => {
 // --- Prévisions météo ---
 app.get("/api/forecast/local", checkCoverage, async (req, res) => {
   try {
-    const { lat, lon } = req.query;
-    const data = await forecastService.getLocalForecast(lat, lon);
+    const { lat, lon, country } = req.query;
+    const data = await forecastService.getLocalForecast(lat, lon, country);
     res.json(data);
   } catch (err) {
     logError("❌ Erreur forecast/local: " + err.message);
@@ -112,8 +104,8 @@ app.get("/api/forecast/national", checkCoverage, async (req, res) => {
 
 app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
   try {
-    const { lat, lon } = req.query;
-    const data = await forecastService.get7DayForecast(lat, lon);
+    const { lat, lon, country } = req.query;
+    const data = await forecastService.get7DayForecast(lat, lon, country);
     res.json(data);
   } catch (err) {
     logError("❌ Erreur forecast/7days: " + err.message);
@@ -212,30 +204,11 @@ app.get("/api/admin/logs", (req, res) => {
 
 // --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
+  // ⚠️ À remplacer par vraie DB Users plus tard
   res.json({
     covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
     nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
   });
-});
-
-// --- Bulletins météo ---
-app.get("/api/bulletins", async (req, res) => {
-  try {
-    const bulletins = await bulletinService.getTodayBulletins();
-    res.json(bulletins);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/bulletins/update", async (req, res) => {
-  try {
-    const { id, newText } = req.body;
-    const updated = await bulletinService.updateBulletin(id, newText);
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 // 🚀 Lancement serveur
