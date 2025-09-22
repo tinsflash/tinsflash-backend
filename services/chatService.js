@@ -1,17 +1,20 @@
 // services/chatService.js
 import { askJean } from "./openai.js";
+import { addLog } from "./logsService.js";
 
-async function chatWithJean(message) {
+/**
+ * Dialogue avec l’IA J.E.A.N.
+ * @param {string} message - Question posée
+ * @returns {Promise<string>} Réponse de l’IA
+ */
+export async function chatWithJean(message) {
   try {
-    if (!message || message.trim() === "") {
-      return "⚠️ Message vide.";
-    }
+    addLog("💬 Question envoyée à J.E.A.N.: " + message);
     const reply = await askJean(message);
-    return reply || "⚠️ Pas de réponse de J.E.A.N.";
+    addLog("🤖 Réponse J.E.A.N.: " + reply);
+    return reply;
   } catch (err) {
-    console.error("❌ Erreur chatWithJean:", err.message);
-    return "❌ Erreur lors de la communication avec J.E.A.N.";
+    addLog("❌ Erreur chat J.E.A.N.: " + err.message);
+    throw err;
   }
 }
-
-export default { chatWithJean };
