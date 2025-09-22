@@ -29,14 +29,14 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Fix __dirname (ESM)
+// Fix pour __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Servir les fichiers statiques (public/)
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Protection admin-pp.html ---
+// --- Protection admin-pp.html --- //
 app.get("/admin-pp.html", (req, res) => {
   const pass = req.query.pass;
   if (pass === "202679") {
@@ -46,13 +46,13 @@ app.get("/admin-pp.html", (req, res) => {
   }
 });
 
-// Désactiver indexation Google
+// Désactiver l’indexation Google
 app.use((req, res, next) => {
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
   next();
 });
 
-// --- Connexion MongoDB ---
+// --- Connexion MongoDB --- //
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -205,33 +205,33 @@ app.get("/api/admin/logs", (req, res) => {
 
 // --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
-  // ⚠️ Exemple : à remplacer par vraie DB Users
+  // ⚠️ À connecter avec vraie DB Users
   res.json({
     covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
     nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
   });
 });
 
-// --- Refresh Index (prévisions modifiées) ---
-app.post("/api/admin/refresh-index", async (req, res) => {
+// --- Mettre à jour texte prévisions FR ---
+app.post("/api/admin/update-forecast-text", async (req, res) => {
   try {
     const { forecastTextFr } = req.body;
+    if (!forecastTextFr) {
+      return res.status(400).json({ error: "Texte prévisions manquant" });
+    }
 
-    const indexData = {
-      timestamp: new Date(),
-      forecastTextFr,
-      alerts: await alertsService.getAlerts(),
-    };
+    const filePath = path.join(__dirname, "public", "index-data.json");
+    let data = {};
+    if (fs.existsSync(filePath)) {
+      data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    }
 
-    fs.writeFileSync(
-      path.join(__dirname, "public", "index-data.json"),
-      JSON.stringify(indexData, null, 2)
-    );
+    data.forecastTextFr = forecastTextFr;
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
 
-    addLog("🔄 Index public mis à jour par l’admin");
-    res.json({ success: true, message: "Index mis à jour", data: indexData });
+    res.json({ success: true, forecastTextFr });
   } catch (err) {
-    logError("❌ Erreur refresh-index: " + err.message);
+    logError("❌ Erreur update forecast text: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
