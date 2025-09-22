@@ -14,6 +14,7 @@ import alertsService from "./services/alertsService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
 import { addLog, getLogs } from "./services/logsService.js";
+import { generateBulletin, getBulletin, updateBulletin } from "./services/bulletinService.js";
 
 // Middleware
 import checkCoverage from "./services/checkCoverage.js";
@@ -22,21 +23,20 @@ import { logInfo, logError } from "./utils/logger.js";
 // Models
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
-import User from "./models/User.js";
 
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Fix pour __dirname en ES modules
+// Fix __dirname pour ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Servir les fichiers statiques (public/)
+// Servir les fichiers statiques
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Protection admin-pp.html --- //
+// --- Protection admin-pp.html ---
 app.get("/admin-pp.html", (req, res) => {
   const pass = req.query.pass;
   if (pass === "202679") {
@@ -52,12 +52,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- Connexion MongoDB --- //
+// --- Connexion MongoDB ---
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => logInfo("✅ MongoDB connecté"))
   .catch((err) => logError("❌ Erreur MongoDB: " + err.message));
 
@@ -65,7 +62,7 @@ mongoose
  * ROUTES API
  */
 
-// --- SuperForecast (Run complet) ---
+// SuperForecast
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
@@ -75,19 +72,17 @@ app.post("/api/supercalc/run", async (req, res) => {
     res.json(result);
   } catch (err) {
     addLog("❌ Erreur run SuperForecast: " + err.message);
-    logError("❌ Erreur supercalc/run: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Prévisions météo ---
+// Forecasts
 app.get("/api/forecast/local", checkCoverage, async (req, res) => {
   try {
     const { lat, lon } = req.query;
     const data = await forecastService.getLocalForecast(lat, lon);
     res.json(data);
   } catch (err) {
-    logError("❌ Erreur forecast/local: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -98,77 +93,42 @@ app.get("/api/forecast/national", checkCoverage, async (req, res) => {
     const data = await forecastService.getNationalForecast(country);
     res.json(data);
   } catch (err) {
-    logError("❌ Erreur forecast/national: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
-  try {
-    const { lat, lon } = req.query;
-    const data = await forecastService.get7DayForecast(lat, lon);
-    res.json(data);
-  } catch (err) {
-    logError("❌ Erreur forecast/7days: " + err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// --- Radar ---
+// Radar
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
     res.json(radar);
   } catch (err) {
-    logError("❌ Erreur radar: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Alertes météo ---
+// Alertes
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await alertsService.getAlerts();
     res.json(alerts);
   } catch (err) {
-    logError("❌ Erreur alerts: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/alerts", async (req, res) => {
-  try {
-    const alert = await alertsService.addAlert(req.body);
-    res.json(alert);
-  } catch (err) {
-    logError("❌ Erreur ajout alerte: " + err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.delete("/api/alerts/:id", async (req, res) => {
-  try {
-    const result = await alertsService.deleteAlert(req.params.id);
-    res.json(result);
-  } catch (err) {
-    logError("❌ Erreur suppression alerte: " + err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// --- Podcasts météo ---
+// Podcasts
 app.post("/api/podcast/generate", async (req, res) => {
   try {
     const { text } = req.body;
     const file = await podcastService.generatePodcast(text);
     res.json(file);
   } catch (err) {
-    logError("❌ Erreur podcast: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Chat avec J.E.A.N. ---
+// Chat JEAN
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -177,54 +137,56 @@ app.post("/api/chat", async (req, res) => {
     addLog("🤖 Réponse J.E.A.N.: " + response);
     res.json({ reply: response });
   } catch (err) {
-    logError("❌ Erreur chat: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Stats admin ---
+// Admin Stats
 app.get("/api/admin/stats", async (req, res) => {
   try {
     const forecasts = await Forecast.countDocuments();
     const alerts = await Alert.countDocuments();
-    res.json({
-      forecasts,
-      alerts,
-      uptime: process.uptime(),
-    });
+    res.json({ forecasts, alerts, uptime: process.uptime() });
   } catch (err) {
-    logError("❌ Erreur admin/stats: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- Logs admin ---
-app.get("/api/admin/logs", (req, res) => {
-  res.json(getLogs());
+// Admin Logs
+app.get("/api/admin/logs", (req, res) => res.json(getLogs()));
+
+// Admin Users (⚠️ temporaire → connecter plus tard DB Users)
+app.get("/api/admin/users", (req, res) => {
+  res.json({
+    covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
+    nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
+  });
 });
 
-// --- Users admin (réels depuis Mongo) ---
-app.get("/api/admin/users", async (req, res) => {
+// Bulletins météo
+app.post("/api/admin/bulletin/generate", async (req, res) => {
   try {
-    const covered = await User.find({ zone: "covered" });
-    const nonCovered = await User.find({ zone: "nonCovered" });
-
-    res.json({
-      covered: {
-        free: covered.filter(u => u.type === "free").length,
-        premium: covered.filter(u => u.type === "premium").length,
-        pro: covered.filter(u => u.type === "pro").length,
-        proPlus: covered.filter(u => u.type === "proPlus").length,
-      },
-      nonCovered: {
-        free: nonCovered.filter(u => u.type === "free").length,
-        premium: nonCovered.filter(u => u.type === "premium").length,
-        pro: nonCovered.filter(u => u.type === "pro").length,
-        proPlus: nonCovered.filter(u => u.type === "proPlus").length,
-      }
-    });
+    const bulletin = await generateBulletin();
+    res.json(bulletin);
   } catch (err) {
-    logError("❌ Erreur admin/users: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/admin/bulletin/latest", (req, res) => {
+  try {
+    const bulletin = getBulletin();
+    res.json(bulletin);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/admin/bulletin/update", (req, res) => {
+  try {
+    const bulletin = updateBulletin(req.body);
+    res.json(bulletin);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
