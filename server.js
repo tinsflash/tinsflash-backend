@@ -13,6 +13,7 @@ import radarService from "./services/radarService.js";
 import alertsService from "./services/alertsService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
+import { addLog, getLogs } from "./services/logsService.js";
 
 // Middleware
 import checkCoverage from "./services/checkCoverage.js";
@@ -67,9 +68,12 @@ mongoose
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
+    addLog("🚀 Run SuperForecast lancé");
     const result = await superForecast.runFullForecast(lat, lon);
+    addLog("✅ Run SuperForecast terminé");
     res.json(result);
   } catch (err) {
+    addLog("❌ Erreur run SuperForecast: " + err.message);
     logError("❌ Erreur supercalc/run: " + err.message);
     res.status(500).json({ error: err.message });
   }
@@ -167,7 +171,9 @@ app.post("/api/podcast/generate", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    const response = await chatService.askJean(message); // ✅ fix
+    addLog("💬 Question posée à J.E.A.N.: " + message);
+    const response = await chatService.chatWithJean(message);
+    addLog("🤖 Réponse J.E.A.N.: " + response);
     res.json({ reply: response });
   } catch (err) {
     logError("❌ Erreur chat: " + err.message);
@@ -189,6 +195,20 @@ app.get("/api/admin/stats", async (req, res) => {
     logError("❌ Erreur admin/stats: " + err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- Logs admin ---
+app.get("/api/admin/logs", (req, res) => {
+  res.json(getLogs());
+});
+
+// --- Users admin ---
+app.get("/api/admin/users", (req, res) => {
+  // ⚠️ Mock simple pour débloquer admin-pp (à remplacer par vraie DB Users)
+  res.json({
+    covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
+    nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
+  });
 });
 
 // 🚀 Lancement serveur
