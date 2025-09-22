@@ -1,85 +1,42 @@
 // routes/admin.js
 import express from "express";
-import { runSuperForecast } from "../services/superForecast.js";
-import { chatWithJean } from "../services/chatService.js";
-import { getForecasts, getAlerts, getUsers } from "../utils/db.js";
+import { addLog, getLogs } from "../services/logsService.js";
 
 const router = express.Router();
 
-/**
- * 🚀 Lancer un Run SuperForecast
- */
-router.post("/superforecast", async (req, res) => {
+// -------------------------
+// 🌍 Admin Routes
+// -------------------------
+
+// ✅ Statistiques système
+router.get("/stats", (req, res) => {
+  res.json({
+    system: "OK",
+    users: 2500, // TODO: à remplacer par un comptage User.countDocuments() si nécessaire
+    activeAlerts: 12,
+    podcasts: 56,
+  });
+});
+
+// ✅ Logs en temps réel
+router.get("/logs", async (req, res) => {
   try {
-    const location = req.body.location || { lat: 50.5, lon: 4.7 }; // défaut: Belgique
-    const result = await runSuperForecast(location);
-    res.json(result);
-  } catch (err) {
-    console.error("Erreur SuperForecast:", err);
-    res.status(500).json({ error: "Erreur lors du lancement du Run SuperForecast." });
+    const logs = await getLogs();
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur récupération logs : " + error.message });
   }
 });
 
-/**
- * 📜 Logs & prévisions sauvegardées
- */
-router.get("/forecasts", async (req, res) => {
-  try {
-    const forecasts = await getForecasts();
-    res.json(forecasts);
-  } catch (err) {
-    res.status(500).json({ error: "Erreur récupération forecasts." });
+// ✅ Validation d’alertes (70%–90%)
+router.post("/validate-alert", (req, res) => {
+  const { id, action } = req.body; // action = accept/refuse/escalate
+  if (!id || !action) {
+    return res.status(400).json({ error: "Paramètres manquants (id, action)" });
   }
-});
 
-/**
- * ⚠️ Alertes générées
- */
-router.get("/alerts", async (req, res) => {
-  try {
-    const alerts = await getAlerts();
-    res.json(alerts);
-  } catch (err) {
-    res.status(500).json({ error: "Erreur récupération alertes." });
-  }
-});
-
-/**
- * 👥 Utilisateurs
- */
-router.get("/users", async (req, res) => {
-  try {
-    const users = await getUsers();
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ error: "Erreur récupération utilisateurs." });
-  }
-});
-
-/**
- * 🤖 Chat avec J.E.A.N.
- */
-router.post("/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-    if (!message) return res.status(400).json({ error: "Message manquant." });
-
-    const jeanResponse = await chatWithJean([
-      {
-        role: "system",
-        content:
-          "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo. " +
-          "Expert météo, climat, mathématiques. Tu analyses les modèles météo, " +
-          "produis des prévisions fiables et des alertes utiles pour la sécurité humaine, animale et matérielle."
-      },
-      { role: "user", content: message }
-    ]);
-
-    res.json({ response: jeanResponse });
-  } catch (err) {
-    console.error("Erreur Chat J.E.A.N.:", err.message);
-    res.status(500).json({ error: "Erreur lors du chat avec J.E.A.N." });
-  }
+  addLog(`⚠️ Alerte ${id} validée avec action: ${action}`);
+  res.json({ success: true, id, action });
 });
 
 export default router;
