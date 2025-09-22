@@ -2,18 +2,27 @@
 import { askJean } from "./openai.js";
 
 /**
- * Service qui relaie les questions de l’admin vers J.E.A.N.
- * @param {string} message - Question ou texte envoyé par l’admin
- * @returns {Promise<string>} - Réponse de J.E.A.N.
+ * Service pour discuter avec J.E.A.N.
+ * @param {string} message
+ * @returns {Promise<string>}
  */
-async function askJeanService(message) {
+async function chatWithJean(message) {
   try {
+    if (!message || message.trim() === "") {
+      return "⚠️ Merci de poser une question à J.E.A.N.";
+    }
+
     const response = await askJean(message);
+
+    if (!response || typeof response !== "string") {
+      return "⚠️ J.E.A.N. n’a pas su répondre cette fois.";
+    }
+
     return response;
   } catch (err) {
-    console.error("Erreur chatService:", err.message);
-    return "⚠️ JEAN ne répond pas.";
+    console.error("❌ Erreur chatWithJean:", err.message);
+    return "⚠️ JEAN n’est pas disponible actuellement.";
   }
 }
 
-export default { askJean: askJeanService };
+export default { chatWithJean };
