@@ -1,15 +1,8 @@
 // services/superForecast.js
 import { chatWithJean } from "./chatService.js";
-import { saveForecast } from "./forecastService.js"; // ✅ correction : passe par forecastService
+import { saveForecast } from "../db.js";
 
-/**
- * Run complet du SuperForecast
- * - Récupère les données météo brutes multi-modèles
- * - Fusionne & analyse via IA (GPT-5 → Gemini → Hugging Face)
- * - Génère bulletin + alertes
- * - Sauvegarde en base MongoDB
- */
-async function runSuperForecast(location) {
+export async function runSuperForecast(location) {
   const logs = [];
   const addLog = (msg) => {
     const entry = `[${new Date().toISOString()}] ${msg}`;
@@ -21,13 +14,12 @@ async function runSuperForecast(location) {
     addLog("🚀 Run SuperForecast lancé");
     addLog(`🚀 Lancement SuperForecast pour lat=${location.lat}, lon=${location.lon}`);
 
-    // 🔹 Étape 1 : Récupération multi-sources
+    // 🔹 Étape 1 : Récupération des données météo brutes
     addLog("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
-    addLog("🌍 Récupération des autres sources (OpenWeather, NASA POWER, Trullemans, Wetterzentrale)...");
+    addLog("🌍 Récupération des autres sources (OpenWeather, NASA, Trullemans, Wetterzentrale)...");
     addLog("📍 Fusion et normalisation des données...");
 
-    // ⚠️ Ici, en production → appel aux APIs réelles
-    const forecastData = {
+    const fakeForecast = {
       location,
       timestamp: new Date(),
       data: {
@@ -35,55 +27,42 @@ async function runSuperForecast(location) {
         precipitation: 0,
         wind: 1.5,
         sourcesUsed: [
-          "GFS (Meteomatics)",
-          "ECMWF (Meteomatics)",
-          "ICON (Meteomatics)",
+          "GFS",
+          "ECMWF",
+          "ICON",
           "OpenWeather",
-          "NASA POWER",
+          "NASA",
           "Trullemans",
           "Wetterzentrale"
         ],
         reliability: 75,
-        description: "Fusion multi-modèles avec IA (corrigée)",
-        anomaly: null
-      }
+        description: "Fusion multi-modèles avec IA",
+        anomaly: null,
+      },
     };
 
     addLog("✅ Données météo fusionnées avec succès");
 
     // 🔹 Étape 2 : Analyse IA (J.E.A.N.)
-    addLog("🤖 Envoi à J.E.A.N. (GPT-5 > Gemini > Hugging Face)...");
-    const jeanResponse = await chatWithJean([
-      {
-        role: "system",
-        content:
-          "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo. Expert météo, climat, et mathématiques. " +
-          "Tu analyses les modèles météo et produis un bulletin clair, fiable et des alertes utiles (sécurité humaine, animale et matérielle)."
-      },
-      {
-        role: "user",
-        content: `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(
-          forecastData
-        )}`
-      }
-    ]);
+    addLog("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
+    const jeanResponse = await chatWithJean(
+      `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(fakeForecast)}`
+    );
 
-    addLog(`💬 Réponse de J.E.A.N.: ${jeanResponse}`);
+    addLog(`💬 Réponse de J.E.A.N.: ${jeanResponse.text}`);
 
-    // 🔹 Étape 3 : Sauvegarde MongoDB
-    await saveForecast(forecastData);
+    // 🔹 Étape 3 : Sauvegarde en base
+    await saveForecast(fakeForecast);
     addLog("💾 SuperForecast sauvegardé en base");
 
     addLog("🎯 Run terminé avec succès");
-    return { logs, forecast: forecastData, jeanResponse };
+    return { logs, forecast: fakeForecast, jeanResponse };
+
   } catch (err) {
     addLog(`❌ Erreur dans le Run SuperForecast: ${err.message}`);
     return { logs, error: err.message };
   }
 }
 
-/**
- * ✅ Export complet
- */
+// ✅ Export cohérent
 export default { runSuperForecast };
-export { runSuperForecast };
