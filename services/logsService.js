@@ -1,23 +1,24 @@
 // services/logsService.js
-
 let logs = [];
 
 /**
- * Ajoute un log au tableau mémoire
- * @param {string} msg
+ * Ajoute un log dans la mémoire + console Render
+ * @param {string} message
  */
-export function addLog(msg) {
-  const entry = `[${new Date().toISOString()}] ${msg}`;
+export function addLog(message) {
+  const timestamp = new Date().toISOString();
+  const entry = `[${timestamp}] ${message}`;
   logs.push(entry);
 
-  // On garde seulement les 100 derniers logs
-  if (logs.length > 100) logs = logs.slice(-100);
+  // Garder uniquement les 200 derniers logs
+  if (logs.length > 200) logs.shift();
+
+  console.log(entry); // visible aussi dans les logs Render
 }
 
 /**
- * Récupère tous les logs en mémoire
- * @returns {string[]}
+ * Retourne les logs stockés
  */
 export function getLogs() {
-  return logs;
+  return { logs };
 }
