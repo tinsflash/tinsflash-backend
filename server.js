@@ -15,13 +15,12 @@ import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
 import { addLog, getLogs } from "./services/logsService.js";
 
-// Middleware
-import checkCoverage from "./services/checkCoverage.js";
-import { logInfo, logError } from "./utils/logger.js";
-
 // Models
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
+
+// ⚡ Nouveau : stockage bulletin
+import fs from "fs";
 
 dotenv.config();
 const app = express();
@@ -57,8 +56,8 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => logInfo("✅ MongoDB connecté"))
-  .catch((err) => logError("❌ Erreur MongoDB: " + err.message));
+  .then(() => addLog("✅ MongoDB connecté"))
+  .catch((err) => addLog("❌ Erreur MongoDB: " + err.message));
 
 /**
  * ROUTES API
@@ -74,41 +73,40 @@ app.post("/api/supercalc/run", async (req, res) => {
     res.json(result);
   } catch (err) {
     addLog("❌ Erreur run SuperForecast: " + err.message);
-    logError("❌ Erreur supercalc/run: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
 // --- Prévisions météo ---
-app.get("/api/forecast/local", checkCoverage, async (req, res) => {
+app.get("/api/forecast/local", async (req, res) => {
   try {
-    const { lat, lon, country } = req.query;
-    const data = await forecastService.getLocalForecast(lat, lon, country);
+    const { lat, lon } = req.query;
+    const data = await forecastService.getLocalForecast(lat, lon);
     res.json(data);
   } catch (err) {
-    logError("❌ Erreur forecast/local: " + err.message);
+    addLog("❌ Erreur forecast/local: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get("/api/forecast/national", checkCoverage, async (req, res) => {
+app.get("/api/forecast/national", async (req, res) => {
   try {
     const { country } = req.query;
     const data = await forecastService.getNationalForecast(country);
     res.json(data);
   } catch (err) {
-    logError("❌ Erreur forecast/national: " + err.message);
+    addLog("❌ Erreur forecast/national: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
+app.get("/api/forecast/7days", async (req, res) => {
   try {
-    const { lat, lon, country } = req.query;
-    const data = await forecastService.get7DayForecast(lat, lon, country);
+    const { lat, lon } = req.query;
+    const data = await forecastService.get7DayForecast(lat, lon);
     res.json(data);
   } catch (err) {
-    logError("❌ Erreur forecast/7days: " + err.message);
+    addLog("❌ Erreur forecast/7days: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -119,7 +117,7 @@ app.get("/api/radar", async (req, res) => {
     const radar = await radarService.getRadar();
     res.json(radar);
   } catch (err) {
-    logError("❌ Erreur radar: " + err.message);
+    addLog("❌ Erreur radar: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -130,7 +128,7 @@ app.get("/api/alerts", async (req, res) => {
     const alerts = await alertsService.getAlerts();
     res.json(alerts);
   } catch (err) {
-    logError("❌ Erreur alerts: " + err.message);
+    addLog("❌ Erreur alerts: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -140,7 +138,7 @@ app.post("/api/alerts", async (req, res) => {
     const alert = await alertsService.addAlert(req.body);
     res.json(alert);
   } catch (err) {
-    logError("❌ Erreur ajout alerte: " + err.message);
+    addLog("❌ Erreur ajout alerte: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -150,7 +148,7 @@ app.delete("/api/alerts/:id", async (req, res) => {
     const result = await alertsService.deleteAlert(req.params.id);
     res.json(result);
   } catch (err) {
-    logError("❌ Erreur suppression alerte: " + err.message);
+    addLog("❌ Erreur suppression alerte: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -162,7 +160,7 @@ app.post("/api/podcast/generate", async (req, res) => {
     const file = await podcastService.generatePodcast(text);
     res.json(file);
   } catch (err) {
-    logError("❌ Erreur podcast: " + err.message);
+    addLog("❌ Erreur podcast: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -176,7 +174,7 @@ app.post("/api/chat", async (req, res) => {
     addLog("🤖 Réponse J.E.A.N.: " + response);
     res.json({ reply: response });
   } catch (err) {
-    logError("❌ Erreur chat: " + err.message);
+    addLog("❌ Erreur chat: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -192,7 +190,7 @@ app.get("/api/admin/stats", async (req, res) => {
       uptime: process.uptime(),
     });
   } catch (err) {
-    logError("❌ Erreur admin/stats: " + err.message);
+    addLog("❌ Erreur admin/stats: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -204,15 +202,31 @@ app.get("/api/admin/logs", (req, res) => {
 
 // --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
-  // ⚠️ À remplacer par vraie DB Users plus tard
   res.json({
     covered: { free: 12, premium: 3, pro: 1, proPlus: 0 },
     nonCovered: { free: 4, premium: 1, pro: 0, proPlus: 0 },
   });
 });
 
+// --- ⚡ Nouveau : Rafraîchir l’index avec bulletin météo ---
+app.post("/api/admin/refresh-index", async (req, res) => {
+  try {
+    const { bulletin } = req.body;
+
+    // Sauvegarde du bulletin dans un fichier public
+    const filePath = path.join(__dirname, "public", "bulletin.json");
+    fs.writeFileSync(filePath, JSON.stringify({ bulletin }, null, 2));
+
+    addLog("🔄 Bulletin mis à jour et injecté dans l’index");
+    res.json({ success: true, message: "Bulletin sauvegardé" });
+  } catch (err) {
+    addLog("❌ Erreur refresh-index: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 🚀 Lancement serveur
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  logInfo(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
+  addLog(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
 });
