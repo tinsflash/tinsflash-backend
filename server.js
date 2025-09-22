@@ -23,9 +23,6 @@ import { logInfo, logError } from "./utils/logger.js";
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
 
-// ✅ Routes (ajout user.js)
-import userRoutes from "./routes/user.js";
-
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -174,10 +171,13 @@ app.post("/api/podcast/generate", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "Message manquant" });
+
     addLog("💬 Question posée à J.E.A.N.: " + message);
     const response = await chatService.chatWithJean(message);
-    addLog("🤖 Réponse J.E.A.N.: " + response);
-    res.json({ reply: response });
+
+    addLog(`🤖 Réponse J.E.A.N. (${response.engine}): ${response.text}`);
+    res.json(response); // ✅ format uniforme { engine, text }
   } catch (err) {
     logError("❌ Erreur chat: " + err.message);
     res.status(500).json({ error: err.message });
@@ -205,8 +205,13 @@ app.get("/api/admin/logs", (req, res) => {
   res.json(getLogs());
 });
 
-// --- Users (via route user.js) ---
-app.use("/api/users", userRoutes);
+// --- Users admin ---
+app.get("/api/admin/users", (req, res) => {
+  res.json({
+    covered: { free: 120, premium: 35, pro: 10, proPlus: 2 },
+    nonCovered: { free: 50, premium: 5, pro: 1, proPlus: 0 },
+  });
+});
 
 // 🚀 Lancement serveur
 const PORT = process.env.PORT || 3000;
