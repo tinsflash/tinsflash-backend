@@ -1,81 +1,91 @@
 // public/admin.js
 
-async function fetchLogs() {
+async function launchRun() {
   try {
-    const res = await fetch("/api/admin/logs");
+    const res = await fetch("/api/admin/superforecast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ location: { lat: 50.5, lon: 4.7 } })
+    });
+
     const data = await res.json();
-    const logs = document.getElementById("logs");
-    logs.textContent = (data.logs || []).join("\n");
+    appendLog("✅ Run lancé avec succès !");
+    if (data.bulletin) {
+      appendLog("📰 Bulletin généré : " + data.bulletin.summary);
+    }
   } catch (err) {
-    document.getElementById("logs").textContent = "❌ Erreur chargement logs";
+    appendLog("❌ Erreur lancement Run: " + err.message);
   }
 }
 
-async function fetchAlerts() {
+async function loadForecasts() {
   try {
-    const res = await fetch("/api/alerts");
+    const res = await fetch("/api/admin/forecasts");
     const data = await res.json();
-    document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
+    document.getElementById("forecasts").innerText = JSON.stringify(data, null, 2);
   } catch (err) {
-    document.getElementById("alerts").textContent = "❌ Erreur chargement alertes";
+    document.getElementById("forecasts").innerText = "❌ Erreur récupération prévisions";
   }
 }
 
-async function fetchUsers() {
+async function loadAlerts() {
+  try {
+    const res = await fetch("/api/admin/alerts");
+    const data = await res.json();
+    document.getElementById("alerts").innerText = JSON.stringify(data, null, 2);
+  } catch (err) {
+    document.getElementById("alerts").innerText = "❌ Erreur récupération alertes";
+  }
+}
+
+async function loadUsers() {
   try {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
-    document.getElementById("users").textContent = JSON.stringify(data, null, 2);
+    document.getElementById("users").innerText = JSON.stringify(data, null, 2);
   } catch (err) {
-    document.getElementById("users").textContent = "❌ Erreur chargement utilisateurs";
+    document.getElementById("users").innerText = "❌ Erreur récupération utilisateurs";
   }
 }
 
-async function launchRun() {
-  try {
-    const res = await fetch("/api/supercalc/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat: 50.5, lon: 4.7 }), // exemple Belgique
-    });
-    const data = await res.json();
-    alert("✅ Run lancé – vérifiez les logs !");
-    console.log(data);
-  } catch (err) {
-    alert("❌ Erreur lancement Run");
-  }
-}
-
+/**
+ * 🤖 Chat avec J.E.A.N.
+ */
 async function sendChat() {
-  const input = document.getElementById("chatInput");
-  const msg = input.value.trim();
-  if (!msg) return;
+  const input = document.getElementById("chatInput").value;
+  if (!input) return;
 
-  const log = document.getElementById("chatLog");
-  log.innerHTML += `<div class="chat-message admin">👤 Admin: ${msg}</div>`;
-  input.value = "";
+  appendLog("💬 Question envoyée à J.E.A.N.: " + input);
 
   try {
-    const res = await fetch("/api/chat", {
+    const res = await fetch("/api/admin/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg }),
+      body: JSON.stringify({ message: input })
     });
+
     const data = await res.json();
-    const reply = data.reply || JSON.stringify(data);
-    log.innerHTML += `<div class="chat-message jean">🤖 J.E.A.N.: ${reply}</div>`;
-    log.scrollTop = log.scrollHeight;
+    if (data.response) {
+      // La réponse contient le moteur IA utilisé
+      appendLog("🤖 Réponse J.E.A.N. (" + data.response.engine + "): " + data.response.text);
+    } else {
+      appendLog("⚠️ Pas de réponse de J.E.A.N.");
+    }
   } catch (err) {
-    log.innerHTML += `<div class="chat-message jean">❌ Erreur réponse JEAN</div>`;
+    appendLog("❌ Erreur chat J.E.A.N.: " + err.message);
   }
 }
 
-// Rafraîchissement auto
-setInterval(fetchLogs, 5000);
-setInterval(fetchAlerts, 7000);
-setInterval(fetchUsers, 10000);
+/**
+ * 📜 Append logs multi-lignes
+ */
+function appendLog(message) {
+  const logs = document.getElementById("logs");
+  logs.textContent += `[${new Date().toISOString()}] ${message}\n`;
+  logs.scrollTop = logs.scrollHeight;
+}
 
-// Init
-fetchLogs();
-fetchAlerts();
-fetchUsers();
+// Charger les données admin automatiquement
+loadForecasts();
+loadAlerts();
+loadUsers();
