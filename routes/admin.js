@@ -1,35 +1,84 @@
 // routes/admin.js
 import express from "express";
-import { askJean } from "../services/jeanService.js";
+import { runSuperForecast } from "../services/superForecast.js";
+import { chatWithJean } from "../services/chatService.js";
+import { getForecasts, getAlerts, getUsers } from "../utils/db.js";
 
 const router = express.Router();
 
-// 📊 Stats admin
-router.get("/stats", (req, res) => {
-  res.json({
-    system: "OK",
-    users: 2500, // ⚠️ À remplacer par vraie DB Users
-    activeAlerts: 12,
-    podcasts: 56,
-  });
+/**
+ * 🚀 Lancer un Run SuperForecast
+ */
+router.post("/superforecast", async (req, res) => {
+  try {
+    const location = req.body.location || { lat: 50.5, lon: 4.7 }; // défaut: Belgique
+    const result = await runSuperForecast(location);
+    res.json(result);
+  } catch (err) {
+    console.error("Erreur SuperForecast:", err);
+    res.status(500).json({ error: "Erreur lors du lancement du Run SuperForecast." });
+  }
 });
 
-// ✅ Validation d’alertes (70%–90%)
-router.post("/validate-alert", (req, res) => {
-  const { id, action } = req.body; // action = accept/refuse/escalate
-  res.json({ success: true, id, action });
+/**
+ * 📜 Logs & prévisions sauvegardées
+ */
+router.get("/forecasts", async (req, res) => {
+  try {
+    const forecasts = await getForecasts();
+    res.json(forecasts);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération forecasts." });
+  }
 });
 
-// 💬 Chat avec J.E.A.N.
+/**
+ * ⚠️ Alertes générées
+ */
+router.get("/alerts", async (req, res) => {
+  try {
+    const alerts = await getAlerts();
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération alertes." });
+  }
+});
+
+/**
+ * 👥 Utilisateurs
+ */
+router.get("/users", async (req, res) => {
+  try {
+    const users = await getUsers();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur récupération utilisateurs." });
+  }
+});
+
+/**
+ * 🤖 Chat avec J.E.A.N.
+ */
 router.post("/chat", async (req, res) => {
   try {
-    const { question } = req.body;
-    if (!question) return res.status(400).json({ error: "❌ Question manquante" });
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "Message manquant." });
 
-    const answer = await askJean(question);
-    res.json({ answer });
+    const jeanResponse = await chatWithJean([
+      {
+        role: "system",
+        content:
+          "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo. " +
+          "Expert météo, climat, mathématiques. Tu analyses les modèles météo, " +
+          "produis des prévisions fiables et des alertes utiles pour la sécurité humaine, animale et matérielle."
+      },
+      { role: "user", content: message }
+    ]);
+
+    res.json({ response: jeanResponse });
   } catch (err) {
-    res.status(500).json({ error: "❌ Erreur JEAN", details: err.message });
+    console.error("Erreur Chat J.E.A.N.:", err.message);
+    res.status(500).json({ error: "Erreur lors du chat avec J.E.A.N." });
   }
 });
 
