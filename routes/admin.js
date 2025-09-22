@@ -1,15 +1,13 @@
+// routes/admin.js
 // -------------------------
 // 🌍 Admin Routes
 // -------------------------
 import express from "express";
-import Log from "../models/Log.js";
-import Alert from "../models/Alert.js";
-import User from "../models/User.js";
 import superForecast from "../services/superForecast.js";
 
 const router = express.Router();
 
-// Exemple stats système
+// ✅ Exemple console admin – stats système
 router.get("/stats", (req, res) => {
   res.json({
     system: "OK",
@@ -19,41 +17,32 @@ router.get("/stats", (req, res) => {
   });
 });
 
-// Validation d’alertes (70%–90%)
+// ✅ Validation d’alertes (accept/refuse/escalate)
 router.post("/validate-alert", (req, res) => {
   const { id, action } = req.body; // action = accept/refuse/escalate
   res.json({ success: true, id, action });
 });
 
-// -------------------------
-// 📜 Logs en temps réel
-// -------------------------
-router.get("/logs", async (req, res) => {
-  const logs = await Log.find().sort({ timestamp: -1 }).limit(50);
-  res.json(logs);
-});
-
-// ⚠️ Alertes générées
-router.get("/alerts", async (req, res) => {
-  const alerts = await Alert.find().sort({ timestamp: -1 }).limit(20);
-  res.json(alerts);
-});
-
-// 👥 Utilisateurs par catégorie
-router.get("/users/stats", async (req, res) => {
-  const categories = await User.aggregate([
-    { $group: { _id: "$category", count: { $sum: 1 } } }
-  ]);
-  res.json(categories);
-});
-
-// 🚀 Lancer un SuperForecast
+// ✅ Lancer un Run SuperForecast
 router.post("/superforecast/run", async (req, res) => {
   try {
-    await superForecast.runFullForecast(50.85, 4.35); // Bruxelles par défaut
-    res.json({ status: "OK" });
+    // Si lat/lon pas envoyés, valeur par défaut = Bruxelles
+    const { lat = 50.85, lon = 4.35 } = req.body;
+
+    const result = await superForecast.runFullForecast(lat, lon);
+
+    res.json({
+      success: true,
+      message: "🚀 SuperForecast lancé avec succès",
+      result,
+    });
   } catch (err) {
-    res.status(500).json({ status: "Erreur", message: err.message });
+    console.error("❌ Erreur SuperForecast:", err.message);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors du lancement du SuperForecast",
+      details: err.message,
+    });
   }
 });
 
