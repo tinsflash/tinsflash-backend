@@ -5,59 +5,131 @@
   <title>Tinsflash – Prévisions météo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
-    header { text-align: center; padding: 20px; font-size: 1.5rem; font-weight: bold; color: #0077cc; }
-    section { margin: 20px 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    h2 { color: #0077cc; }
-    pre { background: #eee; padding: 10px; border-radius: 5px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    header {
+      background: #1e1e1e;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #00e0ff;
+    }
+    main {
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    h2 {
+      margin-top: 25px;
+      font-size: 1.3rem;
+      color: #00e0ff;
+      text-align: center;
+    }
+    section {
+      background: #1e1e1e;
+      margin: 15px 0;
+      padding: 15px;
+      border-radius: 10px;
+    }
+    button {
+      display: block;
+      margin: 15px auto;
+      padding: 12px 20px;
+      font-size: 1.1rem;
+      background: #00e0ff;
+      border: none;
+      border-radius: 8px;
+      color: #121212;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #00c0d9;
+    }
+    pre {
+      background: #000;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
-  <header>🌍 Tinsflash – Prévisions météo avancées</header>
+  <header>🌍 Tinsflash – Prévisions météo</header>
+  <main>
+    <button id="refreshBtn">🔄 Rafraîchir les prévisions</button>
 
-  <section>
-    <h2>📝 Prévisions (dans votre langue)</h2>
-    <p id="forecast">Chargement...</p>
-  </section>
+    <section>
+      <h2>📜 Prévisions</h2>
+      <pre id="forecast">Chargement...</pre>
+    </section>
 
-  <section>
-    <h2>⚠️ Alertes météo</h2>
-    <pre id="alerts">Chargement...</pre>
-  </section>
+    <section>
+      <h2>⚠️ Alertes</h2>
+      <pre id="alerts">Chargement...</pre>
+    </section>
+
+    <section>
+      <h2>🌐 Traduction automatique</h2>
+      <pre id="translated">Chargement traduction...</pre>
+    </section>
+  </main>
 
   <script>
-    async function loadIndexData() {
+    async function loadData() {
       try {
-        const res = await fetch("index-data.json");
+        const res = await fetch("/index-data.json");
+        if (!res.ok) throw new Error("Impossible de charger index-data.json");
         const data = await res.json();
 
-        const userLang = navigator.language || "fr";
-        let forecast = data.forecastTextFr || "Pas de prévisions disponibles.";
+        // Prévisions FR
+        document.getElementById("forecast").textContent =
+          data.forecastTextFr || "Pas de prévisions disponibles.";
 
-        // Traduction auto simple (dictionnaire minimal)
-        const translations = {
-          en: "Weather forecast (AI-generated): ",
-          es: "Previsión meteorológica: ",
-          de: "Wettervorhersage: ",
-          nl: "Weersverwachting: ",
-          it: "Previsioni meteo: ",
-        };
+        // Alertes
+        document.getElementById("alerts").textContent =
+          JSON.stringify(data.alerts || [], null, 2);
 
-        if (userLang.startsWith("fr")) {
-          document.getElementById("forecast").textContent = forecast;
+        // Traduction auto
+        const userLang = navigator.language.split("-")[0]; // ex: "en", "de"
+        if (userLang !== "fr") {
+          const translateRes = await fetch("https://libretranslate.de/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              q: data.forecastTextFr,
+              source: "fr",
+              target: userLang,
+              format: "text"
+            })
+          });
+          const translated = await translateRes.json();
+          document.getElementById("translated").textContent =
+            translated.translatedText || "Traduction indisponible.";
         } else {
-          const prefix = translations[userLang.substring(0,2)] || "Forecast: ";
-          document.getElementById("forecast").textContent = prefix + forecast;
+          document.getElementById("translated").textContent =
+            "Déjà en français, traduction non nécessaire.";
         }
-
-        document.getElementById("alerts").textContent = JSON.stringify(data.alerts, null, 2);
       } catch (err) {
         document.getElementById("forecast").textContent = "❌ Erreur chargement données.";
-        document.getElementById("alerts").textContent = "❌ Erreur chargement alertes.";
+        document.getElementById("alerts").textContent = err.message;
       }
     }
 
-    loadIndexData();
+    // Bouton rafraîchir
+    document.getElementById("refreshBtn").addEventListener("click", loadData);
+
+    // Chargement initial
+    loadData();
   </script>
 </body>
 </html>
