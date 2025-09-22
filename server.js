@@ -167,8 +167,8 @@ app.post("/api/podcast/generate", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    const response = await chatService.chatWithJean(message);
-    res.json({ reply: response }); // 🔥 corrigé pour éviter undefined
+    const response = await chatService.askJean(message); // ✅ fix
+    res.json({ reply: response });
   } catch (err) {
     logError("❌ Erreur chat: " + err.message);
     res.status(500).json({ error: err.message });
