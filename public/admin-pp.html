@@ -1,165 +1,70 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Console Admin – Tinsflash Météo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <title>🌍 Console Admin – Tinsflash Météo</title>
+  <link rel="stylesheet" href="style.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #0d0d0d;
-      color: #00e6e6;
-      text-align: center;
-      padding: 20px;
-    }
-    h1, h2 {
-      margin: 10px 0;
-      font-weight: bold;
-    }
-    h1 {
-      font-size: 22px;
-      color: #00ffff;
-    }
-    h2 {
-      font-size: 18px;
-      color: #00cccc;
-    }
-    .section {
-      background: #111;
-      border: 1px solid #00cccc;
-      border-radius: 10px;
-      margin: 15px auto;
-      padding: 15px;
-      max-width: 700px;
-      text-align: left;
-    }
-    .button {
-      display: block;
-      margin: 15px auto;
-      padding: 14px 22px;
-      font-size: 18px;
-      font-weight: bold;
-      background-color: #00ccff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      color: #000;
-      transition: 0.3s;
-    }
-    .button:hover {
-      background-color: #0099cc;
-    }
-    pre, textarea {
-      background: #000;
-      color: #0f0;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 14px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    textarea {
-      width: 100%;
-      height: 120px;
-      resize: vertical;
-    }
-    input[type="text"] {
-      width: 80%;
-      padding: 8px;
-      margin-top: 10px;
-    }
+    body { background: #111; color: #0f0; font-family: monospace; }
+    h1, h2 { color: cyan; }
+    .section { border: 1px solid cyan; padding: 15px; margin: 10px 0; border-radius: 8px; }
+    button { background: cyan; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 6px; }
+    textarea { width: 100%; height: 120px; background: #000; color: #0f0; border: 1px solid cyan; padding: 10px; }
+    pre { background: #000; color: #0f0; padding: 10px; border-radius: 6px; }
   </style>
 </head>
 <body>
   <h1>🌍 Console Admin – Tinsflash Météo</h1>
 
-  <!-- Lancer un Run -->
   <div class="section">
     <h2>⚡ Lancer un Run SuperForecast (Europe & USA)</h2>
-    <button class="button" onclick="launchRun()">🚀 Lancer le Run</button>
+    <button onclick="launchRun()">🚀 Lancer le Run</button>
   </div>
 
-  <!-- Logs -->
   <div class="section">
     <h2>📜 Logs en temps réel</h2>
-    <pre id="logs">En attente de lancement...</pre>
+    <pre id="logs">⏳ En attente...</pre>
   </div>
 
-  <!-- Alertes -->
   <div class="section">
     <h2>⚠️ Alertes générées</h2>
-    <pre id="alerts">Aucune alerte pour le moment.</pre>
+    <pre id="alerts">⏳ En attente...</pre>
   </div>
 
-  <!-- Bulletin -->
   <div class="section">
     <h2>📰 Bulletin météo généré (modifiable avant publication)</h2>
-    <textarea id="bulletin">En attente de génération...</textarea>
-    <button class="button" onclick="saveBulletin()">💾 Sauvegarder & Rafraîchir Index</button>
+    <textarea id="bulletin"></textarea>
+    <button onclick="saveBulletin()">💾 Sauvegarder & Rafraîchir Index</button>
   </div>
 
-  <!-- Chat -->
   <div class="section">
     <h2>🤖 Chat avec J.E.A.N.</h2>
-    <div id="chatBox" style="height:150px; overflow-y:auto; background:#000; padding:10px; border-radius:5px; color:#fff; font-size:14px;">
-      <p><i>Discussion en attente...</i></p>
-    </div>
-    <input type="text" id="chatInput" placeholder="Posez une question à J.E.A.N." />
-    <button class="button" onclick="sendMessage()">Envoyer</button>
+    <div id="chatBox"><i>Discussion en attente...</i></div>
+    <input id="chatInput" placeholder="Posez une question à J.E.A.N.">
+    <button onclick="sendMessage()">Envoyer</button>
   </div>
 
   <script>
     async function launchRun() {
-      document.getElementById("logs").textContent = "⏳ Run en cours...";
-      const res = await fetch("/run-forecast");
+      document.getElementById("logs").textContent = "🚀 Run en cours...";
+      const res = await fetch("/run-superforecast", { method: "POST" });
       const data = await res.json();
-      document.getElementById("logs").textContent = JSON.stringify(data.logs, null, 2);
-      loadBulletin();
-      loadAlerts();
-    }
-
-    async function loadAlerts() {
-      const res = await fetch("/alerts");
-      const alerts = await res.json();
-      document.getElementById("alerts").textContent = JSON.stringify(alerts, null, 2);
-    }
-
-    async function loadBulletin() {
-      const res = await fetch("/bulletin");
-      const bulletin = await res.json();
-      document.getElementById("bulletin").value = bulletin.local + "\n\n" + bulletin.national;
+      document.getElementById("logs").textContent = data.logs.join("\n");
     }
 
     async function saveBulletin() {
       const text = document.getElementById("bulletin").value;
-      await fetch("/bulletin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ local: text, national: text })
-      });
-      alert("✅ Bulletin sauvegardé et Index rafraîchi !");
+      await fetch("/bulletin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ local: text, national: text }) });
+      alert("✅ Bulletin sauvegardé et index rafraîchi !");
     }
 
     async function sendMessage() {
       const input = document.getElementById("chatInput");
-      const message = input.value.trim();
-      if (!message) return;
-      const chatBox = document.getElementById("chatBox");
-      chatBox.innerHTML += `<p><b>👤 Admin:</b> ${message}</p>`;
-      input.value = "";
-      const res = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message })
-      });
+      const res = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: input.value }) });
       const data = await res.json();
-      chatBox.innerHTML += `<p><b>🤖 J.E.A.N.:</b> ${data.reply}</p>`;
-      chatBox.scrollTop = chatBox.scrollHeight;
+      document.getElementById("chatBox").innerHTML += `<br><b>Admin:</b> ${input.value}<br><b>J.E.A.N.:</b> ${data.reply}`;
+      input.value = "";
     }
-
-    // Charger au démarrage
-    loadAlerts();
-    loadBulletin();
   </script>
 </body>
 </html>
