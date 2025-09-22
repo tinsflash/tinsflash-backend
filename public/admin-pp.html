@@ -23,7 +23,7 @@
       padding: 20px;
       border-radius: 10px;
       width: 90%;
-      max-width: 800px;
+      max-width: 900px;
       box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
       text-align: left;
     }
@@ -45,7 +45,7 @@
     button:hover {
       background: #00cccc;
     }
-    pre {
+    pre, textarea {
       background: #000;
       padding: 10px;
       text-align: left;
@@ -54,6 +54,12 @@
       border-radius: 5px;
       white-space: pre-wrap;
       font-size: 0.9rem;
+      color: #f0f0f0;
+      width: 100%;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 120px;
     }
     .chat-box {
       display: flex;
@@ -115,6 +121,14 @@
   <div class="card">
     <h2>👥 Utilisateurs par catégorie</h2>
     <pre id="users">Chargement...</pre>
+  </div>
+
+  <!-- Bulletin météo -->
+  <div class="card">
+    <h2>📰 Bulletin météo – Belgique / France / Luxembourg</h2>
+    <textarea id="bulletinText">Chargement...</textarea>
+    <button onclick="saveBulletin()">💾 Sauvegarder le Bulletin</button>
+    <button onclick="refreshIndex()">🔄 Rafraîchir Index</button>
   </div>
 
   <!-- Chat J.E.A.N -->
