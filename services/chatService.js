@@ -5,39 +5,43 @@ import { addLog } from "./logsService.js";
 
 dotenv.config();
 
-const client = new OpenAI({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
- * Dialogue avec J.E.A.N. – Chef mécano météo nucléaire
- * Analyse runs, alertes et modèles météo en temps réel
+ * Dialogue direct avec J.E.A.N. (IA chef mécanicien météo)
+ * - Répond aux questions admin dans la console
+ * - Explique les runs, alertes, anomalies
  */
 export async function chatWithJean(message) {
   try {
-    addLog("💬 Question envoyée à J.E.A.N.: " + message);
+    addLog("💬 Question posée à J.E.A.N.: " + message);
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini", // GPT-5 optimisé
+    const response = await openai.chat.completions.create({
+      model: "gpt-5",
       messages: [
         {
           role: "system",
-          content: `Tu es J.E.A.N., chef mécanicien de la Centrale Nucléaire Météo.
-Tu es expert en météorologie, climatologie, mathématiques et physique.
-Ta mission : analyser les runs météo, expliquer les alertes, comparer nos prévisions aux autres modèles,
-et répondre de façon claire, précise, fiable et pédagogique.`,
+          content:
+            "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo mondiale. "
+            + "Tu es expert en météorologie, climatologie et mathématiques. "
+            + "Tu réponds toujours de façon précise, claire, fiable et scientifique. "
+            + "Tu expliques l’analyse des modèles météo, la détection d’anomalies et la génération d’alertes. "
+            + "Tu aides l’administrateur à comprendre et piloter le moteur météo.",
         },
         { role: "user", content: message },
       ],
-      max_tokens: 600,
-      temperature: 0.3,
+      temperature: 0.4,
+      max_tokens: 800,
     });
 
-    const reply = response.choices[0].message.content;
+    const reply = response.choices[0].message.content.trim();
     addLog("🤖 Réponse J.E.A.N.: " + reply);
+
     return reply;
   } catch (err) {
-    addLog("❌ Erreur chat J.E.A.N.: " + err.message);
+    addLog("❌ Erreur chatWithJean: " + err.message);
     return "⚠️ JEAN n’est pas disponible pour le moment.";
   }
 }
