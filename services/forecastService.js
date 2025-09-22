@@ -20,10 +20,37 @@ function generateNationalBulletin(forecast, country) {
   return `Prévisions nationales (${country}): tendance générale ${forecast.condition}, températures moyennes autour de ${forecast.temp}°C.`;
 }
 
+/**
+ * Sauvegarde une prévision météo (MongoDB)
+ */
+async function saveForecast(data) {
+  try {
+    const forecast = new Forecast(data);
+    await forecast.save();
+    addLog("💾 Prévision sauvegardée en base MongoDB");
+    return forecast;
+  } catch (err) {
+    addLog("❌ Erreur saveForecast: " + err.message);
+    throw err;
+  }
+}
+
+/**
+ * Récupère la dernière prévision en base
+ */
+async function getLatestForecast() {
+  try {
+    return await Forecast.findOne().sort({ timestamp: -1 });
+  } catch (err) {
+    addLog("❌ Erreur getLatestForecast: " + err.message);
+    throw err;
+  }
+}
+
 async function getLocalForecast(lat, lon, country = "Europe/USA") {
   try {
     addLog("📍 Récupération prévisions locales...");
-    const forecast = await Forecast.findOne().sort({ timestamp: -1 });
+    const forecast = await getLatestForecast();
     return {
       forecast,
       bulletinLocal: generateLocalBulletin(forecast?.data, country),
@@ -37,7 +64,7 @@ async function getLocalForecast(lat, lon, country = "Europe/USA") {
 async function getNationalForecast(country = "Europe/USA") {
   try {
     addLog("🌍 Récupération prévisions nationales...");
-    const forecast = await Forecast.findOne().sort({ timestamp: -1 });
+    const forecast = await getLatestForecast();
     return {
       forecast,
       bulletinNational: generateNationalBulletin(forecast?.data, country),
@@ -71,9 +98,17 @@ async function get7DayForecast(lat, lon, country = "Europe/USA") {
  * ✅ Export complet (default + fonctions nommées)
  */
 export default {
+  saveForecast,
+  getLatestForecast,
   getLocalForecast,
   getNationalForecast,
-  get7DayForecast
+  get7DayForecast,
 };
 
-export { getLocalForecast, getNationalForecast, get7DayForecast };
+export {
+  saveForecast,
+  getLatestForecast,
+  getLocalForecast,
+  getNationalForecast,
+  get7DayForecast,
+};
