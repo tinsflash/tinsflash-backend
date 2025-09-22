@@ -20,9 +20,6 @@ function generateNationalBulletin(forecast, country) {
   return `Prévisions nationales (${country}): tendance générale ${forecast.condition}, températures moyennes autour de ${forecast.temp}°C.`;
 }
 
-/**
- * Prévisions locales
- */
 export async function getLocalForecast(lat, lon, country = "Europe/USA") {
   try {
     addLog("📍 Récupération prévisions locales...");
@@ -37,9 +34,6 @@ export async function getLocalForecast(lat, lon, country = "Europe/USA") {
   }
 }
 
-/**
- * Prévisions nationales
- */
 export async function getNationalForecast(country = "Europe/USA") {
   try {
     addLog("🌍 Récupération prévisions nationales...");
@@ -54,9 +48,6 @@ export async function getNationalForecast(country = "Europe/USA") {
   }
 }
 
-/**
- * Prévisions sur 7 jours
- */
 export async function get7DayForecast(lat, lon, country = "Europe/USA") {
   try {
     addLog("📅 Récupération prévisions 7 jours...");
