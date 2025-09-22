@@ -1,5 +1,5 @@
 // services/superForecast.js
-import { getLocalForecast, getNationalForecast, get7DayForecast } from "./forecastService.js";
+import { getLocalForecast } from "./forecastService.js";
 import { generateBulletin } from "./bulletinService.js";
 import { addLog } from "./logsService.js";
 import Forecast from "../models/Forecast.js";
@@ -43,7 +43,7 @@ async function runFullForecast(lat, lon) {
     addLog("💾 SuperForecast sauvegardé en base");
 
     // 4. Générer bulletin météo clair
-    const bulletin = await generateBulletin();
+    const bulletin = await generateBulletin(lat, lon);
     addLog("📰 Bulletin météo généré");
 
     addLog("🎯 Run terminé avec succès");
