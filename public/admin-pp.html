@@ -4,33 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🌍 Console Admin – Tinsflash Centrale Météo</title>
+  <link rel="stylesheet" href="styles.css" />
   <style>
     body {
       background: #0a0a0a;
       color: #f0f0f0;
       font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
       text-align: center;
-      padding: 20px;
-      background: #1a1a1a;
+    }
+    h1 {
       color: cyan;
-      font-size: 1.6rem;
-      font-weight: bold;
+      margin-bottom: 20px;
     }
     .card {
-      background: #1e1e1e;
+      background: #1a1a1a;
       margin: 15px auto;
       padding: 20px;
       border-radius: 10px;
-      width: 95%;
-      max-width: 900px;
+      width: 90%;
+      max-width: 700px;
       box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+      text-align: left;
     }
     button {
-      padding: 12px 20px;
+      padding: 10px 20px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -47,42 +44,21 @@
       padding: 10px;
       text-align: left;
       overflow-y: auto;
-      max-height: 250px;
+      max-height: 200px;
       border-radius: 5px;
-      font-size: 0.9rem;
       white-space: pre-wrap;
     }
-    textarea {
-      width: 100%;
-      min-height: 100px;
-      background: #111;
-      color: #fff;
+    #chatInput {
+      width: 80%;
+      padding: 8px;
+      margin: 5px 0;
       border-radius: 5px;
       border: none;
-      padding: 10px;
-      margin-top: 10px;
     }
-    .chat-box {
-      display: flex;
-      flex-direction: column;
-    }
-    .chat-log {
-      background: #000;
-      padding: 10px;
-      height: 200px;
-      overflow-y: auto;
-      border-radius: 5px;
-      margin-bottom: 10px;
-    }
-    .chat-message {
-      margin: 5px 0;
-    }
-    .chat-message.admin { color: cyan; font-weight: bold; }
-    .chat-message.jean { color: #ffcc00; }
   </style>
 </head>
 <body>
-  <header>🌍 Console Admin – Tinsflash Centrale Météo</header>
+  <h1>🌍 Console Admin – Tinsflash Centrale Météo</h1>
 
   <div class="card">
     <h2>⚡ Lancer un Run SuperForecast</h2>
@@ -105,128 +81,17 @@
   </div>
 
   <div class="card">
-    <h2>📰 Bulletins météo (BE / FR / LU)</h2>
-    <label>Bulletin Belgique</label>
-    <textarea id="bulletinBE"></textarea>
-    <label>Bulletin France</label>
-    <textarea id="bulletinFR"></textarea>
-    <label>Bulletin Luxembourg</label>
-    <textarea id="bulletinLU"></textarea>
-    <button onclick="saveBulletins()">💾 Sauvegarder les bulletins</button>
-    <button onclick="refreshIndex()">🔄 Rafraîchir Index</button>
+    <h2>💬 Chat avec J.E.A.N.</h2>
+    <input type="text" id="chatInput" placeholder="Pose ta question à J.E.A.N..." />
+    <button onclick="askJean()">Envoyer</button>
+    <pre id="chatLog">Discussion en cours...</pre>
   </div>
 
   <div class="card">
-    <h2>🤖 Chat avec J.E.A.N.</h2>
-    <div class="chat-box">
-      <div class="chat-log" id="chatLog"></div>
-      <div style="display:flex;gap:10px;">
-        <input type="text" id="chatInput" placeholder="Posez une question à J.E.A.N." style="flex:1;padding:10px;border-radius:5px;border:none;" />
-        <button onclick="sendChat()">Envoyer</button>
-      </div>
-    </div>
+    <h2>🔄 Rafraîchir l’Index</h2>
+    <button onclick="refreshIndex()">🔄 Rafraîchir la page Index</button>
   </div>
 
-  <script>
-    async function fetchLogs() {
-      try {
-        const res = await fetch("/api/admin/logs");
-        const data = await res.json();
-        document.getElementById("logs").textContent = (data.logs || []).join("\\n");
-      } catch {
-        document.getElementById("logs").textContent = "❌ Erreur chargement logs";
-      }
-    }
-
-    async function fetchAlerts() {
-      try {
-        const res = await fetch("/api/alerts");
-        const data = await res.json();
-        document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
-      } catch {
-        document.getElementById("alerts").textContent = "❌ Erreur chargement alertes";
-      }
-    }
-
-    async function fetchUsers() {
-      try {
-        const res = await fetch("/api/admin/users");
-        const data = await res.json();
-        document.getElementById("users").textContent = JSON.stringify(data, null, 2);
-      } catch {
-        document.getElementById("users").textContent = "❌ Erreur chargement utilisateurs";
-      }
-    }
-
-    async function launchRun() {
-      try {
-        const res = await fetch("/api/supercalc/run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat: 50.5, lon: 4.7 })
-        });
-        const data = await res.json();
-        alert("✅ Run lancé !");
-        console.log(data);
-        fetchLogs();
-      } catch {
-        alert("❌ Erreur lancement Run");
-      }
-    }
-
-    async function sendChat() {
-      const input = document.getElementById("chatInput");
-      const msg = input.value.trim();
-      if (!msg) return;
-      const log = document.getElementById("chatLog");
-      log.innerHTML += `<div class="chat-message admin">👤 Admin: ${msg}</div>`;
-      input.value = "";
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: msg })
-        });
-        const data = await res.json();
-        log.innerHTML += `<div class="chat-message jean">🤖 J.E.A.N.: ${data.reply}</div>`;
-        log.scrollTop = log.scrollHeight;
-      } catch {
-        log.innerHTML += `<div class="chat-message jean">❌ Erreur réponse JEAN</div>`;
-      }
-    }
-
-    async function saveBulletins() {
-      const be = document.getElementById("bulletinBE").value;
-      const fr = document.getElementById("bulletinFR").value;
-      const lu = document.getElementById("bulletinLU").value;
-      try {
-        await fetch("/api/admin/bulletins", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ BE: be, FR: fr, LU: lu })
-        });
-        alert("✅ Bulletins sauvegardés !");
-      } catch {
-        alert("❌ Erreur sauvegarde bulletins");
-      }
-    }
-
-    async function refreshIndex() {
-      try {
-        await fetch("/api/admin/refresh-index", { method: "POST" });
-        alert("🔄 Index rafraîchi !");
-      } catch {
-        alert("❌ Erreur rafraîchissement index");
-      }
-    }
-
-    // Rafraîchissements auto
-    setInterval(fetchLogs, 5000);
-    setInterval(fetchAlerts, 7000);
-    setInterval(fetchUsers, 10000);
-
-    fetchLogs(); fetchAlerts(); fetchUsers();
-  </script>
+  <script src="admin.js"></script>
 </body>
 </html>
