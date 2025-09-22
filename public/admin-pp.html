@@ -5,25 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🌍 Console Admin – Tinsflash Centrale Météo</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    body { background: #0a0a0a; color: #f0f0f0; font-family: Arial, sans-serif; }
-    h1 { color: cyan; text-align: center; }
-    .card {
-      background: #1a1a1a; margin: 15px auto; padding: 20px;
-      border-radius: 10px; width: 90%; max-width: 800px;
-      box-shadow: 0 0 10px rgba(0,255,255,0.3);
-    }
-    button { padding: 10px 20px; border: none; border-radius: 8px;
-      cursor: pointer; background: cyan; color: #000; font-weight: bold;
-    }
-    button:hover { background: #00e6e6; }
-    pre, textarea {
-      background: #000; color: #0f0; padding: 10px;
-      text-align: left; overflow-y: auto; border-radius: 5px;
-      max-height: 250px; width: 100%;
-    }
-    textarea { height: 200px; color: #fff; }
-  </style>
 </head>
 <body>
   <h1>🌍 Console Admin – Tinsflash Centrale Météo</h1>
@@ -44,21 +25,10 @@
   </div>
 
   <div class="card">
-    <h2>👥 Utilisateurs</h2>
-    <pre id="users">Chargement...</pre>
-  </div>
-
-  <div class="card">
-    <h2>📰 Bulletins météo (BE/FR/LU modifiables)</h2>
-    <textarea id="bulletins"></textarea><br />
-    <button onclick="saveBulletins()">💾 Sauvegarder</button>
-  </div>
-
-  <div class="card">
     <h2>🤖 Chat avec J.E.A.N.</h2>
-    <pre id="jeanChat">Posez vos questions à J.E.A.N...</pre>
-    <input id="jeanInput" placeholder="Votre question..." style="width:80%" />
-    <button onclick="askJean()">Envoyer</button>
+    <pre id="chatBox">Posez vos questions à J.E.A.N...</pre>
+    <input id="chatInput" type="text" placeholder="Votre question..." />
+    <button onclick="sendMessage()">Envoyer</button>
   </div>
 
   <script src="admin.js"></script>
