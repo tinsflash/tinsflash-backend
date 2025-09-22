@@ -1,63 +1,68 @@
 // services/forecastService.js
-import fetch from "node-fetch";
+import Forecast from "../models/Forecast.js";
+import { addLog } from "./logsService.js";
 
 /**
- * Prévisions locales (ville ou coordonnées précises)
- * Europe / USA = précision max
- * Autres zones = open data basique
+ * Génère un texte clair pour le bulletin météo local
  */
-async function getLocalForecast(lat, lon) {
-  const apiKey = process.env.OPENWEATHER_KEY;
-  if (!apiKey) throw new Error("❌ OPENWEATHER_KEY manquant dans .env");
-
-  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${apiKey}`;
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    throw new Error(`❌ Erreur OpenWeather local: ${res.statusText}`);
-  }
-
-  return res.json();
+function generateLocalBulletin(forecast, country) {
+  if (!forecast) return "⚠️ Données locales indisponibles.";
+  const temp = forecast.temp || "N/A";
+  const cond = forecast.condition || "N/A";
+  return `Prévisions locales pour aujourd'hui (${country || "zone couverte"}): ${cond}, température moyenne ${temp}°C.`;
 }
 
 /**
- * Prévisions nationales (basées sur la capitale ou ville principale)
+ * Génère un texte clair pour le bulletin météo national
  */
-async function getNationalForecast(country) {
-  const apiKey = process.env.OPENWEATHER_KEY;
-  if (!apiKey) throw new Error("❌ OPENWEATHER_KEY manquant dans .env");
-
-  // Exemple simple : on prend le pays comme requête directe
-  const url = `https://api.openweathermap.org/data/2.5/forecast?q=${country}&units=metric&lang=fr&appid=${apiKey}`;
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    throw new Error(`❌ Erreur OpenWeather national: ${res.statusText}`);
-  }
-
-  return res.json();
+function generateNationalBulletin(forecast, country) {
+  if (!forecast) return "⚠️ Données nationales indisponibles.";
+  return `Prévisions nationales (${country}): tendance générale ${forecast.condition}, températures moyennes autour de ${forecast.temp}°C.`;
 }
 
-/**
- * Prévisions sur 7 jours (OneCall API)
- */
-async function get7DayForecast(lat, lon) {
-  const apiKey = process.env.OPENWEATHER_KEY;
-  if (!apiKey) throw new Error("❌ OPENWEATHER_KEY manquant dans .env");
-
-  const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&units=metric&lang=fr&appid=${apiKey}`;
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    throw new Error(`❌ Erreur OpenWeather 7j: ${res.statusText}`);
+export async function getLocalForecast(lat, lon, country = "Europe/USA") {
+  try {
+    addLog("📍 Récupération prévisions locales...");
+    const forecast = await Forecast.findOne().sort({ timestamp: -1 });
+    return {
+      forecast,
+      bulletinLocal: generateLocalBulletin(forecast?.data, country),
+    };
+  } catch (err) {
+    addLog("❌ Erreur getLocalForecast: " + err.message);
+    throw err;
   }
-
-  return res.json();
 }
 
-// ✅ Export par défaut → attendu par server.js et superForecast.js
-export default {
-  getLocalForecast,
-  getNationalForecast,
-  get7DayForecast,
-};
+export async function getNationalForecast(country = "Europe/USA") {
+  try {
+    addLog("🌍 Récupération prévisions nationales...");
+    const forecast = await Forecast.findOne().sort({ timestamp: -1 });
+    return {
+      forecast,
+      bulletinNational: generateNationalBulletin(forecast?.data, country),
+    };
+  } catch (err) {
+    addLog("❌ Erreur getNationalForecast: " + err.message);
+    throw err;
+  }
+}
+
+export async function get7DayForecast(lat, lon, country = "Europe/USA") {
+  try {
+    addLog("📅 Récupération prévisions 7 jours...");
+    const forecasts = await Forecast.find().sort({ timestamp: -1 }).limit(7);
+
+    const textSummary = forecasts.map((f, i) => {
+      return `Jour ${i + 1}: ${f.data.condition}, ${f.data.temp}°C`;
+    });
+
+    return {
+      forecasts,
+      bulletin7days: `Prévisions sur 7 jours (${country}): ${textSummary.join(" | ")}`,
+    };
+  } catch (err) {
+    addLog("❌ Erreur get7DayForecast: " + err.message);
+    throw err;
+  }
+}
