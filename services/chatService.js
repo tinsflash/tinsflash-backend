@@ -1,27 +1,21 @@
 // services/chatService.js
 import { askJean } from "./openai.js";
+import { addLog } from "./logsService.js";
 
 /**
- * Service pour discuter avec J.E.A.N.
- * @param {string} message
- * @returns {Promise<string>}
+ * Dialogue avec l’IA J.E.A.N.
  */
-async function chatWithJean(message) {
+export async function chatWithJean(message) {
   try {
-    if (!message || message.trim() === "") {
-      return "⚠️ Merci de poser une question à J.E.A.N.";
-    }
+    addLog("💬 [Admin] → J.E.A.N.: " + message);
 
-    const response = await askJean(message);
+    const reply = await askJean(message);
 
-    if (!response || typeof response !== "string") {
-      return "⚠️ J.E.A.N. n’a pas su répondre cette fois.";
-    }
-
-    return response;
+    addLog("🤖 [J.E.A.N.] → Admin: " + reply);
+    return reply;
   } catch (err) {
-    console.error("❌ Erreur chatWithJean:", err.message);
-    return "⚠️ JEAN n’est pas disponible actuellement.";
+    addLog("❌ Erreur chat J.E.A.N.: " + err.message);
+    return "⚠️ J.E.A.N. n’est pas disponible pour le moment.";
   }
 }
 
