@@ -1,84 +1,63 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>TinsFlash – La météo gratuite + pub</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <meta charset="UTF-8">
+  <title>Tinsflash – Prévisions météo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
+    header { text-align: center; padding: 20px; font-size: 1.5rem; font-weight: bold; color: #0077cc; }
+    section { margin: 20px 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    h2 { color: #0077cc; }
+    pre { background: #eee; padding: 10px; border-radius: 5px; }
+  </style>
 </head>
 <body>
-  <header class="banner">
-    <video autoplay muted loop id="bg-video">
-      <source src="intro.mp4" type="video/mp4" />
-    </video>
-    <div class="overlay">
-      <h1>🌩️ TinsFlash</h1>
-      <nav>
-        <a href="index.html">Accueil</a>
-        <a href="premium.html">Premium</a>
-        <a href="pro.html">Pro</a>
-        <a href="proplus.html">Pro+</a>
-        <a href="cockpit.html">Cockpit</a>
-        <a href="account.html">Mon Compte</a>
-      </nav>
-    </div>
-  </header>
+  <header>🌍 Tinsflash – Prévisions météo avancées</header>
 
-  <main>
-    <section class="card">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-forecast">⏳ Chargement...</div>
-    </section>
+  <section>
+    <h2>📝 Prévisions (dans votre langue)</h2>
+    <p id="forecast">Chargement...</p>
+  </section>
 
-    <section class="card">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-forecast">⏳ Chargement...</div>
-    </section>
+  <section>
+    <h2>⚠️ Alertes météo</h2>
+    <pre id="alerts">Chargement...</pre>
+  </section>
 
-    <section class="card wide">
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="forecast-7days">⏳ Chargement...</div>
-    </section>
+  <script>
+    async function loadIndexData() {
+      try {
+        const res = await fetch("index-data.json");
+        const data = await res.json();
 
-    <section class="card wide">
-      <h2>📰 Bulletin météo</h2>
-      <div id="bulletin">⏳ Génération...</div>
-    </section>
+        const userLang = navigator.language || "fr";
+        let forecast = data.forecastTextFr || "Pas de prévisions disponibles.";
 
-    <section class="card wide">
-      <h2>🛰️ Radar en direct</h2>
-      <div id="radar-map" style="height:400px;"></div>
-      <div class="radar-controls">
-        ⏳ Frame : <span id="radar-time">--:--</span>
-        <button onclick="playTimeline()">▶️ Lecture</button>
-        <button onclick="clearInterval(playInterval)">⏸ <button onclick="pauseTimeline()">⏸ Pause</button>
-      </div>
-      <canvas id="radar-graph" width="100%" height="120"></canvas>
-    </section>
+        // Traduction auto simple (dictionnaire minimal)
+        const translations = {
+          en: "Weather forecast (AI-generated): ",
+          es: "Previsión meteorológica: ",
+          de: "Wettervorhersage: ",
+          nl: "Weersverwachting: ",
+          it: "Previsioni meteo: ",
+        };
 
-    <section class="card">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts">✅ Aucune alerte</div>
-    </section>
+        if (userLang.startsWith("fr")) {
+          document.getElementById("forecast").textContent = forecast;
+        } else {
+          const prefix = translations[userLang.substring(0,2)] || "Forecast: ";
+          document.getElementById("forecast").textContent = prefix + forecast;
+        }
 
-    <section class="card">
-      <h2>🎙️ Podcast météo</h2>
-      <audio id="podcast" controls></audio>
-    </section>
+        document.getElementById("alerts").textContent = JSON.stringify(data.alerts, null, 2);
+      } catch (err) {
+        document.getElementById("forecast").textContent = "❌ Erreur chargement données.";
+        document.getElementById("alerts").textContent = "❌ Erreur chargement alertes.";
+      }
+    }
 
-    <section class="card ad">
-      <h2>📢 Publicité</h2>
-      <div id="ads">Zone pub</div>
-    </section>
-  </main>
-
-  <footer>
-    © 2025 TinsFlash – La météo gratuite + pub
-  </footer>
-
-  <script src="radar.js"></script>
-  <script src="scripts.js"></script>
+    loadIndexData();
+  </script>
 </body>
 </html>
