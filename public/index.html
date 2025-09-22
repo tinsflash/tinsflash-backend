@@ -1,34 +1,122 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!DOCTYPE html><html lang="fr">
 <head>
   <meta charset="UTF-8">
   <title>Tinsflash – Prévisions météo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; background:#f4f4f4; color:#333; margin:0; }
-    header { background:#00aaff; padding:15px; text-align:center; color:#fff; font-size:1.5rem; font-weight:bold; }
-    main { padding:20px; }
-    section { margin-bottom:30px; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
-    h2 { color:#00aaff; font-size:1.2rem; margin-bottom:10px; }
-    pre { background:#eee; padding:10px; border-radius:5px; }
+    body { font-family: Arial, sans-serif; background: #121212; color: #f1f1f1; margin: 0; padding: 0; }
+    header { background: #1e1e1e; padding: 15px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #00e0ff; }
+    main { padding: 20px; max-width: 1000px; margin: auto; }
+    section { background: #1e1e1e; margin-bottom: 25px; padding: 15px; border-radius: 10px; }
+    h2 { color: #00e0ff; margin-bottom: 10px; }
+    canvas { width: 100%; max-height: 250px; }
+    .bulletin { background: #000; padding: 10px; border-radius: 5px; white-space: pre-line; font-size: 0.95rem; }
+    label, select { font-size: 1rem; margin: 10px; }
+    #radar { width: 100%; height: 400px; border-radius: 10px; border: none; }
   </style>
 </head>
 <body>
-  <header>🌍 Tinsflash – Météo</header>
-  <main>
+  <header>
+    🌍 Tinsflash – Prévisions météo
+    <div>
+      <label for="unitSelect">🌡️ Unités :</label>
+      <select id="unitSelect">
+        <option value="metric">Métrique (°C, km/h, mm)</option>
+        <option value="imperial">Impérial (°F, mph, in)</option>
+      </select>
+    </div>
+  </header>  <main>
     <section>
-      <h2>📰 Bulletin météo du jour</h2>
-      <pre id="bulletin">Chargement...</pre>
-    </section>
-    <section>
-      <h2>⚠️ Alertes météo</h2>
-      <pre id="alerts">Chargement...</pre>
-    </section>
-  </main>
-  <script>
-    async function loadBulletin(){const r=await fetch("/api/admin/bulletin/latest");const d=await r.json();document.getElementById("bulletin").textContent=`LOCAL:\n${d.local}\n\nNATIONAL:\n${d.national}`;}
-    async function loadAlerts(){const r=await fetch("/api/alerts");document.getElementById("alerts").textContent=JSON.stringify(await r.json(),null,2);}
-    loadBulletin(); loadAlerts();
-  </script>
-</body>
+      <h2>☀️ Prévisions du jour</h2>
+      <canvas id="todayChart"></canvas>
+      <h3>📝 Bulletin Local</h3>
+      <div class="bulletin" id="todayLocal">Chargement...</div>
+      <h3>📝 Bulletin National</h3>
+      <div class="bulletin" id="todayNational">Chargement...</div>
+    </section><section>
+  <h2>📅 Prévisions 7 jours</h2>
+  <canvas id="weekChart"></canvas>
+  <h3>📝 Bulletin Local</h3>
+  <div class="bulletin" id="weekLocal">Chargement...</div>
+  <h3>📝 Bulletin National</h3>
+  <div class="bulletin" id="weekNational">Chargement...</div>
+</section>
+
+<section>
+  <h2>📡 Radar (pluie, neige, vent)</h2>
+  <iframe id="radar" src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=5&level=surface&overlay=rain&menu=&message=&marker=&calendar=&pressure=&type=map&location=coordinates&detail=&detailLat=50&detailLon=4&metricWind=default&metricTemp=default&radarRange=-1" frameborder="0"></iframe>
+</section>
+
+  </main>  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <script>
+    // --- Conversion unités ---
+    function convertTemperature(temp, system) {
+      return system === "imperial" ? (temp * 9/5 + 32).toFixed(1) : temp.toFixed(1);
+    }
+    function convertWind(speed, system) {
+      return system === "imperial" ? (speed / 1.609).toFixed(1) : speed.toFixed(1);
+    }
+    function convertPrecip(mm, system) {
+      return system === "imperial" ? (mm / 25.4).toFixed(2) : mm.toFixed(1);
+    }
+
+    // --- Gestion unités utilisateur ---
+    let unitSystem = localStorage.getItem("unitSystem") || "metric";
+    document.getElementById("unitSelect").value = unitSystem;
+    document.getElementById("unitSelect").addEventListener("change", e => {
+      unitSystem = e.target.value;
+      localStorage.setItem("unitSystem", unitSystem);
+      loadTodayForecast();
+      loadWeekForecast();
+    });
+
+    // --- Chargement prévisions ---
+    async function loadTodayForecast() {
+      const res = await fetch("/api/forecast/local?lat=50.5&lon=4.7");
+      const data = await res.json();
+
+      // Graph température/vent/pluie
+      const ctx = document.getElementById("todayChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.hours,
+          datasets: [
+            { label: "Température", data: data.temp.map(t => convertTemperature(t, unitSystem)), borderColor: "#ffcc00" },
+            { label: "Vent", data: data.wind.map(w => convertWind(w, unitSystem)), borderColor: "#00e0ff" },
+            { label: "Précipitations", data: data.precip.map(p => convertPrecip(p, unitSystem)), borderColor: "#00ff88" }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { labels: { color: "#f1f1f1" } } }, scales: { x: { ticks: { color: "#f1f1f1" } }, y: { ticks: { color: "#f1f1f1" } } } }
+      });
+
+      document.getElementById("todayLocal").textContent = data.bulletinLocal;
+      document.getElementById("todayNational").textContent = data.bulletinNational;
+    }
+
+    async function loadWeekForecast() {
+      const res = await fetch("/api/forecast/7days?lat=50.5&lon=4.7");
+      const data = await res.json();
+
+      const ctx = document.getElementById("weekChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.days,
+          datasets: [
+            { label: "Température", data: data.temp.map(t => convertTemperature(t, unitSystem)), borderColor: "#ffcc00" },
+            { label: "Vent", data: data.wind.map(w => convertWind(w, unitSystem)), borderColor: "#00e0ff" },
+            { label: "Précipitations", data: data.precip.map(p => convertPrecip(p, unitSystem)), borderColor: "#00ff88" }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { labels: { color: "#f1f1f1" } } }, scales: { x: { ticks: { color: "#f1f1f1" } }, y: { ticks: { color: "#f1f1f1" } } } }
+      });
+
+      document.getElementById("weekLocal").textContent = data.bulletinLocal;
+      document.getElementById("weekNational").textContent = data.bulletinNational;
+    }
+
+    // --- Initialisation ---
+    loadTodayForecast();
+    loadWeekForecast();
+  </script></body>
 </html>
