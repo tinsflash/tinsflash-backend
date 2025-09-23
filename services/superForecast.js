@@ -1,6 +1,6 @@
 // services/superForecast.js
-import { chatWithJean } from "./chatService.js";
-import { saveForecast } from "../db.js"; // ✅ sauvegarde DB
+import chatService from "./chatService.js";
+import { saveForecast } from "../db.js"; // ✅ import bien nommé
 
 export async function runSuperForecast(location) {
   const logs = [];
@@ -36,39 +36,22 @@ export async function runSuperForecast(location) {
           "Wetterzentrale",
         ],
         reliability: 75,
-        description: "Fusion multi-modèles avec IA nucléaire météo",
+        description: "Fusion multi-modèles avec IA",
         anomaly: null,
       },
     };
 
     addLog("✅ Données météo fusionnées avec succès");
 
-    // 🔹 Étape 2 : Informations sur zones couvertes / non couvertes
-    addLog("🌍 Zones couvertes (Europe élargie + USA) → prévisions locales & nationales détaillées");
-    addLog("🌐 Zones non couvertes → prévisions basiques (open data, sans IA nucléaire)");
-    addLog("⚠️ Monde entier → surveillance anomalies & alertes globales");
-
-    // 🔹 Étape 3 : Analyse IA (J.E.A.N.)
+    // 🔹 Étape 2 : Analyse IA (J.E.A.N.)
     addLog("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
-    const jeanResponse = await chatWithJean([
-      {
-        role: "system",
-        content:
-          "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo mondiale. " +
-          "Expert météo, climat, mathématiques. Tu analyses les modèles météo et produis " +
-          "des prévisions fiables et des alertes utiles pour la sécurité humaine, animale et matérielle.",
-      },
-      {
-        role: "user",
-        content: `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(
-          fakeForecast
-        )}`,
-      },
-    ]);
+    const jeanResponse = await chatService.chatWithJean(
+      `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(fakeForecast)}`
+    );
 
     addLog(`💬 Réponse de J.E.A.N.: ${jeanResponse.text || jeanResponse}`);
 
-    // 🔹 Étape 4 : Sauvegarde en base
+    // 🔹 Étape 3 : Sauvegarde en base
     await saveForecast(fakeForecast);
     addLog("💾 SuperForecast sauvegardé en base");
 
