@@ -222,35 +222,9 @@ app.get("/api/admin/news", async (req, res) => {
   }
 });
 
-// --- Prévisions nationales BE/FR/LUX (édition admin) ---
-app.get("/api/admin/forecasts", async (req, res) => {
-  try {
-    const latest = await Forecast.findOne().sort({ timestamp: -1 });
-    res.json(latest?.nationalForecasts || {});
-  } catch (err) {
-    logError("❌ Erreur admin/forecasts GET: " + err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/admin/forecasts", async (req, res) => {
-  try {
-    const { BE, FR, LUX } = req.body;
-    const latest = await Forecast.findOne().sort({ timestamp: -1 });
-    if (latest) {
-      latest.nationalForecasts = { BE, FR, LUX };
-      await latest.save();
-    }
-    res.json({ success: true, updated: latest?.nationalForecasts });
-  } catch (err) {
-    logError("❌ Erreur admin/forecasts POST: " + err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // 🚀 Lancement serveur
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logInfo(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
-  logInfo("🤖 Mode IA actif: Cohere (GPT-5 en veille)");
+  logInfo("🤖 Mode IA actif: Cohere Chat API (GPT-5 en veille)");
 });
