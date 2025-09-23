@@ -1,76 +1,38 @@
-// services/superForecast.js
-import { chatWithJean } from "./chatService.js";
-import { saveForecast } from "../db.js"; // ✅ import correct
+// services/chatService.js
+import fetch from "node-fetch";
 
-export async function runSuperForecast(location) {
-  const logs = [];
-  const addLog = (msg) => {
-    const entry = `[${new Date().toISOString()}] ${msg}`;
-    logs.push(entry);
-    console.log(entry);
-  };
-
+export async function chatWithJean(message) {
   try {
-    addLog("🚀 Run SuperForecast lancé");
-    addLog(`📍 Lancement SuperForecast pour lat=${location.lat}, lon=${location.lon}`);
-
-    // 🔹 Étape 1 : Récupération des données météo brutes
-    addLog("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
-    addLog("🌍 Récupération des autres sources (OpenWeather, NASA, Trullemans, Wetterzentrale)...");
-    addLog("📍 Fusion et normalisation des données...");
-
-    const fakeForecast = {
-      location,
-      timestamp: new Date(),
-      data: {
-        temperature: 3.5,
-        precipitation: 0,
-        wind: 1.5,
-        sourcesUsed: [
-          "GFS",
-          "ECMWF",
-          "ICON",
-          "OpenWeather",
-          "NASA",
-          "Trullemans",
-          "Wetterzentrale",
-        ],
-        reliability: 75,
-        description: "Fusion multi-modèles avec IA",
-        anomaly: null,
+    const response = await fetch("https://api.cohere.ai/v1/chat", {
+      method: "POST",
+      headers: {
+        Authorization: `BEARER ${process.env.COHERE_API_KEY}`,
+        "Content-Type": "application/json",
       },
-    };
+      body: JSON.stringify({
+        model: "command-r-plus", // modèle Cohere
+        message: message,
+        temperature: 0.7,
+      }),
+    });
 
-    addLog("✅ Données météo fusionnées avec succès");
+    const data = await response.json();
 
-    // 🔹 Étape 2 : Analyse IA (J.E.A.N.)
-    addLog("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
-    const jeanResponse = await chatWithJean(
-      `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(fakeForecast)}`
-    );
+    // 🔎 Debug log complet pour comprendre la réponse de Cohere
+    console.log("🛰️ Réponse brute Cohere:", JSON.stringify(data, null, 2));
 
-    addLog(`💬 Réponse de J.E.A.N.: ${jeanResponse.text || jeanResponse}`);
-
-    // 🔹 Étape 3 : Sauvegarde en base
-    await saveForecast(fakeForecast);
-    addLog("💾 SuperForecast sauvegardé en base");
-
-    // 🔹 Étape 4 : Mise à jour des prévisions nationales (BE, FR, LUX)
-    const nationalForecasts = {
-      BE: "Prévisions nationales Belgique générées et envoyées vers index.",
-      FR: "Prévisions nationales France générées et envoyées vers index.",
-      LUX: "Prévisions nationales Luxembourg générées et envoyées vers index.",
-    };
-
-    for (const [country, forecast] of Object.entries(nationalForecasts)) {
-      addLog(`📡 [${country}] ${forecast}`);
-      addLog(`✅ [${country}] Prévision nationale OK sur index`);
+    // Cas /chat → réponse classique
+    if (data.text) {
+      return { text: data.text.trim() };
     }
 
-    addLog("🎯 Run terminé avec succès");
-    return { logs, forecast: fakeForecast, jeanResponse };
+    // Cas /generate → générations multiples
+    if (data.generations && data.generations.length > 0) {
+      return { text: data.generations[0].text.trim() };
+    }
+
+    return { text: "⚠️ Réponse inattendue de Cohere (aucun texte trouvé)." };
   } catch (err) {
-    addLog(`❌ Erreur dans le Run SuperForecast: ${err.message}`);
-    return { logs, error: err.message };
+    return { text: `❌ Erreur Cohere: ${err.message}` };
   }
 }
