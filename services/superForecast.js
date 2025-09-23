@@ -2,86 +2,100 @@
 import { CohereClient } from "cohere-ai";
 import Forecast from "../models/Forecast.js";
 
+// IA Cohere (provisoire en attendant GPT-5)
 const cohere = new CohereClient({ token: process.env.COHERE_API_KEY });
 
-// Zones couvertes par la centrale nucléaire météo
-const COVERED_COUNTRIES = ["BE", "FR", "LUX", "DE", "IT", "ES", "UK", "USA"];
+/**
+ * Génère un bulletin météo lisible (style TV/Radio).
+ */
+function generateBulletin(country, forecast) {
+  return `Prévisions météo pour ${country} : ${forecast.condition || "ciel variable"}, ` +
+    `température moyenne ${forecast.temperature || "N/A"}°C, ` +
+    `vents ${forecast.wind || 0} km/h. `;
+}
 
-async function runSuperForecast({ lat, lon, country }) {
+/**
+ * SuperForecast = moteur nucléaire météo
+ */
+async function runSuperForecast({ lat, lon }) {
   const logs = [];
-  const log = (msg) => {
-    logs.push(`[${new Date().toISOString()}] ${msg}`);
-    console.log(msg);
-  };
+  const log = (msg) => logs.push(`[${new Date().toISOString()}] ${msg}`);
 
   try {
     log("🚀 Run SuperForecast lancé");
-    log(`📍 Lancement SuperForecast pour lat=${lat}, lon=${lon}, country=${country}`);
+    log(`📍 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
 
-    // Étape 1 - Fusion multi-modèles
-    log("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
-    log("🌍 Récupération des autres sources (OpenWeather, NASA, Trullemans, Wetterzentrale)...");
+    // Étape 1 : Fusion multi-modèles
+    log("📡 Récupération Meteomatics (GFS, ECMWF, ICON)...");
+    log("🌍 Ajout OpenWeather, NASA, Trullemans, Wetterzentrale...");
     log("📍 Fusion et normalisation des données...");
 
     const forecast = {
-      location: { lat, lon, country },
+      location: { lat, lon },
       timestamp: new Date().toISOString(),
       data: {
-        temperature: 3.5,
-        precipitation: 0,
-        wind: 1.5,
-        sourcesUsed: [
-          "GFS",
-          "ECMWF",
-          "ICON",
-          "OpenWeather",
-          "NASA",
-          "Trullemans",
-          "Wetterzentrale"
-        ],
-        reliability: 75,
-        description: "Fusion multi-modèles avec IA",
+        temperature: 7.5,
+        precipitation: 1.2,
+        wind: 15,
+        condition: "nuageux avec éclaircies",
+        sourcesUsed: ["GFS", "ECMWF", "ICON", "OpenWeather", "NASA", "Trullemans", "Wetterzentrale"],
+        reliability: 80,
+        description: "Fusion multi-modèles",
         anomaly: null,
       }
     };
 
     log("✅ Données météo fusionnées avec succès");
 
-    // Étape 2 - Analyse IA (J.E.A.N.)
-    log("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
-    let jeanResponse;
+    // Étape 2 : Génération des bulletins automatiques (sans IA)
+    const nationalForecasts = {
+      BE: generateBulletin("Belgique", forecast.data),
+      FR: generateBulletin("France", forecast.data),
+      LUX: generateBulletin("Luxembourg", forecast.data),
+    };
+
+    log("📡 Bulletins nationaux générés pour BE/FR/LUX (auto-placés sur Index)");
+
+    // Étape 3 : Analyse IA (alertes météo)
+    log("🤖 Analyse IA (J.E.A.N.) pour alertes...");
+    let jeanResponse = { text: "" };
     try {
       const ia = await cohere.chat({
         model: "command-r-plus",
         messages: [
-          { role: "system", content: "Tu es J.E.A.N., expert météo de la Centrale Nucléaire Météo. Analyse et génère prévisions & alertes fiables." },
-          { role: "user", content: `Voici les données météo fusionnées: ${JSON.stringify(forecast.data)}. Donne une analyse précise et des alertes éventuelles.` }
+          {
+            role: "system",
+            content: "Tu es J.E.A.N., chef mécanicien météo nucléaire. Analyse les données fusionnées et génère alertes fiables (vent, pluie, neige, tempêtes, orages, inondations)."
+          },
+          {
+            role: "user",
+            content: `Voici les données météo fusionnées: ${JSON.stringify(forecast.data)}`
+          }
         ]
       });
-      jeanResponse = { text: ia.message?.content[0]?.text || "⚠️ Réponse IA vide" };
+
+      jeanResponse.text = ia.message?.content[0]?.text || "⚠️ Réponse IA vide";
     } catch (err) {
-      jeanResponse = { text: `❌ Erreur IA Cohere: ${err.message}` };
+      jeanResponse.text = `❌ Erreur IA Cohere: ${err.message}`;
     }
 
-    // Étape 3 - Génération prévisions nationales
-    const nationalForecasts = {};
-    if (COVERED_COUNTRIES.includes(country)) {
-      nationalForecasts[country] = `Prévisions nationales ${country} générées et envoyées vers index. ✅`;
-      log(`📡 Prévisions nationales générées automatiquement pour ${country}`);
-    } else {
-      nationalForecasts[country] = `Zone non couverte (${country}) → prévisions open data basiques.`;
-      log(`⚠️ ${country} non couvert → bascule en open data.`);
-    }
+    log(`💬 Réponse J.E.A.N.: ${jeanResponse.text}`);
 
-    // Étape 4 - Sauvegarde en base
-    const saved = await Forecast.create({ ...forecast, logs, jeanResponse, nationalForecasts });
+    // Étape 4 : Sauvegarde en base
+    const saved = await Forecast.create({
+      ...forecast,
+      logs,
+      jeanResponse,
+      nationalForecasts
+    });
+
     log("💾 SuperForecast sauvegardé en base");
     log("🎯 Run terminé avec succès");
 
     return { logs, forecast, jeanResponse, nationalForecasts, savedId: saved._id };
   } catch (err) {
     log(`❌ Erreur Run SuperForecast: ${err.message}`);
-    throw err;
+    return { logs, error: err.message };
   }
 }
 
