@@ -1,180 +1,155 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!DOCTYPE html><html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>⚡ Centrale Nucléaire Météo – Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centrale Nucléaire Météo – Admin</title>
   <style>
     body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
       margin: 0;
-      font-family: 'Courier New', monospace;
-      background: #0a0f1c;
-      color: #e0e0e0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      padding: 0;
+    }
+    header {
+      background: #161b22;
       padding: 15px;
-    }
-
-    h1 {
-      color: #00eaff;
-      text-shadow: 0 0 12px #00eaff;
-      margin-bottom: 20px;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 900px;
-      background: #11192e;
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 20px;
-      box-shadow: 0 0 12px rgba(0, 234, 255, 0.3);
-    }
-
-    button {
-      display: inline-block;
-      background: linear-gradient(135deg, #00eaff, #0077ff);
-      color: #fff;
+      text-align: center;
+      font-size: 20px;
       font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 18px;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      margin: 5px 0;
-      width: 100%;
-      max-width: 250px;
+      border-bottom: 2px solid #30363d;
     }
-    button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 15px #00eaff;
+    section {
+      padding: 15px;
+      border-bottom: 1px solid #30363d;
     }
-
-    .logs-container {
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      font-size: 13px;
-      line-height: 1.4;
+    h2 {
+      color: #58a6ff;
+    }
+    .logs {
+      background: #0d1117;
+      border: 1px solid #30363d;
       padding: 10px;
-      border-radius: 8px;
-      max-height: 350px;
-      overflow-y: auto;
-      white-space: pre-wrap;     /* ✅ retour ligne auto */
-      word-wrap: break-word;     /* ✅ casse les mots longs */
+      max-height: 250px;
+      overflow-y: scroll;
+      white-space: pre-wrap;
+      font-size: 13px;
     }
-
-    .logs-container .error { color: #ff4d4d; font-weight: bold; }
-    .logs-container .success { color: #00ff88; font-weight: bold; }
-    .logs-container .info { color: #00eaff; }
-
     textarea {
       width: 100%;
-      height: 60px;
-      border-radius: 8px;
-      border: 1px solid #00eaff;
-      background: #0a0f1c;
-      color: #fff;
+      min-height: 60px;
+      background: #161b22;
+      color: #e6edf3;
+      border: 1px solid #30363d;
       padding: 8px;
       margin-bottom: 10px;
-      resize: vertical;
     }
-
-    .stats, .users {
-      font-size: 14px;
-      line-height: 1.6;
+    button {
+      background: #238636;
+      border: none;
+      padding: 8px 12px;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+      margin: 5px 0;
     }
-
-    .section-title {
-      font-size: 18px;
-      margin-bottom: 10px;
-      color: #00eaff;
-      text-shadow: 0 0 8px #00eaff;
+    button:hover {
+      background: #2ea043;
     }
-
-    .save-btn {
-      background: linear-gradient(135deg, #00ff88, #00b36b);
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
     }
+    th, td {
+      border: 1px solid #30363d;
+      padding: 6px;
+      text-align: left;
+    }
+    th {
+      background: #21262d;
+    }
+    .status-green { color: #2ea043; font-weight: bold; }
+    .status-red { color: #f85149; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Admin</h1>
+  <header>☢️ Centrale Nucléaire Météo – Console Admin</header>  <!-- SuperForecast -->  <section>
+    <h2>🚀 Lancer SuperForecast</h2>
+    <button onclick="runSuperForecast()">Lancer Run Europe + USA</button>
+    <div id="forecastResult"></div>
+  </section>  <!-- Prévisions Nationales -->  <section>
+    <h2>📌 Prévisions Nationales (édition rapide)</h2>
+    <label>BE :</label><textarea id="forecastBE"></textarea>
+    <label>FR :</label><textarea id="forecastFR"></textarea>
+    <label>LU :</label><textarea id="forecastLU"></textarea>
+    <button onclick="pushForecasts()">✅ Pousser vers Index</button>
+    <span id="forecastStatus"></span>
+  </section>  <!-- Alertes -->  <section>
+    <h2>⚠️ Alertes Météo</h2>
+    <h3>🚨 Publiées automatiquement (>90%)</h3>
+    <div id="autoAlerts"></div>
+    <h3>⏳ À valider (70–90%)</h3>
+    <div id="pendingAlerts"></div>
+  </section>  <!-- Chat J.E.A.N. -->  <section>
+    <h2>🤖 Chat avec J.E.A.N.</h2>
+    <textarea id="chatInput" placeholder="Pose ta question à J.E.A.N."></textarea>
+    <button onclick="sendChat()">Envoyer</button>
+    <div id="chatResponse"></div>
+  </section>  <!-- Logs -->  <section>
+    <h2>📜 Logs en temps réel</h2>
+    <div class="logs" id="logs"></div>
+  </section>  <!-- Outils Bonus -->  <section>
+    <h2>🛠️ Outils de supervision</h2>
+    <p>🔌 API: <span id="healthStatus">⏳</span></p>
+    <p>🗄️ MongoDB: <span id="dbStats">⏳</span></p>
+    <p>⏱️ Uptime serveur: <span id="uptime">⏳</span></p>
+  </section><script>
+async function runSuperForecast() {
+  const res = await fetch('/api/supercalc/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lat: 50.5, lon: 4.7 })
+  });
+  const data = await res.json();
+  document.getElementById('forecastResult').innerText = JSON.stringify(data, null, 2);
+  loadLogs();
+}
 
-  <!-- Bouton Run -->
-  <div class="card" style="text-align:center;">
-    <button onclick="runSuperForecast()">🚀 Lancer un Run SuperForecast</button>
-  </div>
+async function pushForecasts() {
+  document.getElementById('forecastStatus').innerText = "✔️ Prévisions envoyées vers Index";
+}
 
-  <!-- Logs -->
-  <div class="card">
-    <div class="section-title">📜 Logs en temps réel</div>
-    <div id="logs" class="logs-container">[Logs en attente...]</div>
-  </div>
+async function sendChat() {
+  const msg = document.getElementById('chatInput').value;
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg })
+  });
+  const data = await res.json();
+  document.getElementById('chatResponse').innerText = "J.E.A.N.: " + data.text;
+}
 
-  <!-- Prévisions Nationales -->
-  <div class="card">
-    <div class="section-title">🌍 Prévisions Nationales (BE / FR / LUX)</div>
-    <textarea id="BE"></textarea>
-    <textarea id="FR"></textarea>
-    <textarea id="LUX"></textarea>
-    <button class="save-btn" onclick="saveForecasts()">💾 Sauvegarder les prévisions</button>
-  </div>
+async function loadLogs() {
+  const res = await fetch('/api/admin/logs');
+  const logs = await res.json();
+  document.getElementById('logs').innerText = logs.join("\n");
+}
 
-  <!-- Stats -->
-  <div class="card">
-    <div class="section-title">📊 Statistiques</div>
-    <div id="stats" class="stats">Chargement...</div>
-  </div>
+async function loadStats() {
+  const res = await fetch('/api/admin/stats');
+  const stats = await res.json();
+  document.getElementById('dbStats').innerText = stats.forecasts + " prévisions, " + stats.alerts + " alertes";
+  document.getElementById('uptime').innerText = Math.round(stats.uptime/60) + " min";
+  document.getElementById('healthStatus').innerHTML = '<span class="status-green">EN LIGNE</span>';
+}
 
-  <!-- Users -->
-  <div class="card">
-    <div class="section-title">👥 Utilisateurs par catégorie</div>
-    <div id="users" class="users">Chargement...</div>
-  </div>
+// Rafraîchissement périodique
+setInterval(loadLogs, 5000);
+setInterval(loadStats, 10000);
 
-  <script>
-    async function runSuperForecast() {
-      const res = await fetch("/api/supercalc/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: 50.5, lon: 4.7 })
-      });
-      const data = await res.json();
-      addLog("🚀 Run SuperForecast déclenché", "info");
-      console.log("Run result:", data);
-    }
-
-    async function saveForecasts() {
-      const forecasts = {
-        BE: document.getElementById("BE").value,
-        FR: document.getElementById("FR").value,
-        LUX: document.getElementById("LUX").value,
-      };
-      addLog("💾 Prévisions nationales sauvegardées", "success");
-      console.log("Saved forecasts:", forecasts);
-    }
-
-    function addLog(msg, type="info") {
-      const logs = document.getElementById("logs");
-      const span = document.createElement("div");
-      span.className = type;
-      span.textContent = `[${new Date().toISOString()}] ${msg}`;
-      logs.appendChild(span);
-      logs.scrollTop = logs.scrollHeight;
-    }
-
-    async function loadStats() {
-      const res = await fetch("/api/admin/stats");
-      document.getElementById("stats").textContent = JSON.stringify(await res.json(), null, 2);
-    }
-    async function loadUsers() {
-      const res = await fetch("/api/admin/users");
-      document.getElementById("users").textContent = JSON.stringify(await res.json(), null, 2);
-    }
-
-    loadStats();
-    loadUsers();
-  </script>
-</body>
+loadLogs();
+loadStats();
+</script></body>
 </html>
