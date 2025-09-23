@@ -1,8 +1,9 @@
 // superForecast.js
-import cohere from "cohere-ai";
+import { CohereClient } from "cohere-ai";
 import Forecast from "../models/Forecast.js";
 
-cohere.init(process.env.COHERE_API_KEY);
+// Crée une instance du client Cohere
+const cohere = new CohereClient({ token: process.env.COHERE_API_KEY });
 
 // Simulation fusion multi-modèles
 async function runSuperForecast({ lat, lon }) {
@@ -37,13 +38,14 @@ async function runSuperForecast({ lat, lon }) {
     log("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
     let jeanResponse;
     try {
-      const ia = await cohere.chat.create({
+      const ia = await cohere.chat({
         model: "command-r-plus",
         messages: [
           { role: "system", content: "Tu es J.E.A.N., expert météo de la Centrale Nucléaire Météo. Analyse les données météo et génère prévisions et alertes fiables." },
           { role: "user", content: `Voici les données météo fusionnées: ${JSON.stringify(forecast.data)}. Donne une analyse précise.` }
         ]
       });
+
       jeanResponse = { text: ia.message?.content[0]?.text || "⚠️ Réponse IA vide" };
     } catch (err) {
       jeanResponse = { text: `❌ Erreur IA Cohere: ${err.message}` };
