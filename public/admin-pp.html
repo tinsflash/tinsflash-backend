@@ -2,140 +2,221 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>⚡ Centrale Nucléaire Météo – Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Centrale Nucléaire Météo – Admin</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #f1f1f1;
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
       margin: 0;
       padding: 0;
     }
-    h1, h2, h3 {
+    h1, h2 {
       text-align: center;
-      color: #00e0ff;
+      color: cyan;
     }
-    .card {
-      background: #1e1e1e;
-      margin: 15px auto;
+    .section {
+      background: #111;
+      margin: 15px;
       padding: 15px;
-      border-radius: 12px;
-      max-width: 800px;
-      box-shadow: 0 0 10px rgba(0, 224, 255, 0.3);
-    }
-    pre {
-      background: #000;
-      padding: 10px;
-      border-radius: 8px;
-      color: #0f0;
-      max-height: 300px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-    textarea {
-      width: 100%;
-      height: 80px;
-      border-radius: 8px;
-      border: none;
-      padding: 8px;
-      margin-bottom: 8px;
-      font-family: monospace;
-      font-size: 14px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0ff;
     }
     button {
-      background: #00e0ff;
+      background: cyan;
       border: none;
-      border-radius: 8px;
       padding: 10px 20px;
+      font-weight: bold;
       cursor: pointer;
-      color: #000;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    textarea, pre, input {
+      width: 100%;
+      background: #000;
+      color: #0f0;
+      border: 1px solid #0ff;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table th, table td {
+      border: 1px solid #0ff;
+      padding: 8px;
+      text-align: center;
+    }
+    .ok {
+      color: lime;
       font-weight: bold;
     }
-    button:hover {
-      background: #00bcd4;
+    .warn {
+      color: yellow;
+      font-weight: bold;
+    }
+    .alert {
+      color: red;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Admin</h1>
 
-  <!-- Bouton pour lancer un run -->
-  <div class="card">
-    <h2>⚡ Lancer un Run SuperForecast</h2>
-    <button onclick="lancerRun()">🚀 Lancer le Run</button>
+  <h1>⚡ Centrale Nucléaire Météo – Admin ⚡</h1>
+
+  <!-- 🚀 Run -->
+  <div class="section">
+    <h2>🚀 Lancer un Run SuperForecast</h2>
+    <button onclick="launchRun()">🚀 Lancer le Run</button>
   </div>
 
-  <!-- Logs en temps réel -->
-  <div class="card">
-    <h3>📜 Logs en temps réel</h3>
-    <pre id="logs">En attente...</pre>
+  <!-- 📜 Logs -->
+  <div class="section">
+    <h2>📜 Logs en temps réel</h2>
+    <pre id="logs">En attente de Run...</pre>
   </div>
 
-  <!-- Prévisions nationales -->
-  <div class="card">
-    <h3>🌍 Prévisions Nationales (BE / FR / LUX)</h3>
-    <pre id="national-forecasts">Aucune prévision disponible</pre>
-
-    <h4>✏️ Modifier manuellement</h4>
-    <label>🇧🇪 Belgique :</label>
-    <textarea id="forecast-BE"></textarea>
-    <label>🇫🇷 France :</label>
-    <textarea id="forecast-FR"></textarea>
-    <label>🇱🇺 Luxembourg :</label>
-    <textarea id="forecast-LUX"></textarea>
-    <button onclick="sauverNational()">💾 Sauvegarder les prévisions nationales</button>
+  <!-- ⚠️ Alertes -->
+  <div class="section">
+    <h2>⚠️ Alertes générées</h2>
+    <pre id="alerts">[]</pre>
   </div>
 
-  <!-- Script -->
+  <!-- 📡 Radar Console -->
+  <div class="section">
+    <h2>📡 Radar – Vue Console</h2>
+    <table id="radarTable">
+      <thead>
+        <tr>
+          <th>Zone</th>
+          <th>Pluie</th>
+          <th>Neige</th>
+          <th>Vent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4">Chargement...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 👥 Utilisateurs -->
+  <div class="section">
+    <h2>👥 Utilisateurs par catégorie</h2>
+    <pre id="users">Chargement...</pre>
+  </div>
+
+  <!-- 🤖 Chat -->
+  <div class="section">
+    <h2>🤖 Chat avec J.E.A.N.</h2>
+    <input type="text" id="chatInput" placeholder="Pose ta question à J.E.A.N."/>
+    <button onclick="sendChat()">Envoyer</button>
+    <pre id="chatLog">En attente de message...</pre>
+  </div>
+
+  <!-- 🌍 Prévisions Nationales -->
+  <div class="section">
+    <h2>🌍 Prévisions Nationales (BE / FR / LUX)</h2>
+    <pre id="nationalForecast">Chargement...</pre>
+
+    <h3>🇧🇪 Belgique :</h3>
+    <textarea id="beForecast"></textarea>
+    <div class="ok" id="beOk"></div>
+
+    <h3>🇫🇷 France :</h3>
+    <textarea id="frForecast"></textarea>
+    <div class="ok" id="frOk"></div>
+
+    <h3>🇱🇺 Luxembourg :</h3>
+    <textarea id="luxForecast"></textarea>
+    <div class="ok" id="luxOk"></div>
+
+    <button onclick="saveNationalForecasts()">💾 Sauvegarder les prévisions nationales</button>
+  </div>
+
   <script>
-    async function lancerRun() {
-      const res = await fetch("/api/supercalc/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: 50.5, lon: 4.7 }),
+    async function launchRun() {
+      const res = await fetch("/api/supercalc/run", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ lat: 50.5, lon: 4.7 }) 
       });
-
       const data = await res.json();
-
-      // Logs
       document.getElementById("logs").textContent = data.logs.join("\n");
 
-      // Prévisions nationales (corrigé : pas de texte fake si erreur IA)
-      if (data.nationalForecasts) {
-        document.getElementById("national-forecasts").textContent =
-          JSON.stringify(data.nationalForecasts, null, 2);
+      if (data.forecast && data.forecast.national) {
+        document.getElementById("nationalForecast").textContent = JSON.stringify(data.forecast.national, null, 2);
+        document.getElementById("beForecast").value = data.forecast.national.BE || "";
+        document.getElementById("frForecast").value = data.forecast.national.FR || "";
+        document.getElementById("luxForecast").value = data.forecast.national.LUX || "";
 
-        document.getElementById("forecast-BE").value =
-          data.nationalForecasts.BE || "⚠️ Aucune prévision disponible (erreur IA)";
-        document.getElementById("forecast-FR").value =
-          data.nationalForecasts.FR || "⚠️ Aucune prévision disponible (erreur IA)";
-        document.getElementById("forecast-LUX").value =
-          data.nationalForecasts.LUX || "⚠️ Aucune prévision disponible (erreur IA)";
-      } else {
-        document.getElementById("national-forecasts").textContent =
-          "⚠️ Aucune prévision disponible (erreur IA)";
+        document.getElementById("beOk").textContent = "✔️ Prévisions Belgique envoyées vers index";
+        document.getElementById("frOk").textContent = "✔️ Prévisions France envoyées vers index";
+        document.getElementById("luxOk").textContent = "✔️ Prévisions Luxembourg envoyées vers index";
       }
     }
 
-    async function sauverNational() {
-      const forecasts = {
-        BE: document.getElementById("forecast-BE").value,
-        FR: document.getElementById("forecast-FR").value,
-        LUX: document.getElementById("forecast-LUX").value,
-      };
+    async function sendChat() {
+      const msg = document.getElementById("chatInput").value;
+      const res = await fetch("/api/chat", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ message: msg }) 
+      });
+      const data = await res.json();
+      document.getElementById("chatLog").textContent = "🧑 Toi: " + msg + "\n🤖 J.E.A.N.: " + (data.text || JSON.stringify(data));
+    }
 
-      const res = await fetch("/api/admin/national-forecasts", {
+    async function saveNationalForecasts() {
+      const be = document.getElementById("beForecast").value;
+      const fr = document.getElementById("frForecast").value;
+      const lux = document.getElementById("luxForecast").value;
+
+      await fetch("/api/forecast/national/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(forecasts),
+        body: JSON.stringify({ BE: be, FR: fr, LUX: lux })
       });
 
-      if (res.ok) {
-        alert("✅ Prévisions nationales sauvegardées et envoyées sur index !");
-      } else {
-        alert("❌ Erreur lors de la sauvegarde des prévisions");
-      }
+      alert("✅ Prévisions nationales sauvegardées !");
     }
+
+    async function loadRadar() {
+      const radar = await fetch("/api/radar").then(r=>r.json());
+      const tbody = document.querySelector("#radarTable tbody");
+      tbody.innerHTML = "";
+
+      radar.forEach(zone => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${zone.name}</td>
+          <td class="${zone.pluie ? 'alert' : 'ok'}">${zone.pluie ? "⚠️" : "✔️"}</td>
+          <td class="${zone.neige ? 'warn' : 'ok'}">${zone.neige ? "⚠️" : "✔️"}</td>
+          <td class="${zone.vent ? 'alert' : 'ok'}">${zone.vent ? "⚠️" : "✔️"}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadAdminData() {
+      const logs = await fetch("/api/admin/logs").then(r=>r.json());
+      document.getElementById("logs").textContent = logs.join("\n");
+
+      const alerts = await fetch("/api/alerts").then(r=>r.json());
+      document.getElementById("alerts").textContent = JSON.stringify(alerts, null, 2);
+
+      const users = await fetch("/api/admin/users").then(r=>r.json());
+      document.getElementById("users").textContent = JSON.stringify(users, null, 2);
+
+      loadRadar();
+    }
+
+    loadAdminData();
   </script>
 </body>
 </html>
