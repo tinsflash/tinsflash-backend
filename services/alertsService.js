@@ -1,35 +1,76 @@
 // services/alertsService.js
 import Alert from "../models/Alert.js";
+import { addLog } from "./logsService.js";
 
-async function getAlerts() {
-  return await Alert.find().sort({ createdAt: -1 }).limit(50);
+/**
+ * 🔹 Récupérer toutes les alertes
+ */
+export async function getAlerts() {
+  return await Alert.find().sort({ createdAt: -1 });
 }
 
-async function addAlert(data) {
-  if (!data.type || !data.zone || !data.certainty) {
-    throw new Error("Champs obligatoires manquants pour l'alerte");
-  }
-
-  let severity;
-  if (data.certainty >= 90) severity = "rouge";
-  else if (data.certainty >= 70) severity = "orange";
-  else severity = "jaune";
-
+/**
+ * 🔹 Ajouter une alerte
+ * @param {Object} data 
+ */
+export async function addAlert(data) {
   const alert = new Alert({
-    type: data.type,
-    description: data.description || "",
-    zone: data.zone,
+    title: data.title,
+    description: data.description,
+    severity: data.severity,
     certainty: data.certainty,
-    severity,
-    source: data.source || "Tinsflash AI"
+    affectedZones: data.affectedZones || [],
+    status: data.status || "pending", // pending | validated | published
   });
 
-  await alert.save();
+  const saved = await alert.save();
+  addLog(`⚠️ Nouvelle alerte ajoutée: ${saved.title} (Certitude: ${saved.certainty}%)`);
+
+  return saved;
+}
+
+/**
+ * 🔹 Supprimer une alerte
+ */
+export async function deleteAlert(id) {
+  const result = await Alert.findByIdAndDelete(id);
+  addLog(`🗑️ Alerte supprimée: ${id}`);
+  return result;
+}
+
+/**
+ * 🔹 Valider une alerte (admin)
+ */
+export async function validateAlert(id) {
+  const alert = await Alert.findByIdAndUpdate(
+    id,
+    { status: "validated" },
+    { new: true }
+  );
+  addLog(`✅ Alerte validée: ${alert?.title || id}`);
   return alert;
 }
 
-async function deleteAlert(id) {
-  return await Alert.findByIdAndDelete(id);
+/**
+ * 🔹 Publier automatiquement une alerte (si certitude > 90 %)
+ */
+export async function autoPublishAlert(data) {
+  if (data.certainty >= 90) {
+    const alert = new Alert({
+      ...data,
+      status: "published",
+    });
+    const saved = await alert.save();
+    addLog(`🚨 Alerte publiée automatiquement: ${saved.title} (Certitude ${saved.certainty}%)`);
+    return saved;
+  }
+  return null;
 }
 
-export default { getAlerts, addAlert, deleteAlert };
+export default {
+  getAlerts,
+  addAlert,
+  deleteAlert,
+  validateAlert,
+  autoPublishAlert,
+};
