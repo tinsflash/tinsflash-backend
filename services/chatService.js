@@ -1,30 +1,26 @@
-// services/chatService.js
-import fetch from "node-fetch";
+// src/services/chatService.js
+import { CohereClient } from "cohere-ai";
 
-const COHERE_API_KEY = process.env.COHERE_API_KEY;
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
+});
 
-export async function chatWithJean(message) {
+async function chatWithJean(message) {
   try {
-    const response = await fetch("https://api.cohere.ai/v1/chat", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${COHERE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "command-r-plus", // ✅ modèle cohérent avec ton projet
-        message,
-      }),
+    const response = await cohere.chat({
+      model: "command-r-plus", // moteur le plus performant gratuit
+      message: message,
     });
 
-    const data = await response.json();
+    // ✅ Correction : Cohere renvoie souvent response.text ou response.output_text
+    const text =
+      response.text || response.output_text || "⚠️ Réponse vide de Cohere";
 
-    if (!data.text) {
-      return { text: "⚠️ Réponse inattendue de Cohere", raw: data };
-    }
-
-    return { text: data.text, raw: data };
+    return { text };
   } catch (err) {
-    return { text: "❌ Erreur avec Cohere: " + err.message };
+    console.error("❌ Erreur Cohere:", err.message);
+    return { text: "❌ Erreur IA: " + err.message };
   }
 }
+
+export default { chatWithJean };
