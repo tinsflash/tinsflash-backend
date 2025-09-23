@@ -1,36 +1,43 @@
-// chatService.js
+// services/chatService.js
+import dotenv from "dotenv";
 import { CohereClient } from "cohere-ai";
 
+dotenv.config();
+
 const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY,
+  token: process.env.COHERE_API_KEY, // ta clé API Cohere
 });
 
 /**
- * Chat avec J.E.A.N. (IA météo nucléaire)
+ * Fonction pour discuter avec J.E.A.N.
+ * @param {string} userMessage - Le message envoyé par l’utilisateur/admin
  */
-async function chatWithJean(message) {
+async function chatWithJean(userMessage) {
   try {
+    // ⚡ Appel API Cohere Chat (nouvelle syntaxe = messages[])
     const response = await cohere.chat({
-      model: "command-r-plus", // modèle IA gratuit actuel
+      model: "command-r-plus",
       messages: [
         {
-          role: "system",
-          content: "Tu es J.E.A.N., expert météo de la Centrale Nucléaire Météo mondiale. \
-          Tu analyses les données météo fusionnées, expliques les runs et alertes, \
-          et aides l’administrateur à comprendre et valider les prévisions.",
-        },
-        {
           role: "user",
-          content: message,
+          content: userMessage,
         },
       ],
     });
 
-    const text = response.message?.content?.[0]?.text || "⚠️ Réponse IA vide";
-    return { text };
+    // 🔎 Extraction réponse texte
+    let reply = "❌ Pas de réponse de J.E.A.N.";
+    if (response?.message?.content?.[0]?.text) {
+      reply = response.message.content[0].text;
+    }
+
+    return { text: reply };
   } catch (err) {
-    return { text: `❌ Erreur IA Cohere (chat API): ${err.message}` };
+    console.error("❌ Erreur chatWithJean:", err.message);
+    return { text: `❌ Erreur IA Cohere: ${err.message}` };
   }
 }
 
-export default { chatWithJean };
+export default {
+  chatWithJean,
+};
