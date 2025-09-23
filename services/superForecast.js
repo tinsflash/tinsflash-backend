@@ -44,29 +44,23 @@ async function runSuperForecast({ lat, lon }) {
 
     log("✅ Données météo fusionnées avec succès");
 
-    // Analyse IA Cohere via chat API
+    // Analyse IA Cohere via nouvelle API
     log("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
     let jeanResponse;
     try {
       const ia = await cohere.chat({
         model: "command-r-plus",
-        messages: [
-          {
-            role: "system",
-            content: "Tu es J.E.A.N., météorologue expert de la Centrale Nucléaire Météo. \
-            Analyse ces données météo fusionnées et génère prévisions + alertes fiables.",
-          },
-          {
-            role: "user",
-            content: `Voici les données météo fusionnées: ${JSON.stringify(
-              forecast.data
-            )}. Donne une analyse précise.`,
-          },
-        ],
+        message: `Tu es J.E.A.N., météorologue expert de la Centrale Nucléaire Météo. 
+        Analyse ces données météo fusionnées et génère prévisions + alertes fiables : 
+        ${JSON.stringify(forecast.data)}`,
       });
 
       jeanResponse = {
-        text: ia.message?.content?.[0]?.text || "⚠️ Réponse IA vide",
+        text:
+          ia?.text ||
+          ia?.output_text ||
+          ia?.generations?.[0]?.text ||
+          "⚠️ Réponse IA vide",
       };
     } catch (err) {
       jeanResponse = { text: `❌ Erreur IA Cohere (chat API): ${err.message}` };
