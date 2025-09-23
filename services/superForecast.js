@@ -25,11 +25,19 @@ async function runSuperForecast({ lat, lon }) {
         temperature: 3.5,
         precipitation: 0,
         wind: 1.5,
-        sourcesUsed: ["GFS", "ECMWF", "ICON", "OpenWeather", "NASA", "Trullemans", "Wetterzentrale"],
+        sourcesUsed: [
+          "GFS",
+          "ECMWF",
+          "ICON",
+          "OpenWeather",
+          "NASA",
+          "Trullemans",
+          "Wetterzentrale",
+        ],
         reliability: 75,
         description: "Fusion multi-modèles avec IA",
         anomaly: null,
-      }
+      },
     };
 
     log("✅ Données météo fusionnées avec succès");
@@ -40,13 +48,12 @@ async function runSuperForecast({ lat, lon }) {
     try {
       const ia = await cohere.chat({
         model: "command-r-plus",
-        messages: [
-          { role: "system", content: "Tu es J.E.A.N., expert météo de la Centrale Nucléaire Météo. Analyse les données météo et génère prévisions et alertes fiables." },
-          { role: "user", content: `Voici les données météo fusionnées: ${JSON.stringify(forecast.data)}. Donne une analyse précise.` }
-        ]
+        message: `Tu es J.E.A.N., expert météo de la Centrale Nucléaire Météo. 
+                  Analyse ces données météo fusionnées et génère prévisions et alertes fiables :
+                  ${JSON.stringify(forecast.data)}.`,
       });
 
-      jeanResponse = { text: ia.message?.content[0]?.text || "⚠️ Réponse IA vide" };
+      jeanResponse = { text: ia.text || "⚠️ Réponse IA vide" };
     } catch (err) {
       jeanResponse = { text: `❌ Erreur IA Cohere: ${err.message}` };
     }
@@ -61,7 +68,12 @@ async function runSuperForecast({ lat, lon }) {
     log("📡 Prévisions nationales générées automatiquement pour BE/FR/LUX");
 
     // Sauvegarde
-    const saved = await Forecast.create({ ...forecast, logs, jeanResponse, nationalForecasts });
+    const saved = await Forecast.create({
+      ...forecast,
+      logs,
+      jeanResponse,
+      nationalForecasts,
+    });
     log("💾 SuperForecast sauvegardé en base");
     log("🎯 Run terminé avec succès");
 
