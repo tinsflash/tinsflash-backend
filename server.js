@@ -7,12 +7,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Services
-import { runSuperForecast } from "./services/superForecast.js"; // ✅ import nommé corrigé
+import { runSuperForecast } from "./services/superForecast.js"; // ✅ import nommé
 import forecastService from "./services/forecastService.js";
 import radarService from "./services/radarService.js";
 import alertsService from "./services/alertsService.js";
 import podcastService from "./services/podcastService.js";
-import chatService from "./services/chatService.js";
+import { chatWithJean } from "./services/chatService.js"; // ✅ correction ici
 import { addLog, getLogs } from "./services/logsService.js";
 
 // Middleware
@@ -69,7 +69,7 @@ app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
     addLog("🚀 Run SuperForecast lancé");
-    const result = await runSuperForecast({ lat, lon }); // ✅ appel corrigé
+    const result = await runSuperForecast({ lat, lon });
     addLog("✅ Run SuperForecast terminé");
     res.json(result);
   } catch (err) {
@@ -172,7 +172,7 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
     addLog("💬 Question posée à J.E.A.N.: " + message);
-    const response = await chatService.chatWithJean(message);
+    const response = await chatWithJean(message); // ✅ corrigé
     addLog("🤖 Réponse J.E.A.N.: " + response.text);
     res.json(response);
   } catch (err) {
@@ -214,5 +214,5 @@ app.get("/api/admin/users", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logInfo(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
-  logInfo("🤖 Mode IA actif: Gemini uniquement (GPT-5 et HuggingFace désactivés)");
+  logInfo("🤖 Mode IA actif: Cohere uniquement (Gemini désactivé)");
 });
