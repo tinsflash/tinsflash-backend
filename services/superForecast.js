@@ -1,6 +1,6 @@
 // services/superForecast.js
 import { chatWithJean } from "./chatService.js";
-import { saveForecast } from "../db.js"; // ✅ correction : import bien nommé
+import { saveForecast } from "../db.js"; // ✅ import correct
 
 export async function runSuperForecast(location) {
   const logs = [];
@@ -45,25 +45,30 @@ export async function runSuperForecast(location) {
 
     // 🔹 Étape 2 : Analyse IA (J.E.A.N.)
     addLog("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
-    const jeanResponse = await chatWithJean([
-      {
-        role: "system",
-        content:
-          "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo. Expert météo, climat, mathématiques. Tu analyses les modèles météo et produis des prévisions fiables et des alertes utiles pour la sécurité humaine, animale et matérielle.",
-      },
-      {
-        role: "user",
-        content: `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(
-          fakeForecast
-        )}`,
-      },
-    ]);
+    let jeanResponse;
 
-    addLog(`💬 Réponse de J.E.A.N.: ${jeanResponse.text || jeanResponse}`);
+    try {
+      jeanResponse = await chatWithJean(
+        `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(fakeForecast)}`
+      );
 
-    // 🔹 Étape 3 : Sauvegarde en base
-    await saveForecast(fakeForecast);
-    addLog("💾 SuperForecast sauvegardé en base");
+      if (jeanResponse?.text) {
+        addLog(`💬 Réponse J.E.A.N. (${jeanResponse.engine}): ${jeanResponse.text}`);
+      } else {
+        addLog("⚠️ Réponse J.E.A.N. vide ou invalide");
+      }
+    } catch (err) {
+      addLog(`❌ Erreur appel J.E.A.N.: ${err.message}`);
+      jeanResponse = { engine: "Fallback", text: "Erreur IA – analyse indisponible" };
+    }
+
+    // 🔹 Étape 3 : Sauvegarde en base (toujours)
+    try {
+      await saveForecast(fakeForecast);
+      addLog("💾 SuperForecast sauvegardé en base");
+    } catch (err) {
+      addLog(`❌ Erreur sauvegarde en base: ${err.message}`);
+    }
 
     addLog("🎯 Run terminé avec succès");
     return { logs, forecast: fakeForecast, jeanResponse };
