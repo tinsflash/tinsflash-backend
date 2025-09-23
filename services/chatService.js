@@ -1,22 +1,35 @@
-// chatService.js
-import cohere from "cohere-ai";
+// services/chatService.js
+import { CohereClient } from "cohere-ai";
 
-cohere.init(process.env.COHERE_API_KEY);
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY, // ⚡ ta clé est stockée dans Render
+});
 
-async function chatWithJean(message) {
+/**
+ * Dialogue avec J.E.A.N. (mécanicien météo + expert climat)
+ * @param {string} message - Question posée par l’admin ou envoyée lors d’un SuperForecast
+ */
+export async function chatWithJean(message) {
   try {
-    const response = await cohere.chat.create({
-      model: "command-r-plus", // moteur avancé
-      messages: [
-        { role: "system", content: "Tu es J.E.A.N., mécanicien et expert météo de la Centrale Nucléaire Météo. Analyse toujours avec hyper précision et donne des réponses claires et exploitables." },
-        { role: "user", content: message }
-      ]
+    if (!message || message.trim().length === 0) {
+      return { text: "⚠️ Aucun message fourni à J.E.A.N." };
+    }
+
+    // Utilisation correcte de l’API Chat
+    const response = await cohere.chat({
+      model: "command-r-plus", // ⚡ modèle Cohere optimisé
+      message: message,        // le message texte que tu envoies
     });
 
-    return { text: response.message?.content[0]?.text || "⚠️ Réponse vide de J.E.A.N." };
-  } catch (err) {
-    return { text: `❌ Erreur IA Cohere (chat API): ${err.message}` };
+    // Cohere retourne le texte dans response.text
+    if (response && response.text) {
+      return { text: response.text };
+    } else {
+      return { text: "⚠️ Réponse inattendue de Cohere (aucun texte reçu)" };
+    }
+  } catch (error) {
+    return {
+      text: `❌ Erreur IA Cohere (chat API): ${error.message || error}`,
+    };
   }
 }
-
-export default { chatWithJean };
