@@ -1,155 +1,252 @@
-<!DOCTYPE html><html lang="fr">
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Centrale Nucléaire Météo – Admin</title>
+  <meta charset="UTF-8" />
+  <title>Console Admin – Centrale Nucléaire Météo 🌍⚡</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background-color: #0a0f1c;
+      color: #f0f0f0;
       margin: 0;
-      padding: 0;
+      padding: 20px;
     }
-    header {
-      background: #161b22;
-      padding: 15px;
+    h1, h2 {
       text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      border-bottom: 2px solid #30363d;
+      color: #00d9ff;
     }
-    section {
+    .status-bar {
+      background: #111a2d;
+      padding: 12px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: 2px solid #00d9ff;
+      border-radius: 8px;
+      font-size: 1.1em;
+    }
+    .container { display: grid; gap: 20px; }
+    .card {
+      background: #111a2d;
       padding: 15px;
-      border-bottom: 1px solid #30363d;
+      border-radius: 10px;
+      border: 1px solid #00d9ff;
+      box-shadow: 0 0 10px rgba(0,217,255,0.3);
     }
-    h2 {
-      color: #58a6ff;
-    }
-    .logs {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      padding: 10px;
-      max-height: 250px;
-      overflow-y: scroll;
-      white-space: pre-wrap;
-      font-size: 13px;
-    }
-    textarea {
+    textarea, input, button {
       width: 100%;
-      min-height: 60px;
-      background: #161b22;
-      color: #e6edf3;
-      border: 1px solid #30363d;
-      padding: 8px;
-      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      margin-top: 8px;
     }
     button {
-      background: #238636;
-      border: none;
-      padding: 8px 12px;
-      color: white;
+      background: #00d9ff;
+      color: #0a0f1c;
+      font-weight: bold;
       cursor: pointer;
-      border-radius: 4px;
-      margin: 5px 0;
     }
-    button:hover {
-      background: #2ea043;
+    button:hover { background: #00aacc; }
+    #logs {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-y: auto;
+      max-height: 250px;
     }
-    table {
+    .alert-valid { color: #0f0; }
+    .alert-pending { color: #ff0; }
+    .alert-critical { color: #f00; }
+    .small-text { font-size: 0.85em; color: #aaa; }
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 10px;
+    }
+    iframe {
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+      border: none;
+      height: 250px;
+      border-radius: 6px;
     }
-    th, td {
-      border: 1px solid #30363d;
-      padding: 6px;
-      text-align: left;
-    }
-    th {
-      background: #21262d;
-    }
-    .status-green { color: #2ea043; font-weight: bold; }
-    .status-red { color: #f85149; font-weight: bold; }
   </style>
 </head>
 <body>
-  <header>☢️ Centrale Nucléaire Météo – Console Admin</header>  <!-- SuperForecast -->  <section>
-    <h2>🚀 Lancer SuperForecast</h2>
-    <button onclick="runSuperForecast()">Lancer Run Europe + USA</button>
-    <div id="forecastResult"></div>
-  </section>  <!-- Prévisions Nationales -->  <section>
-    <h2>📌 Prévisions Nationales (édition rapide)</h2>
-    <label>BE :</label><textarea id="forecastBE"></textarea>
-    <label>FR :</label><textarea id="forecastFR"></textarea>
-    <label>LU :</label><textarea id="forecastLU"></textarea>
-    <button onclick="pushForecasts()">✅ Pousser vers Index</button>
-    <span id="forecastStatus"></span>
-  </section>  <!-- Alertes -->  <section>
-    <h2>⚠️ Alertes Météo</h2>
-    <h3>🚨 Publiées automatiquement (>90%)</h3>
-    <div id="autoAlerts"></div>
-    <h3>⏳ À valider (70–90%)</h3>
-    <div id="pendingAlerts"></div>
-  </section>  <!-- Chat J.E.A.N. -->  <section>
-    <h2>🤖 Chat avec J.E.A.N.</h2>
-    <textarea id="chatInput" placeholder="Pose ta question à J.E.A.N."></textarea>
-    <button onclick="sendChat()">Envoyer</button>
-    <div id="chatResponse"></div>
-  </section>  <!-- Logs -->  <section>
-    <h2>📜 Logs en temps réel</h2>
-    <div class="logs" id="logs"></div>
-  </section>  <!-- Outils Bonus -->  <section>
-    <h2>🛠️ Outils de supervision</h2>
-    <p>🔌 API: <span id="healthStatus">⏳</span></p>
-    <p>🗄️ MongoDB: <span id="dbStats">⏳</span></p>
-    <p>⏱️ Uptime serveur: <span id="uptime">⏳</span></p>
-  </section><script>
-async function runSuperForecast() {
-  const res = await fetch('/api/supercalc/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lat: 50.5, lon: 4.7 })
-  });
-  const data = await res.json();
-  document.getElementById('forecastResult').innerText = JSON.stringify(data, null, 2);
-  loadLogs();
-}
+  <h1>🛠️ Centrale Nucléaire Météo – Console Admin</h1>
+  <div class="status-bar">
+    <strong>IA Active :</strong> 🤖 Cohere (command-r-plus) –  
+    <strong>Zones couvertes :</strong> 🇪🇺 Europe élargie + 🇺🇸 USA  
+    <strong>Mode :</strong> 100% réel, zéro démo 🚀
+  </div>
 
-async function pushForecasts() {
-  document.getElementById('forecastStatus').innerText = "✔️ Prévisions envoyées vers Index";
-}
+  <div class="container">
+    <!-- SuperForecast -->
+    <div class="card">
+      <h2>⚡ Lancer un Run SuperForecast</h2>
+      <label>Latitude: <input id="lat" value="50.5"></label>
+      <label>Longitude: <input id="lon" value="4.7"></label>
+      <button onclick="runForecast()">🚀 Lancer</button>
+      <button onclick="refreshIndex()">🔄 Rafraîchir Index</button>
+    </div>
 
-async function sendChat() {
-  const msg = document.getElementById('chatInput').value;
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg })
-  });
-  const data = await res.json();
-  document.getElementById('chatResponse').innerText = "J.E.A.N.: " + data.text;
-}
+    <!-- Logs -->
+    <div class="card">
+      <h2>📜 Logs en temps réel</h2>
+      <div id="logs">En attente de logs...</div>
+    </div>
 
-async function loadLogs() {
-  const res = await fetch('/api/admin/logs');
-  const logs = await res.json();
-  document.getElementById('logs').innerText = logs.join("\n");
-}
+    <!-- Prévisions nationales -->
+    <div class="card">
+      <h2>🌍 Prévisions Nationales</h2>
+      <ul id="nationalForecasts">
+        <li>BE: <span id="forecastBE">–</span></li>
+        <li>FR: <span id="forecastFR">–</span></li>
+        <li>LUX: <span id="forecastLUX">–</span></li>
+      </ul>
+      <div class="small-text">✔️ Rafraîchies automatiquement après chaque Run</div>
+    </div>
 
-async function loadStats() {
-  const res = await fetch('/api/admin/stats');
-  const stats = await res.json();
-  document.getElementById('dbStats').innerText = stats.forecasts + " prévisions, " + stats.alerts + " alertes";
-  document.getElementById('uptime').innerText = Math.round(stats.uptime/60) + " min";
-  document.getElementById('healthStatus').innerHTML = '<span class="status-green">EN LIGNE</span>';
-}
+    <!-- Alertes -->
+    <div class="card">
+      <h2>⚠️ Alertes</h2>
+      <h3>🔴 Automatiques (>90%)</h3>
+      <ul id="alertsAuto"><li>Aucune alerte</li></ul>
+      <h3>🟡 À valider (70–90%)</h3>
+      <ul id="alertsPending"><li>Aucune alerte</li></ul>
+    </div>
 
-// Rafraîchissement périodique
-setInterval(loadLogs, 5000);
-setInterval(loadStats, 10000);
+    <!-- Chat -->
+    <div class="card">
+      <h2>💬 Chat avec J.E.A.N.</h2>
+      <textarea id="chatInput" placeholder="Pose une question à J.E.A.N."></textarea>
+      <button onclick="askJean()">Envoyer</button>
+      <div id="chatResponse" class="small-text">Réponses de J.E.A.N. s’afficheront ici.</div>
+    </div>
 
-loadLogs();
-loadStats();
-</script></body>
+    <!-- Surveillance moteur -->
+    <div class="card">
+      <h2>🖥️ Surveillance du Moteur</h2>
+      <div id="engineStatus">Chargement...</div>
+    </div>
+
+    <!-- Surveillance externe -->
+    <div class="card">
+      <h2>🌐 Outils de Surveillance Externe</h2>
+      <div class="tools-grid">
+        <iframe src="https://www.rainviewer.com/map.html"></iframe>
+        <iframe src="https://www.nasa.gov/specials/radar/"></iframe>
+        <iframe src="https://www.wetterzentrale.de/"></iframe>
+        <iframe src="https://climate.copernicus.eu/"></iframe>
+      </div>
+    </div>
+
+    <!-- News scientifiques -->
+    <div class="card">
+      <h2>📰 Flux News Scientifiques & Météo</h2>
+      <iframe id="newsFrame" src="https://news.google.com/rss/search?q=climat+OR+meteo&hl=fr&gl=FR&ceid=FR:fr"></iframe>
+      <button onclick="translateNews()">🌐 Traduire en FR</button>
+      <div id="translatedNews" class="small-text"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card">
+      <h2>📊 Stats & Utilisateurs</h2>
+      <div id="stats">Chargement...</div>
+    </div>
+  </div>
+
+  <script>
+    async function runForecast() {
+      const lat = document.getElementById("lat").value;
+      const lon = document.getElementById("lon").value;
+      const res = await fetch("/api/supercalc/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lon }),
+      });
+      const data = await res.json();
+      updateLogs(data.logs);
+      updateNational(data.nationalForecasts || {});
+    }
+
+    function updateLogs(logs) {
+      document.getElementById("logs").textContent = logs.join("\n");
+    }
+
+    function updateNational(forecasts) {
+      document.getElementById("forecastBE").textContent = forecasts.BE || "–";
+      document.getElementById("forecastFR").textContent = forecasts.FR || "–";
+      document.getElementById("forecastLUX").textContent = forecasts.LUX || "–";
+    }
+
+    async function askJean() {
+      const message = document.getElementById("chatInput").value;
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      document.getElementById("chatResponse").textContent =
+        "🧑‍🔧 J.E.A.N: " + (data.text || "Réponse vide");
+    }
+
+    async function loadStats() {
+      const res = await fetch("/api/admin/stats");
+      const data = await res.json();
+      document.getElementById("stats").innerHTML =
+        `Prévisions: ${data.forecasts} | Alertes: ${data.alerts} | Uptime: ${Math.round(data.uptime/60)} min`;
+    }
+
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      const alerts = await res.json();
+      document.getElementById("alertsAuto").innerHTML = alerts
+        .filter(a => a.reliability > 90)
+        .map(a => `<li class="alert-critical">${a.title}</li>`)
+        .join("") || "<li>Aucune alerte</li>";
+      document.getElementById("alertsPending").innerHTML = alerts
+        .filter(a => a.reliability >= 70 && a.reliability <= 90)
+        .map(a => `<li class="alert-pending">${a.title} <button onclick='validateAlert("${a._id}")'>Valider</button> <button>Rejeter</button></li>`)
+        .join("") || "<li>Aucune alerte</li>";
+    }
+
+    async function loadEngine() {
+      const res = await fetch("/api/admin/engine");
+      const data = await res.json();
+      document.getElementById("engineStatus").innerHTML =
+        `CPU: ${data.cpu}% | RAM: ${data.ram}% | DB: ${data.db} | Uptime: ${Math.round(data.uptime/60)} min`;
+    }
+
+    async function refreshIndex() {
+      await fetch("/api/admin/refresh-index", { method: "POST" });
+      alert("🔄 Index public rafraîchi !");
+    }
+
+    async function translateNews() {
+      try {
+        let frame = document.getElementById("newsFrame");
+        let doc = frame.contentDocument || frame.contentWindow.document;
+        let text = doc.body.innerText.substring(0, 3000); // limite
+        const res = await fetch(
+          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=fr&dt=t&q=${encodeURIComponent(text)}`
+        );
+        const data = await res.json();
+        const translated = data[0].map(item => item[0]).join(" ");
+        document.getElementById("translatedNews").textContent = translated;
+      } catch (err) {
+        document.getElementById("translatedNews").textContent = "❌ Erreur traduction: " + err.message;
+      }
+    }
+
+    loadStats();
+    loadAlerts();
+    loadEngine();
+    setInterval(loadStats, 60000);
+    setInterval(loadAlerts, 60000);
+    setInterval(loadEngine, 60000);
+  </script>
+</body>
 </html>
