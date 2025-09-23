@@ -1,35 +1,37 @@
 // services/chatService.js
 import { CohereClient } from "cohere-ai";
+import { addLog } from "./logsService.js";
 
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY, // ⚡ ta clé est stockée dans Render
-});
+// Crée une instance Cohere
+const cohere = new CohereClient({ token: process.env.COHERE_API_KEY });
 
 /**
- * Dialogue avec J.E.A.N. (mécanicien météo + expert climat)
- * @param {string} message - Question posée par l’admin ou envoyée lors d’un SuperForecast
+ * 🤖 Chat avec J.E.A.N. (expert météo)
  */
-export async function chatWithJean(message) {
+async function chatWithJean(message) {
   try {
-    if (!message || message.trim().length === 0) {
-      return { text: "⚠️ Aucun message fourni à J.E.A.N." };
-    }
-
-    // Utilisation correcte de l’API Chat
-    const response = await cohere.chat({
-      model: "command-r-plus", // ⚡ modèle Cohere optimisé
-      message: message,        // le message texte que tu envoies
+    addLog("⚡ Tentative réponse avec Cohere (command-r-plus)...");
+    const ia = await cohere.chat({
+      model: "command-r-plus",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es J.E.A.N., le mécanicien nucléaire et expert météo de la Centrale Nucléaire Météo mondiale. " +
+            "Tu analyses les modèles météo, tu détectes les anomalies et tu expliques clairement les prévisions et alertes.",
+        },
+        { role: "user", content: message },
+      ],
     });
 
-    // Cohere retourne le texte dans response.text
-    if (response && response.text) {
-      return { text: response.text };
-    } else {
-      return { text: "⚠️ Réponse inattendue de Cohere (aucun texte reçu)" };
-    }
-  } catch (error) {
-    return {
-      text: `❌ Erreur IA Cohere (chat API): ${error.message || error}`,
-    };
+    const reply = ia.message?.content[0]?.text || "⚠️ Réponse IA vide";
+    addLog("✅ Réponse obtenue via Cohere");
+    return { engine: "Cohere (command-r-plus)", text: reply };
+  } catch (err) {
+    addLog("❌ Erreur chatWithJean (Cohere): " + err.message);
+    return { engine: "Cohere", text: `❌ Erreur IA Cohere: ${err.message}` };
   }
 }
+
+export { chatWithJean };
+export default { chatWithJean };
