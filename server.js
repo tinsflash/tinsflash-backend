@@ -212,6 +212,6 @@ app.get("/api/admin/users", (req, res) => {
 
 // 🚀 Lancement serveur
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   logInfo(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
 });
