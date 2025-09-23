@@ -74,7 +74,7 @@
   <!-- Prévisions nationales -->
   <div class="card">
     <h3>🌍 Prévisions Nationales (BE / FR / LUX)</h3>
-    <pre id="national-forecasts">En attente d’un run...</pre>
+    <pre id="national-forecasts">Aucune prévision disponible</pre>
 
     <h4>✏️ Modifier manuellement</h4>
     <label>🇧🇪 Belgique :</label>
@@ -100,15 +100,20 @@
       // Logs
       document.getElementById("logs").textContent = data.logs.join("\n");
 
-      // Prévisions nationales
+      // Prévisions nationales (corrigé : pas de texte fake si erreur IA)
       if (data.nationalForecasts) {
         document.getElementById("national-forecasts").textContent =
           JSON.stringify(data.nationalForecasts, null, 2);
 
-        // Remplir les textarea
-        document.getElementById("forecast-BE").value = data.nationalForecasts.BE || "";
-        document.getElementById("forecast-FR").value = data.nationalForecasts.FR || "";
-        document.getElementById("forecast-LUX").value = data.nationalForecasts.LUX || "";
+        document.getElementById("forecast-BE").value =
+          data.nationalForecasts.BE || "⚠️ Aucune prévision disponible (erreur IA)";
+        document.getElementById("forecast-FR").value =
+          data.nationalForecasts.FR || "⚠️ Aucune prévision disponible (erreur IA)";
+        document.getElementById("forecast-LUX").value =
+          data.nationalForecasts.LUX || "⚠️ Aucune prévision disponible (erreur IA)";
+      } else {
+        document.getElementById("national-forecasts").textContent =
+          "⚠️ Aucune prévision disponible (erreur IA)";
       }
     }
 
@@ -119,7 +124,6 @@
         LUX: document.getElementById("forecast-LUX").value,
       };
 
-      // Appel à un endpoint backend (à créer si pas encore fait)
       const res = await fetch("/api/admin/national-forecasts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
