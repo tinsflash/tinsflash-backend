@@ -2,146 +2,136 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌍 Console Admin – Tinsflash Centrale Météo</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>⚡ Centrale Nucléaire Météo – Admin</title>
   <style>
     body {
-      background: #0a0a0a;
-      color: #f0f0f0;
       font-family: Arial, sans-serif;
-      text-align: center;
+      background-color: #121212;
+      color: #f1f1f1;
+      margin: 0;
+      padding: 0;
     }
-    h1 {
-      color: cyan;
-      margin-bottom: 20px;
+    h1, h2, h3 {
+      text-align: center;
+      color: #00e0ff;
     }
     .card {
-      background: #1a1a1a;
+      background: #1e1e1e;
       margin: 15px auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 95%;
-      max-width: 900px;
-      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: cyan;
-      color: #000;
-      font-weight: bold;
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #00e6e6;
+      padding: 15px;
+      border-radius: 12px;
+      max-width: 800px;
+      box-shadow: 0 0 10px rgba(0, 224, 255, 0.3);
     }
     pre {
       background: #000;
-      padding: 15px;
-      text-align: left;
-      white-space: pre-wrap; /* ✅ retour à la ligne automatique */
-      word-wrap: break-word;
+      padding: 10px;
+      border-radius: 8px;
+      color: #0f0;
+      max-height: 300px;
       overflow-y: auto;
-      max-height: 400px; /* ✅ agrandi */
-      border-radius: 5px;
+      white-space: pre-wrap;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      border-radius: 8px;
+      border: none;
+      padding: 8px;
+      margin-bottom: 8px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    button {
+      background: #00e0ff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      color: #000;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #00bcd4;
     }
   </style>
 </head>
 <body>
-  <h1>🌍 Console Admin – Tinsflash Centrale Météo</h1>
+  <h1>⚡ Centrale Nucléaire Météo – Admin</h1>
 
+  <!-- Bouton pour lancer un run -->
   <div class="card">
     <h2>⚡ Lancer un Run SuperForecast</h2>
-    <button onclick="launchRun()">🚀 Lancer le Run</button>
+    <button onclick="lancerRun()">🚀 Lancer le Run</button>
   </div>
 
+  <!-- Logs en temps réel -->
   <div class="card">
-    <h2>📜 Logs en temps réel</h2>
-    <pre id="logs">En attente de logs...</pre>
+    <h3>📜 Logs en temps réel</h3>
+    <pre id="logs">En attente...</pre>
   </div>
 
+  <!-- Prévisions nationales -->
   <div class="card">
-    <h2>⚠️ Alertes générées</h2>
-    <pre id="alerts">Chargement...</pre>
+    <h3>🌍 Prévisions Nationales (BE / FR / LUX)</h3>
+    <pre id="national-forecasts">En attente d’un run...</pre>
+
+    <h4>✏️ Modifier manuellement</h4>
+    <label>🇧🇪 Belgique :</label>
+    <textarea id="forecast-BE"></textarea>
+    <label>🇫🇷 France :</label>
+    <textarea id="forecast-FR"></textarea>
+    <label>🇱🇺 Luxembourg :</label>
+    <textarea id="forecast-LUX"></textarea>
+    <button onclick="sauverNational()">💾 Sauvegarder les prévisions nationales</button>
   </div>
 
-  <div class="card">
-    <h2>👥 Utilisateurs par catégorie</h2>
-    <pre id="users">Chargement...</pre>
-  </div>
-
-  <div class="card">
-    <h2>🤖 Chat avec J.E.A.N.</h2>
-    <input type="text" id="chatInput" placeholder="Pose une question à J.E.A.N." style="width:80%; padding:10px;" />
-    <button onclick="askJean()">Envoyer</button>
-    <pre id="chat">En attente de questions...</pre>
-  </div>
-
+  <!-- Script -->
   <script>
-    async function launchRun() {
-      const logsBox = document.getElementById("logs");
-      logsBox.textContent = "🚀 Déclenchement du Run SuperForecast...\n";
-      
-      // ✅ Ajout des infos zones dès le départ
-      logsBox.textContent += "🌍 Zones couvertes: Europe élargie + USA → prévisions locales & nationales précises\n";
-      logsBox.textContent += "🌐 Zones non couvertes: prévisions basiques open data (sans IA nucléaire)\n";
-      logsBox.textContent += "⚠️ Monde entier: surveillance anomalies & alertes globales\n\n";
+    async function lancerRun() {
+      const res = await fetch("/api/supercalc/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat: 50.5, lon: 4.7 }),
+      });
 
-      try {
-        const response = await fetch("/api/supercalc/run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat: 50.5, lon: 4.7 }) // coord par défaut (Belgique)
-        });
+      const data = await res.json();
 
-        const data = await response.json();
-        logsBox.textContent += data.logs.join("\n");
-      } catch (err) {
-        logsBox.textContent += "\n❌ Erreur: " + err.message;
+      // Logs
+      document.getElementById("logs").textContent = data.logs.join("\n");
+
+      // Prévisions nationales
+      if (data.nationalForecasts) {
+        document.getElementById("national-forecasts").textContent =
+          JSON.stringify(data.nationalForecasts, null, 2);
+
+        // Remplir les textarea
+        document.getElementById("forecast-BE").value = data.nationalForecasts.BE || "";
+        document.getElementById("forecast-FR").value = data.nationalForecasts.FR || "";
+        document.getElementById("forecast-LUX").value = data.nationalForecasts.LUX || "";
       }
     }
 
-    async function fetchLogs() {
-      const res = await fetch("/api/admin/logs");
-      const data = await res.json();
-      document.getElementById("logs").textContent = data.join("\n");
-    }
+    async function sauverNational() {
+      const forecasts = {
+        BE: document.getElementById("forecast-BE").value,
+        FR: document.getElementById("forecast-FR").value,
+        LUX: document.getElementById("forecast-LUX").value,
+      };
 
-    async function fetchAlerts() {
-      const res = await fetch("/api/alerts");
-      const data = await res.json();
-      document.getElementById("alerts").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function fetchUsers() {
-      const res = await fetch("/api/admin/users");
-      const data = await res.json();
-      document.getElementById("users").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function askJean() {
-      const input = document.getElementById("chatInput").value;
-      if (!input) return;
-      const res = await fetch("/api/chat", {
+      // Appel à un endpoint backend (à créer si pas encore fait)
+      const res = await fetch("/api/admin/national-forecasts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify(forecasts),
       });
-      const data = await res.json();
-      document.getElementById("chat").textContent = `👤 Toi: ${input}\n🤖 JEAN (${data.engine}): ${data.text}`;
+
+      if (res.ok) {
+        alert("✅ Prévisions nationales sauvegardées et envoyées sur index !");
+      } else {
+        alert("❌ Erreur lors de la sauvegarde des prévisions");
+      }
     }
-
-    // Rafraîchissement auto
-    setInterval(fetchLogs, 10000);
-    setInterval(fetchAlerts, 20000);
-    setInterval(fetchUsers, 30000);
-
-    fetchLogs();
-    fetchAlerts();
-    fetchUsers();
   </script>
 </body>
 </html>
