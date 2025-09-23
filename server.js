@@ -7,12 +7,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Services
-import { runSuperForecast } from "./services/superForecast.js"; // ✅ import corrigé
+import { runSuperForecast } from "./services/superForecast.js";
 import forecastService from "./services/forecastService.js";
 import radarService from "./services/radarService.js";
 import alertsService from "./services/alertsService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
+import newsService from "./services/newsService.js";
 import { addLog, getLogs } from "./services/logsService.js";
 
 // Middleware
@@ -155,6 +156,16 @@ app.delete("/api/alerts/:id", async (req, res) => {
   }
 });
 
+app.post("/api/alerts/:id/validate", async (req, res) => {
+  try {
+    const result = await alertsService.validateAlert(req.params.id);
+    res.json(result);
+  } catch (err) {
+    logError("❌ Erreur validation alerte: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Podcasts météo ---
 app.post("/api/podcast/generate", async (req, res) => {
   try {
@@ -177,6 +188,17 @@ app.post("/api/chat", async (req, res) => {
     res.json(response);
   } catch (err) {
     logError("❌ Erreur chat: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- News météo mondiales ---
+app.get("/api/admin/news", async (req, res) => {
+  try {
+    const news = await newsService.getWeatherNews();
+    res.json(news);
+  } catch (err) {
+    logError("❌ Erreur admin/news: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -214,5 +236,5 @@ app.get("/api/admin/users", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logInfo(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
-  logInfo("🤖 Mode IA actif: Cohere (command-r-plus)");
+  logInfo("🤖 Mode IA actif: Cohere (GPT-5 désactivé provisoirement)");
 });
