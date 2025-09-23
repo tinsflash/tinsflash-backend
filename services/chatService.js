@@ -1,36 +1,21 @@
-import { CohereClient } from "cohere-ai";
+// chatService.js
+import cohere from "cohere-ai";
 
-// 🔑 Création du client Cohere
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY, // clé API stockée dans Render
-});
+cohere.init(process.env.COHERE_API_KEY);
 
 async function chatWithJean(message) {
   try {
-    const response = await cohere.chat({
-      model: "command-r-plus", // modèle chat recommandé par Cohere
+    const response = await cohere.chat.create({
+      model: "command-r-plus", // moteur avancé
       messages: [
-        {
-          role: "system",
-          content:
-            "Tu es J.E.A.N., le chef mécanicien de la Centrale Nucléaire Météo Mondiale. " +
-            "Tu analyses les modèles météo fusionnés et génères des prévisions pointues, fiables et précises, " +
-            "ainsi que des alertes critiques pour la sécurité humaine, animale et matérielle.",
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+        { role: "system", content: "Tu es J.E.A.N., mécanicien et expert météo de la Centrale Nucléaire Météo. Analyse toujours avec hyper précision et donne des réponses claires et exploitables." },
+        { role: "user", content: message }
+      ]
     });
 
-    if (response && response.message && response.message.content.length > 0) {
-      return { text: response.message.content[0].text.trim() };
-    } else {
-      return { text: "⚠️ Réponse inattendue de Cohere (aucun texte trouvé)." };
-    }
+    return { text: response.message?.content[0]?.text || "⚠️ Réponse vide de J.E.A.N." };
   } catch (err) {
-    return { text: "❌ Erreur IA Cohere (chat API): " + err.message };
+    return { text: `❌ Erreur IA Cohere (chat API): ${err.message}` };
   }
 }
 
