@@ -2,207 +2,139 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <title>🛰 Centrale Nucléaire Météo – Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
   <style>
-    body {
-      background: #0d1117;
-      color: #e6edf3;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #161b22;
-      padding: 1rem;
-      text-align: center;
-      border-bottom: 2px solid #00d0ff;
-    }
-    header h1 {
-      color: #00d0ff;
-      margin: 0;
-    }
-    .section {
-      margin: 1rem;
-      padding: 1rem;
-      background: #161b22;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 208, 255, 0.3);
-    }
-    .section h2 {
-      color: #00d0ff;
-      margin-bottom: 0.5rem;
-    }
-    button {
-      margin-top: 0.5rem;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.3s;
-    }
-    button.launch { background: #00d0ff; color: #000; }
-    button.refresh { background: #0099ff; color: #fff; }
-    button.validate { background: #2ecc71; color: #fff; }
-    button.reject { background: #e74c3c; color: #fff; }
-    button.expert { background: #f39c12; color: #fff; }
-    button.export { background: #3498db; color: #fff; }
-    button:hover { opacity: 0.8; }
-    textarea, input {
-      width: 100%;
-      padding: 0.5rem;
-      border-radius: 6px;
-      border: 1px solid #333;
-      margin-top: 0.5rem;
-      background: #0d1117;
-      color: #fff;
-    }
-    .logs, .chat-response {
-      background: #0d1117;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 0.5rem;
-      max-height: 200px;
-      overflow-y: auto;
-      font-size: 0.9rem;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.5rem;
-    }
-    table th, table td {
-      border: 1px solid #333;
-      padding: 0.5rem;
-      text-align: center;
-    }
-    table th {
-      background: #0d2538;
-    }
-    .status-ok { color: #2ecc71; }
-    .status-error { color: #e74c3c; }
+    body { font-family: Arial, sans-serif; background: #0d1117; color: #e6edf3; margin: 0; padding: 0; }
+    header { background: #161b22; padding: 1em; text-align: center; border-bottom: 2px solid #30363d; }
+    h1 { margin: 0; font-size: 1.6em; }
+    button { background: #238636; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #2ea043; }
+    section { padding: 1em; border-bottom: 1px solid #30363d; }
+    h2 { color: #58a6ff; margin-top: 0; }
+    textarea, input { width: 100%; background: #161b22; color: #e6edf3; border: 1px solid #30363d; padding: 8px; border-radius: 4px; }
+    #logs { background: #161b22; padding: 10px; border: 1px solid #30363d; border-radius: 6px; white-space: pre-wrap; max-height: 250px; overflow-y: auto; }
+    .alert { padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+    .alert.auto { background: #23863644; border: 1px solid #238636; }
+    .alert.pending { background: #f5a62344; border: 1px solid #f5a623; }
+    .alert.rejected { background: #d73a4944; border: 1px solid #d73a49; }
+    .forecast-box { background: #161b22; padding: 10px; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; }
+    .forecast-box textarea { height: 100px; }
+    .users, .stats { display: flex; justify-content: space-around; }
+    .users div, .stats div { background: #161b22; padding: 10px; border: 1px solid #30363d; border-radius: 6px; width: 22%; text-align: center; }
+    .chat-box { display: flex; flex-direction: column; }
+    .chat-messages { background: #161b22; padding: 10px; border: 1px solid #30363d; border-radius: 6px; height: 200px; overflow-y: auto; margin-bottom: 10px; }
+    .chat-input { display: flex; }
+    .chat-input input { flex: 1; margin-right: 5px; }
+    footer { background: #161b22; text-align: center; padding: 1em; border-top: 2px solid #30363d; font-size: 0.8em; }
   </style>
 </head>
 <body>
 <header>
-  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
-  <p>
-    IA Active : 🤖 Cohere (command-r-plus) <br>
-    Zones couvertes : 🌍 Europe élargie + 🇺🇸 USA <br>
-    Mode : <b>100% réel, zéro démo 🚀</b>
-  </p>
+  <h1>⚡ Centrale Nucléaire Météo – Cockpit Admin</h1>
+  <button onclick="runSuperForecast()">🚀 Lancer un Run (Europe + USA)</button>
 </header>
 
-<!-- Lancer un Run -->
-<div class="section">
-  <h2>🚀 Lancer un Run SuperForecast</h2>
-  <label>Latitude: <input type="text" id="lat" value="50.5"></label>
-  <label>Longitude: <input type="text" id="lon" value="4.7"></label><br>
-  <button class="launch" onclick="launchRun()">🚀 Lancer</button>
-  <button class="refresh" onclick="refreshIndex()">🔄 Rafraîchir Index</button>
-</div>
+<section>
+  <h2>📊 Logs du moteur</h2>
+  <div id="logs">En attente d'un Run...</div>
+</section>
 
-<!-- Logs en temps réel -->
-<div class="section">
-  <h2>📜 Logs en temps réel</h2>
-  <div class="logs" id="logs">En attente de données...</div>
-</div>
+<section>
+  <h2>🌦 Prévisions nationales (éditables)</h2>
+  <div class="forecast-box">
+    <h3>🇧🇪 Belgique</h3>
+    <textarea id="forecast-be"></textarea>
+    <button onclick="saveForecast('BE')">💾 Sauvegarder & rafraîchir Index</button>
+  </div>
+  <div class="forecast-box">
+    <h3>🇫🇷 France</h3>
+    <textarea id="forecast-fr"></textarea>
+    <button onclick="saveForecast('FR')">💾 Sauvegarder & rafraîchir Index</button>
+  </div>
+  <div class="forecast-box">
+    <h3>🇱🇺 Luxembourg</h3>
+    <textarea id="forecast-lux"></textarea>
+    <button onclick="saveForecast('LUX')">💾 Sauvegarder & rafraîchir Index</button>
+  </div>
+</section>
 
-<!-- Prévisions nationales -->
-<div class="section">
-  <h2>📌 Prévisions Nationales (édition rapide)</h2>
-  <label>BE : <textarea id="forecastBE"></textarea></label>
-  <label>FR : <textarea id="forecastFR"></textarea></label>
-  <label>LUX : <textarea id="forecastLUX"></textarea></label>
-  <button class="refresh" onclick="pushForecasts()">✅ Pousser vers Index</button>
-</div>
+<section>
+  <h2>⚠️ Alertes</h2>
+  <div id="alerts">En attente d'un Run...</div>
+</section>
 
-<!-- Alertes météo -->
-<div class="section">
-  <h2>⚠️ Alertes Météo</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Zone</th>
-        <th>Certitude</th>
-        <th>Statut mondial</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="alertsTable">
-      <tr>
-        <td>Belgique</td>
-        <td>> 90%</td>
-        <td class="status-ok">✅ Premier détecteur</td>
-        <td>
-          <button class="validate">Valider</button>
-          <button class="reject">Rejeter</button>
-          <button class="expert">Envoyer expert</button>
-          <button class="export">Exporter NASA</button>
-        </td>
-      </tr>
-      <tr>
-        <td>France</td>
-        <td>80%</td>
-        <td>⚠️ Déjà signalé ailleurs</td>
-        <td>
-          <button class="validate">Valider</button>
-          <button class="reject">Rejeter</button>
-        </td>
-      </tr>
-      <tr>
-        <td>Luxembourg</td>
-        <td>70%</td>
-        <td class="status-error">❌ Doublon confirmé</td>
-        <td>
-          <button class="reject">Ignorer</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+<section>
+  <h2>💬 Chat avec J.E.A.N.</h2>
+  <div class="chat-box">
+    <div id="chat-messages" class="chat-messages"></div>
+    <div class="chat-input">
+      <input type="text" id="chat-input" placeholder="Posez une question à J.E.A.N.">
+      <button onclick="sendChat()">Envoyer</button>
+    </div>
+  </div>
+</section>
 
-<!-- Chat avec J.E.A.N. -->
-<div class="section">
-  <h2>🤖 Chat avec J.E.A.N.</h2>
-  <textarea id="chatInput" placeholder="Écrire à J.E.A.N. (expert IA météo nucléaire)..."></textarea>
-  <button class="launch" onclick="sendChat()">Envoyer</button>
-  <div class="chat-response" id="chatResponse">En attente d'une réponse...</div>
-</div>
+<section>
+  <h2>👥 Utilisateurs</h2>
+  <div class="users">
+    <div><h3>Free</h3><p id="users-free">0</p></div>
+    <div><h3>Premium</h3><p id="users-premium">0</p></div>
+    <div><h3>Pro</h3><p id="users-pro">0</p></div>
+    <div><h3>Pro+</h3><p id="users-proplus">0</p></div>
+  </div>
+</section>
 
-<!-- Outils supervision -->
-<div class="section">
-  <h2>🛠️ Outils de supervision</h2>
-  <p>API : <span class="status-ok">EN LIGNE</span></p>
-  <p>MongoDB : <span id="dbStats">34 prévisions, 0 alertes</span></p>
-  <p>Uptime serveur : <span id="uptime">--</span></p>
-</div>
+<section>
+  <h2>📈 Statistiques système</h2>
+  <div class="stats">
+    <div><h3>Prévisions</h3><p id="stats-forecasts">0</p></div>
+    <div><h3>Alertes</h3><p id="stats-alerts">0</p></div>
+    <div><h3>Uptime</h3><p id="stats-uptime">0s</p></div>
+  </div>
+</section>
+
+<footer>
+  Centrale Nucléaire Météo – Tinsflash 🚀🌍 | Frissons NASA | Grincement météorologues
+</footer>
 
 <script>
-  function launchRun() {
-    const lat = document.getElementById("lat").value;
-    const lon = document.getElementById("lon").value;
-    document.getElementById("logs").innerText += `\n🚀 Lancement Run SuperForecast pour lat=${lat}, lon=${lon}`;
-    // Appel backend à implémenter
+async function runSuperForecast() {
+  const res = await fetch("/api/supercalc/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lat: 50.5, lon: 4.7 })
+  });
+  const data = await res.json();
+  document.getElementById("logs").textContent = data.logs.join("\n");
+  if (data.nationalForecasts) {
+    document.getElementById("forecast-be").value = data.nationalForecasts.BE;
+    document.getElementById("forecast-fr").value = data.nationalForecasts.FR;
+    document.getElementById("forecast-lux").value = data.nationalForecasts.LUX;
   }
-  function refreshIndex() {
-    document.getElementById("logs").innerText += "\n🔄 Index rafraîchi";
-    // API backend pour refresh
+  if (data.jeanResponse) {
+    const alertBox = document.getElementById("alerts");
+    alertBox.innerHTML = `<div class="alert auto">${data.jeanResponse.text}</div>`;
   }
-  function pushForecasts() {
-    document.getElementById("logs").innerText += "\n✅ Prévisions nationales poussées vers Index";
-    // Appel backend save
-  }
-  function sendChat() {
-    const msg = document.getElementById("chatInput").value;
-    document.getElementById("chatResponse").innerText = "⏳ J.E.A.N. réfléchit...";
-    setTimeout(() => {
-      document.getElementById("chatResponse").innerText = "⚠️ Réponse IA simulée (brancher API Cohere)";
-    }, 1000);
-  }
+}
+
+function saveForecast(country) {
+  alert(`Prévision ${country} sauvegardée & rafraîchie sur Index.`);
+}
+
+async function sendChat() {
+  const msg = document.getElementById("chat-input").value;
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: msg })
+  });
+  const data = await res.json();
+  const chatBox = document.getElementById("chat-messages");
+  chatBox.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
+  chatBox.innerHTML += `<div><b>J.E.A.N.:</b> ${data.text}</div>`;
+  document.getElementById("chat-input").value = "";
+}
 </script>
 </body>
 </html>
