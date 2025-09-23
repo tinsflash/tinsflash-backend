@@ -1,41 +1,49 @@
 // services/chatService.js
 import fetch from "node-fetch";
-import { addLog } from "./logsService.js";
 
-/**
- * 🤖 Chat avec J.E.A.N. (Gemini uniquement pour l’instant)
- */
-async function chatWithJean(message) {
+const COHERE_API_KEY = process.env.COHERE_API_KEY;
+const COHERE_API_URL = "https://api.cohere.ai/v1/chat";
+
+export async function chatWithJean(message) {
+  if (!COHERE_API_KEY) {
+    return { text: "❌ Clé Cohere manquante. Vérifiez vos variables d'environnement." };
+  }
+
   try {
-    // --- Gemini (Google AI Studio) ---
-    addLog("⚡ Tentative réponse avec Gemini...");
-    const gemini = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: message }] }],
-        }),
-      }
-    );
+    const response = await fetch(COHERE_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${COHERE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "command-r-plus", // ✅ modèle le plus puissant en gratuit
+        messages: [
+          {
+            role: "system",
+            content:
+              "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo. \
+              Expert météo, climat, mathématiques, ton rôle est d’analyser les \
+              modèles météo et radars fusionnés pour générer des prévisions fiables, \
+              détecter des anomalies et créer des alertes précises. \
+              Tu dois toujours fournir une analyse détaillée et compréhensible.",
+          },
+          {
+            role: "user",
+            content: message,
+          },
+        ],
+      }),
+    });
 
-    const geminiData = await gemini.json();
-    const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const data = await response.json();
 
-    if (reply) {
-      addLog("✅ Réponse obtenue via Gemini");
-      return { engine: "Gemini", text: reply };
+    if (data.message && data.message.content) {
+      return { text: data.message.content[0].text };
     }
 
-    throw new Error("Pas de réponse valide de Gemini");
+    return { text: "⚠️ Réponse inattendue de Cohere.", raw: data };
   } catch (err) {
-    addLog("⚠️ Gemini indisponible: " + err.message);
-    return {
-      engine: "Fallback",
-      text: "❌ J.E.A.N. est indisponible actuellement (Gemini off). Vérifiez la clé API.",
-    };
+    return { text: "❌ Erreur lors de l’appel à Cohere: " + err.message };
   }
 }
-
-export default { chatWithJean };
