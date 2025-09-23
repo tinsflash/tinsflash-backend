@@ -1,6 +1,6 @@
 // services/superForecast.js
-import chatService from "./chatService.js";
-import { saveForecast } from "../db.js"; // ✅ import bien nommé
+import { chatWithJean } from "./chatService.js";
+import { saveForecast } from "../db.js"; // ✅ import correct
 
 export async function runSuperForecast(location) {
   const logs = [];
@@ -36,7 +36,7 @@ export async function runSuperForecast(location) {
           "Wetterzentrale",
         ],
         reliability: 75,
-        description: "Fusion multi-modèles avec IA",
+        description: "Fusion multi-modèles avec IA nucléaire météo",
         anomaly: null,
       },
     };
@@ -45,9 +45,19 @@ export async function runSuperForecast(location) {
 
     // 🔹 Étape 2 : Analyse IA (J.E.A.N.)
     addLog("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
-    const jeanResponse = await chatService.chatWithJean(
-      `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(fakeForecast)}`
-    );
+    const jeanResponse = await chatWithJean([
+      {
+        role: "system",
+        content:
+          "Tu es J.E.A.N., chef mécanicien de la centrale nucléaire météo. Expert météo, climat, mathématiques. Tu analyses les modèles météo et produis des prévisions fiables et des alertes utiles pour la sécurité humaine, animale et matérielle.",
+      },
+      {
+        role: "user",
+        content: `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(
+          fakeForecast
+        )}`,
+      },
+    ]);
 
     addLog(`💬 Réponse de J.E.A.N.: ${jeanResponse.text || jeanResponse}`);
 
