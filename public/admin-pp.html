@@ -1,222 +1,180 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Centrale Nucléaire Météo – Admin</title>
+  <meta charset="UTF-8">
+  <title>⚡ Centrale Nucléaire Météo – Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      background: #0a0f1c;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px;
+    }
+
+    h1 {
+      color: #00eaff;
+      text-shadow: 0 0 12px #00eaff;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 900px;
+      background: #11192e;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 12px rgba(0, 234, 255, 0.3);
+    }
+
+    button {
+      display: inline-block;
+      background: linear-gradient(135deg, #00eaff, #0077ff);
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin: 5px 0;
+      width: 100%;
+      max-width: 250px;
+    }
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px #00eaff;
+    }
+
+    .logs-container {
       background: #000;
       color: #0f0;
       font-family: monospace;
-      margin: 0;
-      padding: 0;
-    }
-    h1, h2 {
-      text-align: center;
-      color: cyan;
-    }
-    .section {
-      background: #111;
-      margin: 15px;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #0ff;
-    }
-    button {
-      background: cyan;
-      border: none;
-      padding: 10px 20px;
-      font-weight: bold;
-      cursor: pointer;
+      font-size: 13px;
+      line-height: 1.4;
+      padding: 10px;
       border-radius: 8px;
-      margin-top: 10px;
+      max-height: 350px;
+      overflow-y: auto;
+      white-space: pre-wrap;     /* ✅ retour ligne auto */
+      word-wrap: break-word;     /* ✅ casse les mots longs */
     }
-    textarea, pre, input {
+
+    .logs-container .error { color: #ff4d4d; font-weight: bold; }
+    .logs-container .success { color: #00ff88; font-weight: bold; }
+    .logs-container .info { color: #00eaff; }
+
+    textarea {
       width: 100%;
-      background: #000;
-      color: #0f0;
-      border: 1px solid #0ff;
+      height: 60px;
+      border-radius: 8px;
+      border: 1px solid #00eaff;
+      background: #0a0f1c;
+      color: #fff;
       padding: 8px;
-      margin-top: 5px;
-      border-radius: 6px;
+      margin-bottom: 10px;
+      resize: vertical;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+
+    .stats, .users {
+      font-size: 14px;
+      line-height: 1.6;
     }
-    table th, table td {
-      border: 1px solid #0ff;
-      padding: 8px;
-      text-align: center;
+
+    .section-title {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #00eaff;
+      text-shadow: 0 0 8px #00eaff;
     }
-    .ok {
-      color: lime;
-      font-weight: bold;
-    }
-    .warn {
-      color: yellow;
-      font-weight: bold;
-    }
-    .alert {
-      color: red;
-      font-weight: bold;
+
+    .save-btn {
+      background: linear-gradient(135deg, #00ff88, #00b36b);
     }
   </style>
 </head>
 <body>
+  <h1>⚡ Centrale Nucléaire Météo – Admin</h1>
 
-  <h1>⚡ Centrale Nucléaire Météo – Admin ⚡</h1>
-
-  <!-- 🚀 Run -->
-  <div class="section">
-    <h2>🚀 Lancer un Run SuperForecast</h2>
-    <button onclick="launchRun()">🚀 Lancer le Run</button>
+  <!-- Bouton Run -->
+  <div class="card" style="text-align:center;">
+    <button onclick="runSuperForecast()">🚀 Lancer un Run SuperForecast</button>
   </div>
 
-  <!-- 📜 Logs -->
-  <div class="section">
-    <h2>📜 Logs en temps réel</h2>
-    <pre id="logs">En attente de Run...</pre>
+  <!-- Logs -->
+  <div class="card">
+    <div class="section-title">📜 Logs en temps réel</div>
+    <div id="logs" class="logs-container">[Logs en attente...]</div>
   </div>
 
-  <!-- ⚠️ Alertes -->
-  <div class="section">
-    <h2>⚠️ Alertes générées</h2>
-    <pre id="alerts">[]</pre>
+  <!-- Prévisions Nationales -->
+  <div class="card">
+    <div class="section-title">🌍 Prévisions Nationales (BE / FR / LUX)</div>
+    <textarea id="BE"></textarea>
+    <textarea id="FR"></textarea>
+    <textarea id="LUX"></textarea>
+    <button class="save-btn" onclick="saveForecasts()">💾 Sauvegarder les prévisions</button>
   </div>
 
-  <!-- 📡 Radar Console -->
-  <div class="section">
-    <h2>📡 Radar – Vue Console</h2>
-    <table id="radarTable">
-      <thead>
-        <tr>
-          <th>Zone</th>
-          <th>Pluie</th>
-          <th>Neige</th>
-          <th>Vent</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="4">Chargement...</td></tr>
-      </tbody>
-    </table>
+  <!-- Stats -->
+  <div class="card">
+    <div class="section-title">📊 Statistiques</div>
+    <div id="stats" class="stats">Chargement...</div>
   </div>
 
-  <!-- 👥 Utilisateurs -->
-  <div class="section">
-    <h2>👥 Utilisateurs par catégorie</h2>
-    <pre id="users">Chargement...</pre>
-  </div>
-
-  <!-- 🤖 Chat -->
-  <div class="section">
-    <h2>🤖 Chat avec J.E.A.N.</h2>
-    <input type="text" id="chatInput" placeholder="Pose ta question à J.E.A.N."/>
-    <button onclick="sendChat()">Envoyer</button>
-    <pre id="chatLog">En attente de message...</pre>
-  </div>
-
-  <!-- 🌍 Prévisions Nationales -->
-  <div class="section">
-    <h2>🌍 Prévisions Nationales (BE / FR / LUX)</h2>
-    <pre id="nationalForecast">Chargement...</pre>
-
-    <h3>🇧🇪 Belgique :</h3>
-    <textarea id="beForecast"></textarea>
-    <div class="ok" id="beOk"></div>
-
-    <h3>🇫🇷 France :</h3>
-    <textarea id="frForecast"></textarea>
-    <div class="ok" id="frOk"></div>
-
-    <h3>🇱🇺 Luxembourg :</h3>
-    <textarea id="luxForecast"></textarea>
-    <div class="ok" id="luxOk"></div>
-
-    <button onclick="saveNationalForecasts()">💾 Sauvegarder les prévisions nationales</button>
+  <!-- Users -->
+  <div class="card">
+    <div class="section-title">👥 Utilisateurs par catégorie</div>
+    <div id="users" class="users">Chargement...</div>
   </div>
 
   <script>
-    async function launchRun() {
-      const res = await fetch("/api/supercalc/run", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ lat: 50.5, lon: 4.7 }) 
-      });
-      const data = await res.json();
-      document.getElementById("logs").textContent = data.logs.join("\n");
-
-      if (data.forecast && data.forecast.national) {
-        document.getElementById("nationalForecast").textContent = JSON.stringify(data.forecast.national, null, 2);
-        document.getElementById("beForecast").value = data.forecast.national.BE || "";
-        document.getElementById("frForecast").value = data.forecast.national.FR || "";
-        document.getElementById("luxForecast").value = data.forecast.national.LUX || "";
-
-        document.getElementById("beOk").textContent = "✔️ Prévisions Belgique envoyées vers index";
-        document.getElementById("frOk").textContent = "✔️ Prévisions France envoyées vers index";
-        document.getElementById("luxOk").textContent = "✔️ Prévisions Luxembourg envoyées vers index";
-      }
-    }
-
-    async function sendChat() {
-      const msg = document.getElementById("chatInput").value;
-      const res = await fetch("/api/chat", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ message: msg }) 
-      });
-      const data = await res.json();
-      document.getElementById("chatLog").textContent = "🧑 Toi: " + msg + "\n🤖 J.E.A.N.: " + (data.text || JSON.stringify(data));
-    }
-
-    async function saveNationalForecasts() {
-      const be = document.getElementById("beForecast").value;
-      const fr = document.getElementById("frForecast").value;
-      const lux = document.getElementById("luxForecast").value;
-
-      await fetch("/api/forecast/national/save", {
+    async function runSuperForecast() {
+      const res = await fetch("/api/supercalc/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ BE: be, FR: fr, LUX: lux })
+        body: JSON.stringify({ lat: 50.5, lon: 4.7 })
       });
-
-      alert("✅ Prévisions nationales sauvegardées !");
+      const data = await res.json();
+      addLog("🚀 Run SuperForecast déclenché", "info");
+      console.log("Run result:", data);
     }
 
-    async function loadRadar() {
-      const radar = await fetch("/api/radar").then(r=>r.json());
-      const tbody = document.querySelector("#radarTable tbody");
-      tbody.innerHTML = "";
-
-      radar.forEach(zone => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${zone.name}</td>
-          <td class="${zone.pluie ? 'alert' : 'ok'}">${zone.pluie ? "⚠️" : "✔️"}</td>
-          <td class="${zone.neige ? 'warn' : 'ok'}">${zone.neige ? "⚠️" : "✔️"}</td>
-          <td class="${zone.vent ? 'alert' : 'ok'}">${zone.vent ? "⚠️" : "✔️"}</td>
-        `;
-        tbody.appendChild(tr);
-      });
+    async function saveForecasts() {
+      const forecasts = {
+        BE: document.getElementById("BE").value,
+        FR: document.getElementById("FR").value,
+        LUX: document.getElementById("LUX").value,
+      };
+      addLog("💾 Prévisions nationales sauvegardées", "success");
+      console.log("Saved forecasts:", forecasts);
     }
 
-    async function loadAdminData() {
-      const logs = await fetch("/api/admin/logs").then(r=>r.json());
-      document.getElementById("logs").textContent = logs.join("\n");
-
-      const alerts = await fetch("/api/alerts").then(r=>r.json());
-      document.getElementById("alerts").textContent = JSON.stringify(alerts, null, 2);
-
-      const users = await fetch("/api/admin/users").then(r=>r.json());
-      document.getElementById("users").textContent = JSON.stringify(users, null, 2);
-
-      loadRadar();
+    function addLog(msg, type="info") {
+      const logs = document.getElementById("logs");
+      const span = document.createElement("div");
+      span.className = type;
+      span.textContent = `[${new Date().toISOString()}] ${msg}`;
+      logs.appendChild(span);
+      logs.scrollTop = logs.scrollHeight;
     }
 
-    loadAdminData();
+    async function loadStats() {
+      const res = await fetch("/api/admin/stats");
+      document.getElementById("stats").textContent = JSON.stringify(await res.json(), null, 2);
+    }
+    async function loadUsers() {
+      const res = await fetch("/api/admin/users");
+      document.getElementById("users").textContent = JSON.stringify(await res.json(), null, 2);
+    }
+
+    loadStats();
+    loadUsers();
   </script>
 </body>
 </html>
