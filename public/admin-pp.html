@@ -20,8 +20,8 @@
     .alert.rejected { background: #d73a4944; border: 1px solid #d73a49; }
     .forecast-box { background: #161b22; padding: 10px; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 10px; }
     .forecast-box textarea { height: 100px; }
-    .users, .stats { display: flex; justify-content: space-around; }
-    .users div, .stats div { background: #161b22; padding: 10px; border: 1px solid #30363d; border-radius: 6px; width: 22%; text-align: center; }
+    .users, .stats { display: flex; justify-content: space-around; flex-wrap: wrap; }
+    .users div, .stats div { background: #161b22; padding: 10px; border: 1px solid #30363d; border-radius: 6px; width: 22%; text-align: center; margin: 5px; }
     .chat-box { display: flex; flex-direction: column; }
     .chat-messages { background: #161b22; padding: 10px; border: 1px solid #30363d; border-radius: 6px; height: 200px; overflow-y: auto; margin-bottom: 10px; }
     .chat-input { display: flex; }
@@ -107,14 +107,19 @@ async function runSuperForecast() {
   });
   const data = await res.json();
   document.getElementById("logs").textContent = data.logs.join("\n");
+
   if (data.nationalForecasts) {
     document.getElementById("forecast-be").value = data.nationalForecasts.BE;
     document.getElementById("forecast-fr").value = data.nationalForecasts.FR;
     document.getElementById("forecast-lux").value = data.nationalForecasts.LUX;
   }
+
   if (data.jeanResponse) {
     const alertBox = document.getElementById("alerts");
     alertBox.innerHTML = `<div class="alert auto">${data.jeanResponse.text}</div>`;
+  } else {
+    document.getElementById("alerts").innerHTML =
+      "<div class='alert rejected'>❌ Pas de réponse de l’IA</div>";
   }
 }
 
@@ -124,12 +129,15 @@ function saveForecast(country) {
 
 async function sendChat() {
   const msg = document.getElementById("chat-input").value;
+  if (!msg) return;
+
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: msg })
   });
   const data = await res.json();
+
   const chatBox = document.getElementById("chat-messages");
   chatBox.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
   chatBox.innerHTML += `<div><b>J.E.A.N.:</b> ${data.text}</div>`;
