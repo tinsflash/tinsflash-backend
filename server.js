@@ -7,7 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Services
-import { runSuperForecast } from "./services/superForecast.js";
+import { runSuperForecast } from "./services/superForecast.js"; // ✅ import corrigé
 import forecastService from "./services/forecastService.js";
 import radarService from "./services/radarService.js";
 import alertsService from "./services/alertsService.js";
@@ -28,26 +28,35 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Fix pour __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Servir les fichiers statiques (public/)
 app.use(express.static(path.join(__dirname, "public")));
 
-// Protection admin
+// --- Protection admin-pp.html --- //
 app.get("/admin-pp.html", (req, res) => {
   const pass = req.query.pass;
-  if (pass === "202679") res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
-  else res.status(401).send("⛔ Accès refusé – mot de passe requis");
+  if (pass === "202679") {
+    res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
+  } else {
+    res.status(401).send("⛔ Accès refusé – mot de passe requis");
+  }
 });
 
-// Désactiver indexation Google
+// Désactiver l’indexation Google
 app.use((req, res, next) => {
   res.setHeader("X-Robots-Tag", "noindex, nofollow");
   next();
 });
 
-// MongoDB
+// --- Connexion MongoDB --- //
 mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => logInfo("✅ MongoDB connecté"))
   .catch((err) => logError("❌ Erreur MongoDB: " + err.message));
 
@@ -55,7 +64,7 @@ mongoose
  * ROUTES API
  */
 
-// SuperForecast
+// --- SuperForecast (Run complet) ---
 app.post("/api/supercalc/run", async (req, res) => {
   try {
     const { lat, lon } = req.body;
@@ -70,21 +79,7 @@ app.post("/api/supercalc/run", async (req, res) => {
   }
 });
 
-// Chat J.E.A.N.
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-    addLog("💬 Question posée à J.E.A.N.: " + message);
-    const response = await chatService.chatWithJean(message);
-    addLog("🤖 Réponse J.E.A.N.: " + response.text);
-    res.json(response);
-  } catch (err) {
-    logError("❌ Erreur chat: " + err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Forecasts, radar, alerts...
+// --- Prévisions météo ---
 app.get("/api/forecast/local", checkCoverage, async (req, res) => {
   try {
     const { lat, lon } = req.query;
@@ -118,7 +113,7 @@ app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
   }
 });
 
-// Radar
+// --- Radar ---
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
@@ -129,7 +124,7 @@ app.get("/api/radar", async (req, res) => {
   }
 });
 
-// Alerts
+// --- Alertes météo ---
 app.get("/api/alerts", async (req, res) => {
   try {
     const alerts = await alertsService.getAlerts();
@@ -160,7 +155,7 @@ app.delete("/api/alerts/:id", async (req, res) => {
   }
 });
 
-// Podcasts
+// --- Podcasts météo ---
 app.post("/api/podcast/generate", async (req, res) => {
   try {
     const { text } = req.body;
@@ -172,22 +167,42 @@ app.post("/api/podcast/generate", async (req, res) => {
   }
 });
 
-// Admin stats
+// --- Chat avec J.E.A.N. ---
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message } = req.body;
+    addLog("💬 Question posée à J.E.A.N.: " + message);
+    const response = await chatService.chatWithJean(message);
+    addLog("🤖 Réponse J.E.A.N.: " + response.text);
+    res.json(response);
+  } catch (err) {
+    logError("❌ Erreur chat: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Stats admin ---
 app.get("/api/admin/stats", async (req, res) => {
   try {
     const forecasts = await Forecast.countDocuments();
     const alerts = await Alert.countDocuments();
-    res.json({ forecasts, alerts, uptime: process.uptime() });
+    res.json({
+      forecasts,
+      alerts,
+      uptime: process.uptime(),
+    });
   } catch (err) {
     logError("❌ Erreur admin/stats: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Admin logs
-app.get("/api/admin/logs", (req, res) => res.json(getLogs()));
+// --- Logs admin ---
+app.get("/api/admin/logs", (req, res) => {
+  res.json(getLogs());
+});
 
-// Admin users
+// --- Users admin ---
 app.get("/api/admin/users", (req, res) => {
   res.json({
     covered: { free: 120, premium: 35, pro: 10, proPlus: 2 },
@@ -199,5 +214,5 @@ app.get("/api/admin/users", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   logInfo(`🌍 Serveur météo Tinsflash en marche sur port ${PORT}`);
-  logInfo("🤖 Mode IA actif: Cohere (Chat API) connecté à J.E.A.N.");
+  logInfo("🤖 Mode IA actif: Cohere (command-r-plus)");
 });
