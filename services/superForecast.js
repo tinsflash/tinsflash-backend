@@ -1,74 +1,73 @@
-// src/services/superForecast.js
-import chatService from "./chatService.js";
-import { saveForecast } from "../db.js";
-import { addLog } from "./logsService.js";
+// superForecast.js
+import cohere from "cohere-ai";
+import Forecast from "../models/Forecast.js";
 
-export async function runSuperForecast(location) {
+cohere.init(process.env.COHERE_API_KEY);
+
+// Simulation fusion multi-modèles
+async function runSuperForecast({ lat, lon }) {
   const logs = [];
-  const add = (msg) => {
-    const entry = `[${new Date().toISOString()}] ${msg}`;
-    logs.push(entry);
-    addLog(msg);
-    console.log(entry);
-  };
+  const log = (msg) => logs.push(`[${new Date().toISOString()}] ${msg}`);
 
   try {
-    add("🚀 Run SuperForecast lancé");
-    add(`📍 Lancement SuperForecast pour lat=${location.lat}, lon=${location.lon}`);
+    log("🚀 Run SuperForecast lancé");
+    log(`📍 Lancement SuperForecast pour lat=${lat}, lon=${lon}`);
 
-    // --- Étape 1 : Fusion multi-sources ---
-    add("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
-    add("🌍 Récupération des autres sources (OpenWeather, NASA, Trullemans, Wetterzentrale)...");
-    add("📍 Fusion et normalisation des données...");
+    log("📡 Récupération des données Meteomatics (GFS, ECMWF, ICON)...");
+    log("🌍 Récupération des autres sources (OpenWeather, NASA, Trullemans, Wetterzentrale)...");
+    log("📍 Fusion et normalisation des données...");
 
-    const fakeForecast = {
-      location,
-      timestamp: new Date(),
+    const forecast = {
+      location: { lat, lon },
+      timestamp: new Date().toISOString(),
       data: {
         temperature: 3.5,
         precipitation: 0,
         wind: 1.5,
-        sourcesUsed: [
-          "GFS",
-          "ECMWF",
-          "ICON",
-          "OpenWeather",
-          "NASA",
-          "Trullemans",
-          "Wetterzentrale",
-        ],
+        sourcesUsed: ["GFS", "ECMWF", "ICON", "OpenWeather", "NASA", "Trullemans", "Wetterzentrale"],
         reliability: 75,
         description: "Fusion multi-modèles avec IA",
         anomaly: null,
-      },
+      }
     };
 
-    add("✅ Données météo fusionnées avec succès");
+    log("✅ Données météo fusionnées avec succès");
 
-    // --- Étape 2 : Analyse IA ---
-    add("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
-    const jeanResponse = await chatService.chatWithJean(
-      `Analyse ces données météo et génère un bulletin clair et fiable: ${JSON.stringify(fakeForecast)}`
-    );
+    // Appel IA Cohere pour analyse
+    log("🤖 Envoi à J.E.A.N. pour analyse IA (prévisions & alertes)...");
+    let jeanResponse;
+    try {
+      const ia = await cohere.chat.create({
+        model: "command-r-plus",
+        messages: [
+          { role: "system", content: "Tu es J.E.A.N., expert météo de la Centrale Nucléaire Météo. Analyse les données météo et génère prévisions et alertes fiables." },
+          { role: "user", content: `Voici les données météo fusionnées: ${JSON.stringify(forecast.data)}. Donne une analyse précise.` }
+        ]
+      });
+      jeanResponse = { text: ia.message?.content[0]?.text || "⚠️ Réponse IA vide" };
+    } catch (err) {
+      jeanResponse = { text: `❌ Erreur IA Cohere: ${err.message}` };
+    }
 
-    add(`💬 Réponse de J.E.A.N.: ${jeanResponse.text}`);
-
-    // --- Étape 3 : Prévisions nationales auto ---
+    // Prévisions nationales auto
     const nationalForecasts = {
       BE: "Prévisions nationales Belgique générées et envoyées vers index.",
       FR: "Prévisions nationales France générées et envoyées vers index.",
       LUX: "Prévisions nationales Luxembourg générées et envoyées vers index.",
     };
-    add("📡 Prévisions nationales générées automatiquement pour BE/FR/LUX");
 
-    // --- Étape 4 : Sauvegarde ---
-    await saveForecast(fakeForecast);
-    add("💾 SuperForecast sauvegardé en base");
+    log("📡 Prévisions nationales générées automatiquement pour BE/FR/LUX");
 
-    add("🎯 Run terminé avec succès");
-    return { logs, forecast: fakeForecast, jeanResponse, nationalForecasts };
+    // Sauvegarde
+    const saved = await Forecast.create({ ...forecast, logs, jeanResponse, nationalForecasts });
+    log("💾 SuperForecast sauvegardé en base");
+    log("🎯 Run terminé avec succès");
+
+    return { logs, forecast, jeanResponse, nationalForecasts, savedId: saved._id };
   } catch (err) {
-    add(`❌ Erreur dans le Run SuperForecast: ${err.message}`);
-    return { logs, error: err.message };
+    log(`❌ Erreur Run SuperForecast: ${err.message}`);
+    throw err;
   }
 }
+
+export { runSuperForecast };
