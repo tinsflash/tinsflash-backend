@@ -1,47 +1,41 @@
 // services/chatService.js
 import fetch from "node-fetch";
+import { addLog } from "./logsService.js";
 
-export async function chatWithJean(message) {
+/**
+ * 🤖 Chat avec J.E.A.N. (Gemini uniquement pour l’instant)
+ */
+async function chatWithJean(message) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("❌ Clé GEMINI_API_KEY manquante dans .env");
+    // --- Gemini (Google AI Studio) ---
+    addLog("⚡ Tentative réponse avec Gemini...");
+    const gemini = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: message }] }],
+        }),
+      }
+    );
+
+    const geminiData = await gemini.json();
+    const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (reply) {
+      addLog("✅ Réponse obtenue via Gemini");
+      return { engine: "Gemini", text: reply };
     }
 
-    // URL officielle Gemini
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
-
-    // Préparer la requête
-    const body = {
-      contents: [
-        {
-          parts: [{ text: typeof message === "string" ? message : JSON.stringify(message) }],
-        },
-      ],
-    };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    // Gestion des erreurs
-    if (!response.ok) {
-      throw new Error(`Erreur API Gemini: ${JSON.stringify(data)}`);
-    }
-
-    // Extraire le texte de la réponse Gemini
-    const output =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "⚠️ Aucune réponse générée par Gemini";
-
-    return { text: output };
+    throw new Error("Pas de réponse valide de Gemini");
   } catch (err) {
-    return { text: "❌ Erreur Gemini: " + err.message };
+    addLog("⚠️ Gemini indisponible: " + err.message);
+    return {
+      engine: "Fallback",
+      text: "❌ J.E.A.N. est indisponible actuellement (Gemini off). Vérifiez la clé API.",
+    };
   }
 }
+
+export default { chatWithJean };
