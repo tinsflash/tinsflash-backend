@@ -1,76 +1,118 @@
 // services/alertsService.js
 import Alert from "../models/Alert.js";
 import { addLog } from "./logsService.js";
+import axios from "axios";
 
 /**
- * 🔹 Récupérer toutes les alertes
+ * Vérifie si une alerte existe déjà en base ou chez NOAA/Copernicus
+ * Retourne un statut clair : Premier détecteur / Déjà signalé / Doublon confirmé
+ */
+async function checkDuplicate(alert) {
+  try {
+    // Vérification interne Mongo
+    const existing = await Alert.findOne({
+      title: alert.title,
+      region: alert.region,
+      level: alert.level,
+    });
+    if (existing) return "❌ Doublon confirmé (interne)";
+
+    // Vérification externe NOAA (simplifié → à améliorer avec API clé si dispo)
+    const noaaCheck = false;
+    // Vérification Copernicus (idem, placeholder)
+    const copernicusCheck = false;
+
+    if (noaaCheck || copernicusCheck) {
+      return "⚠️ Déjà signalé ailleurs";
+    }
+
+    return "✅ Premier détecteur";
+  } catch (err) {
+    console.error("❌ Erreur checkDuplicate:", err.message);
+    return "⚠️ Vérification externe impossible";
+  }
+}
+
+/**
+ * Crée une nouvelle alerte
+ * Zones couvertes : locale/nationale (Europe élargie + USA par État + synthèse)
+ * Zones non couvertes : alerte par continent
+ */
+export async function createAlert(data) {
+  try {
+    const { title, description, level, probability, region } = data;
+
+    const newAlert = new Alert({
+      title,
+      description,
+      level,
+      probability,
+      region,
+      validated: probability >= 90, // auto validée si certitude ≥90%
+    });
+
+    const status = await checkDuplicate(newAlert);
+    await addLog(`⚠️ Nouvelle alerte ${region} (${level}, ${probability}%) → ${status}`);
+
+    await newAlert.save();
+    return { ...newAlert.toObject(), status };
+  } catch (err) {
+    console.error("❌ Erreur createAlert:", err.message);
+    throw err;
+  }
+}
+
+/**
+ * Récupère toutes les alertes
+ * - Dernières d’abord
+ * - Zones couvertes = précises
+ * - Zones non couvertes = globales
  */
 export async function getAlerts() {
-  return await Alert.find().sort({ createdAt: -1 });
+  try {
+    const alerts = await Alert.find().sort({ createdAt: -1 });
+    return alerts;
+  } catch (err) {
+    console.error("❌ Erreur getAlerts:", err.message);
+    throw err;
+  }
 }
 
 /**
- * 🔹 Ajouter une alerte
- * @param {Object} data 
- */
-export async function addAlert(data) {
-  const alert = new Alert({
-    title: data.title,
-    description: data.description,
-    severity: data.severity,
-    certainty: data.certainty,
-    affectedZones: data.affectedZones || [],
-    status: data.status || "pending", // pending | validated | published
-  });
-
-  const saved = await alert.save();
-  addLog(`⚠️ Nouvelle alerte ajoutée: ${saved.title} (Certitude: ${saved.certainty}%)`);
-
-  return saved;
-}
-
-/**
- * 🔹 Supprimer une alerte
- */
-export async function deleteAlert(id) {
-  const result = await Alert.findByIdAndDelete(id);
-  addLog(`🗑️ Alerte supprimée: ${id}`);
-  return result;
-}
-
-/**
- * 🔹 Valider une alerte (admin)
+ * Valide une alerte manuellement (70–89%)
  */
 export async function validateAlert(id) {
-  const alert = await Alert.findByIdAndUpdate(
-    id,
-    { status: "validated" },
-    { new: true }
-  );
-  addLog(`✅ Alerte validée: ${alert?.title || id}`);
-  return alert;
+  try {
+    const alert = await Alert.findByIdAndUpdate(
+      id,
+      { validated: true },
+      { new: true }
+    );
+    await addLog(`✅ Alerte validée manuellement: ${alert.title} (${alert.region})`);
+    return alert;
+  } catch (err) {
+    console.error("❌ Erreur validateAlert:", err.message);
+    throw err;
+  }
 }
 
 /**
- * 🔹 Publier automatiquement une alerte (si certitude > 90 %)
+ * Supprime une alerte obsolète
  */
-export async function autoPublishAlert(data) {
-  if (data.certainty >= 90) {
-    const alert = new Alert({
-      ...data,
-      status: "published",
-    });
-    const saved = await alert.save();
-    addLog(`🚨 Alerte publiée automatiquement: ${saved.title} (Certitude ${saved.certainty}%)`);
-    return saved;
+export async function deleteAlert(id) {
+  try {
+    const alert = await Alert.findByIdAndDelete(id);
+    await addLog(`🗑️ Alerte supprimée: ${alert?.title || id}`);
+    return alert;
+  } catch (err) {
+    console.error("❌ Erreur deleteAlert:", err.message);
+    throw err;
   }
-  return null;
 }
 
 export default {
+  createAlert,
   getAlerts,
-  addAlert,
-  deleteAlert,
   validateAlert,
-  autoPublishAlert,
+  deleteAlert,
 };
