@@ -14,10 +14,10 @@ import chatService from "./services/chatService.js"; // ✅ IA Cohere
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js"; // ✅ corrigé (singulier, correspond au zip)
+import Alert from "./models/Alert.js"; // ✅ bien singulier, comme dans ton zip
 
-// === Initialisation ===
 dotenv.config();
+
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -35,7 +35,7 @@ app.use("/api/superforecast", superForecast);
 app.use("/api/alerts", alertsService);
 app.use("/api/radar", radarService);
 app.use("/api/podcast", podcastService);
-app.use("/api/chat", chatService); // ✅ ajout route IA
+app.use("/api/chat", chatService); // ✅ route IA fonctionnelle
 
 // ==============================
 // 🚀 Server start
