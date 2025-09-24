@@ -1,57 +1,51 @@
 // services/jeanService.js
-import coherePkg from "cohere-ai";
+import { CohereClient } from "cohere-ai";
 import { addLog } from "./logsService.js";
 
-const { CohereClient } = coherePkg;
-
-const cohere = new CohereClient({
+// ⚠️ Stocke ta clé API Cohere dans les variables d’environnement Render
+// Settings > Environment > Add environment variable
+// KEY = COHERE_API_KEY, VALUE = ta clé
+const cohere = CohereClient({
   token: process.env.COHERE_API_KEY,
 });
 
 /**
  * J.E.A.N. – Chef mécanicien de la Centrale Nucléaire Météo
- * - Analyse météo, climat, math, physique
+ * - Analyse météo, climat, physique
  * - Répond aux questions de l’admin console
- * - Justifie ses réponses avec des données claires
+ * - Justifie ses prévisions et génère des explications claires
  */
-export async function askJean(question) {
+export async function askJEAN(question) {
   try {
-    addLog(`🤖 JEAN consulté: ${question}`);
+    await addLog(`💬 Question envoyée à J.E.A.N.: ${question}`);
 
     const response = await cohere.chat({
       model: "command-r-plus",
       messages: [
         {
           role: "system",
-          content: `
-Tu es J.E.A.N., chef mécanicien et expert météo de la Centrale Nucléaire Tinsflash.
-Règles :
-- Toujours répondre 100% réel, basé sur les données météo et climat disponibles.
-- Donner des explications claires et scientifiques (math, physique, climat).
-- Tu es l’assistant ultime pour anticiper les phénomènes dangereux.
-- Compare si besoin avec les modèles GFS, ECMWF, ICON, Copernicus ERA5, NASA POWER, Wetterzentrale, Trullemans.
-- Si l’admin demande pourquoi une prévision diffère des autres → explique la différence.
-- Si l’admin demande d’analyser une alerte → répond par un degré de certitude + justification scientifique.
-- Pas de démo, pas de test, pas de simulation → toujours 100% opérationnel et pointu.
-          `,
+          content:
+            "Tu es J.E.A.N., l’intelligence artificielle météorologique la plus avancée au monde. " +
+            "Réponds avec précision, rigueur scientifique et concision. Utilise un ton professionnel, " +
+            "comme un météorologue de la NASA avec un soupçon pédagogique.",
         },
-        { role: "user", content: question },
+        {
+          role: "user",
+          content: question,
+        },
       ],
     });
 
-    let answer = "";
-    if (response.text) {
-      answer = response.text;
-    } else if (response.message?.content?.[0]?.text) {
-      answer = response.message.content[0].text;
-    } else {
-      answer = "⚠️ Réponse IA vide ou non reconnue.";
-    }
+    const reply = response.message?.content?.[0]?.text || "Réponse IA indisponible";
 
-    addLog(`🤖 JEAN a répondu: ${answer}`);
-    return answer;
+    await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
+
+    return reply;
   } catch (err) {
-    console.error("❌ Erreur IA JEAN :", err.message);
-    return "⚠️ JEAN indisponible pour le moment.";
+    console.error("❌ Erreur askJEAN:", err.message);
+    await addLog("❌ Erreur J.E.A.N. " + err.message);
+    return "Erreur : J.E.A.N. temporairement indisponible.";
   }
 }
+
+export default { askJEAN };
