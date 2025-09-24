@@ -4,26 +4,22 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// ✅ Nouveau client Cohere (plus de cohere.init)
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
 
-// === Chat avec J.E.A.N. ===
 async function chatWithJean(message) {
-  if (!message || !message.trim()) {
-    return { reply: "⚠️ Message vide. Reformule ta question." };
-  }
-
   try {
+    const cleaned = (message || "").trim();
+    if (cleaned.length < 2) {
+      return { reply: "⚠️ Pose une vraie question météo (au moins 2 caractères)." };
+    }
+
     const response = await cohere.chat({
-      model: "command-r-03-202",   // ✅ modèle actif 2025
-      messages: [
-        { role: "user", content: message }
-      ]
+      model: "command-r-03-202",   // ✅ modèle actif
+      message: cleaned,            // ✅ clé correcte (PAS 'messages')
     });
 
-    // ✅ Récupération texte IA
     const reply =
       response.message?.content?.[0]?.text ||
       response.text ||
