@@ -59,17 +59,21 @@ app.get("/api/forecasts", async (req, res) => {
   }
 });
 
+// ==============================
+// 🚨 ALERTS
+// ==============================
+
 // Get alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    const alerts = await Alert.find().sort({ createdAt: -1 }).limit(50);
+    const alerts = await alertsService.getAlerts(50);
     res.json(alerts);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Create alert (manual override)
+// Create alert (manual override OR IA injection)
 app.post("/api/alerts", async (req, res) => {
   try {
     const alert = await alertsService.createAlert(req.body);
@@ -79,7 +83,46 @@ app.post("/api/alerts", async (req, res) => {
   }
 });
 
-// Chat with J.E.A.N.
+// Update alert (validate / reject / edit)
+app.put("/api/alerts/:id", async (req, res) => {
+  try {
+    const updated = await alertsService.updateAlert(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: "Alerte non trouvée" });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete alert
+app.delete("/api/alerts/:id", async (req, res) => {
+  try {
+    const deleted = await alertsService.deleteAlert(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Alerte non trouvée" });
+    res.json({ message: "Alerte supprimée avec succès" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Force publish alert (bypass IA)
+app.post("/api/alerts/publish/:id", async (req, res) => {
+  try {
+    const updated = await alertsService.updateAlert(req.params.id, {
+      status: "✅",
+      published: true,
+    });
+    if (!updated) return res.status(404).json({ error: "Alerte non trouvée" });
+    await addLog(`🚨 Alerte forcée publiée manuellement: ${updated._id}`);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================
+// 💬 CHAT (J.E.A.N. IA)
+// ==============================
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -90,7 +133,9 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Logs
+// ==============================
+// 📜 LOGS
+// ==============================
 app.get("/api/logs", async (req, res) => {
   try {
     const logs = await getLogs();
@@ -100,7 +145,9 @@ app.get("/api/logs", async (req, res) => {
   }
 });
 
-// Radar proxy
+// ==============================
+// 🛰️ RADAR
+// ==============================
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
@@ -110,7 +157,9 @@ app.get("/api/radar", async (req, res) => {
   }
 });
 
-// Podcast (bulletin météo audio)
+// ==============================
+// 🎙️ PODCAST
+// ==============================
 app.get("/api/podcast", async (req, res) => {
   try {
     const audio = await podcastService.generatePodcast();
@@ -124,4 +173,6 @@ app.get("/api/podcast", async (req, res) => {
 // 🌍 Server start
 // ==============================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Serveur météo nucléaire actif sur le port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 Serveur météo nucléaire actif sur le port ${PORT}`)
+);
