@@ -10,11 +10,11 @@ import forecastService from "./services/forecastService.js";
 import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
-import chatService from "./services/chatService.js"; // ✅ maintenant OK
+import chatService from "./services/chatService.js"; // ✅ route IA
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js";
+import Alert from "./models/Alert.js"; // ✅ bien singulier
 
 dotenv.config();
 
@@ -35,7 +35,7 @@ app.use("/api/superforecast", superForecast);
 app.use("/api/alerts", alertsService);
 app.use("/api/radar", radarService);
 app.use("/api/podcast", podcastService);
-app.use("/api/chat", chatService); // ✅ Express reconnaît bien un Router
+app.use("/api/chat", chatService); // ✅ IA branchée
 
 // ==============================
 // 🚀 Server start
