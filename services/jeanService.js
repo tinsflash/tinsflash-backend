@@ -1,23 +1,20 @@
 // services/jeanService.js
-import { CohereClient } from "cohere-ai";
+import pkg from "cohere-ai";
 import { addLog } from "./logsService.js";
 
-// ⚠️ Stocke ta clé API Cohere dans les variables d’environnement Render
-// Settings > Environment > Add environment variable
-// KEY = COHERE_API_KEY, VALUE = ta clé
-const cohere = CohereClient({
+const { CohereClient } = pkg;
+
+const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
 
 /**
- * J.E.A.N. – Chef mécanicien de la Centrale Nucléaire Météo
- * - Analyse météo, climat, physique
- * - Répond aux questions de l’admin console
- * - Justifie ses prévisions et génère des explications claires
+ * J.E.A.N. – IA experte météo/climat
+ * Explications scientifiques, justification des alertes
  */
 export async function askJEAN(question) {
   try {
-    await addLog(`💬 Question envoyée à J.E.A.N.: ${question}`);
+    await addLog(`💬 Question posée à J.E.A.N.: ${question}`);
 
     const response = await cohere.chat({
       model: "command-r-plus",
@@ -25,25 +22,23 @@ export async function askJEAN(question) {
         {
           role: "system",
           content:
-            "Tu es J.E.A.N., l’intelligence artificielle météorologique la plus avancée au monde. " +
-            "Réponds avec précision, rigueur scientifique et concision. Utilise un ton professionnel, " +
-            "comme un météorologue de la NASA avec un soupçon pédagogique.",
+            "Tu es J.E.A.N., l’intelligence artificielle météorologique la plus avancée du monde. " +
+            "Réponds avec précision scientifique, concision et pédagogie, comme un météorologue NASA.",
         },
-        {
-          role: "user",
-          content: question,
-        },
+        { role: "user", content: question },
       ],
     });
 
-    const reply = response.message?.content?.[0]?.text || "Réponse IA indisponible";
+    const reply =
+      response.message?.content?.[0]?.text ||
+      response.text ||
+      "⚠️ Réponse J.E.A.N. indisponible";
 
     await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
-
     return reply;
   } catch (err) {
     console.error("❌ Erreur askJEAN:", err.message);
-    await addLog("❌ Erreur J.E.A.N. " + err.message);
+    await addLog("❌ Erreur J.E.A.N.: " + err.message);
     return "Erreur : J.E.A.N. temporairement indisponible.";
   }
 }
