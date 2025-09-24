@@ -6,98 +6,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <link rel="stylesheet" href="style.css">
-
-  <!-- Weather Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css">
-
   <style>
-    body {
-      font-family: "Orbitron", sans-serif;
-      background: radial-gradient(circle at center, #000010, #000000);
-      color: #00ffea;
-      margin: 0;
-      padding: 0;
-    }
-    h1, h2 { text-align: center; color: #00eaff; }
-    .container { padding: 20px; max-width: 1200px; margin: auto; }
-    .card {
-      background: rgba(20, 20, 40, 0.9);
-      padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      border: 1px solid #00ffea;
-      box-shadow: 0 0 15px rgba(0, 255, 234, 0.4);
-    }
-    .btn {
-      padding: 10px 15px;
-      margin: 5px;
-      background: #00ffea;
-      color: #000;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .btn:hover { background: #00c9c9; }
-    textarea, input, select {
-      width: 100%;
-      padding: 8px;
-      margin: 5px 0;
-      border-radius: 6px;
-      border: none;
-    }
-    #logs {
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      padding: 10px;
-      height: 200px;
-      overflow-y: auto;
-      border-radius: 8px;
-    }
-    .forecast-grid {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .day-card {
-      flex: 1 1 150px;
-      text-align: center;
-      background: rgba(0, 255, 234, 0.05);
-      border: 1px solid #00ffea;
-      border-radius: 10px;
-      padding: 10px;
-    }
-    .day-card i {
-      font-size: 2rem;
-      margin-bottom: 8px;
-      display: block;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    table, th, td {
-      border: 1px solid #00ffea;
-    }
-    th, td {
-      padding: 10px;
-      text-align: center;
-    }
-    footer {
-      text-align: center;
-      padding: 10px;
-      border-top: 1px solid #00ffea;
-      margin-top: 20px;
-      font-size: 0.9rem;
-      color: #00eaff;
-    }
+    body { background:#0a0f1c; color:#00ffea; font-family:"Orbitron", Arial, sans-serif; margin:0; }
+    header { text-align:center; padding:20px; border-bottom:2px solid #00ffea; }
+    h1 { margin:0; color:#00ffea; text-shadow:0 0 10px #00fbe7; }
+    .container { padding:20px; max-width:1200px; margin:auto; display:grid; gap:20px; }
+    .card { background:#111830; border:1px solid #00ffea; border-radius:12px; padding:20px; box-shadow:0 0 15px rgba(0,255,234,0.3); }
+    h2 { color:#00fbe7; margin-top:0; text-shadow:0 0 8px #00d9ff; }
+    .btn { background:#00ffea; color:#000; border:none; padding:10px 15px; margin:5px; border-radius:8px; font-weight:bold; cursor:pointer; }
+    .btn:hover { background:#00d9ff; }
+    #logs { background:#000; color:#0f0; font-family:monospace; padding:10px; height:200px; overflow-y:auto; border-radius:6px; }
+    textarea,input,select { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none; background:#0c1a2b; color:#fff; }
   </style>
+  <script>
+    // Sécurité simple par mot de passe
+    document.addEventListener("DOMContentLoaded", () => {
+      const pass = prompt("Mot de passe Admin ?");
+      if(pass !== "202679") {
+        alert("⛔ Accès refusé");
+        window.location.href = "index.html";
+      }
+    });
+  </script>
 </head>
 <body>
-  <h1>🛰️ Console Admin – TINSFLASH</h1>
+  <header>
+    <h1>🛰️ Console Administrateur – Mode NASA</h1>
+  </header>
   <div class="container">
 
     <!-- Supercalculateur -->
@@ -106,149 +41,73 @@
       <button class="btn" onclick="runForecast('morning')">🌅 Run 07h10</button>
       <button class="btn" onclick="runForecast('noon')">☀️ Run 12h10</button>
       <button class="btn" onclick="runForecast('evening')">🌙 Run 19h10</button>
-      <div id="forecast-status">⏳ En attente de lancement...</div>
+      <div id="forecast-status">⏳ En attente...</div>
     </div>
 
     <!-- Logs & Alertes -->
     <div class="card">
-      <h2>📡 Monitoring</h2>
-      <button class="btn" onclick="loadLogs()">📖 Voir Logs</button>
-      <button class="btn" onclick="loadAlerts()">⚠️ Voir Alertes</button>
-      <div id="logs">⏳ Logs en attente...</div>
+      <h2>📡 Monitoring & Alertes</h2>
+      <button class="btn" onclick="loadLogs()">📖 Logs</button>
+      <button class="btn" onclick="loadAlerts()">⚠️ Alertes</button>
+      <div id="logs">⏳ Attente logs...</div>
     </div>
 
-    <!-- Prévisions nationales BE & FR -->
+    <!-- Prévisions Nationales -->
     <div class="card">
-      <h2>🇧🇪🇫🇷 Prévisions Nationales (BE / FR)</h2>
-      <div id="forecast-national" class="forecast-grid">⏳ Chargement...</div>
-      <pre id="forecast-text">⏳ Génération bulletin météo national...</pre>
+      <h2>🌍 Prévisions Nationales BE / FR</h2>
+      <div id="forecast-be">⏳ Chargement Belgique...</div>
+      <div id="forecast-fr">⏳ Chargement France...</div>
     </div>
 
     <!-- Statistiques utilisateurs -->
     <div class="card">
-      <h2>👥 Statistiques Utilisateurs</h2>
-      <div id="user-stats">⏳ Chargement statistiques...</div>
+      <h2>📊 Statistiques Utilisateurs</h2>
+      <div id="user-stats">⏳ Chargement...</div>
     </div>
 
     <!-- Chat IA -->
     <div class="card">
       <h2>🤖 IA J.E.A.N</h2>
-      <textarea id="ai-input" rows="3" placeholder="Posez une question..."></textarea>
-      <button class="btn" onclick="chatJean()">Envoyer</button>
-      <div id="ai-response">⏳ En attente...</div>
+      <textarea id="ai-input" placeholder="Posez une question..."></textarea>
+      <button class="btn" onclick="sendChat()">Envoyer</button>
+      <div id="ai-response"></div>
     </div>
   </div>
-
-  <footer>
-    🚀 Console Admin TINSFLASH – Mode NASA
-  </footer>
 
   <script>
     const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
-    // Supercalculateur
     async function runForecast(time) {
-      document.getElementById("forecast-status").innerText = "⏳ Calcul en cours...";
-      try {
-        const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
-        const data = await res.json();
-        document.getElementById("forecast-status").innerText =
-          `✅ Run ${time} terminé : ${data.combined.temperature}°C, Fiabilité ${data.combined.reliability}%`;
-      } catch (err) {
-        document.getElementById("forecast-status").innerText = "❌ Erreur lancement forecast";
-      }
+      document.getElementById("forecast-status").innerText = "⏳ Calcul...";
+      const res = await fetch(`${API_BASE}/forecast/national?country=BE`);
+      const data = await res.json();
+      document.getElementById("forecast-status").innerText = 
+        `✅ Run ${time} : ${data.combined.description}, ${data.combined.temperature}°C`;
     }
 
-    // Logs
     async function loadLogs() {
       document.getElementById("logs").innerText = "⏳ Chargement logs...";
-      try {
-        const res = await fetch(`${API_BASE}/logs`);
-        const data = await res.json();
-        document.getElementById("logs").innerText = data.join("\\n");
-      } catch {
-        document.getElementById("logs").innerText = "❌ Erreur logs";
-      }
+      const res = await fetch(`${API_BASE}/logs`);
+      const data = await res.json();
+      document.getElementById("logs").innerText = data.join("\n");
     }
 
-    // Alertes
     async function loadAlerts() {
       document.getElementById("logs").innerText = "⏳ Chargement alertes...";
-      try {
-        const res = await fetch(`${API_BASE}/alerts`);
-        const data = await res.json();
-        document.getElementById("logs").innerText =
-          data.map(a => `⚠️ ${a.level} - ${a.message}`).join("\\n");
-      } catch {
-        document.getElementById("logs").innerText = "❌ Erreur alertes";
-      }
+      const res = await fetch(`${API_BASE}/alerts`);
+      const data = await res.json();
+      document.getElementById("logs").innerText = data.map(a => `⚠️ ${a.level} - ${a.message}`).join("\n");
     }
 
-    // Prévisions nationales BE/FR
-    async function loadNationalForecasts() {
-      const container = document.getElementById("forecast-national");
-      container.innerHTML = "⏳ Chargement...";
-      try {
-        const beRes = await fetch(`${API_BASE}/forecast/national?country=BE`);
-        const frRes = await fetch(`${API_BASE}/forecast/national?country=FR`);
-        const beData = await beRes.json();
-        const frData = await frRes.json();
-
-        container.innerHTML = `
-          <div class="day-card"><i class="wi wi-day-sunny"></i><p>BE: ${beData.combined.description}, ${beData.combined.temperature}°C</p></div>
-          <div class="day-card"><i class="wi wi-cloudy"></i><p>FR: ${frData.combined.description}, ${frData.combined.temperature}°C</p></div>
-        `;
-        document.getElementById("forecast-text").innerText =
-          "🇧🇪 Bulletin BE: " + beData.combined.text + "\\n🇫🇷 Bulletin FR: " + frData.combined.text;
-      } catch {
-        container.innerHTML = "❌ Erreur chargement prévisions nationales";
-      }
+    async function sendChat() {
+      const msg = document.getElementById("ai-input").value;
+      const res = await fetch(`${API_BASE}/chat`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      document.getElementById("ai-response").innerText = data.reply;
     }
-
-    // Stats utilisateurs
-    async function loadUserStats() {
-      document.getElementById("user-stats").innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch(`${API_BASE}/users/stats`);
-        const data = await res.json();
-        document.getElementById("user-stats").innerHTML = `
-          <table>
-            <tr><th>Type</th><th>Nombre</th></tr>
-            <tr><td>Gratuit</td><td>${data.free}</td></tr>
-            <tr><td>Premium</td><td>${data.premium}</td></tr>
-            <tr><td>Pro</td><td>${data.pro}</td></tr>
-            <tr><td>Pro+</td><td>${data.proplus}</td></tr>
-            <tr><td>Zones couvertes</td><td>${data.covered}</td></tr>
-            <tr><td>Zones non couvertes</td><td>${data.uncovered}</td></tr>
-          </table>
-        `;
-      } catch {
-        document.getElementById("user-stats").innerText = "❌ Erreur stats";
-      }
-    }
-
-    // Chat IA
-    async function chatJean() {
-      const input = document.getElementById("ai-input").value;
-      document.getElementById("ai-response").innerText = "⏳ Analyse...";
-      try {
-        const res = await fetch(`${API_BASE}/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: input })
-        });
-        const data = await res.json();
-        document.getElementById("ai-response").innerText = data.reply;
-      } catch {
-        document.getElementById("ai-response").innerText = "❌ Erreur IA";
-      }
-    }
-
-    // Auto load
-    window.onload = () => {
-      loadNationalForecasts();
-      loadUserStats();
-    };
   </script>
 </body>
 </html>
