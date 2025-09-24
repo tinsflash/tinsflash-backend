@@ -1,16 +1,15 @@
 // services/chatService.js
-import { CohereClient } from "cohere-ai";
+import pkg from "cohere-ai";
 import { addLog } from "./logsService.js";
 
-// Initialisation Cohere
-const cohere = CohereClient({
+const { CohereClient } = pkg;
+
+const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
 
 /**
- * Service de chat IA J.E.A.N.
- * - Dialogue direct depuis l’interface utilisateur
- * - Réponse rapide (moins technique que superForecast)
+ * Service Chat IA – dialogue direct avec J.E.A.N.
  */
 async function askJEAN(userMessage) {
   try {
@@ -18,12 +17,10 @@ async function askJEAN(userMessage) {
 
     const response = await cohere.chat({
       model: "command-r-plus",
-      messages: [
-        { role: "user", content: userMessage }
-      ]
+      messages: [{ role: "user", content: userMessage }],
     });
 
-    let reply =
+    const reply =
       response.message?.content?.[0]?.text ||
       response.text ||
       "⚠️ Réponse IA vide ou non reconnue";
