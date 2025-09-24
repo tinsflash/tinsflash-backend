@@ -1,40 +1,24 @@
 // services/radarService.js
-import axios from "axios";
+import express from "express";
+import Radar from "../utils/radar.js";
 
-/**
- * Radar gratuit : pluie, neige, vent (30 min) + intensité + animation
- * Sources : OpenMeteo + RainViewer
- */
-async function getRadar(lat = 50.5, lon = 4.7) {
+const router = express.Router();
+
+// ================================
+// 🌍 Radar météo
+// ================================
+router.get("/", async (req, res) => {
   try {
-    // 1. OpenMeteo (précipitations & vent)
-    const openMeteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,precipitation_probability,snowfall,wind_speed_10m&forecast_days=1&timezone=auto`;
-    const openRes = await axios.get(openMeteoUrl);
-    const openData = openRes.data?.hourly || {};
-
-    // 2. RainViewer (animation radar nuages/pluie)
-    const rainviewerUrl = "https://api.rainviewer.com/public/weather-maps.json";
-    const rainRes = await axios.get(rainviewerUrl);
-    const rainData = rainRes.data;
-
-    return {
-      source: "Radar Gratuit (OpenMeteo + RainViewer)",
-      precipitation: {
-        time: openData.time || [],
-        intensity: openData.precipitation || [],
-        probability: openData.precipitation_probability || [],
-      },
-      snowfall: openData.snowfall || [],
-      wind: openData.wind_speed_10m || [],
-      animation: rainData.radar?.past?.map(frame => ({
-        time: frame.time,
-        path: frame.path,
-      })) || [],
-    };
+    const radarData = await Radar.getLatest();
+    res.json({
+      status: "✅ OK",
+      source: "radarService",
+      data: radarData,
+    });
   } catch (err) {
-    console.error("❌ Erreur RadarService:", err.message);
-    return { error: "Radar indisponible" };
+    console.error("❌ Erreur radarService:", err.message);
+    res.status(500).json({ error: "Erreur radar météo" });
   }
-}
+});
 
-export default { getRadar };
+export default router;
