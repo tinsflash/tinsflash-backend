@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -8,17 +9,17 @@ import { getForecast } from "./services/forecastService.js";
 import { runSuperForecast } from "./services/superForecast.js";
 import { getAlerts } from "./services/alertsService.js";
 import { getRadar } from "./services/radarService.js";
-import { saveLog, getLogs } from "./services/logsService.js";
+import { getLogs } from "./services/logsService.js";
 import { chatWithJean } from "./services/chatService.js";
 import { runAllModels } from "./services/meteoManager.js";
-import { generateBulletin } from "./services/bulletinService.js";
+import { generateBulletin } from "./services/bulletinService.js"; // ✅ bulletin météo
 import { getWeatherNews } from "./services/newsService.js";
 import { getSatelliteImages } from "./services/nasaSat.js";
 import { getCopernicusData } from "./services/copernicusService.js";
 import { getWZCharts } from "./services/wetterzentrale.js";
 import { getTrullemansData } from "./services/trullemans.js";
 import { checkZoneCoverage } from "./services/checkCoverage.js";
-// podcastService désactivé temporairement
+// podcastService volontairement désactivé
 
 dotenv.config();
 
@@ -32,14 +33,16 @@ mongoose
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// === Routes ===
+// ==============================
+// 📡 API ROUTES
 
 // Prévisions simples
 app.get("/api/forecast/:zone", async (req, res) => {
   try {
-    const covered = checkZoneCoverage(req.params.zone);
+    const { zone } = req.params;
+    const covered = checkZoneCoverage(zone);
     if (!covered) return res.status(400).json({ error: "Zone not covered" });
-    const forecast = await getForecast(req.params.zone);
+    const forecast = await getForecast(zone);
     res.json(forecast);
   } catch (err) {
     console.error("❌ Forecast error:", err);
@@ -103,12 +106,14 @@ app.get("/api/logs", async (req, res) => {
   }
 });
 
-// Bulletin
-app.get("/api/bulletin", async (req, res) => {
+// ✅ Bulletin météo paramétrable
+app.get("/api/bulletin/:zone/:country", async (req, res) => {
   try {
-    const bulletin = await generateBulletin();
-    res.json(bulletin);
+    const { zone, country } = req.params;
+    const bulletin = await generateBulletin(zone, country);
+    res.type("text/plain").send(bulletin);
   } catch (err) {
+    console.error("❌ Bulletin error:", err);
     res.status(500).json({ error: "Bulletin failed" });
   }
 });
@@ -163,6 +168,9 @@ app.get("/api/trullemans", async (req, res) => {
   }
 });
 
-// === Server start ===
+// ==============================
+// ✅ Server ready
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
