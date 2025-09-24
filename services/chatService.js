@@ -1,7 +1,9 @@
 // services/chatService.js
-import cohere from "cohere-ai";
+import { CohereClient } from "cohere-ai";
 
-cohere.init(process.env.COHERE_API_KEY);
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
+});
 
 async function askJEAN(userMessage) {
   try {
@@ -14,9 +16,9 @@ async function askJEAN(userMessage) {
 
     let reply;
     if (response.text) {
-      reply = response.text; // Anciennes versions SDK
-    } else if (response.message?.content) {
-      reply = response.message.content[0].text; // Nouvelles versions SDK
+      reply = response.text; // Ancienne compatibilité
+    } else if (response.message?.content?.[0]?.text) {
+      reply = response.message.content[0].text; // Format nouveau SDK
     } else {
       reply = "⚠️ Réponse IA vide ou non reconnue";
     }
