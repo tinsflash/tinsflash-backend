@@ -2,70 +2,84 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Console Administrateur – Tinsflash</title>
+  <title>Tinsflash – Console Admin</title>
   <style>
-    body{margin:0;font-family:Arial,sans-serif;background:#0b0e11;color:#f0f0f0}
-    header{background:#11151a;padding:15px;text-align:center;border-bottom:2px solid #4FC3F7}
-    header h1{margin:0;font-size:1.6rem;color:#4FC3F7}
-    nav{background:#1a1d21;padding:10px;display:flex;gap:15px;border-bottom:1px solid #333}
-    nav a{color:#f0f0f0;text-decoration:none;padding:6px 10px;border-radius:4px}
-    nav a:hover{background:#4FC3F7;color:#000}
-    main{padding:20px}
-    section{margin-bottom:25px;padding:15px;background:#1a1d21;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,.4)}
-    h2{color:#4FC3F7;margin-top:0}
-    iframe{width:100%;height:400px;border:none;background:#fff;border-radius:6px}
-    button{padding:8px 12px;border:0;border-radius:6px;background:#4FC3F7;color:#000;cursor:pointer}
-    button:hover{background:#0288D1}
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0c10;
+      color: #f1f1f1;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #1f2833;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    section {
+      padding: 20px;
+      border-bottom: 1px solid #333;
+    }
+    h2 {
+      color: #66fcf1;
+    }
+    button {
+      background: #45a29e;
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      margin-top: 10px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    button:hover {
+      background: #66fcf1;
+      color: #000;
+    }
+    #radarImage {
+      margin-top: 20px;
+      max-width: 100%;
+      border: 2px solid #66fcf1;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
-  <header><h1>🛰️ Console Administrateur – Tinsflash</h1></header>
+  <header>
+    ⚡ Centrale Nucléaire Météo – Console Admin ⚡
+  </header>
 
-  <nav>
-    <a href="/admin-pp.html">🏠 Tableau de bord</a>
-    <a href="/admin-chat.html">💬 Chat IA J.E.A.N.</a>
-    <a href="/index.html" target="_blank">🌍 Site Public</a>
-  </nav>
-
-  <main>
-    <section>
-      <h2>📡 SuperForecast (lancer un run)</h2>
-      <button id="runBtn">▶️ Lancer Run</button>
-      <span id="runMsg" style="margin-left:10px;"></span>
-    </section>
-
-    <section>
-      <h2>⚠️ Alertes Météo</h2>
-      <iframe src="/api/alerts"></iframe>
-    </section>
-
-    <section>
-      <h2>🌦️ Prévisions Nationales</h2>
-      <iframe src="/api/forecasts"></iframe>
-    </section>
-
-    <section>
-      <h2>🛰️ Radar</h2>
-      <iframe src="/api/radar"></iframe>
-    </section>
-
-    <section>
-      <h2>📊 Logs</h2>
-      <iframe src="/api/logs"></iframe>
-    </section>
-  </main>
+  <section id="radar">
+    <h2>🌍 Radar Météo</h2>
+    <p>Visualisation radar en temps réel (Windy) avec fallback Meteologix.</p>
+    <button onclick="loadRadar()">Charger Radar</button>
+    <div id="radarResult"></div>
+  </section>
 
   <script>
-    const runBtn = document.getElementById('runBtn');
-    const runMsg = document.getElementById('runMsg');
-    runBtn.onclick = async () => {
-      runMsg.textContent = "⏳ Lancement...";
+    async function loadRadar() {
       try {
-        const res = await fetch("/api/superforecast/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const res = await fetch("/api/radar?lat=50.85&lon=4.35"); // par défaut Bruxelles
         const data = await res.json();
-        runMsg.textContent = data?.status ? `✅ ${data.status}` : "✅ Run lancé";
-      } catch(e){ runMsg.textContent = "❌ Erreur run"; }
-    };
+
+        let html = `<p><strong>Source :</strong> ${data.provider}</p>`;
+        if (data.imageUrl) {
+          html += `<img id="radarImage" src="${data.imageUrl}" alt="Radar Image">`;
+        } else if (data.url) {
+          html += `<p><a href="${data.url}" target="_blank">Voir sur Meteologix</a></p>`;
+        } else {
+          html += `<p>⚠️ Radar indisponible.</p>`;
+        }
+
+        document.getElementById("radarResult").innerHTML = html;
+      } catch (err) {
+        document.getElementById("radarResult").innerHTML =
+          "<p>❌ Erreur chargement radar</p>";
+        console.error(err);
+      }
+    }
   </script>
 </body>
 </html>
