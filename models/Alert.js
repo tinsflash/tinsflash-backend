@@ -1,21 +1,21 @@
-// models/Alert.js
+// models/Alerts.js
 import mongoose from "mongoose";
 
-const alertSchema = new mongoose.Schema(
+const AlertSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    level: { type: String, enum: ["low", "medium", "high", "critical"], required: true },
-    probability: { type: Number, required: true }, // ex: 85 (%)
-    region: { type: String, required: true }, // ex: BE, FR, LUX, USA, etc.
-    createdAt: { type: Date, default: Date.now },
-    expiresAt: { type: Date },
-    source: { type: String, default: "Centrale Nucléaire Météo Tinsflash" },
-    validated: { type: Boolean, default: false }, // >90% auto validé, 70-89% à valider
+    zone: { type: String, required: true }, // ex. "FR-NO", "USA-CA"
+    type: { type: String, default: "meteo" }, // ex. meteo, climatique
+    message: { type: String, required: true }, // texte généré par IA
+    confidence: { type: Number, default: 0 }, // % de certitude IA
+    status: {
+      type: String,
+      enum: ["✅", "⚠️", "❌"],
+      default: "⚠️", // par défaut en attente validation
+    },
+    source: { type: String, default: "JEAN" }, // toujours loggé
+    published: { type: Boolean, default: false },
   },
-  { collection: "alerts" }
+  { timestamps: true } // createdAt, updatedAt
 );
 
-const Alert = mongoose.model("Alert", alertSchema);
-
-export default Alert;
+export default mongoose.model("Alert", AlertSchema);
