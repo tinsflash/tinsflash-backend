@@ -127,7 +127,9 @@
           body:JSON.stringify({ message: msg })
         });
         const data = await res.json();
-        document.getElementById("ai-response").innerText = data.reply || "❌ Pas de réponse";
+
+        // ✅ Correction : on affiche juste la réponse
+        document.getElementById("ai-response").innerText = data.reply || "❌ Pas de réponse IA";
       } catch {
         document.getElementById("ai-response").innerText = "❌ Erreur IA";
       }
