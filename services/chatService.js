@@ -1,11 +1,15 @@
 // services/chatService.js
-import cohere from "cohere-ai";
+import { CohereClient } from "cohere-ai";
 import dotenv from "dotenv";
 
 dotenv.config();
-cohere.init(process.env.COHERE_API_KEY);
 
-// === Chat avec J.E.A.N. (IA météo nucléaire) ===
+// ⚡ Nouveau client Cohere
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
+});
+
+// === Chat avec J.E.A.N. ===
 async function chatWithJean(message) {
   if (!message || !message.trim()) {
     return { reply: "⚠️ Message vide. Reformule ta question." };
@@ -13,16 +17,16 @@ async function chatWithJean(message) {
 
   try {
     const response = await cohere.chat({
-      model: "command-r-03-202",   // ✅ modèle actif Cohere
+      model: "command-r-03-202",   // ✅ modèle actif
       messages: [
         { role: "user", content: message }
       ]
     });
 
-    // ✅ Récupération sécurisée du texte
+    // ✅ Le SDK renvoie response.message.content[0].text
     const reply =
+      response.message?.content?.[0]?.text ||
       response.text ||
-      response.message?.content ||
       "❌ Pas de réponse IA";
 
     return { reply };
