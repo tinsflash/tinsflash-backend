@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// ⚡ Nouveau client Cohere
+// ✅ Nouveau client Cohere
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
@@ -23,7 +23,7 @@ async function chatWithJean(message) {
       ]
     });
 
-    // ✅ Le SDK renvoie response.message.content[0].text
+    // ✅ Cohere renvoie ici
     const reply =
       response.message?.content?.[0]?.text ||
       response.text ||
