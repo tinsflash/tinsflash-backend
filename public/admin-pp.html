@@ -1,49 +1,203 @@
-<!-- Chat J.E.A.N. -->
-<section id="chat">
-  <h3>💬 Chat J.E.A.N.</h3>
-  <input type="text" id="chat-input" placeholder="Pose ta question...">
-  <button id="chat-send">Envoyer</button>
-  <p id="chat-response">⏳ En attente...</p>
-</section>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #161b22;
+      padding: 15px;
+      text-align: center;
+      border-bottom: 2px solid #30363d;
+    }
+    h1 {
+      margin: 0;
+      color: #58a6ff;
+    }
+    section {
+      margin: 20px;
+      padding: 15px;
+      background: #161b22;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    h3 {
+      margin-top: 0;
+      color: #ffa657;
+    }
+    button {
+      padding: 8px 15px;
+      margin-top: 10px;
+      background: #238636;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #2ea043;
+    }
+    input {
+      padding: 8px;
+      width: 80%;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: #0d1117;
+      color: #e6edf3;
+      margin-right: 10px;
+    }
+    pre {
+      font-size: 12px;
+      line-height: 1.4em;
+      background: #0d1117;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  </header>
 
-<!-- Debug IA (masqué par défaut) -->
-<section id="debug-ia" style="display:none; margin-top:15px;">
-  <h3>🛠️ Debug Cohere</h3>
-  <pre id="debug-content" style="background:#111; color:#0f0; padding:10px; border-radius:8px; max-height:200px; overflow:auto;"></pre>
-</section>
+  <!-- SuperForecast -->
+  <section>
+    <h3>🚀 SuperForecast</h3>
+    <button onclick="runSuperForecast()">Lancer Run</button>
+    <p id="sf-status">⏳ En attente…</p>
+  </section>
 
-<!-- Bouton toggle debug -->
-<button id="toggle-debug" style="margin-top:10px;">Afficher debug IA</button>
+  <!-- Prévisions -->
+  <section>
+    <h3>📡 Prévisions nationales (BE / FR multi-zones / USA)</h3>
+    <div id="forecast-list">⏳ Chargement…</div>
+    <button onclick="publishToIndex()">Publier vers index</button>
+  </section>
 
-<script>
-  const chatInput = document.getElementById("chat-input");
-  const chatSend = document.getElementById("chat-send");
-  const chatResponse = document.getElementById("chat-response");
-  const debugSection = document.getElementById("debug-ia");
-  const debugContent = document.getElementById("debug-content");
-  const toggleDebug = document.getElementById("toggle-debug");
+  <!-- Alertes -->
+  <section>
+    <h3>⚠️ Alertes</h3>
+    <div id="alerts">Aucune alerte</div>
+  </section>
 
-  // Toggle affichage debug
-  toggleDebug.addEventListener("click", () => {
-    debugSection.style.display = debugSection.style.display === "none" ? "block" : "none";
-  });
+  <!-- Chat J.E.A.N. -->
+  <section>
+    <h3>🤖 Chat J.E.A.N.</h3>
+    <input type="text" id="chat-input" placeholder="Pose ta question..." />
+    <button id="chat-send">Envoyer</button>
+    <p id="chat-response">⏳ En attente...</p>
+  </section>
 
-  chatSend.addEventListener("click", async () => {
-    const message = chatInput.value;
-    chatResponse.textContent = "⏳ J.E.A.N. réfléchit...";
+  <!-- Debug IA -->
+  <section id="debug-ia" style="display:none;">
+    <h3>🛠️ Debug Cohere</h3>
+    <pre id="debug-content"></pre>
+  </section>
+  <button id="toggle-debug">Afficher debug IA</button>
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+  <!-- Logs -->
+  <section>
+    <h3>📜 Logs</h3>
+    <div id="logs">⏳ Chargement…</div>
+  </section>
+
+  <script>
+    async function runSuperForecast() {
+      document.getElementById("sf-status").textContent = "⏳ Run en cours…";
+      const res = await fetch("/api/superforecast/run", { method: "POST" });
+      const data = await res.json();
+      document.getElementById("sf-status").textContent = "✅ Run terminé";
+      loadLogs();
+    }
+
+    async function publishToIndex() {
+      alert("📤 Prévisions publiées vers l’index (simulation front, côté serveur déjà branché).");
+    }
+
+    async function loadForecasts() {
+      const res = await fetch("/api/forecasts");
+      const data = await res.json();
+      const container = document.getElementById("forecast-list");
+      if (!data || data.length === 0) {
+        container.textContent = "⚠️ Aucune prévision disponible.";
+        return;
+      }
+      container.innerHTML = data.map(f =>
+        `<div><strong>${f.zone || "N/A"}</strong> – ${f.minTemp ?? "?"}° / ${f.maxTemp ?? "?"}° – 🌧️ ${f.precip ?? "?"}% – 💨 ${f.wind ?? "?"} km/h</div>`
+      ).join("");
+    }
+
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      const container = document.getElementById("alerts");
+      if (!data || data.length === 0) {
+        container.textContent = "⚠️ Aucune alerte.";
+        return;
+      }
+      container.innerHTML = data.map(a =>
+        `<div>🚨 ${a.type} – ${a.zone} (${a.level})</div>`
+      ).join("");
+    }
+
+    async function loadLogs() {
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      const container = document.getElementById("logs");
+      if (!data || data.length === 0) {
+        container.textContent = "⚠️ Aucun log.";
+        return;
+      }
+      container.innerHTML = data.map(l =>
+        `<div>[${l.date}] ${l.message}</div>`
+      ).join("");
+    }
+
+    // Chat JEAN
+    const chatInput = document.getElementById("chat-input");
+    const chatSend = document.getElementById("chat-send");
+    const chatResponse = document.getElementById("chat-response");
+    const debugSection = document.getElementById("debug-ia");
+    const debugContent = document.getElementById("debug-content");
+    const toggleDebug = document.getElementById("toggle-debug");
+
+    toggleDebug.addEventListener("click", () => {
+      debugSection.style.display = debugSection.style.display === "none" ? "block" : "none";
     });
 
-    const data = await res.json();
-    chatResponse.textContent = data.reply || "⚠️ Réponse indisponible";
+    chatSend.addEventListener("click", async () => {
+      const message = chatInput.value;
+      chatResponse.textContent = "⏳ J.E.A.N. réfléchit...";
 
-    // Afficher debug brut si dispo
-    if (data.debug) {
-      debugContent.textContent = JSON.stringify(data.debug, null, 2);
-    }
-  });
-</script>
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+
+      const data = await res.json();
+      chatResponse.textContent = data.reply || "⚠️ Réponse indisponible";
+
+      if (data.debug) {
+        debugContent.textContent = JSON.stringify(data.debug, null, 2);
+      }
+    });
+
+    // Auto-load
+    loadForecasts();
+    loadAlerts();
+    loadLogs();
+  </script>
+</body>
+</html>
