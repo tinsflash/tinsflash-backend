@@ -1,42 +1,31 @@
 // services/chatService.js
-import dotenv from "dotenv";
-import { CohereClient } from "cohere-ai";
+import cohere from "cohere-ai";
 
-dotenv.config();
+cohere.init(process.env.COHERE_API_KEY);
 
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY, // clé API Cohere
-});
-
-/**
- * Fonction pour discuter avec J.E.A.N.
- * @param {string} userMessage - Le message envoyé par l'utilisateur/admin
- */
-async function chatWithJean(userMessage) {
+async function askJEAN(userMessage) {
   try {
-    // ✅ Appel API Cohere (syntaxe correcte : message au singulier)
     const response = await cohere.chat({
       model: "command-r-plus",
-      message: userMessage,
+      messages: [
+        { role: "user", content: userMessage }
+      ]
     });
 
-    // ✅ Extraction robuste de la réponse
-    let reply = "❌ Pas de réponse de J.E.A.N.";
-    if (response?.text) {
-      reply = response.text;
-    } else if (response?.output_text) {
-      reply = response.output_text;
-    } else if (response?.generations?.[0]?.text) {
-      reply = response.generations[0].text;
-    } else if (response?.message?.content?.[0]?.text) {
-      reply = response.message.content[0].text;
+    let reply;
+    if (response.text) {
+      reply = response.text; // Anciennes versions SDK
+    } else if (response.message?.content) {
+      reply = response.message.content[0].text; // Nouvelles versions SDK
+    } else {
+      reply = "⚠️ Réponse IA vide ou non reconnue";
     }
 
-    return { text: reply };
+    return reply;
   } catch (err) {
-    console.error("❌ Erreur chatWithJean:", err);
-    return { text: `❌ Erreur IA Cohere: ${err.message}` };
+    console.error("❌ Erreur IA JEAN :", err.message);
+    return "⚠️ JEAN indisponible, erreur IA.";
   }
 }
 
-export default chatWithJean;
+export default { askJEAN };
