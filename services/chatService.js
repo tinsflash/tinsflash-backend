@@ -3,10 +3,16 @@ import fetch from "node-fetch";
 import { addLog } from "./logsService.js";
 
 /**
- * Chat avec J.E.A.N. (IA météo nucléaire)
+ * Chat avec J.E.A.N. (IA experte météo/climat)
  */
-async function chatWithJean(message) {
+export async function chatWithJean(message) {
   try {
+    if (!message || message.trim().length === 0) {
+      throw new Error("Message vide envoyé à J.E.A.N.");
+    }
+
+    await addLog(`💬 Question à J.E.A.N.: ${message}`);
+
     const res = await fetch("https://api.cohere.ai/v1/chat", {
       method: "POST",
       headers: {
@@ -14,28 +20,36 @@ async function chatWithJean(message) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-plus-08-2024", // ✅ modèle mis à jour
+        model: "command-r-plus-08-2024", // ✅ modèle actif depuis sept 2025
         messages: [
-          { role: "system", content: "Tu es J.E.A.N., une IA experte météo et climatologue nucléaire. Donne des réponses précises, pointues et 100 % réelles." },
-          { role: "user", content: message }
+          {
+            role: "system",
+            content: `Tu es J.E.A.N., intelligence artificielle nucléaire météo,
+            le meilleur météorologue et climatologue au monde.
+            Tu croises GFS, ECMWF, ICON, Copernicus ERA5, Meteomatics, NASA POWER.
+            Tu analyses relief, océans, anomalies saisonnières, inondations, sécheresses.
+            Tes réponses doivent être 100% réelles, pointues, utiles pour experts, communes,
+            agriculteurs et NASA. Aucun test, aucune simulation, uniquement du réel.`,
+          },
+          { role: "user", content: message },
         ],
       }),
     });
 
     const data = await res.json();
 
-    if (!data?.text && !data?.message?.content?.[0]?.text) {
-      throw new Error("Réponse Cohere invalide: " + JSON.stringify(data));
-    }
+    const reply =
+      data?.text ||
+      data?.message?.content?.[0]?.text ||
+      "⚠️ Réponse indisponible";
 
-    const reply = data.text || data.message.content[0].text;
+    await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
 
-    await addLog("🤖 Réponse IA J.E.A.N.: " + reply);
     return reply;
   } catch (err) {
-    console.error("❌ Erreur JEAN:", err.message);
-    await addLog("❌ Erreur JEAN: " + err.message);
-    return "Erreur IA: " + err.message;
+    console.error("❌ Erreur chatWithJean:", err.message);
+    await addLog("❌ Erreur chatWithJean: " + err.message);
+    return "⚠️ Erreur IA J.E.A.N.";
   }
 }
 
