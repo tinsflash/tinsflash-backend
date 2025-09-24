@@ -17,7 +17,7 @@ import openaiRoutes from "./routes/openai.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alerts.js";
+import Alert from "./models/Alert.js"; // ✅ Correction ici
 
 dotenv.config();
 
