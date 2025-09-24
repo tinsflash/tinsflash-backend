@@ -10,14 +10,14 @@ import forecastService from "./services/forecastService.js";
 import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
-import chatService from "./services/chatService.js"; // 👈 ajouté pour IA Cohere
+import chatService from "./services/chatService.js"; // ✅ IA Cohere
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alerts.js";
+import Alert from "./models/Alert.js"; // ✅ corrigé (singulier, correspond au zip)
 
+// === Initialisation ===
 dotenv.config();
-
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -35,7 +35,7 @@ app.use("/api/superforecast", superForecast);
 app.use("/api/alerts", alertsService);
 app.use("/api/radar", radarService);
 app.use("/api/podcast", podcastService);
-app.use("/api/chat", chatService); // 👈 nouvelle route IA J.E.A.N.
+app.use("/api/chat", chatService); // ✅ ajout route IA
 
 // ==============================
 // 🚀 Server start
