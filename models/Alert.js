@@ -1,21 +1,19 @@
-// models/Alerts.js
+// models/Alert.js
 import mongoose from "mongoose";
 
 const AlertSchema = new mongoose.Schema(
   {
-    zone: { type: String, required: true }, // ex. "FR-NO", "USA-CA", "BE"
-    type: { type: String, default: "meteo" }, // météo, climatique, etc.
-    message: { type: String, required: true }, // texte généré par J.E.A.N.
-    confidence: { type: Number, default: 0 }, // certitude % (IA)
-    status: {
-      type: String,
-      enum: ["✅", "⚠️", "❌"],
-      default: "⚠️", // par défaut → en attente
-    },
-    source: { type: String, default: "JEAN" }, // ex. JEAN, NOAA, Copernicus
-    published: { type: Boolean, default: false }, // publié ou pas
+    title: { type: String, required: true },         // ex. "Tempête violente"
+    description: { type: String, required: true },   // détail de l'alerte
+    country: { type: String, required: true },       // ex. "FR", "USA-CA"
+    severity: { type: String, enum: ["low", "medium", "high", "extreme"], default: "medium" },
+    certainty: { type: Number, min: 0, max: 100, required: true }, // % de certitude
+    issuedAt: { type: Date, default: Date.now },     // horodatage alerte
+    source: { type: String, default: "Tinsflash Nuclear Core" },   // toujours clair 🚀
+    status: { type: String, enum: ["✅ Premier détecteur", "⚠️ Déjà signalé", "❌ Doublon"], default: "✅ Premier détecteur" }
   },
-  { timestamps: true } // ajoute createdAt et updatedAt
+  { timestamps: true }
 );
 
-export default mongoose.model("Alert", AlertSchema);
+const Alert = mongoose.model("Alert", AlertSchema);
+export default Alert;
