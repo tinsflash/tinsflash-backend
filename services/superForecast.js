@@ -24,10 +24,10 @@ function buildForecastData(fusionData) {
   results.push({
     country: "BE",
     date: today,
-    minTemp: fusionData.BE?.min ?? null,
-    maxTemp: fusionData.BE?.max ?? null,
-    rainProbability: fusionData.BE?.rain ?? null,
-    windSpeed: fusionData.BE?.wind ?? null,
+    minTemp: fusionData.BE?.min || null,
+    maxTemp: fusionData.BE?.max || null,
+    rainProbability: fusionData.BE?.rain || null,
+    windSpeed: fusionData.BE?.wind || null,
   });
 
   // 🇫🇷 France (multi-zones)
@@ -35,10 +35,10 @@ function buildForecastData(fusionData) {
     results.push({
       country: `FR-${zone}`,
       date: today,
-      minTemp: fusionData[`FR-${zone}`]?.min || fusionData.FR?.min ?? null,
-      maxTemp: fusionData[`FR-${zone}`]?.max || fusionData.FR?.max ?? null,
-      rainProbability: fusionData[`FR-${zone}`]?.rain || fusionData.FR?.rain ?? null,
-      windSpeed: fusionData[`FR-${zone}`]?.wind || fusionData.FR?.wind ?? null,
+      minTemp: fusionData[`FR-${zone}`]?.min || fusionData.FR?.min || null,
+      maxTemp: fusionData[`FR-${zone}`]?.max || fusionData.FR?.max || null,
+      rainProbability: fusionData[`FR-${zone}`]?.rain || fusionData.FR?.rain || null,
+      windSpeed: fusionData[`FR-${zone}`]?.wind || fusionData.FR?.wind || null,
     });
   });
 
@@ -47,19 +47,19 @@ function buildForecastData(fusionData) {
     results.push({
       country: `USA-${state}`,
       date: today,
-      minTemp: fusionData[`USA-${state}`]?.min || fusionData.USA?.min ?? null,
-      maxTemp: fusionData[`USA-${state}`]?.max || fusionData.USA?.max ?? null,
-      rainProbability: fusionData[`USA-${state}`]?.rain || fusionData.USA?.rain ?? null,
-      windSpeed: fusionData[`USA-${state}`]?.wind || fusionData.USA?.wind ?? null,
+      minTemp: fusionData[`USA-${state}`]?.min || fusionData.USA?.min || null,
+      maxTemp: fusionData[`USA-${state}`]?.max || fusionData.USA?.max || null,
+      rainProbability: fusionData[`USA-${state}`]?.rain || fusionData.USA?.rain || null,
+      windSpeed: fusionData[`USA-${state}`]?.wind || fusionData.USA?.wind || null,
     });
   });
   results.push({
     country: "USA",
     date: today,
-    minTemp: fusionData.USA?.min ?? null,
-    maxTemp: fusionData.USA?.max ?? null,
-    rainProbability: fusionData.USA?.rain ?? null,
-    windSpeed: fusionData.USA?.wind ?? null,
+    minTemp: fusionData.USA?.min || null,
+    maxTemp: fusionData.USA?.max || null,
+    rainProbability: fusionData.USA?.rain || null,
+    windSpeed: fusionData.USA?.wind || null,
   });
 
   // 🌍 Autres pays couverts (Europe élargie + UK + UA)
@@ -68,10 +68,10 @@ function buildForecastData(fusionData) {
       results.push({
         country: cc,
         date: today,
-        minTemp: fusionData[cc]?.min ?? null,
-        maxTemp: fusionData[cc]?.max ?? null,
-        rainProbability: fusionData[cc]?.rain ?? null,
-        windSpeed: fusionData[cc]?.wind ?? null,
+        minTemp: fusionData[cc]?.min || null,
+        maxTemp: fusionData[cc]?.max || null,
+        rainProbability: fusionData[cc]?.rain || null,
+        windSpeed: fusionData[cc]?.wind || null,
       });
     }
   });
