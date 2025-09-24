@@ -3,69 +3,25 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // === Services ===
 import superForecast from "./services/superForecast.js";
 import forecastService from "./services/forecastService.js";
 import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
-import podcastService from "./services/podcastService.js";
+import podcastService from "./services/podcastService.js"; // encore là si besoin futur
 import chatService from "./services/chatService.js";
 import { addLog, getLogs } from "./services/logsService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js"; // ✅ cohérent
+import Alert from "./models/Alert.js"; // ✅ corrigé (singulier, correspond au fichier)
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
-
-// ==============================
-// 🔐 Protection Admin (Basic Auth)
-// ==============================
-function adminAuthMiddleware(req, res, next) {
-  const isAdminPath =
-    req.path === "/admin-pp.html" || req.path.startsWith("/admin");
-  if (!isAdminPath) return next();
-
-  const auth = req.headers.authorization;
-  if (!auth) {
-    res.setHeader("WWW-Authenticate", 'Basic realm="Tinsflash Admin"');
-    return res.status(401).send("Authentification requise");
-  }
-
-  const parts = auth.split(" ");
-  if (parts.length !== 2 || parts[0] !== "Basic") {
-    return res.status(400).send("Format d'auth non supporté");
-  }
-
-  const decoded = Buffer.from(parts[1], "base64").toString("utf8");
-  const [user, pass] = decoded.split(":");
-  const ADMIN_USER = "admin";
-  const ADMIN_PASS = "202679";
-
-  if (user === ADMIN_USER && pass === ADMIN_PASS) {
-    return next();
-  } else {
-    res.setHeader("WWW-Authenticate", 'Basic realm="Tinsflash Admin"');
-    return res.status(401).send("Authentification échouée");
-  }
-}
-
-app.use(adminAuthMiddleware);
-
-// ==============================
-// 📂 Fichiers statiques
-// ==============================
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use(express.static(path.join(__dirname, "public")));
 
 // ==============================
 // 📡 MongoDB connection
@@ -89,6 +45,7 @@ app.post("/api/superforecast/run", async (req, res) => {
     const result = await superForecast.runSuperForecast(data);
     res.json(result);
   } catch (err) {
+    await addLog(`❌ Erreur SuperForecast: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
@@ -99,6 +56,7 @@ app.get("/api/forecasts", async (req, res) => {
     const forecasts = await Forecast.find().sort({ date: -1 }).limit(50);
     res.json(forecasts);
   } catch (err) {
+    await addLog(`❌ Erreur récupération forecasts: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
@@ -109,6 +67,7 @@ app.get("/api/alerts", async (req, res) => {
     const alerts = await Alert.find().sort({ createdAt: -1 }).limit(50);
     res.json(alerts);
   } catch (err) {
+    await addLog(`❌ Erreur récupération alerts: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
@@ -119,6 +78,7 @@ app.post("/api/alerts", async (req, res) => {
     const alert = await alertsService.createAlert(req.body);
     res.json(alert);
   } catch (err) {
+    await addLog(`❌ Erreur création alert: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
@@ -127,9 +87,10 @@ app.post("/api/alerts", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    const reply = await chatService.chatWithJean(message);
-    res.json({ reply });
+    const result = await chatService.chatWithJean(message);
+    res.json(result);
   } catch (err) {
+    await addLog(`❌ Erreur chat JEAN: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
@@ -150,16 +111,18 @@ app.get("/api/radar", async (req, res) => {
     const radar = await radarService.getRadar();
     res.json(radar);
   } catch (err) {
+    await addLog(`❌ Erreur radar: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Podcast (bulletin météo audio)
+// Podcast (bulletin météo audio) – tu peux le retirer si inutile
 app.get("/api/podcast", async (req, res) => {
   try {
     const audio = await podcastService.generatePodcast();
     res.json(audio);
   } catch (err) {
+    await addLog(`❌ Erreur podcast: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
@@ -169,5 +132,5 @@ app.get("/api/podcast", async (req, res) => {
 // ==============================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
-  console.log(`🚀 Serveur météo nucléaire actif sur le port ${PORT}`)
+  console.log(`🚀 Centrale météo nucléaire active sur le port ${PORT}`)
 );
