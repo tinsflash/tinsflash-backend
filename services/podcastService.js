@@ -1,16 +1,24 @@
 // services/podcastService.js
+import express from "express";
+import Podcast from "../utils/podcast.js";
 
-async function generatePodcast(text) {
+const router = express.Router();
+
+// ================================
+// 🎙️ Podcasts météo
+// ================================
+router.get("/", async (req, res) => {
   try {
-    return {
-      text,
-      audioUrl: "https://example.com/podcast.mp3",
-      createdAt: new Date()
-    };
+    const podcast = await Podcast.generate();
+    res.json({
+      status: "✅ OK",
+      source: "podcastService",
+      podcast,
+    });
   } catch (err) {
-    console.error("❌ PodcastService error:", err.message);
-    return null;
+    console.error("❌ Erreur podcastService:", err.message);
+    res.status(500).json({ error: "Erreur podcast météo" });
   }
-}
+});
 
-export default { generatePodcast };
+export default router;
