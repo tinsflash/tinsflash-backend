@@ -1,35 +1,30 @@
 // services/chatService.js
-import { CohereClient } from "cohere-ai";
-import dotenv from "dotenv";
+import express from "express";
+import { CohereClientV2 } from "cohere-ai";
 
-dotenv.config();
+const router = express.Router();
 
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY,
+const cohere = new CohereClientV2({
+  apiKey: process.env.COHERE_API_KEY, // clé API stockée dans Render
 });
 
-async function chatWithJean(message) {
+// POST /api/chat
+router.post("/", async (req, res) => {
+  const { message } = req.body;
   try {
-    const cleaned = (message || "").trim();
-    if (cleaned.length < 2) {
-      return { reply: "⚠️ Pose une vraie question météo (au moins 2 caractères)." };
-    }
-
     const response = await cohere.chat({
-      model: "command-r",  // ✅ modèle valide (septembre 2025)
-      message: cleaned,
+      model: "command-a-03-2025",
+      messages: [
+        { role: "user", content: message }
+      ],
     });
 
-    const reply =
-      response.message?.content?.[0]?.text ||
-      response.text ||
-      "❌ Pas de réponse IA";
-
-    return { reply };
+    const reply = response.message.content[0].text;
+    res.json({ reply });
   } catch (err) {
-    console.error("❌ Erreur chat JEAN:", err);
-    return { reply: `❌ Erreur IA: ${err.message}` };
+    console.error("❌ Chat IA error:", err.message);
+    res.status(500).json({ reply: "Erreur serveur IA." });
   }
-}
+});
 
-export default { chatWithJean };
+export default router;
