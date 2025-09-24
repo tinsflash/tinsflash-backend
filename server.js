@@ -5,19 +5,17 @@ import dotenv from "dotenv";
 import cors from "cors";
 
 // === Services ===
+import superForecast from "./services/superForecast.js";
 import forecastService from "./services/forecastService.js";
-import superForecastService from "./services/superForecast.js";
 import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
-import { getLogs } from "./services/logsService.js";
+import { addLog, getLogs } from "./services/logsService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js";
-import Log from "./models/Log.js";
-import User from "./models/User.js";
+import Alert from "./models/Alerts.js";
 
 dotenv.config();
 
@@ -25,159 +23,105 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// === MongoDB connection ===
+// ==============================
+// 📡 MongoDB connection
+// ==============================
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
   .then(() => console.log("✅ MongoDB connecté"))
-  .catch((err) => console.error("❌ Erreur connexion MongoDB:", err));
+  .catch((err) => console.error("❌ Erreur MongoDB:", err));
 
 // ==============================
-// 📡 API ROUTES
+// 🚀 API ROUTES
 // ==============================
 
-// === Prévisions météo ===
-app.get("/api/forecast/:country", async (req, res) => {
+// Run SuperForecast (manuel)
+app.post("/api/superforecast/run", async (req, res) => {
   try {
-    const { country } = req.params;
-    const data = await forecastService.getForecast(country);
-    res.json(data);
-  } catch (err) {
-    console.error("❌ Erreur /api/forecast:", err.message);
-    res.status(500).json({ error: "Forecast API failed" });
-  }
-});
-
-// === SuperForecast (centrale nucléaire météo) ===
-app.post("/api/superforecast", async (req, res) => {
-  try {
-    const { forecastData } = req.body;
-    const result = await superForecastService.runSuperForecast(forecastData);
+    const data = req.body || {};
+    const result = await superForecast.runSuperForecast(data);
     res.json(result);
   } catch (err) {
-    console.error("❌ Erreur /api/superforecast:", err.message);
-    res.status(500).json({ error: "SuperForecast API failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// === Alertes ===
+// Get latest forecasts
+app.get("/api/forecasts", async (req, res) => {
+  try {
+    const forecasts = await Forecast.find().sort({ date: -1 }).limit(50);
+    res.json(forecasts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    const alerts = await alertsService.getAlerts();
+    const alerts = await Alert.find().sort({ createdAt: -1 }).limit(50);
     res.json(alerts);
   } catch (err) {
-    console.error("❌ Erreur /api/alerts:", err.message);
-    res.status(500).json({ error: "Alerts API failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
+// Create alert (manual override)
 app.post("/api/alerts", async (req, res) => {
   try {
     const alert = await alertsService.createAlert(req.body);
     res.json(alert);
   } catch (err) {
-    console.error("❌ Erreur création alerte:", err.message);
-    res.status(500).json({ error: "Create alert failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.put("/api/alerts/:id/validate", async (req, res) => {
+// Chat with J.E.A.N.
+app.post("/api/chat", async (req, res) => {
   try {
-    const alert = await alertsService.validateAlert(req.params.id);
-    res.json(alert);
+    const { message } = req.body;
+    const reply = await chatService.chatWithJean(message);
+    res.json({ reply });
   } catch (err) {
-    console.error("❌ Erreur validation alerte:", err.message);
-    res.status(500).json({ error: "Validate alert failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.delete("/api/alerts/:id", async (req, res) => {
+// Logs
+app.get("/api/logs", async (req, res) => {
   try {
-    const alert = await alertsService.deleteAlert(req.params.id);
-    res.json(alert);
+    const logs = await getLogs();
+    res.json(logs);
   } catch (err) {
-    console.error("❌ Erreur suppression alerte:", err.message);
-    res.status(500).json({ error: "Delete alert failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// === Radar ===
+// Radar proxy
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
     res.json(radar);
   } catch (err) {
-    console.error("❌ Erreur /api/radar:", err.message);
-    res.status(500).json({ error: "Radar API failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// === Podcasts météo ===
-app.get("/api/podcasts", async (req, res) => {
+// Podcast (bulletin météo audio)
+app.get("/api/podcast", async (req, res) => {
   try {
-    const podcasts = await podcastService.getPodcasts();
-    res.json(podcasts);
+    const audio = await podcastService.generatePodcast();
+    res.json(audio);
   } catch (err) {
-    console.error("❌ Erreur /api/podcasts:", err.message);
-    res.status(500).json({ error: "Podcast API failed" });
-  }
-});
-
-// === Chat avec J.E.A.N. ===
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-    const reply = await chatService.askJEAN(message);
-    res.json({ reply });
-  } catch (err) {
-    console.error("❌ Erreur /api/chat:", err.message);
-    res.status(500).json({ error: "Chat API failed" });
-  }
-});
-
-// === Admin : Logs ===
-app.get("/api/admin/logs", async (req, res) => {
-  try {
-    const logs = await getLogs(200);
-    res.json(logs.map(l => `[${l.createdAt.toISOString()}] ${l.message}`));
-  } catch (err) {
-    console.error("❌ Erreur /api/admin/logs:", err.message);
-    res.status(500).json({ error: "Logs API failed" });
-  }
-});
-
-// === Admin : Utilisateurs ===
-app.get("/api/admin/users", async (req, res) => {
-  try {
-    const stats = await User.aggregate([
-      {
-        $group: {
-          _id: { type: "$type", zone: "$zone" },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          type: "$_id.type",
-          zone: "$_id.zone",
-          count: 1
-        }
-      }
-    ]);
-    res.json(stats);
-  } catch (err) {
-    console.error("❌ Erreur /api/admin/users:", err.message);
-    res.status(500).json({ error: "Users API failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // ==============================
-// 🚀 Start server
+// 🌍 Server start
 // ==============================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`⚡ Centrale Nucléaire Météo active sur port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Serveur météo nucléaire actif sur le port ${PORT}`));
