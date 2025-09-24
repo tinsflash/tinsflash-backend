@@ -2,83 +2,51 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Console IA – J.E.A.N.</title>
+  <title>Admin Chat IA</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0b0e11;
-      color: #f0f0f0;
-      padding: 20px;
-    }
-    #chat-box {
-      width: 100%;
-      height: 400px;
-      border: 1px solid #444;
-      padding: 10px;
-      overflow-y: auto;
-      background: #1a1d21;
-    }
-    .user { color: #4FC3F7; margin: 5px 0; }
-    .assistant { color: #A5D6A7; margin: 5px 0; }
-    #input-area {
-      margin-top: 10px;
-    }
-    #message {
-      width: 80%;
-      padding: 8px;
-      border: none;
-      border-radius: 4px;
-    }
-    #send {
-      padding: 8px 12px;
-      background: #4FC3F7;
-      color: #000;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #send:hover {
-      background: #0288D1;
-    }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+    #chatBox { width: 100%; height: 300px; border: 1px solid #ccc; padding: 10px; overflow-y: auto; background: #fff; }
+    #userInput { width: 80%; padding: 10px; }
+    #sendBtn { padding: 10px 15px; }
   </style>
 </head>
 <body>
-  <h1>💬 Console IA – J.E.A.N.</h1>
-  <div id="chat-box"></div>
-  <div id="input-area">
-    <input type="text" id="message" placeholder="Pose ta question ici...">
-    <button id="send">Envoyer</button>
-  </div>
+  <h2>Console Admin – Chat IA J.E.A.N.</h2>
+  <div id="chatBox"></div>
+  <br>
+  <input type="text" id="userInput" placeholder="Écris ton message...">
+  <button id="sendBtn">Envoyer</button>
 
   <script>
-    const chatBox = document.getElementById("chat-box");
-    const sendBtn = document.getElementById("send");
-    const msgInput = document.getElementById("message");
+    const chatBox = document.getElementById("chatBox");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
 
-    function appendMessage(role, text) {
-      const div = document.createElement("div");
-      div.className = role;
-      div.textContent = role.toUpperCase() + ": " + text;
-      chatBox.appendChild(div);
+    function appendMessage(sender, text) {
+      const msg = document.createElement("div");
+      msg.textContent = sender + ": " + text;
+      chatBox.appendChild(msg);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     sendBtn.addEventListener("click", async () => {
-      const text = msgInput.value.trim();
-      if (!text) return;
-      appendMessage("user", text);
-      msgInput.value = "";
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      appendMessage("👤 Toi", message);
+      userInput.value = "";
 
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text })
+          body: JSON.stringify({ message })
         });
+
         const data = await res.json();
-        appendMessage("assistant", data.reply);
+        appendMessage("🤖 J.E.A.N.", data.reply);
       } catch (err) {
-        appendMessage("assistant", "⚠️ Erreur connexion IA");
+        appendMessage("❌ Erreur", "Impossible de contacter l'IA");
       }
     });
   </script>
