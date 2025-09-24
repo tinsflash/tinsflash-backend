@@ -1,71 +1,25 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Console Administrateur – Tinsflash</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b0e11;
-      color: #f0f0f0;
-    }
-    header {
-      background: #11151a;
-      padding: 15px;
-      text-align: center;
-      border-bottom: 2px solid #4FC3F7;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 1.6rem;
-      color: #4FC3F7;
-    }
-    nav {
-      background: #1a1d21;
-      padding: 10px;
-      display: flex;
-      gap: 15px;
-      border-bottom: 1px solid #333;
-    }
-    nav a {
-      color: #f0f0f0;
-      text-decoration: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    nav a:hover {
-      background: #4FC3F7;
-      color: #000;
-    }
-    main {
-      padding: 20px;
-    }
-    section {
-      margin-bottom: 25px;
-      padding: 15px;
-      background: #1a1d21;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
-    }
-    h2 {
-      color: #4FC3F7;
-      margin-top: 0;
-    }
-    iframe {
-      width: 100%;
-      height: 400px;
-      border: none;
-      background: #fff;
-      border-radius: 6px;
-    }
+    body{margin:0;font-family:Arial,sans-serif;background:#0b0e11;color:#f0f0f0}
+    header{background:#11151a;padding:15px;text-align:center;border-bottom:2px solid #4FC3F7}
+    header h1{margin:0;font-size:1.6rem;color:#4FC3F7}
+    nav{background:#1a1d21;padding:10px;display:flex;gap:15px;border-bottom:1px solid #333}
+    nav a{color:#f0f0f0;text-decoration:none;padding:6px 10px;border-radius:4px}
+    nav a:hover{background:#4FC3F7;color:#000}
+    main{padding:20px}
+    section{margin-bottom:25px;padding:15px;background:#1a1d21;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,.4)}
+    h2{color:#4FC3F7;margin-top:0}
+    iframe{width:100%;height:400px;border:none;background:#fff;border-radius:6px}
+    button{padding:8px 12px;border:0;border-radius:6px;background:#4FC3F7;color:#000;cursor:pointer}
+    button:hover{background:#0288D1}
   </style>
 </head>
 <body>
-  <header>
-    <h1>🛰️ Console Administrateur – Tinsflash</h1>
-  </header>
+  <header><h1>🛰️ Console Administrateur – Tinsflash</h1></header>
 
   <nav>
     <a href="/admin-pp.html">🏠 Tableau de bord</a>
@@ -76,7 +30,8 @@
   <main>
     <section>
       <h2>📡 SuperForecast (lancer un run)</h2>
-      <button onclick="alert('Run SuperForecast lancé 🚀');">▶️ Lancer Run</button>
+      <button id="runBtn">▶️ Lancer Run</button>
+      <span id="runMsg" style="margin-left:10px;"></span>
     </section>
 
     <section>
@@ -86,7 +41,7 @@
 
     <section>
       <h2>🌦️ Prévisions Nationales</h2>
-      <iframe src="/api/forecast"></iframe>
+      <iframe src="/api/forecasts"></iframe>
     </section>
 
     <section>
@@ -96,8 +51,21 @@
 
     <section>
       <h2>📊 Logs</h2>
-      <iframe src="/api/adminlogs"></iframe>
+      <iframe src="/api/logs"></iframe>
     </section>
   </main>
+
+  <script>
+    const runBtn = document.getElementById('runBtn');
+    const runMsg = document.getElementById('runMsg');
+    runBtn.onclick = async () => {
+      runMsg.textContent = "⏳ Lancement...";
+      try {
+        const res = await fetch("/api/superforecast/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const data = await res.json();
+        runMsg.textContent = data?.status ? `✅ ${data.status}` : "✅ Run lancé";
+      } catch(e){ runMsg.textContent = "❌ Erreur run"; }
+    };
+  </script>
 </body>
 </html>
