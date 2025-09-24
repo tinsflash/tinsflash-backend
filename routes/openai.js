@@ -1,19 +1,46 @@
-const OpenAI = require("openai");
+// routes/openai.js (corrigé → Cohere + ESM)
+import express from "express";
+import coherePkg from "cohere-ai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_KEY,
+const { CohereClient } = coherePkg;
+
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
 });
 
-async function generatePodcast(location) {
-  const prompt = `Fais un bulletin météo clair et concis pour ${location}.`;
+const router = express.Router();
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-  });
+/**
+ * Génère un bulletin météo clair et concis pour une localisation donnée
+ */
+router.get("/podcast/:location", async (req, res) => {
+  try {
+    const location = req.params.location;
 
-  return completion.choices[0].message.content;
-}
+    const response = await cohere.chat({
+      model: "command-r-plus",
+      messages: [
+        {
+          role: "user",
+          content: `Fais un bulletin météo clair et concis pour ${location}.`,
+        },
+      ],
+    });
 
-module.exports = { generatePodcast };
+    let bulletin = "";
+    if (response.text) {
+      bulletin = response.text;
+    } else if (response.message?.content?.[0]?.text) {
+      bulletin = response.message.content[0].text;
+    } else {
+      bulletin = "⚠️ Bulletin météo non disponible.";
+    }
 
+    res.json({ location, bulletin });
+  } catch (err) {
+    console.error("❌ Erreur génération podcast:", err.message);
+    res.status(500).json({ error: "Erreur génération podcast météo" });
+  }
+});
+
+export default router;
