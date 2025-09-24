@@ -15,7 +15,7 @@ import { addLog, getLogs } from "./services/logsService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alerts.js";
+import Alert from "./models/Alert.js";   // ✅ corrigé (singulier, correspond au fichier)
 
 dotenv.config();
 
@@ -59,21 +59,17 @@ app.get("/api/forecasts", async (req, res) => {
   }
 });
 
-// ==============================
-// 🚨 ALERTS
-// ==============================
-
 // Get alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    const alerts = await alertsService.getAlerts(50);
+    const alerts = await Alert.find().sort({ createdAt: -1 }).limit(50);
     res.json(alerts);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Create alert (manual override OR IA injection)
+// Create alert (manual override)
 app.post("/api/alerts", async (req, res) => {
   try {
     const alert = await alertsService.createAlert(req.body);
@@ -83,46 +79,7 @@ app.post("/api/alerts", async (req, res) => {
   }
 });
 
-// Update alert (validate / reject / edit)
-app.put("/api/alerts/:id", async (req, res) => {
-  try {
-    const updated = await alertsService.updateAlert(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ error: "Alerte non trouvée" });
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Delete alert
-app.delete("/api/alerts/:id", async (req, res) => {
-  try {
-    const deleted = await alertsService.deleteAlert(req.params.id);
-    if (!deleted) return res.status(404).json({ error: "Alerte non trouvée" });
-    res.json({ message: "Alerte supprimée avec succès" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Force publish alert (bypass IA)
-app.post("/api/alerts/publish/:id", async (req, res) => {
-  try {
-    const updated = await alertsService.updateAlert(req.params.id, {
-      status: "✅",
-      published: true,
-    });
-    if (!updated) return res.status(404).json({ error: "Alerte non trouvée" });
-    await addLog(`🚨 Alerte forcée publiée manuellement: ${updated._id}`);
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==============================
-// 💬 CHAT (J.E.A.N. IA)
-// ==============================
+// Chat with J.E.A.N.
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -133,9 +90,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// ==============================
-// 📜 LOGS
-// ==============================
+// Logs
 app.get("/api/logs", async (req, res) => {
   try {
     const logs = await getLogs();
@@ -145,9 +100,7 @@ app.get("/api/logs", async (req, res) => {
   }
 });
 
-// ==============================
-// 🛰️ RADAR
-// ==============================
+// Radar proxy
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
@@ -157,9 +110,7 @@ app.get("/api/radar", async (req, res) => {
   }
 });
 
-// ==============================
-// 🎙️ PODCAST
-// ==============================
+// Podcast (bulletin météo audio)
 app.get("/api/podcast", async (req, res) => {
   try {
     const audio = await podcastService.generatePodcast();
