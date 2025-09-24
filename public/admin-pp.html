@@ -1,149 +1,149 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <title>🛰️ Console Admin TINSFLASH</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background:#0a0f1c; color:#00ffea; font-family:"Orbitron", Arial, sans-serif; margin:0; }
+    header { text-align:center; padding:20px; border-bottom:2px solid #00ffea; }
+    h1 { margin:0; color:#00ffea; text-shadow:0 0 10px #00fbe7; }
+    .container { padding:20px; max-width:1200px; margin:auto; display:grid; gap:20px; }
+    .card { background:#111830; border:1px solid #00ffea; border-radius:12px; padding:20px; box-shadow:0 0 15px rgba(0,255,234,0.3); }
+    h2 { color:#00fbe7; margin-top:0; text-shadow:0 0 8px #00d9ff; }
+    .btn { background:#00ffea; color:#000; border:none; padding:10px 15px; margin:5px; border-radius:8px; font-weight:bold; cursor:pointer; }
+    .btn:hover { background:#00d9ff; }
+    #logs { background:#000; color:#0f0; font-family:monospace; padding:10px; height:200px; overflow-y:auto; border-radius:6px; }
+    textarea,input,select { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none; background:#0c1a2b; color:#fff; }
+  </style>
+  <script>
+    // 🔐 Protection par mot de passe
+    document.addEventListener("DOMContentLoaded", () => {
+      const pass = prompt("Mot de passe Admin ?");
+      if(pass !== "202679") {
+        alert("⛔ Accès refusé");
+        window.location.href = "index.html";
+      }
+    });
+  </script>
 </head>
 <body>
   <header>
-    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+    <h1>🛰️ Console Administrateur – Mode NASA</h1>
   </header>
+  <div class="container">
 
-  <!-- SuperForecast -->
-  <section>
-    <h3>🚀 SuperForecast</h3>
-    <button onclick="runSuperForecast()">Lancer Run</button>
-    <p id="sf-status">⏳ En attente…</p>
-  </section>
+    <!-- SuperForecast -->
+    <div class="card">
+      <h2>⚡ SuperForecast</h2>
+      <button class="btn" onclick="runSuperForecast()">🚀 Lancer Run</button>
+      <div id="forecast-status">⏳ En attente...</div>
+    </div>
 
-  <!-- Prévisions -->
-  <section>
-    <h3>📡 Prévisions nationales (BE / FR multi-zones / USA)</h3>
-    <div id="forecast-list">⏳ Chargement…</div>
-    <button onclick="publishToIndex()">Publier vers index</button>
-  </section>
+    <!-- Prévisions Nationales -->
+    <div class="card">
+      <h2>🌍 Prévisions Nationales</h2>
+      <div id="forecast-be">🇧🇪 ⏳ Belgique...</div>
+      <div id="forecast-fr">🇫🇷 ⏳ France...</div>
+    </div>
 
-  <!-- Alertes -->
-  <section>
-    <h3>⚠️ Alertes</h3>
-    <div id="alerts">Aucune alerte</div>
-  </section>
+    <!-- Alertes -->
+    <div class="card">
+      <h2>⚠️ Alertes</h2>
+      <div id="alerts">⏳ Chargement...</div>
+    </div>
 
-  <!-- Chat J.E.A.N. -->
-  <section>
-    <h3>🤖 Chat J.E.A.N.</h3>
-    <input type="text" id="chat-input" placeholder="Pose ta question..." />
-    <button id="chat-send">Envoyer</button>
-    <p id="chat-response">⏳ En attente...</p>
-  </section>
+    <!-- Statistiques utilisateurs -->
+    <div class="card">
+      <h2>📊 Statistiques Utilisateurs</h2>
+      <div id="user-stats">⏳ Chargement...</div>
+    </div>
 
-  <!-- Debug IA -->
-  <section id="debug-ia" style="display:none;">
-    <h3>🛠️ Debug Cohere</h3>
-    <pre id="debug-content" style="background:#111; color:#0f0; padding:10px; border-radius:8px; max-height:200px; overflow:auto;"></pre>
-  </section>
-  <button id="toggle-debug">Afficher debug IA</button>
+    <!-- Chat IA -->
+    <div class="card">
+      <h2>🤖 IA J.E.A.N.</h2>
+      <textarea id="ai-input" placeholder="Posez une question..."></textarea>
+      <button class="btn" onclick="sendChat()">Envoyer</button>
+      <div id="ai-response"></div>
+    </div>
 
-  <!-- Logs -->
-  <section>
-    <h3>📜 Logs</h3>
-    <div id="logs">⏳ Chargement…</div>
-  </section>
+    <!-- Logs -->
+    <div class="card">
+      <h2>📜 Logs</h2>
+      <div id="logs">⏳ Attente logs...</div>
+    </div>
+  </div>
 
   <script>
-    async function runSuperForecast() {
-      document.getElementById("sf-status").textContent = "⏳ Run en cours…";
-      const res = await fetch("/api/superforecast/run", { method: "POST" });
-      const data = await res.json();
-      document.getElementById("sf-status").textContent = "✅ Run terminé";
-      loadLogs();
-    }
+    const API_BASE = "/api"; // Render sert déjà sur ton domaine
 
-    async function publishToIndex() {
-      alert("📤 Prévisions publiées vers l’index (front).");
+    async function runSuperForecast() {
+      document.getElementById("forecast-status").innerText = "⏳ Calcul en cours...";
+      try {
+        const res = await fetch(`${API_BASE}/superforecast/run`, { method: "POST" });
+        const data = await res.json();
+        document.getElementById("forecast-status").innerText = "✅ Run terminé";
+        loadForecasts();
+        loadLogs();
+      } catch (err) {
+        document.getElementById("forecast-status").innerText = "❌ Erreur Run";
+      }
     }
 
     async function loadForecasts() {
-      const res = await fetch("/api/forecasts");
-      const data = await res.json();
-      const container = document.getElementById("forecast-list");
-      if (!data || data.length === 0) {
-        container.textContent = "⚠️ Aucune prévision disponible.";
-        return;
+      try {
+        const res = await fetch(`${API_BASE}/forecasts`);
+        const data = await res.json();
+        document.getElementById("forecast-be").innerText =
+          "🇧🇪 Belgique : " + (data.find(f => f.country === "BE")?.summary || "N/A");
+        document.getElementById("forecast-fr").innerText =
+          "🇫🇷 France : " + (data.find(f => f.country === "FR")?.summary || "N/A");
+      } catch {
+        document.getElementById("forecast-be").innerText = "❌ Erreur BE";
+        document.getElementById("forecast-fr").innerText = "❌ Erreur FR";
       }
-      container.innerHTML = data.map(f =>
-        `<div><strong>${f.zone || "N/A"}</strong> – ${f.minTemp ?? "?"}° / ${f.maxTemp ?? "?"}° – 🌧️ ${f.precip ?? "?"}% – 💨 ${f.wind ?? "?"} km/h</div>`
-      ).join("");
     }
 
     async function loadAlerts() {
-      const res = await fetch("/api/alerts");
-      const data = await res.json();
-      const container = document.getElementById("alerts");
-      if (!data || data.length === 0) {
-        container.textContent = "⚠️ Aucune alerte.";
-        return;
+      try {
+        const res = await fetch(`${API_BASE}/alerts`);
+        const data = await res.json();
+        document.getElementById("alerts").innerText =
+          data.length ? data.map(a => `⚠️ ${a.level} – ${a.message}`).join("\n") : "Aucune alerte";
+      } catch {
+        document.getElementById("alerts").innerText = "❌ Erreur alertes";
       }
-      container.innerHTML = data.map(a =>
-        `<div>🚨 ${a.type} – ${a.zone} (${a.level})</div>`
-      ).join("");
+    }
+
+    async function sendChat() {
+      const msg = document.getElementById("ai-input").value;
+      document.getElementById("ai-response").innerText = "⏳ J.E.A.N. réfléchit...";
+      try {
+        const res = await fetch(`${API_BASE}/chat`, {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ message: msg })
+        });
+        const data = await res.json();
+        document.getElementById("ai-response").innerText = data.reply || "❌ Pas de réponse";
+      } catch {
+        document.getElementById("ai-response").innerText = "❌ Erreur IA";
+      }
     }
 
     async function loadLogs() {
-      const res = await fetch("/api/logs");
-      const data = await res.json();
-      const container = document.getElementById("logs");
-      if (!data || data.length === 0) {
-        container.textContent = "⚠️ Aucun log.";
-        return;
+      try {
+        const res = await fetch(`${API_BASE}/logs`);
+        const data = await res.json();
+        document.getElementById("logs").innerText = data.map(log => `[${log.date}] ${log.message}`).join("\n");
+      } catch {
+        document.getElementById("logs").innerText = "❌ Erreur logs";
       }
-      container.innerHTML = data.map(l =>
-        `<div>[${l.date || "?"}] ${l.message}</div>`
-      ).join("");
     }
 
-    // Chat JEAN
-    const chatInput = document.getElementById("chat-input");
-    const chatSend = document.getElementById("chat-send");
-    const chatResponse = document.getElementById("chat-response");
-    const debugSection = document.getElementById("debug-ia");
-    const debugContent = document.getElementById("debug-content");
-    const toggleDebug = document.getElementById("toggle-debug");
-
-    toggleDebug.addEventListener("click", () => {
-      debugSection.style.display = debugSection.style.display === "none" ? "block" : "none";
-    });
-
-    chatSend.addEventListener("click", async () => {
-      const message = chatInput.value.trim();
-      if (!message) {
-        chatResponse.textContent = "⚠️ Entrez une question.";
-        return;
-      }
-
-      chatResponse.textContent = "⏳ J.E.A.N. réfléchit...";
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
-        });
-
-        const data = await res.json();
-        chatResponse.textContent = data.reply || "⚠️ Réponse indisponible";
-
-        if (data.debug) {
-          debugContent.textContent = JSON.stringify(data.debug, null, 2);
-        }
-      } catch (err) {
-        chatResponse.textContent = "⚠️ Erreur réseau.";
-      }
-    });
-
-    // Auto-load
+    // Auto-chargement au démarrage
     loadForecasts();
     loadAlerts();
     loadLogs();
