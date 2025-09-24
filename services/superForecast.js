@@ -1,10 +1,11 @@
 // services/superForecast.js
 import axios from "axios";
-import { CohereClient } from "cohere-ai";
+import coherePkg from "cohere-ai";
 import forecastService from "./forecastService.js";
 import alertsService from "./alertsService.js";
 
 // Init Cohere client
+const { CohereClient } = coherePkg;
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
@@ -13,9 +14,7 @@ async function runSuperForecast(lat, lon) {
   try {
     console.log("🚀 Lancement SuperForecast...");
 
-    // 1️⃣ Récupération des données météo multi-sources
-    console.log("📡 Récupération des modèles Meteomatics, OpenWeather, NASA...");
-    // TODO: intégrer API réelles → simplifié ici
+    // 1️⃣ Récupération des données météo multi-sources (placeholder pour l’instant)
     const fakeData = {
       min: 5,
       max: 15,
@@ -24,7 +23,6 @@ async function runSuperForecast(lat, lon) {
     };
 
     // 2️⃣ Analyse IA J.E.A.N.
-    console.log("🤖 Envoi des données à J.E.A.N. pour analyse IA...");
     const response = await cohere.chat({
       model: "command-r-plus",
       messages: [
@@ -44,7 +42,7 @@ async function runSuperForecast(lat, lon) {
       aiSummary = "⚠️ Résumé IA non disponible.";
     }
 
-    // 3️⃣ Sauvegarde prévision nationale (exemple: Belgique)
+    // 3️⃣ Sauvegarde prévision nationale (Belgique en exemple)
     await forecastService.saveNationalForecast("BE", [], aiSummary, fakeData.icon);
 
     // 4️⃣ Détection et sauvegarde alerte éventuelle
