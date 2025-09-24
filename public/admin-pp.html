@@ -5,66 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #161b22;
-      padding: 15px;
-      text-align: center;
-      border-bottom: 2px solid #30363d;
-    }
-    h1 {
-      margin: 0;
-      color: #58a6ff;
-    }
-    section {
-      margin: 20px;
-      padding: 15px;
-      background: #161b22;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-    h3 {
-      margin-top: 0;
-      color: #ffa657;
-    }
-    button {
-      padding: 8px 15px;
-      margin-top: 10px;
-      background: #238636;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #2ea043;
-    }
-    input {
-      padding: 8px;
-      width: 80%;
-      border-radius: 6px;
-      border: 1px solid #30363d;
-      background: #0d1117;
-      color: #e6edf3;
-      margin-right: 10px;
-    }
-    pre {
-      font-size: 12px;
-      line-height: 1.4em;
-      background: #0d1117;
-      color: #0f0;
-      padding: 10px;
-      border-radius: 8px;
-      overflow-x: auto;
-    }
-  </style>
 </head>
 <body>
   <header>
@@ -102,7 +42,7 @@
   <!-- Debug IA -->
   <section id="debug-ia" style="display:none;">
     <h3>🛠️ Debug Cohere</h3>
-    <pre id="debug-content"></pre>
+    <pre id="debug-content" style="background:#111; color:#0f0; padding:10px; border-radius:8px; max-height:200px; overflow:auto;"></pre>
   </section>
   <button id="toggle-debug">Afficher debug IA</button>
 
@@ -122,7 +62,7 @@
     }
 
     async function publishToIndex() {
-      alert("📤 Prévisions publiées vers l’index (simulation front, côté serveur déjà branché).");
+      alert("📤 Prévisions publiées vers l’index (front).");
     }
 
     async function loadForecasts() {
@@ -160,7 +100,7 @@
         return;
       }
       container.innerHTML = data.map(l =>
-        `<div>[${l.date}] ${l.message}</div>`
+        `<div>[${l.date || "?"}] ${l.message}</div>`
       ).join("");
     }
 
@@ -177,20 +117,29 @@
     });
 
     chatSend.addEventListener("click", async () => {
-      const message = chatInput.value;
+      const message = chatInput.value.trim();
+      if (!message) {
+        chatResponse.textContent = "⚠️ Entrez une question.";
+        return;
+      }
+
       chatResponse.textContent = "⏳ J.E.A.N. réfléchit...";
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
 
-      const data = await res.json();
-      chatResponse.textContent = data.reply || "⚠️ Réponse indisponible";
+        const data = await res.json();
+        chatResponse.textContent = data.reply || "⚠️ Réponse indisponible";
 
-      if (data.debug) {
-        debugContent.textContent = JSON.stringify(data.debug, null, 2);
+        if (data.debug) {
+          debugContent.textContent = JSON.stringify(data.debug, null, 2);
+        }
+      } catch (err) {
+        chatResponse.textContent = "⚠️ Erreur réseau.";
       }
     });
 
