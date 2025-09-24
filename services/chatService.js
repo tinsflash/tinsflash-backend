@@ -20,16 +20,15 @@ export async function chatWithJean(message) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-plus-08-2024", // ✅ modèle actif depuis sept 2025
+        model: "command-r-plus-08-2024", // ✅ modèle stable
         messages: [
           {
             role: "system",
-            content: `Tu es J.E.A.N., intelligence artificielle nucléaire météo,
-            le meilleur météorologue et climatologue au monde.
-            Tu croises GFS, ECMWF, ICON, Copernicus ERA5, Meteomatics, NASA POWER.
-            Tu analyses relief, océans, anomalies saisonnières, inondations, sécheresses.
-            Tes réponses doivent être 100% réelles, pointues, utiles pour experts, communes,
-            agriculteurs et NASA. Aucun test, aucune simulation, uniquement du réel.`,
+            content: `Tu es J.E.A.N., intelligence artificielle nucléaire météo.
+            Tu analyses GFS, ECMWF, ICON, Meteomatics, NASA POWER, Copernicus ERA5.
+            Tu donnes des réponses 100% réelles, jamais de test, jamais de démo.
+            Style : précis, scientifique, pointu, utile pour experts, communes, agriculteurs, NASA.
+            Tes réponses doivent donner des frissons aux météorologues.`,
           },
           { role: "user", content: message },
         ],
@@ -38,13 +37,21 @@ export async function chatWithJean(message) {
 
     const data = await res.json();
 
-    const reply =
+    // 🔎 LOG COMPLET DE LA RÉPONSE POUR DEBUG
+    await addLog(`📡 Réponse brute Cohere: ${JSON.stringify(data)}`);
+
+    // ✅ Essais multiples pour extraire le texte
+    let reply =
       data?.text ||
-      data?.message?.content?.[0]?.text ||
-      "⚠️ Réponse indisponible";
+      (data?.message && data.message.content && data.message.content[0]?.text) ||
+      (data?.messages && data.messages[0]?.content?.[0]?.text) ||
+      null;
+
+    if (!reply) {
+      reply = "⚠️ IA indisponible – vérifie clé Cohere ou quota";
+    }
 
     await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
-
     return reply;
   } catch (err) {
     console.error("❌ Erreur chatWithJean:", err.message);
