@@ -1,12 +1,11 @@
 // services/jeanService.js
-import OpenAI from "openai";
+import coherePkg from "cohere-ai";
 import { addLog } from "./logsService.js";
 
-// ⚠️ Stocke ta clé API dans les variables d’environnement Render
-// Settings > Environment > Add environment variable
-// KEY = OPENAI_API_KEY, VALUE = ta clé
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const { CohereClient } = coherePkg;
+
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
 });
 
 /**
@@ -19,8 +18,8 @@ export async function askJean(question) {
   try {
     addLog(`🤖 JEAN consulté: ${question}`);
 
-    const response = await client.chat.completions.create({
-      model: "gpt-5", // GPT-5 en prod
+    const response = await cohere.chat({
+      model: "command-r-plus",
       messages: [
         {
           role: "system",
@@ -34,23 +33,25 @@ Règles :
 - Si l’admin demande pourquoi une prévision diffère des autres → explique la différence.
 - Si l’admin demande d’analyser une alerte → répond par un degré de certitude + justification scientifique.
 - Pas de démo, pas de test, pas de simulation → toujours 100% opérationnel et pointu.
-        `,
+          `,
         },
-        {
-          role: "user",
-          content: question,
-        },
+        { role: "user", content: question },
       ],
-      temperature: 0.2, // haute précision
-      max_tokens: 500,
     });
 
-    const answer = response.choices[0].message.content.trim();
-    addLog(`🤖 JEAN a répondu: ${answer}`);
+    let answer = "";
+    if (response.text) {
+      answer = response.text;
+    } else if (response.message?.content?.[0]?.text) {
+      answer = response.message.content[0].text;
+    } else {
+      answer = "⚠️ Réponse IA vide ou non reconnue.";
+    }
 
+    addLog(`🤖 JEAN a répondu: ${answer}`);
     return answer;
   } catch (err) {
-    addLog("❌ Erreur JEAN: " + err.message);
-    throw err;
+    console.error("❌ Erreur IA JEAN :", err.message);
+    return "⚠️ JEAN indisponible pour le moment.";
   }
 }
