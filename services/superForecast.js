@@ -1,24 +1,23 @@
 // services/superForecast.js
-import cohere from "cohere-ai";
+import { CohereClient } from "cohere-ai";
 import { addLog } from "./logsService.js";
 import { injectForecasts } from "./forecastService.js";
 
-// ✅ Initialisation correcte pour Cohere v7+
-cohere.init(process.env.COHERE_API_KEY);
+// ✅ Nouvelle initialisation (sans .init())
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
+});
 
 // ==============================
 // 🌍 Zones couvertes
 // ==============================
 const COVERED_EUROPE = [
-  "DE", "AT", "BE", "BG", "CY", "HR", "DK", "ES", "EE", "FI", "FR", "GR", "HU",
-  "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "CZ", "RO", "SK", "SI", "SE"
+  "DE","AT","BE","BG","CY","HR","DK","ES","EE","FI","FR","GR","HU",
+  "IE","IT","LV","LT","LU","MT","NL","PL","PT","CZ","RO","SK","SI","SE"
 ];
 const EXTRA_COVERED = ["UK", "UA"];
-const USA_STATES = ["CA", "NY", "TX", "FL", "WA"]; // 🔥 à enrichir avec tous les États
+const USA_STATES = ["CA", "NY", "TX", "FL", "WA"]; // 🔥 à enrichir
 
-/**
- * Génère un tableau forecastData structuré pour injectForecasts
- */
 function buildForecastData(fusionData) {
   const today = new Date().toISOString().split("T")[0];
   const results = [];
@@ -33,8 +32,8 @@ function buildForecastData(fusionData) {
     windSpeed: fusionData.BE?.wind || null,
   });
 
-  // 🇫🇷 France (multi-zones)
-  ["NO", "NE", "SO", "SE", "COR"].forEach((zone) => {
+  // 🇫🇷 France multi-zones
+  ["NO","NE","SO","SE","COR"].forEach((zone) => {
     results.push({
       country: `FR-${zone}`,
       date: today,
@@ -65,7 +64,7 @@ function buildForecastData(fusionData) {
     windSpeed: fusionData.USA?.wind || null,
   });
 
-  // 🌍 Autres pays couverts (Europe élargie + UK + UA)
+  // Autres pays UE élargie + UK + UA
   [...COVERED_EUROPE, ...EXTRA_COVERED].forEach((cc) => {
     if (cc !== "FR" && cc !== "BE") {
       results.push({
@@ -79,34 +78,22 @@ function buildForecastData(fusionData) {
     }
   });
 
-  // 🌐 Exemple reste du monde (Brésil ici, généralisable)
-  if (fusionData.BR) {
-    results.push({
-      country: "BR",
-      date: today,
-      minTemp: fusionData.BR.min,
-      maxTemp: fusionData.BR.max,
-      rainProbability: fusionData.BR.rain,
-      windSpeed: fusionData.BR.wind,
-    });
-  }
-
   return results;
 }
 
-/**
- * Lance un run SuperForecast (fusion multi-modèles + IA)
- */
+// ==============================
+// 🚀 SuperForecast
+// ==============================
 export async function runSuperForecast(fusionData) {
   try {
     await addLog("🚀 Run SuperForecast lancé");
 
-    // === Étape 1 : Analyse IA via Cohere ===
+    // 🔮 Analyse IA J.E.A.N.
     const prompt = `
-      Analyse météorologique mondiale (données fusionnées multi-modèles).
-      Détaille risques principaux : pluie, vent, neige, orages, inondations.
-      Précise tendances par zones couvertes (Europe élargie, UK, Ukraine, USA).
-      Mets en évidence toute anomalie majeure détectée.
+      Analyse météorologique mondiale (multi-modèles).
+      Détaille : pluie, vent, neige, orages, inondations.
+      Tendances par zones couvertes (UE27, UK, UA, USA).
+      Mets en évidence anomalies majeures.
     `;
 
     const response = await cohere.chat({
@@ -121,10 +108,10 @@ export async function runSuperForecast(fusionData) {
 
     await addLog(`📊 Analyse IA SuperForecast: ${analysis}`);
 
-    // === Étape 2 : Construire forecastData ===
+    // Construire données prévisions
     const forecastData = buildForecastData(fusionData);
 
-    // === Étape 3 : Injection MongoDB ===
+    // Injection DB
     await injectForecasts(forecastData);
 
     await addLog("🎯 SuperForecast terminé avec succès");
