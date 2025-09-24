@@ -3,6 +3,8 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // === Services ===
 import superForecast from "./services/superForecast.js";
@@ -15,13 +17,21 @@ import { addLog, getLogs } from "./services/logsService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js";   // ✅ corrigé (singulier, correspond au fichier)
+import Alert from "./models/Alert.js"; // ✅ cohérent avec ton repo GitHub
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// ==============================
+// 📂 Servir les fichiers statiques (/public)
+// ==============================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "public")));
 
 // ==============================
 // 📡 MongoDB connection
