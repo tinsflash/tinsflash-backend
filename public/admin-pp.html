@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Tinsflash – Console Admin</title>
+  <meta name="robots" content="noindex, nofollow" /> <!-- empêche indexation -->
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -44,21 +45,52 @@
       border: 2px solid #66fcf1;
       border-radius: 8px;
     }
+    #lockscreen {
+      text-align: center;
+      padding: 100px 20px;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
-  <header>
-    ⚡ Centrale Nucléaire Météo – Console Admin ⚡
-  </header>
+  <div id="lockscreen">
+    <h2>🔒 Accès restreint</h2>
+    <p>Veuillez entrer le code d'accès :</p>
+    <input type="password" id="accessCode" placeholder="Code PIN" />
+    <button onclick="checkCode()">Entrer</button>
+    <p id="errorMsg" style="color:red;"></p>
+  </div>
 
-  <section id="radar">
-    <h2>🌍 Radar Météo</h2>
-    <p>Visualisation radar en temps réel (Windy) avec fallback Meteologix.</p>
-    <button onclick="loadRadar()">Charger Radar</button>
-    <div id="radarResult"></div>
-  </section>
+  <div id="adminConsole" style="display:none;">
+    <header>
+      ⚡ Centrale Nucléaire Météo – Console Admin ⚡
+    </header>
+
+    <section id="radar">
+      <h2>🌍 Radar Météo</h2>
+      <p>Visualisation radar en temps réel (Windy) avec fallback Meteologix.</p>
+      <button onclick="loadRadar()">Charger Radar</button>
+      <div id="radarResult"></div>
+    </section>
+  </div>
 
   <script>
+    function checkCode() {
+      const code = document.getElementById("accessCode").value;
+      if (code === "202679") {
+        document.getElementById("lockscreen").style.display = "none";
+        document.getElementById("adminConsole").style.display = "block";
+      } else {
+        document.getElementById("errorMsg").textContent = "❌ Code incorrect";
+      }
+    }
+
     async function loadRadar() {
       try {
         const res = await fetch("/api/radar?lat=50.85&lon=4.35"); // par défaut Bruxelles
