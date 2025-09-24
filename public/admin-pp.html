@@ -6,9 +6,18 @@
   <title>Centrale Nucléaire Météo - Admin</title>
   <style>
     body { font-family: Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
+    h2 { color: #0ff; }
     h3 { margin-top: 30px; }
     h4 { margin: 10px 0; }
-    div { margin: 5px 0; }
+    div, table { margin: 5px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    th { background: #222; }
+    tr:nth-child(even) { background: #1a1a1a; }
+    .btn { background: #0ff; color: #000; border: none; padding: 5px 10px; cursor: pointer; }
+    .btn:hover { background: #0cc; }
+    .danger { background: #f33; color: #fff; }
+    .danger:hover { background: #c00; }
   </style>
 </head>
 <body>
@@ -22,7 +31,37 @@
     <div id="LUX-forecast">⏳ Chargement Luxembourg...</div>
   </section>
 
+  <!-- Alertes météo -->
+  <section id="alerts">
+    <h3>⚠️ Alertes météo</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Niveau</th>
+          <th>Certitude</th>
+          <th>Description</th>
+          <th>Zone</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="alerts-table">
+        <tr><td colspan="6">⏳ Chargement...</td></tr>
+      </tbody>
+    </table>
+    <h4>➕ Nouvelle alerte</h4>
+    <form id="alert-form">
+      <input type="text" id="alert-type" placeholder="Type (pluie, vent...)" required />
+      <input type="text" id="alert-level" placeholder="Niveau (jaune, orange, rouge)" required />
+      <input type="number" id="alert-certainty" placeholder="Certitude (%)" required />
+      <input type="text" id="alert-description" placeholder="Description" />
+      <input type="text" id="alert-location" placeholder="Localisation" />
+      <button type="submit" class="btn">Créer</button>
+    </form>
+  </section>
+
   <script>
+  // Charger les prévisions nationales
   async function loadForecast(country) {
     try {
       const res = await fetch(`/api/admin/forecasts/latest/${country}`);
@@ -46,8 +85,74 @@
     }
   }
 
+  // Charger les alertes
+  async function loadAlerts() {
+    try {
+      const res = await fetch("/api/admin/alerts");
+      const alerts = await res.json();
+      const tbody = document.getElementById("alerts-table");
+      tbody.innerHTML = "";
+      if (alerts.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='6'>Aucune alerte</td></tr>";
+        return;
+      }
+      alerts.forEach(a => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${a.type}</td>
+          <td>${a.level}</td>
+          <td>${a.certainty}%</td>
+          <td>${a.description || ""}</td>
+          <td>${a.location || ""}</td>
+          <td>
+            <button class="btn danger" onclick="deleteAlert('${a._id}')">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (err) {
+      console.error("Erreur chargement alertes", err);
+    }
+  }
+
+  // Supprimer une alerte
+  async function deleteAlert(id) {
+    if (!confirm("Supprimer cette alerte ?")) return;
+    try {
+      await fetch(`/api/admin/alerts/${id}`, { method: "DELETE" });
+      loadAlerts();
+    } catch (err) {
+      console.error("Erreur suppression alerte", err);
+    }
+  }
+
+  // Ajouter une nouvelle alerte
+  document.getElementById("alert-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const newAlert = {
+        type: document.getElementById("alert-type").value,
+        level: document.getElementById("alert-level").value,
+        certainty: parseInt(document.getElementById("alert-certainty").value),
+        description: document.getElementById("alert-description").value,
+        location: document.getElementById("alert-location").value
+      };
+      await fetch("/api/admin/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAlert)
+      });
+      document.getElementById("alert-form").reset();
+      loadAlerts();
+    } catch (err) {
+      console.error("Erreur création alerte", err);
+    }
+  });
+
+  // Charger au démarrage
   window.onload = () => {
     ["BE","FR","LUX"].forEach(c => loadForecast(c));
+    loadAlerts();
   };
   </script>
 </body>
