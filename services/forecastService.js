@@ -135,7 +135,30 @@ export async function injectForecasts(forecastData) {
   }
 }
 
+/**
+ * ➕ Nouvelles fonctions nécessaires pour bulletinService
+ */
+
+// Locale (commune/zone)
+export async function getLocalForecast(zone) {
+  return getForecast(zone);
+}
+
+// Nationale (pays entier)
+export async function getNationalForecast(country) {
+  return getForecast(country);
+}
+
+// 7 jours
+export async function get7DayForecast(zone) {
+  const forecasts = await getForecast(zone);
+  return forecasts.slice(0, 7);
+}
+
 export default {
   getForecast,
   injectForecasts,
+  getLocalForecast,
+  getNationalForecast,
+  get7DayForecast,
 };
