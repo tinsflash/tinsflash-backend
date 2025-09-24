@@ -1,54 +1,41 @@
 // services/chatService.js
-// 👉 Appelle l’API REST Cohere directement (pas le SDK) pour éviter
-// les incompatibilités de version et l’erreur “Missing required key 'message'”.
-
+import fetch from "node-fetch";
 import { addLog } from "./logsService.js";
 
-const COHERE_URL = "https://api.cohere.ai/v1/chat";
-const COHERE_KEY = process.env.COHERE_API_KEY;
-
-export async function chatWithJean(message) {
+/**
+ * Chat avec J.E.A.N. (IA météo nucléaire)
+ */
+async function chatWithJean(message) {
   try {
-    if (!COHERE_KEY) {
-      throw new Error("COHERE_API_KEY manquant dans l'environnement");
-    }
-    if (!message || typeof message !== "string") {
-      throw new Error("Message vide");
-    }
-
-    const body = {
-      model: "command-r-plus",
-      // ⚠️ Cohere attend 'message' (singulier), pas 'messages'
-      message,
-      temperature: 0.2,
-    };
-
-    const res = await fetch(COHERE_URL, {
+    const res = await fetch("https://api.cohere.ai/v1/chat", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${COHERE_KEY}`,
+        "Authorization": `Bearer ${process.env.COHERE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        model: "command-r-plus-08-2024", // ✅ modèle mis à jour
+        messages: [
+          { role: "system", content: "Tu es J.E.A.N., une IA experte météo et climatologue nucléaire. Donne des réponses précises, pointues et 100 % réelles." },
+          { role: "user", content: message }
+        ],
+      }),
     });
 
-    if (!res.ok) {
-      const errTxt = await res.text();
-      throw new Error(`Cohere HTTP ${res.status} – ${errTxt}`);
+    const data = await res.json();
+
+    if (!data?.text && !data?.message?.content?.[0]?.text) {
+      throw new Error("Réponse Cohere invalide: " + JSON.stringify(data));
     }
 
-    const data = await res.json();
-    // Réponses possibles : data.text (le plus courant) ou data.message?.content
-    const answer =
-      data?.text ||
-      data?.message?.content?.[0]?.text ||
-      "⚠️ Réponse IA vide";
+    const reply = data.text || data.message.content[0].text;
 
-    await addLog(`🤖 JEAN: ${answer}`);
-    return answer;
+    await addLog("🤖 Réponse IA J.E.A.N.: " + reply);
+    return reply;
   } catch (err) {
-    await addLog(`❌ Erreur JEAN: ${err.message}`);
-    throw err;
+    console.error("❌ Erreur JEAN:", err.message);
+    await addLog("❌ Erreur JEAN: " + err.message);
+    return "Erreur IA: " + err.message;
   }
 }
 
