@@ -1,5 +1,6 @@
 // services/chatService.js
-import { CohereClient } from "cohere-ai";
+import coherePkg from "cohere-ai";
+const { CohereClient } = coherePkg;
 
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
@@ -16,9 +17,9 @@ async function askJEAN(userMessage) {
 
     let reply;
     if (response.text) {
-      reply = response.text; // Ancienne compatibilité
+      reply = response.text;
     } else if (response.message?.content?.[0]?.text) {
-      reply = response.message.content[0].text; // Format nouveau SDK
+      reply = response.message.content[0].text;
     } else {
       reply = "⚠️ Réponse IA vide ou non reconnue";
     }
