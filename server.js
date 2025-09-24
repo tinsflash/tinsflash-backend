@@ -5,16 +5,15 @@ import dotenv from "dotenv";
 import cors from "cors";
 
 // === Services ===
-import superForecast from "./services/superForecast.js";
 import forecastService from "./services/forecastService.js";
+import superForecast from "./services/superForecast.js";
 import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
-import chatService from "./services/chatService.js";   // ✅ Import corrigé (pas "* as")
+import chatService from "./services/chatService.js";
 
 // === DB Models ===
-import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js";   // ✅ Vérifié : ton zip a bien Alert.js (pas Alerts.js)
+import Alert from "./models/Alert.js";
 
 dotenv.config();
 
@@ -33,26 +32,28 @@ mongoose
 
 // ==============================
 // 📡 API ROUTES
+
 // Prévisions
-app.use("/api/forecast", forecastService);
+app.get("/api/forecast", forecastService.getForecast);
 
-// Fusion multi-modèles IA
-app.use("/api/superforecast", superForecast);
+// Super forecast
+app.get("/api/superforecast", superForecast.run);
 
-// Alertes météo
-app.use("/api/alerts", alertsService);
+// Alertes
+app.get("/api/alerts", alertsService.getAlerts);
+app.post("/api/alerts", alertsService.createAlert);
 
 // Radar
-app.use("/api/radar", radarService);
+app.get("/api/radar", radarService.fetchRadar);
 
-// Podcast météo
-app.use("/api/podcast", podcastService);
+// Podcasts (⚠️ mode DEBUG pour l’instant)
+app.get("/api/podcast", podcastService.fetchPodcast);
 
-// Chat IA (J.E.A.N.)
-app.use("/api/chat", chatService);   // ✅ Correctement branché
+// Chat IA
+app.post("/api/chat", chatService.chat);
 
 // ==============================
-// PORT
+// ✅ Server ready
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
