@@ -1,106 +1,62 @@
 // services/alertsService.js
-import Alert from "../models/Alerts.js";
+import Alert from "../models/Alert.js";
 import { addLog } from "./logsService.js";
 
 /**
- * Vérifie si une alerte similaire existe déjà (même zone + message proche)
- */
-async function isDuplicate(zone, message) {
-  const existing = await Alert.findOne({
-    zone,
-    message: { $regex: message.slice(0, 30), $options: "i" }, // comparaison début message
-  });
-  return !!existing;
-}
-
-/**
- * Crée une alerte avec la logique nucléaire IA
+ * Création d'une alerte
+ * @param {Object} data - données d'entrée
  */
 export async function createAlert(data) {
   try {
-    const { zone, type, message, confidence, source = "JEAN" } = data;
-
-    if (!zone || !message) {
-      throw new Error("Zone et message requis");
-    }
-
-    // Vérification doublon
-    if (await isDuplicate(zone, message)) {
-      await addLog(`❌ Doublon détecté pour la zone ${zone}`);
-      return await Alert.create({
-        zone,
-        type,
-        message,
-        confidence,
-        status: "❌",
-        source,
-        published: false,
-      });
-    }
-
-    // Détermination statut selon % confiance
-    let status = "⚠️";
-    let published = false;
-
-    if (confidence >= 90) {
-      status = "✅";
-      published = true;
-      await addLog(`🚨 Alerte publiée automatiquement pour ${zone} (${confidence}%)`);
-    } else if (confidence >= 70) {
-      status = "⚠️";
-      published = false;
-      await addLog(`⏳ Alerte en attente validation admin (${zone}, ${confidence}%)`);
-    } else {
-      status = "❌";
-      published = false;
-      await addLog(`ℹ️ Alerte ignorée (<70%) pour ${zone} (${confidence}%)`);
-    }
-
-    // Création en base
-    const alert = await Alert.create({
-      zone,
-      type,
-      message,
-      confidence,
-      status,
-      source,
-      published,
+    const alert = new Alert({
+      title: data.title || "Alerte météo",
+      description: data.description || "⚠️ Pas de description fournie",
+      country: data.country || "N/A",
+      severity: data.severity || "medium",
+      certainty: data.certainty || 50,
+      issuedAt: data.issuedAt || new Date(),
+      source: data.source || "Tinsflash Nuclear Core",
+      status: data.status || "✅ Premier détecteur",
     });
 
-    return alert;
+    const savedAlert = await alert.save();
+    await addLog(`🚨 Nouvelle alerte créée : ${savedAlert.title} (${savedAlert.country})`);
+
+    return savedAlert;
   } catch (err) {
-    await addLog("❌ Erreur createAlert: " + err.message);
+    console.error("❌ Erreur création alerte:", err.message);
+    await addLog("❌ Erreur création alerte : " + err.message);
     throw err;
   }
 }
 
 /**
- * Récupère toutes les alertes (limite 100 dernières)
+ * Récupération des alertes (par pays optionnel)
  */
-export async function getAlerts(limit = 100) {
-  return await Alert.find().sort({ createdAt: -1 }).limit(limit);
-}
-
-/**
- * Met à jour une alerte (validation, correction)
- */
-export async function updateAlert(id, updates) {
-  const alert = await Alert.findByIdAndUpdate(id, updates, { new: true });
-  if (alert) {
-    await addLog(`✏️ Alerte mise à jour: ${alert._id}`);
+export async function getAlerts(filter = {}) {
+  try {
+    const alerts = await Alert.find(filter).sort({ createdAt: -1 }).limit(100);
+    return alerts;
+  } catch (err) {
+    console.error("❌ Erreur récupération alertes:", err.message);
+    throw err;
   }
-  return alert;
 }
 
 /**
- * Supprime une alerte
+ * Suppression d'une alerte
  */
 export async function deleteAlert(id) {
-  const alert = await Alert.findByIdAndDelete(id);
-  if (alert) {
-    await addLog(`🗑️ Alerte supprimée: ${alert._id}`);
+  try {
+    const deleted = await Alert.findByIdAndDelete(id);
+    if (deleted) {
+      await addLog(`🗑️ Alerte supprimée : ${deleted.title} (${deleted.country})`);
+    }
+    return deleted;
+  } catch (err) {
+    console.error("❌ Erreur suppression alerte:", err.message);
+    throw err;
   }
-  return alert;
 }
 
-export default { createAlert, getAlerts, updateAlert, deleteAlert };
+export default { createAlert, getAlerts, deleteAlert };
