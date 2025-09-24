@@ -1,122 +1,256 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>⚡ Centrale Nucléaire Météo – Admin</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Empêcher indexation par les moteurs -->
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="googlebot" content="noindex,nofollow" />
+  <meta name="bingbot" content="noindex,nofollow" />
+
+  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* styles minimaux pour le gate et la console */
+    body { font-family: Inter, Arial, sans-serif; background:#071024; color:#e6eef8; margin:0; }
+    header { padding:18px; background:linear-gradient(90deg,#081022,#0b1630); }
+    main { padding:18px; }
+    .hidden { display:none !important; }
+    .gate { max-width:440px; margin:40px auto; background:#071428; border:1px solid #123; padding:20px; border-radius:8px; text-align:center; }
+    input[type="password"]{ width:100%; padding:10px; margin-top:10px; border-radius:6px; border:1px solid #234; background:#071428; color:#e6eef8; }
+    button { margin-top:12px; padding:10px 14px; border-radius:6px; border:0; cursor:pointer; background:#1f8feb; color:white; }
+    .note { color:#9fb2d6; font-size:0.9rem; margin-top:8px; }
+    .danger { background:#e64949 !important; }
+    .card{ background:#07182a; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #123; }
+    .small{ font-size:0.9rem; color:#9fb2d6; }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>⚡ Console Admin Tinsflash</h1>
-  </header>
+  <!-- Gate : s'affiche tant que pas de mot de passe -->
+  <div id="gate" class="gate" aria-live="polite">
+    <h2>🔒 Accès Admin</h2>
+    <p class="small">Page protégée — accès réservé aux administrateurs Tinsflash.</p>
+    <input id="admin-pass" type="password" placeholder="Mot de passe admin" aria-label="mot de passe admin" />
+    <button id="btn-unlock">Déverrouiller</button>
+    <p class="note">Astuce : ce contrôle côté client est pratique pour UX. Pour sécurité réelle active le middleware serveur (voir instructions serveur).</p>
+  </div>
 
-  <!-- Bouton Run unique -->
-  <section>
-    <h2>🚀 SuperForecast</h2>
-    <button onclick="runSuperForecast()">Lancer Run</button>
-    <div id="superforecast-result">En attente…</div>
-  </section>
+  <!-- Main console : cachée tant que gate non validée -->
+  <main id="console" class="hidden" aria-hidden="true">
+    <header>
+      <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+      <p class="small">Mode 100% réel — zones couvertes : UE27 + UK + Ukraine + USA</p>
+    </header>
 
-  <!-- Prévisions -->
-  <section>
-    <h2>🛰️ Prévisions nationales</h2>
-    <div id="forecasts">⏳ Chargement…</div>
-  </section>
+    <!-- SuperForecast -->
+    <section class="card">
+      <h3>🚀 SuperForecast</h3>
+      <button id="btn-run">Lancer Run</button>
+      <div id="sf-result" class="small">En attente...</div>
+    </section>
 
-  <!-- Alertes -->
-  <section>
-    <h2>⚠️ Alertes</h2>
-    <div id="alerts">⏳ Chargement…</div>
-  </section>
+    <!-- Prévisions (BE, FR multi-zones, USA...) -->
+    <section class="card">
+      <h3>🛰️ Prévisions nationales (BE / FR multi-zones / USA)</h3>
+      <div id="forecasts">Chargement…</div>
+      <div style="margin-top:8px;">
+        <button id="btn-publish" title="Publier les prévisions sur l'index public">Publier vers index</button>
+      </div>
+    </section>
 
-  <!-- Chat -->
-  <section>
-    <h2>🤖 J.E.A.N.</h2>
-    <input id="chat-input" placeholder="Pose ta question…" style="width:70%;"/>
-    <button onclick="sendChat()">Envoyer</button>
-    <div id="chat-reply"></div>
-  </section>
+    <!-- Alertes -->
+    <section class="card">
+      <h3>⚠️ Alertes</h3>
+      <div id="alerts">Chargement…</div>
+    </section>
 
-  <!-- Logs -->
-  <section>
-    <h2>📜 Logs</h2>
-    <div id="logs">⏳ Chargement…</div>
-  </section>
+    <!-- Chat JEAN -->
+    <section class="card">
+      <h3>🤖 Chat J.E.A.N.</h3>
+      <input id="chat-input" placeholder="Question à J.E.A.N." style="width:75%;padding:8px;border-radius:6px;border:1px solid #123;background:#071428;color:#e6eef8"/>
+      <button id="btn-chat">Envoyer</button>
+      <div id="chat-reply" class="small" style="margin-top:8px"></div>
+    </section>
+
+    <!-- Logs -->
+    <section class="card">
+      <h3>📜 Logs</h3>
+      <div id="logs" class="small">Chargement…</div>
+    </section>
+  </main>
 
 <script>
-const API = "";
+/*
+  Gate logic (client-side)
+  - Password required: 202679
+  - Stores ephemeral flag in sessionStorage only (not persistent)
+  - Warning: client-only protection is not fully secure (see server-side snippet below)
+*/
+const ADMIN_PW = "202679";
+const gateEl = document.getElementById("gate");
+const consoleEl = document.getElementById("console");
+const passInput = document.getElementById("admin-pass");
+const btnUnlock = document.getElementById("btn-unlock");
 
-// === SuperForecast ===
+function unlockUI() {
+  gateEl.classList.add("hidden");
+  consoleEl.classList.remove("hidden");
+  consoleEl.removeAttribute("aria-hidden");
+  sessionStorage.setItem("tinsflash_admin_unlocked", "1");
+  initConsole(); // charge data
+}
+
+btnUnlock.addEventListener("click", () => {
+  if (passInput.value === ADMIN_PW) {
+    unlockUI();
+  } else {
+    passInput.value = "";
+    passInput.placeholder = "Mot de passe incorrect";
+    passInput.focus();
+  }
+});
+
+// Auto-unlock if session present
+if (sessionStorage.getItem("tinsflash_admin_unlocked") === "1") {
+  unlockUI();
+}
+
+/* =========================
+   Console JS: appels API
+   =========================
+   - API base assumed same origin: "/api/..."
+   - Si tu utilises un sous-domaine/host, modifie API_BASE.
+*/
+const API_BASE = ""; // "" => même origine
+
+async function initConsole() {
+  // add button listeners
+  document.getElementById("btn-run").addEventListener("click", runSuperForecast);
+  document.getElementById("btn-publish").addEventListener("click", publishForecasts);
+  document.getElementById("btn-chat").addEventListener("click", sendChat);
+
+  // initial load
+  await Promise.all([loadForecasts(), loadAlerts(), loadLogs()]);
+  // refresh logs every 10s to see live run steps
+  setInterval(loadLogs, 10000);
+}
+
 async function runSuperForecast() {
-  document.getElementById("superforecast-result").innerText = "⏳ Lancement…";
+  const r = document.getElementById("sf-result");
+  r.textContent = "⏳ Lancement SuperForecast…";
   try {
-    const res = await fetch(`${API}/api/superforecast/run`, { method:"POST" });
-    const data = await res.json();
-    document.getElementById("superforecast-result").innerText = data.analysis || "✅ Run terminé";
-    loadForecasts();
-    loadLogs();
-  } catch (err) {
-    document.getElementById("superforecast-result").innerText = "❌ Erreur: " + err.message;
+    const res = await fetch(API_BASE + "/api/superforecast/run", { method: "POST" });
+    const json = await res.json();
+    r.textContent = json.analysis || "✅ Run terminé";
+    // refresh data
+    await loadForecasts();
+    await loadAlerts();
+    await loadLogs();
+  } catch (e) {
+    r.textContent = "❌ Erreur run: " + (e.message || e);
   }
 }
 
-// === Forecasts ===
 async function loadForecasts() {
-  const box = document.getElementById("forecasts");
+  const el = document.getElementById("forecasts");
+  el.textContent = "Chargement…";
   try {
-    const res = await fetch(`${API}/api/forecasts`);
-    const forecasts = await res.json();
-    if (!forecasts.length) { box.innerHTML = "Aucune donnée."; return; }
-    box.innerHTML = forecasts.map(f => `
-      <div>
-        <b>${f.country}</b> (${f.date}) 🌡️ ${f.minTemp}–${f.maxTemp}°C ☔ ${f.rainProbability || 0}%
-      </div>`).join("");
-  } catch (err) { box.innerHTML = "❌ Erreur: " + err.message; }
+    const res = await fetch(API_BASE + "/api/forecasts");
+    const arr = await res.json();
+    if (!Array.isArray(arr) || arr.length === 0) { el.innerHTML = "<i>Aucune prévision</i>"; return; }
+    // group by country for readability (BE/FR/USA)
+    const grouped = {};
+    arr.forEach(f => { grouped[f.country] = grouped[f.country] || []; grouped[f.country].push(f); });
+    let html = "";
+    for (const country of Object.keys(grouped)) {
+      html += `<div style="margin-bottom:8px;"><strong>${country}</strong>`;
+      grouped[country].forEach(item => {
+        html += `<div class="small" style="margin-left:8px;">${item.date} — ${item.minTemp ?? "-"}° / ${item.maxTemp ?? "-"}° • ☔ ${item.rainProbability ?? 0}% • 💨 ${item.windSpeed ?? 0} km/h</div>`;
+      });
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  } catch (err) {
+    el.innerHTML = `<span style="color:#ff7b7b">Erreur prévisions: ${err.message || err}</span>`;
+  }
 }
 
-// === Alertes ===
+async function publishForecasts() {
+  // action rapide: envoi un signal au backend pour publier
+  // backend attendu: POST /api/forecasts/publish  (à ajouter si pas présent)
+  if (!confirm("Publier les prévisions sur l'index public ?")) return;
+  try {
+    const res = await fetch(API_BASE + "/api/forecasts/publish", { method: "POST" });
+    if (!res.ok) throw new Error("Erreur publication");
+    alert("✅ Publication demandée (backend doit gérer l'actualisation index)");
+  } catch (e) {
+    alert("❌ Impossible de publier: " + (e.message || e));
+  }
+}
+
 async function loadAlerts() {
-  const box = document.getElementById("alerts");
+  const el = document.getElementById("alerts");
+  el.textContent = "Chargement…";
   try {
-    const res = await fetch(`${API}/api/alerts`);
-    const alerts = await res.json();
-    if (!alerts.length) { box.innerHTML = "Aucune alerte."; return; }
-    box.innerHTML = alerts.map(a => `
-      <div>
-        <b>${a.title || "Alerte"}</b> (${a.certainty}%) → ${a.status}<br/>
-        ${a.description}<br/>
-      </div>`).join("");
-  } catch (err) { box.innerHTML = "❌ Erreur: " + err.message; }
+    const res = await fetch(API_BASE + "/api/alerts");
+    const arr = await res.json();
+    if (!Array.isArray(arr) || arr.length === 0) { el.innerHTML = "<i>Aucune alerte</i>"; return; }
+    let html = "";
+    arr.forEach(a => {
+      const status = a.status || "⚠️";
+      html += `<div style="margin-bottom:8px;"><strong>${a.title ?? "Alerte"}</strong> <span class="small">(${a.certainty ?? "?"}%)</span><div class="small">${a.description ?? a.message ?? ""}</div>`;
+      // action buttons (valider/rejeter) -> backend endpoints supportés: PUT /api/alerts/:id or POST /api/alerts/publish...
+      html += `<div style="margin-top:6px;"><button onclick="validateAlert('${a._id}')">✅ Valider</button> <button onclick="rejectAlert('${a._id}')" class="danger">❌ Rejeter</button></div></div>`;
+    });
+    el.innerHTML = html;
+  } catch (err) {
+    el.innerHTML = `<span style="color:#ff7b7b">Erreur alertes: ${err.message || err}</span>`;
+  }
 }
 
-// === Chat ===
+async function validateAlert(id) {
+  try {
+    // appel PUT pour mettre à jour le statut
+    const res = await fetch(API_BASE + `/api/alerts/${id}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status: "✅ Premier détecteur", published: true }) });
+    if (!res.ok) throw new Error("Échec validation");
+    await loadAlerts();
+  } catch (e) {
+    alert("Erreur validation: " + (e.message||e));
+  }
+}
+async function rejectAlert(id) {
+  try {
+    const res = await fetch(API_BASE + `/api/alerts/${id}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ status: "❌ Doublon", published: false }) });
+    if (!res.ok) throw new Error("Échec rejet");
+    await loadAlerts();
+  } catch (e) { alert("Erreur rejet: " + (e.message||e)); }
+}
+
 async function sendChat() {
   const q = document.getElementById("chat-input").value;
-  const reply = document.getElementById("chat-reply");
-  reply.innerText = "⏳ J.E.A.N. réfléchit…";
+  const out = document.getElementById("chat-reply");
+  out.textContent = "⏳ J.E.A.N. en cours…";
   try {
-    const res = await fetch(`${API}/api/chat`, { 
-      method:"POST", headers:{ "Content-Type":"application/json" }, 
-      body:JSON.stringify({ message:q })
-    });
-    const data = await res.json();
-    reply.innerText = data.reply || "❌ Pas de réponse";
-  } catch (err) { reply.innerText = "❌ Erreur: " + err.message; }
+    const res = await fetch(API_BASE + "/api/chat", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ message: q }) });
+    const json = await res.json();
+    out.textContent = json.reply || json || "Pas de réponse";
+  } catch (e) {
+    out.textContent = "❌ Erreur chat: " + (e.message||e);
+  }
 }
 
-// === Logs ===
 async function loadLogs() {
-  const box = document.getElementById("logs");
+  const el = document.getElementById("logs");
   try {
-    const res = await fetch(`${API}/api/logs`);
+    const res = await fetch(API_BASE + "/api/logs");
     const logs = await res.json();
-    box.innerHTML = logs.map(l => `<div>[${l.timestamp}] ${l.message}</div>`).join("");
-  } catch (err) { box.innerHTML = "❌ Erreur: " + err.message; }
+    if (!Array.isArray(logs) || logs.length === 0) { el.textContent = "Aucun log"; return; }
+    el.innerHTML = logs.map(l => `<div class="small">[${new Date(l.timestamp).toLocaleString()}] ${l.message}</div>`).join("");
+  } catch (e) {
+    el.textContent = "Erreur logs: " + (e.message||e);
+  }
 }
-
-setInterval(loadLogs, 10000);
-loadForecasts(); loadAlerts(); loadLogs();
 </script>
 </body>
 </html>
