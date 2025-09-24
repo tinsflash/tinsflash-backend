@@ -3,19 +3,21 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // === Services ===
 import superForecast from "./services/superForecast.js";
 import forecastService from "./services/forecastService.js";
 import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
-import podcastService from "./services/podcastService.js"; // encore là si besoin futur
+import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
 import { addLog, getLogs } from "./services/logsService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js"; // ✅ corrigé (singulier, correspond au fichier)
+import Alert from "./models/Alert.js"; // ✅ correspond bien au fichier
 
 dotenv.config();
 
@@ -35,10 +37,18 @@ mongoose
   .catch((err) => console.error("❌ Erreur MongoDB:", err));
 
 // ==============================
+// 🌍 Static files (admin + index)
+// ==============================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "public")));
+
+// ==============================
 // 🚀 API ROUTES
 // ==============================
 
-// Run SuperForecast (manuel)
+// Run SuperForecast
 app.post("/api/superforecast/run", async (req, res) => {
   try {
     const data = req.body || {};
@@ -50,7 +60,7 @@ app.post("/api/superforecast/run", async (req, res) => {
   }
 });
 
-// Get latest forecasts
+// Get forecasts
 app.get("/api/forecasts", async (req, res) => {
   try {
     const forecasts = await Forecast.find().sort({ date: -1 }).limit(50);
@@ -72,7 +82,7 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// Create alert (manual override)
+// Create alert (manual)
 app.post("/api/alerts", async (req, res) => {
   try {
     const alert = await alertsService.createAlert(req.body);
@@ -105,7 +115,7 @@ app.get("/api/logs", async (req, res) => {
   }
 });
 
-// Radar proxy
+// Radar
 app.get("/api/radar", async (req, res) => {
   try {
     const radar = await radarService.getRadar();
@@ -116,7 +126,7 @@ app.get("/api/radar", async (req, res) => {
   }
 });
 
-// Podcast (bulletin météo audio) – tu peux le retirer si inutile
+// Podcast (si tu veux garder)
 app.get("/api/podcast", async (req, res) => {
   try {
     const audio = await podcastService.generatePodcast();
@@ -128,7 +138,14 @@ app.get("/api/podcast", async (req, res) => {
 });
 
 // ==============================
-// 🌍 Server start
+// 🖥️ Catch-all (redirige vers index.html si route inconnue)
+// ==============================
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ==============================
+// 🚀 Start server
 // ==============================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
