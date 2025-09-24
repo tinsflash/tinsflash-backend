@@ -1,118 +1,106 @@
 // services/alertsService.js
-import Alert from "../models/Alert.js";
+import Alert from "../models/Alerts.js";
 import { addLog } from "./logsService.js";
-import axios from "axios";
 
 /**
- * Vérifie si une alerte existe déjà en base ou chez NOAA/Copernicus
- * Retourne un statut clair : Premier détecteur / Déjà signalé / Doublon confirmé
+ * Vérifie si une alerte similaire existe déjà (même zone + message proche)
  */
-async function checkDuplicate(alert) {
-  try {
-    // Vérification interne Mongo
-    const existing = await Alert.findOne({
-      title: alert.title,
-      region: alert.region,
-      level: alert.level,
-    });
-    if (existing) return "❌ Doublon confirmé (interne)";
-
-    // Vérification externe NOAA (simplifié → à améliorer avec API clé si dispo)
-    const noaaCheck = false;
-    // Vérification Copernicus (idem, placeholder)
-    const copernicusCheck = false;
-
-    if (noaaCheck || copernicusCheck) {
-      return "⚠️ Déjà signalé ailleurs";
-    }
-
-    return "✅ Premier détecteur";
-  } catch (err) {
-    console.error("❌ Erreur checkDuplicate:", err.message);
-    return "⚠️ Vérification externe impossible";
-  }
+async function isDuplicate(zone, message) {
+  const existing = await Alert.findOne({
+    zone,
+    message: { $regex: message.slice(0, 30), $options: "i" }, // comparaison début message
+  });
+  return !!existing;
 }
 
 /**
- * Crée une nouvelle alerte
- * Zones couvertes : locale/nationale (Europe élargie + USA par État + synthèse)
- * Zones non couvertes : alerte par continent
+ * Crée une alerte avec la logique nucléaire IA
  */
 export async function createAlert(data) {
   try {
-    const { title, description, level, probability, region } = data;
+    const { zone, type, message, confidence, source = "JEAN" } = data;
 
-    const newAlert = new Alert({
-      title,
-      description,
-      level,
-      probability,
-      region,
-      validated: probability >= 90, // auto validée si certitude ≥90%
+    if (!zone || !message) {
+      throw new Error("Zone et message requis");
+    }
+
+    // Vérification doublon
+    if (await isDuplicate(zone, message)) {
+      await addLog(`❌ Doublon détecté pour la zone ${zone}`);
+      return await Alert.create({
+        zone,
+        type,
+        message,
+        confidence,
+        status: "❌",
+        source,
+        published: false,
+      });
+    }
+
+    // Détermination statut selon % confiance
+    let status = "⚠️";
+    let published = false;
+
+    if (confidence >= 90) {
+      status = "✅";
+      published = true;
+      await addLog(`🚨 Alerte publiée automatiquement pour ${zone} (${confidence}%)`);
+    } else if (confidence >= 70) {
+      status = "⚠️";
+      published = false;
+      await addLog(`⏳ Alerte en attente validation admin (${zone}, ${confidence}%)`);
+    } else {
+      status = "❌";
+      published = false;
+      await addLog(`ℹ️ Alerte ignorée (<70%) pour ${zone} (${confidence}%)`);
+    }
+
+    // Création en base
+    const alert = await Alert.create({
+      zone,
+      type,
+      message,
+      confidence,
+      status,
+      source,
+      published,
     });
 
-    const status = await checkDuplicate(newAlert);
-    await addLog(`⚠️ Nouvelle alerte ${region} (${level}, ${probability}%) → ${status}`);
-
-    await newAlert.save();
-    return { ...newAlert.toObject(), status };
-  } catch (err) {
-    console.error("❌ Erreur createAlert:", err.message);
-    throw err;
-  }
-}
-
-/**
- * Récupère toutes les alertes
- * - Dernières d’abord
- * - Zones couvertes = précises
- * - Zones non couvertes = globales
- */
-export async function getAlerts() {
-  try {
-    const alerts = await Alert.find().sort({ createdAt: -1 });
-    return alerts;
-  } catch (err) {
-    console.error("❌ Erreur getAlerts:", err.message);
-    throw err;
-  }
-}
-
-/**
- * Valide une alerte manuellement (70–89%)
- */
-export async function validateAlert(id) {
-  try {
-    const alert = await Alert.findByIdAndUpdate(
-      id,
-      { validated: true },
-      { new: true }
-    );
-    await addLog(`✅ Alerte validée manuellement: ${alert.title} (${alert.region})`);
     return alert;
   } catch (err) {
-    console.error("❌ Erreur validateAlert:", err.message);
+    await addLog("❌ Erreur createAlert: " + err.message);
     throw err;
   }
 }
 
 /**
- * Supprime une alerte obsolète
+ * Récupère toutes les alertes (limite 100 dernières)
+ */
+export async function getAlerts(limit = 100) {
+  return await Alert.find().sort({ createdAt: -1 }).limit(limit);
+}
+
+/**
+ * Met à jour une alerte (validation, correction)
+ */
+export async function updateAlert(id, updates) {
+  const alert = await Alert.findByIdAndUpdate(id, updates, { new: true });
+  if (alert) {
+    await addLog(`✏️ Alerte mise à jour: ${alert._id}`);
+  }
+  return alert;
+}
+
+/**
+ * Supprime une alerte
  */
 export async function deleteAlert(id) {
-  try {
-    const alert = await Alert.findByIdAndDelete(id);
-    await addLog(`🗑️ Alerte supprimée: ${alert?.title || id}`);
-    return alert;
-  } catch (err) {
-    console.error("❌ Erreur deleteAlert:", err.message);
-    throw err;
+  const alert = await Alert.findByIdAndDelete(id);
+  if (alert) {
+    await addLog(`🗑️ Alerte supprimée: ${alert._id}`);
   }
+  return alert;
 }
 
-export default {
-  createAlert,
-  getAlerts,
-  validateAlert,
-  deleteAlert,
-};
+export default { createAlert, getAlerts, updateAlert, deleteAlert };
