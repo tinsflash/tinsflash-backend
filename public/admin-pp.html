@@ -2,115 +2,53 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>⚡ Centrale Nucléaire Météo – Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Centrale Nucléaire Météo - Admin</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #0d1117; color: #e6edf3; margin: 0; }
-    header { background: #161b22; padding: 1em; text-align: center; border-bottom: 2px solid #30363d; }
-    h1 { margin: 0; font-size: 1.6em; }
-    button { background: #238636; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-    button:hover { background: #2ea043; }
-    section { padding: 1em; border-bottom: 1px solid #30363d; }
-    h2 { color: #58a6ff; }
-    textarea { width: 100%; background: #161b22; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
-    #logs { background: #161b22; padding: 10px; border-radius: 6px; border: 1px solid #30363d; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
-    .forecast-box { background: #161b22; padding: 10px; border: 1px solid #30363d; border-radius: 6px; margin-bottom: 15px; }
-    .forecast-days { display: flex; gap: 10px; }
-    .day { flex: 1; background: #0d1117; border: 1px solid #30363d; padding: 10px; border-radius: 6px; text-align: center; }
-    .day h4 { margin: 0; color: #58a6ff; }
+    body { font-family: Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
+    h3 { margin-top: 30px; }
+    h4 { margin: 10px 0; }
+    div { margin: 5px 0; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>⚡ Centrale Nucléaire Météo – Cockpit Admin</h1>
-    <button onclick="runSuperForecast()">🚀 Lancer un Run (Europe + USA)</button>
-  </header>
+  <h2>⚡ Centrale Nucléaire Météo - Admin Console</h2>
 
-  <section>
-    <h2>📊 Logs du moteur</h2>
-    <div id="logs">En attente d'un Run...</div>
-  </section>
-
-  <section>
-    <h2>🌦 Prévisions nationales</h2>
-    <div class="forecast-box">
-      <h3>🇧🇪 Belgique</h3>
-      <textarea id="forecast-be"></textarea>
-      <div id="days-be" class="forecast-days"></div>
-    </div>
-    <div class="forecast-box">
-      <h3>🇫🇷 France</h3>
-      <textarea id="forecast-fr"></textarea>
-      <div id="days-fr" class="forecast-days"></div>
-    </div>
-    <div class="forecast-box">
-      <h3>🇱🇺 Luxembourg</h3>
-      <textarea id="forecast-lux"></textarea>
-      <div id="days-lux" class="forecast-days"></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>⚠️ Alertes</h2>
-    <div id="alerts">En attente d'un Run...</div>
-  </section>
-
-  <section>
-    <h2>💬 Chat avec J.E.A.N.</h2>
-    <div id="chat-box">
-      <input type="text" id="chat-input" placeholder="Parlez avec J.E.A.N." />
-      <button onclick="sendChat()">Envoyer</button>
-      <div id="chat-messages"></div>
-    </div>
+  <!-- Prévisions nationales -->
+  <section id="national">
+    <h3>🇧🇪🇫🇷🇱🇺 Prévisions nationales</h3>
+    <div id="BE-forecast">⏳ Chargement Belgique...</div>
+    <div id="FR-forecast">⏳ Chargement France...</div>
+    <div id="LUX-forecast">⏳ Chargement Luxembourg...</div>
   </section>
 
   <script>
-    async function runSuperForecast() {
-      const res = await fetch("/api/supercalc/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: 50.5, lon: 4.7 }),
-      });
-      const data = await res.json();
-
-      document.getElementById("logs").textContent = data.logs.join("\n");
-
-      if (data.nationalForecasts) {
-        document.getElementById("forecast-be").value = data.nationalForecasts.BE;
-        document.getElementById("forecast-fr").value = data.nationalForecasts.FR;
-        document.getElementById("forecast-lux").value = data.nationalForecasts.LUX;
+  async function loadForecast(country) {
+    try {
+      const res = await fetch(`/api/admin/forecasts/latest/${country}`);
+      if (!res.ok) {
+        document.getElementById(`${country}-forecast`).innerText = "❌ Pas de prévision dispo";
+        return;
       }
-
-      if (data.forecast?.multiDay) {
-        renderDays("days-be", data.forecast.multiDay);
-        renderDays("days-fr", data.forecast.multiDay);
-        renderDays("days-lux", data.forecast.multiDay);
-      }
-    }
-
-    function renderDays(containerId, days) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = days
-        .map(
-          (d) =>
-            `<div class="day"><h4>${d.date}</h4><div>${d.icon}</div><div>${d.tempMin}°C / ${d.tempMax}°C</div><div>💨 ${d.wind} km/h</div><div>🌧️ ${d.precipitation}%</div></div>`
-        )
-        .join("");
-    }
-
-    async function sendChat() {
-      const msg = document.getElementById("chat-input").value;
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg }),
-      });
       const data = await res.json();
-      const chatBox = document.getElementById("chat-messages");
-      chatBox.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
-      chatBox.innerHTML += `<div><b>J.E.A.N.:</b> ${data.text}</div>`;
-      document.getElementById("chat-input").value = "";
+      let html = `<h4>${country}</h4>`;
+      if (data.zones?.length > 0) {
+        data.zones.forEach(z => {
+          html += `<div><b>${z.name}</b> : ${z.text} (${z.min}°C / ${z.max}°C, ${z.icon})</div>`;
+        });
+      } else {
+        html += `<div>${data.text} (${data.icon})</div>`;
+      }
+      document.getElementById(`${country}-forecast`).innerHTML = html;
+    } catch (err) {
+      console.error("Erreur chargement forecast", err);
+      document.getElementById(`${country}-forecast`).innerText = "⚠️ Erreur chargement";
     }
+  }
+
+  window.onload = () => {
+    ["BE","FR","LUX"].forEach(c => loadForecast(c));
+  };
   </script>
 </body>
 </html>
