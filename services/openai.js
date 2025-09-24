@@ -1,29 +1,36 @@
-// services/openai.js
-import OpenAI from "openai";
+// services/openai.js (corrigé → Cohere)
+import coherePkg from "cohere-ai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // clé stockée dans Render
+const { CohereClient } = coherePkg;
+
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
 });
 
 /**
- * Envoie une requête à GPT pour le chat J.E.A.N.
+ * Envoie une requête à JEAN (Cohere) pour le chat météo.
  * @param {string} prompt - Texte de l’utilisateur
- * @returns {Promise<string>} - Réponse de l’IA
+ * @returns {Promise<string>} - Réponse de JEAN
  */
 export async function askJean(prompt) {
   try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini", // modèle rapide & économique
+    const response = await cohere.chat({
+      model: "command-r-plus",
       messages: [
         { role: "system", content: "Tu es J.E.A.N., une IA spécialisée en météo." },
         { role: "user", content: prompt },
       ],
-      max_tokens: 300,
+      max_tokens: 500,
     });
 
-    return response.choices[0].message.content;
+    if (response.text) {
+      return response.text;
+    } else if (response.message?.content?.[0]?.text) {
+      return response.message.content[0].text;
+    }
+    return "⚠️ Réponse IA vide ou non reconnue.";
   } catch (err) {
-    console.error("Erreur OpenAI:", err.message);
+    console.error("❌ Erreur JEAN (Cohere):", err.message);
     return "⚠️ JEAN n’est pas disponible pour le moment.";
   }
 }
