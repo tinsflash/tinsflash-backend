@@ -1,241 +1,49 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Centrale Nucléaire Météo – Console Admin</title>
-  <meta name="robots" content="noindex,nofollow">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <style>
-    :root { --bg:#0b1220; --card:#121a2b; --text:#e9f0ff; --muted:#9fb3d1; --accent:#4da3ff; --ok:#30d158; --err:#ff5b5b; }
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;}
-    .wrap{max-width:960px;margin:24px auto;padding:0 16px}
-    .h1{font-size:28px;margin:0 0 16px;display:flex;align-items:center;gap:10px}
-    .card{background:var(--card);border-radius:16px;padding:18px;margin:16px 0;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-    .title{font-size:22px;margin:0 0 12px}
-    .btn{background:#2c77ff;border:none;border-radius:12px;color:#fff;padding:10px 16px;font-weight:700;cursor:pointer}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .ok{color:var(--ok)}
-    .err{color:var(--err)}
-    .muted{color:var(--muted)}
-    .grid{display:grid;gap:10px}
-    .grid-2{grid-template-columns:1fr 1fr}
-    .row{display:flex;gap:8px;flex-wrap:wrap}
-    .pill{background:#0f1526;border:1px solid #203157;border-radius:10px;padding:6px 10px}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-    .day{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#0f1526;border:1px solid #203157}
-    .label{font-size:13px;color:var(--muted)}
-    textarea,input{width:100%;border-radius:12px;border:1px solid #203157;background:#0f1526;color:var(--text);padding:10px}
-    .sec-title{margin:8px 0 6px;font-size:16px;color:#cfe0ff}
-    .list{display:grid;gap:8px}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1 class="h1">⚡ Centrale Nucléaire Météo — Console Admin</h1>
+<!-- Chat J.E.A.N. -->
+<section id="chat">
+  <h3>💬 Chat J.E.A.N.</h3>
+  <input type="text" id="chat-input" placeholder="Pose ta question...">
+  <button id="chat-send">Envoyer</button>
+  <p id="chat-response">⏳ En attente...</p>
+</section>
 
-    <!-- SuperForecast -->
-    <section class="card">
-      <h2 class="title">🚀 SuperForecast</h2>
-      <button id="runBtn" class="btn">Lancer Run</button>
-      <span id="runStatus" class="pill muted">En attente…</span>
-    </section>
+<!-- Debug IA (masqué par défaut) -->
+<section id="debug-ia" style="display:none; margin-top:15px;">
+  <h3>🛠️ Debug Cohere</h3>
+  <pre id="debug-content" style="background:#111; color:#0f0; padding:10px; border-radius:8px; max-height:200px; overflow:auto;"></pre>
+</section>
 
-    <!-- Prévisions nationales -->
-    <section class="card">
-      <h2 class="title">📡 Prévisions nationales (BE / FR multi-zones / USA)</h2>
-
-      <!-- BE -->
-      <div>
-        <div class="sec-title">🇧🇪 Belgique (national)</div>
-        <div id="be-today" class="row"></div>
-        <div class="sec-title">Vue rapide 7 jours</div>
-        <div id="be-7d" class="list"></div>
-      </div>
-
-      <!-- FR -->
-      <div style="margin-top:16px">
-        <div class="sec-title">🇫🇷 France (national + zones)</div>
-        <div id="fr-national" class="row"></div>
-        <div class="grid grid-2">
-          <div>
-            <div class="label">Nord-Ouest</div>
-            <div id="fr-NO" class="row"></div>
-          </div>
-          <div>
-            <div class="label">Nord-Est</div>
-            <div id="fr-NE" class="row"></div>
-          </div>
-          <div>
-            <div class="label">Sud-Ouest</div>
-            <div id="fr-SO" class="row"></div>
-          </div>
-          <div>
-            <div class="label">Sud-Est</div>
-            <div id="fr-SE" class="row"></div>
-          </div>
-          <div>
-            <div class="label">Corse</div>
-            <div id="fr-COR" class="row"></div>
-          </div>
-        </div>
-
-        <div class="sec-title" style="margin-top:12px">Vue rapide 7 jours (FR national)</div>
-        <div id="fr-7d" class="list"></div>
-      </div>
-
-      <div style="margin-top:14px">
-        <button id="publishBtn" class="btn">Publier vers index</button>
-        <span class="muted">— pousse le dernier run vers la page publique</span>
-      </div>
-    </section>
-
-    <!-- Alertes -->
-    <section class="card">
-      <h2 class="title">⚠️ Alertes</h2>
-      <div id="alertsBox" class="list"><span class="muted">Chargement…</span></div>
-    </section>
-
-    <!-- Chat JEAN -->
-    <section class="card">
-      <h2 class="title">🤖 Chat J.E.A.N.</h2>
-      <div class="row">
-        <input id="chatInput" placeholder="Pose ta question à J.E.A.N. (analyse IA)…">
-        <button id="chatBtn" class="btn">Envoyer</button>
-      </div>
-      <div id="chatResp" class="mono muted" style="margin-top:8px"></div>
-    </section>
-
-    <!-- Logs -->
-    <section class="card">
-      <h2 class="title">📜 Logs</h2>
-      <div id="logsBox" class="mono" style="white-space:pre-wrap;line-height:1.45">Chargement…</div>
-    </section>
-  </div>
+<!-- Bouton toggle debug -->
+<button id="toggle-debug" style="margin-top:10px;">Afficher debug IA</button>
 
 <script>
-const API = "";
+  const chatInput = document.getElementById("chat-input");
+  const chatSend = document.getElementById("chat-send");
+  const chatResponse = document.getElementById("chat-response");
+  const debugSection = document.getElementById("debug-ia");
+  const debugContent = document.getElementById("debug-content");
+  const toggleDebug = document.getElementById("toggle-debug");
 
-// ===== Helpers UI
-const n = x => (x === null || x === undefined) ? "—" : x;
-const icon = (rain, wx) => {
-  const r = Number(rain ?? 0);
-  if (r >= 60) return "🌧️";
-  if (r >= 20) return "🌦️";
-  if ((wx||"").toLowerCase().includes("neige")) return "❄️";
-  return "☀️";
-};
-function rowHTML(f) {
-  return `<span class="pill">${icon(f?.rainProbability)} ${n(f?.minTemp)}° / ${n(f?.maxTemp)}° • ☔ ${n(f?.rainProbability)}% • 💨 ${n(f?.windSpeed)} km/h</span>`;
-}
-function dayHTML(d) {
-  return `<div class="day">${d.date || "—"} ${icon(d?.rainProbability)} <span class="muted">|</span> ${n(d?.minTemp)}° / ${n(d?.maxTemp)}° <span class="muted">•</span> ☔ ${n(d?.rainProbability)}%</div>`;
-}
+  // Toggle affichage debug
+  toggleDebug.addEventListener("click", () => {
+    debugSection.style.display = debugSection.style.display === "none" ? "block" : "none";
+  });
 
-// ===== Actions
-async function runSF() {
-  const btn = document.getElementById("runBtn");
-  const status = document.getElementById("runStatus");
-  btn.disabled = true; status.textContent = "En cours…";
-  try {
-    const res = await fetch(`${API}/api/superforecast/run`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({}) });
-    const data = await res.json();
-    status.innerHTML = "✅ Run terminé";
-    await Promise.all([loadForecasts(), loadLogs()]);
-  } catch (e) {
-    status.innerHTML = "❌ Échec du Run";
-  } finally {
-    btn.disabled = false;
-  }
-}
+  chatSend.addEventListener("click", async () => {
+    const message = chatInput.value;
+    chatResponse.textContent = "⏳ J.E.A.N. réfléchit...";
 
-async function loadForecasts() {
-  try {
-    const res = await fetch(`${API}/api/forecasts`);
-    const data = await res.json();
-
-    // BE (national)
-    const be = data.filter(x => x.country === "BE");
-    document.getElementById("be-today").innerHTML = be.slice(0,1).map(rowHTML).join("") || `<span class="muted">Pas de données</span>`;
-    document.getElementById("be-7d").innerHTML = be.slice(0,7).map(dayHTML).join("");
-
-    // FR national + zones
-    const frNat = data.filter(x => x.country === "FR");
-    const frNO = data.filter(x => x.country === "FR-NO");
-    const frNE = data.filter(x => x.country === "FR-NE");
-    const frSO = data.filter(x => x.country === "FR-SO");
-    const frSE = data.filter(x => x.country === "FR-SE");
-    const frCO = data.filter(x => x.country === "FR-COR");
-
-    document.getElementById("fr-national").innerHTML = frNat.slice(0,1).map(rowHTML).join("") || `<span class="muted">Pas de données</span>`;
-    document.getElementById("fr-NO").innerHTML = frNO.slice(0,1).map(rowHTML).join("") || `<span class="muted">—</span>`;
-    document.getElementById("fr-NE").innerHTML = frNE.slice(0,1).map(rowHTML).join("") || `<span class="muted">—</span>`;
-    document.getElementById("fr-SO").innerHTML = frSO.slice(0,1).map(rowHTML).join("") || `<span class="muted">—</span>`;
-    document.getElementById("fr-SE").innerHTML = frSE.slice(0,1).map(rowHTML).join("") || `<span class="muted">—</span>`;
-    document.getElementById("fr-COR").innerHTML = frCO.slice(0,1).map(rowHTML).join("") || `<span class="muted">—</span>`;
-    document.getElementById("fr-7d").innerHTML = frNat.slice(0,7).map(dayHTML).join("");
-  } catch (e) {
-    document.getElementById("be-today").innerHTML = `<span class="err">Erreur chargement</span>`;
-  }
-}
-
-async function loadAlerts() {
-  try {
-    const res = await fetch(`${API}/api/alerts`);
-    const data = await res.json();
-    const box = document.getElementById("alertsBox");
-    if (!data.length) {
-      box.innerHTML = `<span class="muted">Aucune alerte</span>`;
-      return;
-    }
-    box.innerHTML = data.map(a => `<div class="day">⚠️ <b>${a.title || "Alerte"}</b> — ${n(a.status)} — ${n(a.certainty)}%</div>`).join("");
-  } catch (e) {
-    document.getElementById("alertsBox").innerHTML = `<span class="err">Erreur</span>`;
-  }
-}
-
-async function sendChat() {
-  const input = document.getElementById("chatInput");
-  const resp = document.getElementById("chatResp");
-  const msg = (input.value || "").trim();
-  if (!msg) return;
-  resp.textContent = "⏳ JEAN réfléchit…";
-  try {
-    const res = await fetch(`${API}/api/chat`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ message: msg })
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
     });
+
     const data = await res.json();
-    if (data?.reply) resp.textContent = data.reply;
-    else resp.textContent = "⚠️ Réponse vide";
-  } catch (e) {
-    resp.innerHTML = `<span class="err">Erreur IA</span>`;
-  }
-}
+    chatResponse.textContent = data.reply || "⚠️ Réponse indisponible";
 
-async function loadLogs() {
-  try {
-    const res = await fetch(`${API}/api/logs`);
-    const logs = await res.json();
-    const fmt = logs.map(l => {
-      const ts = l.createdAt ? new Date(l.createdAt).toISOString() : "—";
-      return `[${ts}] ${l.message}`;
-    }).join("\n");
-    document.getElementById("logsBox").textContent = fmt || "—";
-  } catch (e) {
-    document.getElementById("logsBox").textContent = "Erreur logs";
-  }
-}
-
-// Events
-document.getElementById("runBtn").addEventListener("click", runSF);
-document.getElementById("chatBtn").addEventListener("click", sendChat);
-
-// Initial load
-loadForecasts();
-loadAlerts();
-loadLogs();
+    // Afficher debug brut si dispo
+    if (data.debug) {
+      debugContent.textContent = JSON.stringify(data.debug, null, 2);
+    }
+  });
 </script>
-</body>
-</html>
