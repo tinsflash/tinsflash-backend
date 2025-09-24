@@ -2,158 +2,172 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Centrale Nucléaire Météo - Admin</title>
+  <title>🧠 Centrale Nucléaire Météo – Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
-    h2 { color: #0ff; }
-    h3 { margin-top: 30px; }
-    h4 { margin: 10px 0; }
-    div, table { margin: 5px 0; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
-    th { background: #222; }
-    tr:nth-child(even) { background: #1a1a1a; }
-    .btn { background: #0ff; color: #000; border: none; padding: 5px 10px; cursor: pointer; }
-    .btn:hover { background: #0cc; }
-    .danger { background: #f33; color: #fff; }
-    .danger:hover { background: #c00; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #0a0f24; color: #f0f0f0; }
+    header { background: #142850; padding: 1rem; text-align: center; }
+    h1 { margin: 0; font-size: 1.6rem; }
+    section { padding: 1rem; border-bottom: 1px solid #333; }
+    h2 { font-size: 1.3rem; margin-top: 0; }
+    textarea, input, select {
+      width: 100%; padding: 0.5rem; margin: 0.5rem 0;
+      border: none; border-radius: 5px;
+    }
+    button {
+      background: #00b4d8; color: white; border: none;
+      padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;
+    }
+    button:hover { background: #0096c7; }
+    .log-box { background: #111; padding: 0.5rem; height: 150px; overflow-y: auto; font-size: 0.85rem; }
+    .forecast-card, .alert-card {
+      background: #1a1f36; padding: 0.7rem; margin: 0.5rem 0; border-radius: 5px;
+    }
+    .forecast-card span { font-weight: bold; }
+    .status-premier { color: #00ff00; }
+    .status-deja { color: #ffcc00; }
+    .status-doublon { color: #ff4d4d; }
   </style>
 </head>
 <body>
-  <h2>⚡ Centrale Nucléaire Météo - Admin Console</h2>
+  <header>
+    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  </header>
 
-  <!-- Prévisions nationales -->
-  <section id="national">
-    <h3>🇧🇪🇫🇷🇱🇺 Prévisions nationales</h3>
-    <div id="BE-forecast">⏳ Chargement Belgique...</div>
-    <div id="FR-forecast">⏳ Chargement France...</div>
-    <div id="LUX-forecast">⏳ Chargement Luxembourg...</div>
+  <!-- 🔴 SuperForecast -->
+  <section>
+    <h2>🚀 SuperForecast</h2>
+    <button onclick="runSuperForecast()">▶ Lancer Run</button>
+    <div id="analysis"></div>
   </section>
 
-  <!-- Alertes météo -->
-  <section id="alerts">
-    <h3>⚠️ Alertes météo</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Niveau</th>
-          <th>Certitude</th>
-          <th>Description</th>
-          <th>Zone</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="alerts-table">
-        <tr><td colspan="6">⏳ Chargement...</td></tr>
-      </tbody>
-    </table>
-    <h4>➕ Nouvelle alerte</h4>
-    <form id="alert-form">
-      <input type="text" id="alert-type" placeholder="Type (pluie, vent...)" required />
-      <input type="text" id="alert-level" placeholder="Niveau (jaune, orange, rouge)" required />
-      <input type="number" id="alert-certainty" placeholder="Certitude (%)" required />
-      <input type="text" id="alert-description" placeholder="Description" />
-      <input type="text" id="alert-location" placeholder="Localisation" />
-      <button type="submit" class="btn">Créer</button>
-    </form>
+  <!-- 🌍 Prévisions nationales -->
+  <section>
+    <h2>📡 Prévisions nationales</h2>
+    <div id="forecasts">⏳ Chargement…</div>
+  </section>
+
+  <!-- ⚠️ Alertes -->
+  <section>
+    <h2>⚠️ Alertes</h2>
+    <div id="alerts">⏳ Chargement…</div>
+  </section>
+
+  <!-- 💬 Chat IA J.E.A.N. -->
+  <section>
+    <h2>💬 Chat J.E.A.N.</h2>
+    <textarea id="chatInput" placeholder="Posez une question à J.E.A.N."></textarea>
+    <button onclick="askJEAN()">Envoyer</button>
+    <div id="chatReply"></div>
+  </section>
+
+  <!-- 📜 Logs -->
+  <section>
+    <h2>📜 Logs</h2>
+    <div id="logs" class="log-box">⏳ Chargement…</div>
+  </section>
+
+  <!-- 👥 Utilisateurs -->
+  <section>
+    <h2>👥 Utilisateurs</h2>
+    <div id="users">⏳ Chargement…</div>
+  </section>
+
+  <!-- 🌐 Outils de veille -->
+  <section>
+    <h2>🌐 Outils de veille</h2>
+    <ul>
+      <li><a href="https://www.noaa.gov/" target="_blank">NOAA (USA)</a></li>
+      <li><a href="https://climate.copernicus.eu/" target="_blank">Copernicus (Europe)</a></li>
+      <li><a href="https://www.meteo.be/" target="_blank">IRM (Belgique)</a></li>
+      <li><a href="https://meteofrance.com/" target="_blank">Météo France</a></li>
+      <li><a href="https://www.nasa.gov/" target="_blank">NASA</a></li>
+    </ul>
   </section>
 
   <script>
-  // Charger les prévisions nationales
-  async function loadForecast(country) {
-    try {
-      const res = await fetch(`/api/admin/forecasts/latest/${country}`);
-      if (!res.ok) {
-        document.getElementById(`${country}-forecast`).innerText = "❌ Pas de prévision dispo";
-        return;
-      }
-      const data = await res.json();
-      let html = `<h4>${country}</h4>`;
-      if (data.zones?.length > 0) {
-        data.zones.forEach(z => {
-          html += `<div><b>${z.name}</b> : ${z.text} (${z.min}°C / ${z.max}°C, ${z.icon})</div>`;
-        });
-      } else {
-        html += `<div>${data.text} (${data.icon})</div>`;
-      }
-      document.getElementById(`${country}-forecast`).innerHTML = html;
-    } catch (err) {
-      console.error("Erreur chargement forecast", err);
-      document.getElementById(`${country}-forecast`).innerText = "⚠️ Erreur chargement";
-    }
-  }
-
-  // Charger les alertes
-  async function loadAlerts() {
-    try {
-      const res = await fetch("/api/admin/alerts");
-      const alerts = await res.json();
-      const tbody = document.getElementById("alerts-table");
-      tbody.innerHTML = "";
-      if (alerts.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='6'>Aucune alerte</td></tr>";
-        return;
-      }
-      alerts.forEach(a => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${a.type}</td>
-          <td>${a.level}</td>
-          <td>${a.certainty}%</td>
-          <td>${a.description || ""}</td>
-          <td>${a.location || ""}</td>
-          <td>
-            <button class="btn danger" onclick="deleteAlert('${a._id}')">🗑️</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    } catch (err) {
-      console.error("Erreur chargement alertes", err);
-    }
-  }
-
-  // Supprimer une alerte
-  async function deleteAlert(id) {
-    if (!confirm("Supprimer cette alerte ?")) return;
-    try {
-      await fetch(`/api/admin/alerts/${id}`, { method: "DELETE" });
-      loadAlerts();
-    } catch (err) {
-      console.error("Erreur suppression alerte", err);
-    }
-  }
-
-  // Ajouter une nouvelle alerte
-  document.getElementById("alert-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      const newAlert = {
-        type: document.getElementById("alert-type").value,
-        level: document.getElementById("alert-level").value,
-        certainty: parseInt(document.getElementById("alert-certainty").value),
-        description: document.getElementById("alert-description").value,
-        location: document.getElementById("alert-location").value
-      };
-      await fetch("/api/admin/alerts", {
+    async function runSuperForecast() {
+      const res = await fetch("/api/superforecast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newAlert)
+        body: JSON.stringify({ forecastData: {} }) // ⚠️ brancher avec fusion réelle
       });
-      document.getElementById("alert-form").reset();
+      const data = await res.json();
+      document.getElementById("analysis").innerText = data.analysis || "⚠️ Analyse indisponible";
+      loadForecasts();
       loadAlerts();
-    } catch (err) {
-      console.error("Erreur création alerte", err);
     }
-  });
 
-  // Charger au démarrage
-  window.onload = () => {
-    ["BE","FR","LUX"].forEach(c => loadForecast(c));
+    async function loadForecasts() {
+      const countries = ["BE", "FR", "LU", "USA", "UK", "UA"];
+      let html = "";
+      for (const cc of countries) {
+        const res = await fetch(`/api/forecast/${cc}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          data.forEach(f => {
+            html += `<div class="forecast-card">
+              <span>${f.country}</span> (${f.date}) :
+              ${f.minTemp ?? "-"}°C / ${f.maxTemp ?? "-"}°C –
+              ${f.summary ?? "Pas de résumé"} ${f.icon ?? ""}
+            </div>`;
+          });
+        }
+      }
+      document.getElementById("forecasts").innerHTML = html || "Aucune prévision disponible.";
+    }
+
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      let html = "";
+      data.forEach(a => {
+        let statusClass =
+          a.status?.includes("Premier") ? "status-premier" :
+          a.status?.includes("Déjà") ? "status-deja" :
+          "status-doublon";
+        html += `<div class="alert-card">
+          <span>${a.title}</span> – ${a.region} [${a.level.toUpperCase()}]
+          <br/>${a.description}
+          <br/>Probabilité: ${a.probability}% – 
+          <span class="${statusClass}">${a.status ?? "?"}</span>
+        </div>`;
+      });
+      document.getElementById("alerts").innerHTML = html || "Aucune alerte active.";
+    }
+
+    async function askJEAN() {
+      const msg = document.getElementById("chatInput").value;
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      document.getElementById("chatReply").innerText = data.reply || "⚠️ Pas de réponse";
+    }
+
+    async function loadLogs() {
+      const res = await fetch("/api/admin/logs"); // ⚠️ API à créer côté backend
+      const data = await res.json();
+      document.getElementById("logs").innerText = data.join("\n");
+    }
+
+    async function loadUsers() {
+      const res = await fetch("/api/admin/users"); // ⚠️ API à créer côté backend
+      const data = await res.json();
+      let html = "";
+      data.forEach(u => {
+        html += `<div>${u.type} – ${u.zone} (${u.count} utilisateurs)</div>`;
+      });
+      document.getElementById("users").innerHTML = html || "Aucun utilisateur trouvé.";
+    }
+
+    // Auto-load au démarrage
+    loadForecasts();
     loadAlerts();
-  };
+    loadLogs();
+    loadUsers();
   </script>
 </body>
 </html>
