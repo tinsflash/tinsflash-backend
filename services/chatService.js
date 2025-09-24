@@ -16,8 +16,8 @@ async function chatWithJean(message) {
     }
 
     const response = await cohere.chat({
-      model: "command-r-03-202",   // ✅ modèle actif
-      message: cleaned,            // ✅ clé correcte (PAS 'messages')
+      model: "command-r",  // ✅ modèle valide (septembre 2025)
+      message: cleaned,
     });
 
     const reply =
@@ -27,7 +27,7 @@ async function chatWithJean(message) {
 
     return { reply };
   } catch (err) {
-    console.error("❌ Erreur chat JEAN:", err.message);
+    console.error("❌ Erreur chat JEAN:", err);
     return { reply: `❌ Erreur IA: ${err.message}` };
   }
 }
