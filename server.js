@@ -5,19 +5,16 @@ import dotenv from "dotenv";
 import cors from "cors";
 
 // === Services ===
-import superForecast from "./services/superForecast.js";
 import forecastService from "./services/forecastService.js";
+import superForecastService from "./services/superForecast.js";
 import alertsService from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
 
-// === Routes ===
-import openaiRoutes from "./routes/openai.js";
-
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js"; // ✅ Correction ici
+import Alert from "./models/Alert.js";
 
 dotenv.config();
 
@@ -27,7 +24,10 @@ app.use(cors());
 
 // === MongoDB connection ===
 mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
@@ -35,86 +35,79 @@ mongoose
 // 📡 API ROUTES
 // ==============================
 
-// Admin – prévisions nationales
-app.get("/api/admin/forecasts/latest/:country", async (req, res) => {
+// === Prévisions météo ===
+app.get("/api/forecast/:country", async (req, res) => {
   try {
-    const forecast = await Forecast.findOne({ country: req.params.country }).sort({ createdAt: -1 });
-    if (!forecast) return res.status(404).json({ error: "Pas de prévision disponible" });
-    res.json(forecast);
+    const { country } = req.params;
+    const data = await forecastService.getForecast(country);
+    res.json(data);
   } catch (err) {
-    console.error("❌ Erreur récupération forecast:", err.message);
-    res.status(500).json({ error: "Erreur serveur" });
+    console.error("❌ Forecast API error:", err.message);
+    res.status(500).json({ error: "Forecast API failed" });
   }
 });
 
-// Admin – alertes
-app.get("/api/admin/alerts", async (req, res) => {
+// === SuperForecast (centrale IA nucléaire) ===
+app.post("/api/superforecast", async (req, res) => {
   try {
-    const alerts = await Alert.find().sort({ createdAt: -1 });
+    const { forecastData } = req.body;
+    const analysis = await superForecastService.runSuperForecast(forecastData);
+    res.json({ analysis });
+  } catch (err) {
+    console.error("❌ SuperForecast API error:", err.message);
+    res.status(500).json({ error: "SuperForecast API failed" });
+  }
+});
+
+// === Alertes ===
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const alerts = await alertsService.getAlerts();
     res.json(alerts);
   } catch (err) {
-    res.status(500).json({ error: "Erreur récupération alertes" });
+    console.error("❌ Alerts API error:", err.message);
+    res.status(500).json({ error: "Alerts API failed" });
   }
 });
 
-app.post("/api/admin/alerts", async (req, res) => {
+// === Radar ===
+app.get("/api/radar", async (req, res) => {
   try {
-    const alert = await alertsService.createAlert(req.body);
-    res.json(alert);
+    const radar = await radarService.getRadar();
+    res.json(radar);
   } catch (err) {
-    res.status(500).json({ error: "Erreur création alerte" });
+    console.error("❌ Radar API error:", err.message);
+    res.status(500).json({ error: "Radar API failed" });
   }
 });
 
-app.delete("/api/admin/alerts/:id", async (req, res) => {
+// === Podcasts météo ===
+app.get("/api/podcasts", async (req, res) => {
   try {
-    await Alert.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+    const podcasts = await podcastService.getPodcasts();
+    res.json(podcasts);
   } catch (err) {
-    res.status(500).json({ error: "Erreur suppression alerte" });
+    console.error("❌ Podcast API error:", err.message);
+    res.status(500).json({ error: "Podcast API failed" });
   }
 });
 
-// SuperForecast – lancement manuel
-app.post("/api/admin/superforecast/run", async (req, res) => {
-  try {
-    const { lat, lon } = req.body;
-    const result = await superForecast.runSuperForecast(lat, lon);
-    res.json(result);
-  } catch (err) {
-    console.error("❌ Erreur SuperForecast:", err.message);
-    res.status(500).json({ error: "Erreur lancement SuperForecast" });
-  }
-});
-
-// Chat avec IA J.E.A.N.
+// === Chat avec J.E.A.N. ===
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
     const reply = await chatService.askJEAN(message);
     res.json({ reply });
   } catch (err) {
-    console.error("❌ Erreur chat JEAN:", err.message);
-    res.status(500).json({ error: "Erreur chat IA JEAN" });
-  }
-});
-
-// Podcast météo (bulletins automatiques)
-app.use("/api/openai", openaiRoutes);
-
-// Radar (si déjà implémenté)
-app.get("/api/radar", async (req, res) => {
-  try {
-    const radar = await radarService.getRadarData();
-    res.json(radar);
-  } catch (err) {
-    console.error("❌ Erreur radar:", err.message);
-    res.status(500).json({ error: "Erreur récupération radar" });
+    console.error("❌ Chat API error:", err.message);
+    res.status(500).json({ error: "Chat API failed" });
   }
 });
 
 // ==============================
-// 🚀 Serveur
+// 🚀 Start server
 // ==============================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Serveur Tinsflash lancé sur port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`⚡ Centrale Nucléaire Météo active sur port ${PORT}`);
+});
