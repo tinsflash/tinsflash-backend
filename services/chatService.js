@@ -4,12 +4,16 @@ import { CohereClientV2 } from "cohere-ai";
 
 const router = express.Router();
 
-// Initialisation Cohere (clé API via Render)
+// ================================
+// 🤖 Client Cohere IA
+// ================================
 const cohere = new CohereClientV2({
   apiKey: process.env.COHERE_API_KEY,
 });
 
-// === Route POST /api/chat ===
+// ================================
+// 💬 Route Chat IA
+// ================================
 router.post("/", async (req, res) => {
   const { message } = req.body ?? {};
 
@@ -20,17 +24,12 @@ router.post("/", async (req, res) => {
   try {
     const response = await cohere.chat({
       model: "command-a-03-2025",
-      messages: [
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+      messages: [{ role: "user", content: message }],
     });
 
-    // Extraire la réponse texte
     const reply =
-      response?.message?.content?.[0]?.text ?? "⚠️ Pas de réponse IA.";
+      response?.message?.content?.[0]?.text ??
+      "⚠️ Pas de réponse de l'IA.";
 
     res.json({ reply });
   } catch (err) {
