@@ -2,6 +2,7 @@
 import fetch from "node-fetch";
 import { addLog } from "./logsService.js";
 import { injectForecasts } from "./forecastService.js";
+import ClimateFactors from "./climateFactors.js";
 
 // ==============================
 // 🌍 Zones couvertes
@@ -80,9 +81,9 @@ function buildForecastData(fusionData) {
 }
 
 /**
- * Lance un run SuperForecast (fusion multi-modèles + IA Cohere)
+ * Lance un run SuperForecast (fusion multi-modèles + IA + facteurs climat)
  */
-export async function runSuperForecast(fusionData) {
+export async function runSuperForecast(fusionData, lat = 50.5, lon = 4.5) {
   try {
     await addLog("🚀 Run SuperForecast lancé");
 
@@ -90,6 +91,7 @@ export async function runSuperForecast(fusionData) {
     const prompt = `
       Analyse météorologique nucléaire mondiale.
       Croise GFS, ECMWF, ICON, Copernicus, Meteomatics, NASA POWER, Trullemans, Wetterzentrale.
+      Intègre relief, altitude, climat local, proximité mers/rivières, facteurs urbains.
       Détaille risques pluie, vent, neige, orages, inondations.
       Mets en évidence toute anomalie majeure détectée.
       Précision maximale pour 🇧🇪 BE, 🇫🇷 FR multi-zones, 🇺🇸 USA (états + national), 🇪🇺 UE27, 🇬🇧 UK, 🇺🇦 UA.
@@ -102,7 +104,7 @@ export async function runSuperForecast(fusionData) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-plus-08-2024", // ✅ modèle mis à jour
+        model: "command-a-03-2025",
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -117,13 +119,22 @@ export async function runSuperForecast(fusionData) {
     await addLog(`📊 Analyse IA SuperForecast: ${analysis}`);
 
     // === Étape 2 : Construire forecastData ===
-    const forecastData = buildForecastData(fusionData);
+    let forecastData = buildForecastData(fusionData);
 
-    // === Étape 3 : Injection MongoDB ===
-    await injectForecasts(forecastData);
+    // === Étape 3 : Application ClimateFactors sur chaque entrée ===
+    const adjustedData = [];
+    for (const entry of forecastData) {
+      const adjusted = await ClimateFactors.applyClimateFactors(entry, lat, lon, {
+        zoneType: entry.country.startsWith("USA-") ? "urban" : "rural",
+      });
+      adjustedData.push(adjusted);
+    }
+
+    // === Étape 4 : Injection MongoDB ===
+    await injectForecasts(adjustedData);
 
     await addLog("🎯 SuperForecast terminé avec succès");
-    return { analysis, forecastData };
+    return { analysis, forecastData: adjustedData };
   } catch (err) {
     console.error("❌ Erreur runSuperForecast:", err.message);
     await addLog("❌ Erreur SuperForecast: " + err.message);
