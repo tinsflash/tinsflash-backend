@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// ✅ Nouveau client Cohere
+// ✅ Nouveau client Cohere (plus de cohere.init)
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
@@ -17,13 +17,13 @@ async function chatWithJean(message) {
 
   try {
     const response = await cohere.chat({
-      model: "command-r-03-202",   // ✅ modèle actif
+      model: "command-r-03-202",   // ✅ modèle actif 2025
       messages: [
         { role: "user", content: message }
       ]
     });
 
-    // ✅ Cohere renvoie ici
+    // ✅ Récupération texte IA
     const reply =
       response.message?.content?.[0]?.text ||
       response.text ||
