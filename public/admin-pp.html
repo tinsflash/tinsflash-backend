@@ -2,85 +2,102 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Console IA – J.E.A.N.</title>
+  <title>Console Administrateur – Tinsflash</title>
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
       background: #0b0e11;
       color: #f0f0f0;
-      padding: 20px;
     }
-    #chat-box {
-      width: 100%;
-      height: 400px;
-      border: 1px solid #444;
-      padding: 10px;
-      overflow-y: auto;
+    header {
+      background: #11151a;
+      padding: 15px;
+      text-align: center;
+      border-bottom: 2px solid #4FC3F7;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      color: #4FC3F7;
+    }
+    nav {
       background: #1a1d21;
+      padding: 10px;
+      display: flex;
+      gap: 15px;
+      border-bottom: 1px solid #333;
     }
-    .user { color: #4FC3F7; margin: 5px 0; }
-    .assistant { color: #A5D6A7; margin: 5px 0; }
-    #input-area {
-      margin-top: 10px;
-    }
-    #message {
-      width: 80%;
-      padding: 8px;
-      border: none;
+    nav a {
+      color: #f0f0f0;
+      text-decoration: none;
+      padding: 6px 10px;
       border-radius: 4px;
+      transition: background 0.2s;
     }
-    #send {
-      padding: 8px 12px;
+    nav a:hover {
       background: #4FC3F7;
       color: #000;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
     }
-    #send:hover {
-      background: #0288D1;
+    main {
+      padding: 20px;
+    }
+    section {
+      margin-bottom: 25px;
+      padding: 15px;
+      background: #1a1d21;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    h2 {
+      color: #4FC3F7;
+      margin-top: 0;
+    }
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+      background: #fff;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <h1>💬 Console IA – J.E.A.N.</h1>
-  <div id="chat-box"></div>
-  <div id="input-area">
-    <input type="text" id="message" placeholder="Pose ta question ici...">
-    <button id="send">Envoyer</button>
-  </div>
+  <header>
+    <h1>🛰️ Console Administrateur – Tinsflash</h1>
+  </header>
 
-  <script>
-    const chatBox = document.getElementById("chat-box");
-    const sendBtn = document.getElementById("send");
-    const msgInput = document.getElementById("message");
+  <nav>
+    <a href="/admin-pp.html">🏠 Tableau de bord</a>
+    <a href="/admin-chat.html">💬 Chat IA J.E.A.N.</a>
+    <a href="/index.html" target="_blank">🌍 Site Public</a>
+  </nav>
 
-    function appendMessage(role, text) {
-      const div = document.createElement("div");
-      div.className = role;
-      div.textContent = role.toUpperCase() + ": " + text;
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
+  <main>
+    <section>
+      <h2>📡 SuperForecast (lancer un run)</h2>
+      <button onclick="alert('Run SuperForecast lancé 🚀');">▶️ Lancer Run</button>
+    </section>
 
-    sendBtn.addEventListener("click", async () => {
-      const text = msgInput.value.trim();
-      if (!text) return;
-      appendMessage("user", text);
-      msgInput.value = "";
+    <section>
+      <h2>⚠️ Alertes Météo</h2>
+      <iframe src="/api/alerts"></iframe>
+    </section>
 
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text })
-        });
-        const data = await res.json();
-        appendMessage("assistant", data.reply);
-      } catch (err) {
-        appendMessage("assistant", "⚠️ Erreur connexion IA");
-      }
-    });
-  </script>
+    <section>
+      <h2>🌦️ Prévisions Nationales</h2>
+      <iframe src="/api/forecast"></iframe>
+    </section>
+
+    <section>
+      <h2>🛰️ Radar</h2>
+      <iframe src="/api/radar"></iframe>
+    </section>
+
+    <section>
+      <h2>📊 Logs</h2>
+      <iframe src="/api/adminlogs"></iframe>
+    </section>
+  </main>
 </body>
 </html>
