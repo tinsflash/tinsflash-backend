@@ -1,7 +1,6 @@
 // services/forecastService.js
 import Forecast from "../models/Forecast.js";
 import { addLog } from "./logsService.js";
-import axios from "axios";
 
 // ==============================
 // 🌍 Zones couvertes : Europe élargie + UK + Ukraine + USA
@@ -73,34 +72,26 @@ export async function getForecast(countryCode) {
 
     let forecasts;
 
-    // ==============================
     // 🇺🇸 États-Unis → par État + national
-    // ==============================
     if (countryCode === "USA") {
       forecasts = await Forecast.find({ country: { $regex: "^USA" } }).sort({ date: -1 });
       return forecasts;
     }
 
-    // ==============================
     // 🇫🇷 France → multi-zones
-    // ==============================
     if (countryCode === "FR") {
       const zones = ["FR-NO", "FR-NE", "FR-SO", "FR-SE", "FR-COR"];
       forecasts = await Forecast.find({ country: { $in: zones } }).sort({ date: -1 });
       return forecasts;
     }
 
-    // ==============================
     // 🌍 Europe élargie + UK + Ukraine
-    // ==============================
     if ([...COVERED_EUROPE, ...EXTRA_COVERED].includes(countryCode)) {
       forecasts = await Forecast.find({ country: countryCode }).sort({ date: -1 });
       return forecasts;
     }
 
-    // ==============================
     // 🌐 Zones non couvertes (reste du monde)
-    // ==============================
     forecasts = await Forecast.find({ country: countryCode }).sort({ date: -1 });
     if (!forecasts || forecasts.length === 0) {
       await addLog(`⚠️ Zone non couverte → ${countryCode}, prévisions simplifiées.`);
@@ -125,14 +116,12 @@ export async function getForecast(countryCode) {
 
 /**
  * Injection des données météo (externe → Mongo)
- * Cette fonction sera appelée après fusion multi-modèles (SuperForecast)
  */
 export async function injectForecasts(forecastData) {
   try {
     await addLog("💾 Injection des prévisions en base…");
 
     const results = [];
-
     for (const entry of forecastData) {
       const saved = await saveForecast(entry);
       results.push(saved);
