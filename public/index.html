@@ -1,127 +1,180 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🌍 Tinsflash, les prévisions et alertes météorologiques les plus fiables</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tinsflash – Centrale Nucléaire Météo</title>
+  <link rel="stylesheet" href="styles.css">
 
-  <!-- === Google AdSense === -->
+  <!-- ✅ Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
      crossorigin="anonymous"></script>
-  <!-- === Fin Google AdSense === -->
 </head>
 <body>
   <header>
-    <h1>🌍 Tinsflash – Prévisions Nucléaires</h1>
+    <h1>🌍 Tinsflash – La Centrale Nucléaire Météo</h1>
   </header>
 
   <!-- Prévisions locales -->
-  <section>
+  <section id="local">
     <h2>📍 Prévisions locales</h2>
-    <div id="local">⏳ Chargement…</div>
+    <div id="local-content">⏳ Chargement…</div>
   </section>
 
   <!-- Prévisions nationales -->
-  <section>
-    <h2>🇧🇪/🇫🇷 Prévisions nationales</h2>
-    <div id="national">⏳ Chargement…</div>
+  <section id="national">
+    <h2>🇧🇪 Belgique & 🇫🇷 France (multi-zones)</h2>
+    <div id="national-content">⏳ Chargement…</div>
   </section>
 
   <!-- Prévisions 7 jours -->
-  <section>
+  <section id="seven-days">
     <h2>📅 Prévisions 7 jours</h2>
-    <div id="days">⏳ Chargement…</div>
+    <div id="days-container">⏳ Chargement…</div>
   </section>
 
-  <!-- Bulletin texte -->
-  <section>
-    <h2>📰 Bulletin météo</h2>
-    <div id="bulletin">⏳ Chargement…</div>
+  <!-- Bulletin météo -->
+  <section id="forecast-text-section">
+    <h2>📰 Bulletin météo IA</h2>
+    <pre id="forecast-text">⏳ Génération…</pre>
   </section>
 
   <!-- Radar -->
-  <section>
-    <h2>🛰️ Radar</h2>
-    <div id="radar">⏳ Chargement…</div>
+  <section id="radar">
+    <h2>🛰️ Radar en direct</h2>
+    <div id="radar-map">⏳ Chargement…</div>
   </section>
 
   <!-- Alertes -->
-  <section>
+  <section id="alerts-section">
     <h2>⚠️ Alertes</h2>
-    <div id="alerts">⏳ Chargement…</div>
+    <div id="alerts-container">⏳ Chargement…</div>
   </section>
 
-<script>
-const API = "";
+  <footer>
+    <p>⚡ Centrale Nucléaire Météo – Powered by IA & multi-modèles réels (ECMWF, GFS, ICON, Copernicus, Meteomatics).</p>
+  </footer>
 
-// Prévisions locales
+<script>
+const API = ""; // ➜ garde vide si index.html est servi par ton backend Render
+
+// ===== Helpers =====
+const n = x => (x === null || x === undefined) ? "—" : x;
+const icon = (rain, wx) => {
+  const r = Number(rain ?? 0);
+  if (r >= 60) return "🌧️";
+  if (r >= 20) return "🌦️";
+  if ((wx||"").toLowerCase().includes("neige")) return "❄️";
+  return "☀️";
+};
+function rowHTML(f) {
+  return `<div>🌡️ ${n(f?.minTemp)}° / ${n(f?.maxTemp)}° — ☔ ${n(f?.rainProbability)}% — 💨 ${n(f?.windSpeed)} km/h</div>`;
+}
+function dayHTML(d) {
+  return `<div>${d.date || "—"} ${icon(d?.rainProbability)} ${n(d?.minTemp)}°/${n(d?.maxTemp)}° — ☔ ${n(d?.rainProbability)}%</div>`;
+}
+
+// ===== Prévisions locales (BE par défaut)
 async function loadLocal() {
-  const box = document.getElementById("local");
   try {
     const res = await fetch(`${API}/api/forecasts`);
     const data = await res.json();
     const be = data.find(f => f.country === "BE");
-    box.innerHTML = be ? `🌡️ ${be.minTemp}–${be.maxTemp}°C, ☔ ${be.rainProbability}%` : "Non dispo.";
-  } catch (e) { box.innerText = "❌ Erreur"; }
+    document.getElementById("local-content").innerHTML =
+      be ? rowHTML(be) : "❌ Données indisponibles";
+  } catch {
+    document.getElementById("local-content").innerText = "❌ Erreur API";
+  }
 }
 
-// Prévisions nationales
+// ===== National (BE + FR multi-zones)
 async function loadNational() {
-  const box = document.getElementById("national");
   try {
     const res = await fetch(`${API}/api/forecasts`);
     const data = await res.json();
-    const fr = data.filter(f => f.country.startsWith("FR"));
-    box.innerHTML = fr.map(z => `<div>${z.country}: ${z.minTemp}–${z.maxTemp}°C</div>`).join("");
-  } catch (e) { box.innerText = "❌ Erreur"; }
+    let html = "";
+
+    // Belgique
+    const be = data.find(f => f.country === "BE");
+    if (be) html += "<h3>🇧🇪 Belgique</h3>" + rowHTML(be);
+
+    // France (national + zones)
+    const frNat = data.find(f => f.country === "FR");
+    if (frNat) html += "<h3>🇫🇷 France (national)</h3>" + rowHTML(frNat);
+
+    const zones = ["FR-NO","FR-NE","FR-SO","FR-SE","FR-COR"];
+    zones.forEach(z => {
+      const zf = data.find(f => f.country === z);
+      if (zf) {
+        const label = { "FR-NO":"Nord-Ouest", "FR-NE":"Nord-Est", "FR-SO":"Sud-Ouest", "FR-SE":"Sud-Est", "FR-COR":"Corse" }[z];
+        html += `<div><b>${label}</b> — ${rowHTML(zf)}</div>`;
+      }
+    });
+
+    document.getElementById("national-content").innerHTML = html || "❌ Non disponible";
+  } catch {
+    document.getElementById("national-content").innerText = "❌ Erreur API";
+  }
 }
 
-// 7 jours
+// ===== Vue rapide 7 jours (Belgique national par défaut)
 async function load7Days() {
-  const box = document.getElementById("days");
   try {
     const res = await fetch(`${API}/api/forecasts`);
     const data = await res.json();
-    box.innerHTML = data.slice(0,7).map(d => `
-      <div>${d.date} 🌡️ ${d.minTemp}–${d.maxTemp}°C ☔${d.rainProbability}%</div>
-    `).join("");
-  } catch (e) { box.innerText = "❌ Erreur"; }
+    const be = data.filter(f => f.country === "BE");
+    document.getElementById("days-container").innerHTML =
+      be.slice(0,7).map(dayHTML).join("") || "❌ Pas de données";
+  } catch {
+    document.getElementById("days-container").innerText = "❌ Erreur API";
+  }
 }
 
-// Bulletin
+// ===== Bulletin météo IA
 async function loadBulletin() {
-  const box = document.getElementById("bulletin");
   try {
     const res = await fetch(`${API}/api/logs`);
     const logs = await res.json();
     const last = logs.reverse().find(l => l.message.includes("Analyse IA"));
-    box.innerText = last ? last.message : "Pas encore dispo.";
-  } catch (e) { box.innerText = "❌ Erreur"; }
+    document.getElementById("forecast-text").innerText =
+      last ? last.message : "Pas encore disponible";
+  } catch {
+    document.getElementById("forecast-text").innerText = "❌ Erreur API";
+  }
 }
 
-// Radar
+// ===== Radar
 async function loadRadar() {
-  const box = document.getElementById("radar");
   try {
     const res = await fetch(`${API}/api/radar`);
     const radar = await res.json();
-    box.innerText = JSON.stringify(radar);
-  } catch (e) { box.innerText = "❌ Erreur"; }
+    document.getElementById("radar-map").innerText = JSON.stringify(radar);
+  } catch {
+    document.getElementById("radar-map").innerText = "❌ Erreur API";
+  }
 }
 
-// Alertes
+// ===== Alertes
 async function loadAlerts() {
-  const box = document.getElementById("alerts");
   try {
     const res = await fetch(`${API}/api/alerts`);
     const alerts = await res.json();
-    if (!alerts.length) { box.innerHTML = "Aucune alerte."; return; }
-    box.innerHTML = alerts.map(a => `<div>${a.title} (${a.certainty}%)</div>`).join("");
-  } catch (e) { box.innerText = "❌ Erreur"; }
+    document.getElementById("alerts-container").innerHTML =
+      alerts.length ? alerts.map(a =>
+        `<div>⚠️ <b>${a.title}</b> — ${n(a.certainty)}%</div>`
+      ).join("") : "✅ Aucune alerte active";
+  } catch {
+    document.getElementById("alerts-container").innerText = "❌ Erreur API";
+  }
 }
 
-loadLocal(); loadNational(); load7Days(); loadBulletin(); loadRadar(); loadAlerts();
+// ===== Run
+loadLocal();
+loadNational();
+load7Days();
+loadBulletin();
+loadRadar();
+loadAlerts();
 </script>
 </body>
 </html>
