@@ -1,60 +1,34 @@
 // services/chatService.js
-import fetch from "node-fetch";
-import { addLog } from "./logsService.js";
+import cohere from "cohere-ai";
+import dotenv from "dotenv";
 
-const COHERE_API_KEY = process.env.COHERE_API_KEY;
+dotenv.config();
+cohere.init(process.env.COHERE_API_KEY);
 
+// === Chat avec J.E.A.N. (IA météo nucléaire) ===
 async function chatWithJean(message) {
+  if (!message || !message.trim()) {
+    return { reply: "⚠️ Message vide. Reformule ta question." };
+  }
+
   try {
-    if (!COHERE_API_KEY) {
-      await addLog("❌ Clé Cohere manquante");
-      return { reply: "⚠️ IA indisponible – clé API manquante.", debug: null };
-    }
-
-    if (!message || message.trim().length === 0) {
-      await addLog("⚠️ Question vide envoyée à J.E.A.N.");
-      return { reply: "⚠️ Merci de poser une question.", debug: null };
-    }
-
-    await addLog(`💬 Question à J.E.A.N.: ${message}`);
-
-    const res = await fetch("https://api.cohere.ai/v1/chat", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${COHERE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "command-r-03-2025", // ✅ modèle valide
-        messages: [
-          { role: "system", content: "Tu es J.E.A.N., une IA météorologique nucléaire. Donne des prévisions ultra précises et scientifiques." },
-          { role: "user", content: message }
-        ],
-      }),
+    const response = await cohere.chat({
+      model: "command-r-03-202",   // ✅ modèle actif Cohere
+      messages: [
+        { role: "user", content: message }
+      ]
     });
 
-    const data = await res.json();
-    await addLog(`📡 Réponse Cohere (brute): ${JSON.stringify(data)}`);
+    // ✅ Récupération sécurisée du texte
+    const reply =
+      response.text ||
+      response.message?.content ||
+      "❌ Pas de réponse IA";
 
-    let reply = "⚠️ IA indisponible – réponse vide.";
-
-    // ✅ Analyse sécurisée du format de réponse
-    if (data.message && Array.isArray(data.message.content)) {
-      reply = data.message.content.map(p => p.text || "").join(" ");
-    } else if (data.text) {
-      reply = data.text;
-    } else if (data.output_text) {
-      reply = data.output_text;
-    } else if (data.message && typeof data.message === "string") {
-      reply = data.message;
-    }
-
-    await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
-    return { reply, debug: data };
-
+    return { reply };
   } catch (err) {
-    await addLog(`❌ Erreur JEAN: ${err.message}`);
-    return { reply: "⚠️ IA indisponible – erreur serveur.", debug: null };
+    console.error("❌ Erreur chat JEAN:", err.message);
+    return { reply: `❌ Erreur IA: ${err.message}` };
   }
 }
 
