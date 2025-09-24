@@ -2,13 +2,13 @@
 import fetch from "node-fetch";
 import { addLog } from "./logsService.js";
 
-/**
- * Chat avec J.E.A.N. (IA experte météo/climat)
- */
-export async function chatWithJean(message) {
+const COHERE_API_KEY = process.env.COHERE_API_KEY;
+
+async function chatWithJean(message) {
   try {
-    if (!message || message.trim().length === 0) {
-      throw new Error("Message vide envoyé à J.E.A.N.");
+    if (!COHERE_API_KEY) {
+      await addLog("❌ Clé Cohere manquante");
+      return "⚠️ IA indisponible – clé API manquante.";
     }
 
     await addLog(`💬 Question à J.E.A.N.: ${message}`);
@@ -16,47 +16,47 @@ export async function chatWithJean(message) {
     const res = await fetch("https://api.cohere.ai/v1/chat", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.COHERE_API_KEY}`,
+        "Authorization": `Bearer ${COHERE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-plus-08-2024", // ✅ modèle stable
+        model: "command-r-03-2025",   // ✅ modèle actuel disponible
         messages: [
           {
             role: "system",
-            content: `Tu es J.E.A.N., intelligence artificielle nucléaire météo.
-            Tu analyses GFS, ECMWF, ICON, Meteomatics, NASA POWER, Copernicus ERA5.
-            Tu donnes des réponses 100% réelles, jamais de test, jamais de démo.
-            Style : précis, scientifique, pointu, utile pour experts, communes, agriculteurs, NASA.
-            Tes réponses doivent donner des frissons aux météorologues.`,
+            content:
+              "Tu es J.E.A.N., l'assistant météorologique nucléaire. Réponds de manière scientifique, précise et concise.",
           },
-          { role: "user", content: message },
+          {
+            role: "user",
+            content: message,
+          },
         ],
       }),
     });
 
     const data = await res.json();
 
-    // 🔎 LOG COMPLET DE LA RÉPONSE POUR DEBUG
-    await addLog(`📡 Réponse brute Cohere: ${JSON.stringify(data)}`);
+    // Log brut de la réponse pour debug
+    await addLog(`📡 Réponse Cohere (brute): ${JSON.stringify(data)}`);
 
-    // ✅ Essais multiples pour extraire le texte
-    let reply =
-      data?.text ||
-      (data?.message && data.message.content && data.message.content[0]?.text) ||
-      (data?.messages && data.messages[0]?.content?.[0]?.text) ||
-      null;
-
-    if (!reply) {
-      reply = "⚠️ IA indisponible – vérifie clé Cohere ou quota";
+    if (data.message) {
+      const reply = data.message.content
+        .map((part) => part.text)
+        .join(" ");
+      await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
+      return reply;
+    } else if (data.text) {
+      // fallback si Cohere renvoie directement un champ text
+      await addLog(`🤖 Réponse J.E.A.N.: ${data.text}`);
+      return data.text;
+    } else {
+      await addLog("⚠️ Réponse vide de Cohere");
+      return "⚠️ IA indisponible – réponse vide.";
     }
-
-    await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
-    return reply;
   } catch (err) {
-    console.error("❌ Erreur chatWithJean:", err.message);
-    await addLog("❌ Erreur chatWithJean: " + err.message);
-    return "⚠️ Erreur IA J.E.A.N.";
+    await addLog(`❌ Erreur JEAN: ${err.message}`);
+    return "⚠️ IA indisponible – erreur serveur.";
   }
 }
 
