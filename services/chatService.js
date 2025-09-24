@@ -1,6 +1,6 @@
 // services/chatService.js
-import express from "express";
-import { CohereClientV2 } from "cohere-ai";
+const express = require("express");
+const { CohereClientV2 } = require("cohere-ai");
 
 const router = express.Router();
 
@@ -19,7 +19,7 @@ router.post("/", async (req, res) => {
 
   try {
     const response = await cohere.chat({
-      model: "command-a-03-2025", // modèle mis à jour (septembre 2025)
+      model: "command-a-03-2025",
       messages: [{ role: "user", content: message }],
     });
 
@@ -35,5 +35,5 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ Export direct d’un Router Express
-export default router;
+// ✅ Export CommonJS (comme tous tes autres services)
+module.exports = router;
