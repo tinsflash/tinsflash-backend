@@ -17,7 +17,7 @@ import { addLog, getLogs } from "./services/logsService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js"; // ✅ cohérent avec ton repo GitHub
+import Alert from "./models/Alert.js"; // ✅ cohérent
 
 dotenv.config();
 
@@ -26,7 +26,41 @@ app.use(express.json());
 app.use(cors());
 
 // ==============================
-// 📂 Servir les fichiers statiques (/public)
+// 🔐 Protection Admin (Basic Auth)
+// ==============================
+function adminAuthMiddleware(req, res, next) {
+  const isAdminPath =
+    req.path === "/admin-pp.html" || req.path.startsWith("/admin");
+  if (!isAdminPath) return next();
+
+  const auth = req.headers.authorization;
+  if (!auth) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Tinsflash Admin"');
+    return res.status(401).send("Authentification requise");
+  }
+
+  const parts = auth.split(" ");
+  if (parts.length !== 2 || parts[0] !== "Basic") {
+    return res.status(400).send("Format d'auth non supporté");
+  }
+
+  const decoded = Buffer.from(parts[1], "base64").toString("utf8");
+  const [user, pass] = decoded.split(":");
+  const ADMIN_USER = "admin";
+  const ADMIN_PASS = "202679";
+
+  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    return next();
+  } else {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Tinsflash Admin"');
+    return res.status(401).send("Authentification échouée");
+  }
+}
+
+app.use(adminAuthMiddleware);
+
+// ==============================
+// 📂 Fichiers statiques
 // ==============================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
