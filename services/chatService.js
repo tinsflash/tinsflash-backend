@@ -2,40 +2,37 @@
 import { CohereClient } from "cohere-ai";
 import { addLog } from "./logsService.js";
 
-// ✅ Initialisation correcte Cohere v7+
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY,
-});
+const hasKey = !!process.env.COHERE_API_KEY;
+const cohere = hasKey ? new CohereClient({ token: process.env.COHERE_API_KEY }) : null;
 
 /**
- * Chat IA avec J.E.A.N.
- * @param {string} message - question de l'admin
- * @returns {Promise<string>} réponse IA
+ * Chat IA J.E.A.N. — explications scientifiques, prévisions, alertes.
  */
 export async function chatWithJean(message) {
   try {
-    await addLog(`💬 Question envoyée à J.E.A.N.: ${message}`);
+    if (!message || !message.trim()) {
+      return "Donne-moi ta question météo (zone, échéance, risque…).";
+    }
+    if (!cohere) {
+      await addLog("❌ IA indisponible: COHERE_API_KEY manquant sur Render.");
+      return "J.E.A.N. indisponible (clé IA absente sur le serveur).";
+    }
 
-    const response = await cohere.chat({
+    const res = await cohere.chat({
       model: "command-r-plus",
-      messages: [
-        { role: "system", content: "Tu es J.E.A.N., une IA météorologique experte qui analyse les modèles climatiques et météorologiques mondiaux avec la précision d'une centrale nucléaire météo." },
-        { role: "user", content: message }
-      ],
+      messages: [{ role: "user", content: message }],
     });
 
-    const reply =
-      response?.text ||
-      response?.message?.content?.[0]?.text ||
-      "⚠️ Réponse IA indisponible";
+    const text =
+      res?.message?.content?.map(p => p?.text || "").join("\n").trim() ||
+      res?.text ||
+      "Analyse IA non fournie.";
 
-    await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
-
-    return reply;
+    await addLog("🤖 JEAN a répondu via Cohere.");
+    return text;
   } catch (err) {
-    console.error("❌ Erreur chatWithJean:", err.message);
-    await addLog("❌ Erreur chatWithJean: " + err.message);
-    return "❌ J.E.A.N. est momentanément indisponible.";
+    await addLog("❌ Erreur JEAN: " + err.message);
+    return "Erreur IA: " + err.message;
   }
 }
 
