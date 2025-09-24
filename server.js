@@ -16,7 +16,7 @@ import chatService from "./services/chatService.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alerts.js";
+import Alert from "./models/Alert.js"; // ✅ corrigé (singulier)
 
 // === Routes ===
 import adminRoutes from "./routes/admin.js";
