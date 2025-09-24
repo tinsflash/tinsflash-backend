@@ -1,95 +1,122 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>TINSFLASH – La météo ultime</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268" crossorigin="anonymous"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css">
-  <style>
-    body { margin:0; font-family:"Segoe UI", sans-serif; background:#f4f9ff; color:#222; }
-    header { text-align:center; padding:20px; background:#0077cc; color:#fff; }
-    h1 { margin:0; font-size:1.8rem; }
-    .container { max-width:1200px; margin:auto; padding:20px; display:grid; gap:20px; }
-    .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
-    h2 { margin-top:0; color:#0077cc; }
-    .forecast-grid { display:flex; gap:15px; flex-wrap:wrap; }
-    .forecast-item { flex:1 1 120px; background:#eef6ff; border-radius:10px; padding:10px; text-align:center; }
-    #radar-map { height:400px; border-radius:10px; }
-    .alert { background:#ffe5e5; border-left:5px solid #cc0000; padding:10px; margin:5px 0; border-radius:8px; }
-    .video-container { position:relative; max-width:100%; margin-bottom:20px; }
-    video { width:100%; border-radius:12px; }
-    .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
-  </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌍 Tinsflash – La Centrale Nucléaire Météo</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
   <header>
-    <h1>🌤️ TINSFLASH – Vos prévisions météo</h1>
+    <h1>🌍 Tinsflash – Prévisions Nucléaires</h1>
   </header>
-  <main class="container">
 
-    <!-- Vidéo intro -->
-    <div class="video-container">
-      <video id="introVideo" autoplay muted loop>
-        <source src="intro.mp4" type="video/mp4">
-      </video>
-      <button class="video-btn" onclick="toggleVideo()">⏯️ Pause</button>
-    </div>
+  <!-- Prévisions locales -->
+  <section>
+    <h2>📍 Prévisions locales</h2>
+    <div id="local">⏳ Chargement…</div>
+  </section>
 
-    <!-- Prévisions locales -->
-    <div class="card">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-content">⏳ Chargement...</div>
-    </div>
+  <!-- Prévisions nationales -->
+  <section>
+    <h2>🇧🇪/🇫🇷 Prévisions nationales</h2>
+    <div id="national">⏳ Chargement…</div>
+  </section>
 
-    <!-- Prévisions nationales -->
-    <div class="card">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-content">⏳ Chargement...</div>
-    </div>
+  <!-- Prévisions 7 jours -->
+  <section>
+    <h2>📅 Prévisions 7 jours</h2>
+    <div id="days">⏳ Chargement…</div>
+  </section>
 
-    <!-- 7 jours -->
-    <div class="card">
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="days-container" class="forecast-grid">⏳ Chargement...</div>
-    </div>
+  <!-- Bulletin texte -->
+  <section>
+    <h2>📰 Bulletin météo</h2>
+    <div id="bulletin">⏳ Chargement…</div>
+  </section>
 
-    <!-- Bulletin texte -->
-    <div class="card">
-      <h2>📰 Bulletin météo</h2>
-      <div id="forecast-text">⏳ Génération...</div>
-    </div>
+  <!-- Radar -->
+  <section>
+    <h2>🛰️ Radar</h2>
+    <div id="radar">⏳ Chargement…</div>
+  </section>
 
-    <!-- Radar -->
-    <div class="card">
-      <h2>🛰️ Radar en direct</h2>
-      <div id="radar-map">⏳ Radar...</div>
-    </div>
+  <!-- Alertes -->
+  <section>
+    <h2>⚠️ Alertes</h2>
+    <div id="alerts">⏳ Chargement…</div>
+  </section>
 
-    <!-- Alertes -->
-    <div class="card">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-content">⏳ Chargement...</div>
-    </div>
+<script>
+const API = "";
 
-    <!-- Podcast -->
-    <div class="card">
-      <h2>🎙️ Podcast météo</h2>
-      <div id="podcast-container">⏳ Génération...</div>
-    </div>
+// Prévisions locales
+async function loadLocal() {
+  const box = document.getElementById("local");
+  try {
+    const res = await fetch(`${API}/api/forecasts`);
+    const data = await res.json();
+    const be = data.find(f => f.country === "BE");
+    box.innerHTML = be ? `🌡️ ${be.minTemp}–${be.maxTemp}°C, ☔ ${be.rainProbability}%` : "Non dispo.";
+  } catch (e) { box.innerText = "❌ Erreur"; }
+}
 
-  </main>
+// Prévisions nationales
+async function loadNational() {
+  const box = document.getElementById("national");
+  try {
+    const res = await fetch(`${API}/api/forecasts`);
+    const data = await res.json();
+    const fr = data.filter(f => f.country.startsWith("FR"));
+    box.innerHTML = fr.map(z => `<div>${z.country}: ${z.minTemp}–${z.maxTemp}°C</div>`).join("");
+  } catch (e) { box.innerText = "❌ Erreur"; }
+}
 
-  <script src="app.js"></script>
-  <script>
-    function toggleVideo() {
-      const video = document.getElementById("introVideo");
-      const btn = document.querySelector(".video-btn");
-      if (video.paused) { video.play(); btn.innerText="⏯️ Pause"; }
-      else { video.pause(); btn.innerText="▶️ Lecture"; }
-    }
-  </script>
+// 7 jours
+async function load7Days() {
+  const box = document.getElementById("days");
+  try {
+    const res = await fetch(`${API}/api/forecasts`);
+    const data = await res.json();
+    box.innerHTML = data.slice(0,7).map(d => `
+      <div>${d.date} 🌡️ ${d.minTemp}–${d.maxTemp}°C ☔${d.rainProbability}%</div>
+    `).join("");
+  } catch (e) { box.innerText = "❌ Erreur"; }
+}
+
+// Bulletin
+async function loadBulletin() {
+  const box = document.getElementById("bulletin");
+  try {
+    const res = await fetch(`${API}/api/logs`);
+    const logs = await res.json();
+    const last = logs.reverse().find(l => l.message.includes("Analyse IA"));
+    box.innerText = last ? last.message : "Pas encore dispo.";
+  } catch (e) { box.innerText = "❌ Erreur"; }
+}
+
+// Radar
+async function loadRadar() {
+  const box = document.getElementById("radar");
+  try {
+    const res = await fetch(`${API}/api/radar`);
+    const radar = await res.json();
+    box.innerText = JSON.stringify(radar);
+  } catch (e) { box.innerText = "❌ Erreur"; }
+}
+
+// Alertes
+async function loadAlerts() {
+  const box = document.getElementById("alerts");
+  try {
+    const res = await fetch(`${API}/api/alerts`);
+    const alerts = await res.json();
+    if (!alerts.length) { box.innerHTML = "Aucune alerte."; return; }
+    box.innerHTML = alerts.map(a => `<div>${a.title} (${a.certainty}%)</div>`).join("");
+  } catch (e) { box.innerText = "❌ Erreur"; }
+}
+
+loadLocal(); loadNational(); load7Days(); loadBulletin(); loadRadar(); loadAlerts();
+</script>
 </body>
 </html>
