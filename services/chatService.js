@@ -8,7 +8,7 @@ async function chatWithJean(message) {
   try {
     if (!COHERE_API_KEY) {
       await addLog("❌ Clé Cohere manquante");
-      return "⚠️ IA indisponible – clé API manquante.";
+      return { reply: "⚠️ IA indisponible – clé API manquante.", debug: null };
     }
 
     await addLog(`💬 Question à J.E.A.N.: ${message}`);
@@ -20,43 +20,35 @@ async function chatWithJean(message) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-03-2025",   // ✅ modèle actuel disponible
+        model: "command-r-03-2025",  // ✅ modèle dispo
         messages: [
-          {
-            role: "system",
-            content:
-              "Tu es J.E.A.N., l'assistant météorologique nucléaire. Réponds de manière scientifique, précise et concise.",
-          },
-          {
-            role: "user",
-            content: message,
-          },
+          { role: "system", content: "Tu es J.E.A.N., IA météo nucléaire." },
+          { role: "user", content: message }
         ],
       }),
     });
 
     const data = await res.json();
-
-    // Log brut de la réponse pour debug
     await addLog(`📡 Réponse Cohere (brute): ${JSON.stringify(data)}`);
 
-    if (data.message) {
-      const reply = data.message.content
-        .map((part) => part.text)
-        .join(" ");
-      await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
-      return reply;
+    let reply = "⚠️ IA indisponible – réponse vide.";
+
+    if (data.message && data.message.content) {
+      reply = data.message.content.map(p => p.text || "").join(" ");
     } else if (data.text) {
-      // fallback si Cohere renvoie directement un champ text
-      await addLog(`🤖 Réponse J.E.A.N.: ${data.text}`);
-      return data.text;
-    } else {
-      await addLog("⚠️ Réponse vide de Cohere");
-      return "⚠️ IA indisponible – réponse vide.";
+      reply = data.text;
+    } else if (data.output_text) {
+      reply = data.output_text;
+    } else if (data.message) {
+      reply = data.message; // fallback brut
     }
+
+    await addLog(`🤖 Réponse J.E.A.N.: ${reply}`);
+    return { reply, debug: data };
+
   } catch (err) {
     await addLog(`❌ Erreur JEAN: ${err.message}`);
-    return "⚠️ IA indisponible – erreur serveur.";
+    return { reply: "⚠️ IA indisponible – erreur serveur.", debug: null };
   }
 }
 
