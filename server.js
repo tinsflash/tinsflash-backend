@@ -3,13 +3,15 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // === Services (imports alignés aux exports réels) ===
 import forecastService from "./services/forecastService.js";
 import runSuperForecast from "./services/superForecast.js";
 import radarService from "./services/radarService.js";
 import generateBulletin from "./services/bulletinService.js";
-import { chatWithJean } from "./services/chatService.js";
+import chatWithJean from "./services/chatService.js"; // ✅ default export
 import { addLog } from "./services/logsService.js";
 import checkCoverage from "./services/checkCoverage.js";
 
@@ -22,6 +24,20 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// === Setup static files (HTML, CSS, JS) ===
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
+
+// === Protect admin-pp.html ===
+app.use("/admin-pp.html", (req, res, next) => {
+  const code = req.query.code;
+  if (code !== "202679") {
+    return res.status(403).send("🚫 Accès refusé");
+  }
+  next();
+});
 
 // === MongoDB connection ===
 mongoose
