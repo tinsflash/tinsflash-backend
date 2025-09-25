@@ -119,8 +119,6 @@ app.post("/api/logs", async (req, res) => {
 // 🛠️ Check moteur (zones couvertes / non couvertes)
 // ==============================
 
-import runSuperForecast from "./services/superForecast.js";
-
 app.get("/api/checkup", async (req, res) => {
   try {
     const zonesTest = [
@@ -134,7 +132,7 @@ app.get("/api/checkup", async (req, res) => {
     const results = [];
     for (const z of zonesTest) {
       try {
-        const forecast = await runSuperForecast(z);
+        const forecast = await superForecast(z);
         results.push({
           zone: z.country,
           covered: !!forecast.covered,
