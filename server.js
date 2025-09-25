@@ -4,13 +4,12 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
-// === Services ===
+// === Services (robustes, pas de crash si export différent) ===
 import forecastService from "./services/forecastService.js";
 import { runSuperForecast } from "./services/superForecast.js";
-// ❌ plus d'import alertsService.js
 import { radarHandler } from "./services/radarService.js";
-import { generateBulletin } from "./services/bulletinService.js";
-import { chatWithJean } from "./services/chatService.js"; // ✅ import nommé
+import * as bulletinService from "./services/bulletinService.js";
+import * as chatService from "./services/chatService.js";
 import { addLog } from "./services/logsService.js";
 import checkCoverage from "./services/checkCoverage.js";
 
@@ -66,20 +65,17 @@ app.get("/api/superforecast", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Alerts (bypass alertsService.js + imports dynamiques sûrs) ---
+// --- Alerts ---
 app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
   try {
-    const zone = req.params.zone;
-
     const detMod = await import("./services/alertDetector.js");
     const detectAlerts =
       detMod.detectAlerts ||
       detMod.default ||
       detMod.detect ||
       detMod.alertsDetector;
-
     if (typeof detectAlerts !== "function") {
-      return res.status(500).json({ error: "alertDetector introuvable (export manquant)" });
+      return res.status(500).json({ error: "alertDetector introuvable" });
     }
 
     let processAlerts = null;
@@ -90,10 +86,10 @@ app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
       processAlerts = null;
     }
 
-    const rawAlerts = await detectAlerts(zone);
-    const enriched = processAlerts ? await processAlerts(rawAlerts, { zone }) : rawAlerts;
+    const rawAlerts = await detectAlerts(req.params.zone);
+    const enriched = processAlerts ? await processAlerts(rawAlerts, { zone: req.params.zone }) : rawAlerts;
 
-    res.json({ zone, alerts: enriched });
+    res.json({ zone: req.params.zone, alerts: enriched });
   } catch (err) {
     console.error("❌ Alerts route error:", err);
     res.status(500).json({ error: "Alerts service failed" });
@@ -114,6 +110,12 @@ app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
 // --- Bulletins ---
 app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   try {
+    const generateBulletin =
+      bulletinService.generateBulletin ||
+      bulletinService.default;
+    if (typeof generateBulletin !== "function") {
+      return res.status(500).json({ error: "generateBulletin introuvable" });
+    }
     const data = await generateBulletin(req.params.zone);
     res.json(data);
   } catch (err) {
@@ -126,6 +128,12 @@ app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
 app.post("/api/chat", checkCoverage, async (req, res) => {
   try {
     const { message } = req.body;
+    const chatWithJean =
+      chatService.chatWithJean ||
+      chatService.default;
+    if (typeof chatWithJean !== "function") {
+      return res.status(500).json({ error: "chatWithJean introuvable" });
+    }
     const response = await chatWithJean(message);
     res.json(response);
   } catch (err) {
@@ -146,9 +154,7 @@ app.post("/api/logs", async (req, res) => {
   }
 });
 
-// ==============================
-// 🛠️ Check moteur (zones couvertes / non couvertes)
-// ==============================
+// --- Checkup ---
 app.get("/api/checkup", async (req, res) => {
   try {
     const zonesTest = [
@@ -156,7 +162,7 @@ app.get("/api/checkup", async (req, res) => {
       { country: "France", lat: 48.8, lon: 2.3 },
       { country: "USA", lat: 38.9, lon: -77.0 },
       { country: "Norway", lat: 59.9, lon: 10.7 },
-      { country: "Brazil", lat: -15.8, lon: -47.9 } // non couverte
+      { country: "Brazil", lat: -15.8, lon: -47.9 },
     ];
 
     const results = [];
