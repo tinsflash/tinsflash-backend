@@ -1,47 +1,49 @@
-// services/checkCoverage.js
-import { COVERAGE } from "../utils/zones.js";
-import User from "../models/User.js";
-import { addLog } from "../services/adminLogs.js";
+// PATH: services/checkCoverage.js
+// Middleware Express pour vérifier si une zone est couverte ou non
 
+const COVERED_REGIONS = [
+  // UE27
+  "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
+  "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
+  "Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands",
+  "Poland","Portugal","Czechia","Czech Republic","Romania","Slovakia",
+  "Slovenia","Sweden",
 
-export default async function checkCoverage(req, res, next) {
-  try {
-    const { lat, lon, userId } = req.query;
+  // Ajouts
+  "Ukraine",
+  "United Kingdom","UK","England","Scotland","Wales","Northern Ireland",
+  "Norway",
+  "USA","United States"
+];
 
-    if (!lat || !lon) {
-      return res.status(400).json({ error: "Latitude et longitude requises" });
-    }
+/**
+ * Vérifie si une zone est couverte
+ */
+function isCovered(country) {
+  if (!country) return false;
+  return COVERED_REGIONS.includes(country);
+}
 
-    let zone = "other";
-    if (lon >= -130 && lon <= -60 && lat >= 25 && lat <= 50) {
-      zone = "usa";
-    } else if (lon >= -30 && lon <= 40 && lat >= 35 && lat <= 70) {
-      zone = "europe";
-    }
+/**
+ * Middleware Express
+ * - Si la zone est couverte → next()
+ * - Si non couverte → réponse adaptée
+ */
+export default function checkCoverage(req, res, next) {
+  const { zone } = req.params;
 
-    if (COVERAGE[zone]) {
-      return next();
-    }
+  if (!zone) {
+    return res.status(400).json({ error: "Zone non spécifiée" });
+  }
 
-    const user = await User.findById(userId).exec();
-    if (user) {
-      if (user.subscription === "premium") {
-        addLog(`⚠️ Premium hors zone détecté : ${user.email} (${lat}, ${lon})`);
-        return next();
-      } else {
-        addLog(`🛑 Utilisateur gratuit hors zone : ${user.email || "unknown"} (${lat}, ${lon})`);
-      }
-    } else {
-      addLog(`🆕 Nouvel utilisateur non identifié hors zone (${lat}, ${lon})`);
-    }
-
+  if (isCovered(zone)) {
+    return next();
+  } else {
     return res.status(403).json({
-      error: "Zone non encore couverte",
-      message:
-        "Les prévisions complètes seront activées pour votre région prochainement. Passez en Premium pour accélérer l’ouverture.",
+      error: "Zone non couverte par la centrale météo",
+      zone,
+      covered: false,
+      message: "Disponible uniquement avec abonnement Premium/Pro+",
     });
-  } catch (err) {
-    addLog(`❌ Erreur middleware checkCoverage: ${err.message}`);
-    return res.status(500).json({ error: "Erreur interne serveur" });
   }
 }
