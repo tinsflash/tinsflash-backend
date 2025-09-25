@@ -1,194 +1,141 @@
-/* Reset simple */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Poppins", Arial, sans-serif;
+// public/js/index.js
+
+async function getUserPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject("La géolocalisation n'est pas supportée.");
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        err => reject("Impossible d'obtenir la géolocalisation: " + err.message)
+      );
+    }
+  });
 }
 
-body {
-  background: #f7faff;
-  color: #222;
-  line-height: 1.6;
+// Prévisions locales
+async function loadLocalForecast(lat, lon) {
+  const res = await fetch(`/api/localforecast/${lat}/${lon}`);
+  const data = await res.json();
+  const div = document.getElementById("local-content");
+
+  if (data.error) {
+    div.innerHTML = "❌ Erreur prévisions locales";
+    return;
+  }
+
+  div.innerHTML = `
+    <h3>${data.zone || "Votre position"}</h3>
+    <i class="wi wi-day-sunny animated"></i>
+    <p>${data.temp_min}°C – ${data.temp_max}°C</p>
+    <p>🌧️ Pluie: ${data.rain_prob || 0}%</p>
+    <p>💨 Vent: ${data.wind || 0} km/h</p>
+    <p>🔒 Fiabilité: ${data.confidence || 70}%</p>
+  `;
 }
 
-/* --- Bandeau vidéo --- */
-.video-banner {
-  position: relative;
-  height: 250px;
-  overflow: hidden;
+// Prévisions nationales
+async function loadNationalForecast(zone = "Belgium") {
+  const res = await fetch(`/api/forecast/${zone}`);
+  const data = await res.json();
+  const div = document.getElementById("national-content");
+
+  if (data.error) {
+    div.innerHTML = "❌ Erreur prévisions nationales";
+    return;
+  }
+
+  div.innerHTML = `
+    <h3>${zone}</h3>
+    <i class="wi wi-cloudy animated"></i>
+    <p>${data.temp_min}°C – ${data.temp_max}°C</p>
+    <p>${data.summary || "Prévisions nationales en cours..."}</p>
+  `;
 }
 
-#bg-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+// Prévisions 7 jours
+async function loadForecastDays(zone = "Belgium") {
+  const res = await fetch(`/api/forecast/${zone}`);
+  const data = await res.json();
+  const container = document.getElementById("days-container");
+
+  if (!data || !data.days) {
+    container.innerHTML = "❌ Erreur 7 jours";
+    return;
+  }
+
+  container.innerHTML = data.days
+    .map(day => `
+      <div class="forecast-item">
+        <h4>${day.date || "?"}</h4>
+        <i class="wi wi-day-cloudy animated"></i>
+        <p>${day.temp_min}°C – ${day.temp_max}°C</p>
+      </div>
+    `)
+    .join("");
 }
 
-.video-banner .overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.3);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+// Bulletin météo (auto, pas IA)
+async function loadBulletin(zone = "Belgium") {
+  const res = await fetch(`/api/bulletin/${zone}`);
+  const data = await res.json();
+  document.getElementById("forecast-text").innerText =
+    data.text || "❌ Erreur génération bulletin";
 }
 
-.video-banner h1 {
-  font-size: 2.2rem;
-  margin-bottom: 10px;
+// Radar
+async function loadRadar(zone = "Belgium") {
+  const res = await fetch(`/api/radar/${zone}`);
+  const data = await res.json();
+  const div = document.getElementById("radar-map");
+
+  if (data.error) {
+    div.innerHTML = "❌ Erreur radar";
+    return;
+  }
+
+  const map = L.map("radar-map").setView([50.5, 4.7], 6);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "Radar data",
+  }).addTo(map);
 }
 
-.video-banner p {
-  font-size: 1.1rem;
-  margin-bottom: 15px;
+// Alertes
+async function loadAlerts(zone = "Belgium") {
+  const res = await fetch(`/api/alerts/${zone}`);
+  const data = await res.json();
+  const div = document.getElementById("alerts-content");
+
+  if (!data.alerts || data.alerts.length === 0) {
+    div.innerHTML = "✅ Aucune alerte";
+    return;
+  }
+
+  div.innerHTML = data.alerts
+    .map(a => `
+      <div class="alert">
+        <strong>${a.type}</strong> (${a.prob || 0}%)<br>
+        ${a.message}
+      </div>
+    `)
+    .join("");
 }
 
-.video-banner button {
-  background: #00c4ff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-.video-banner button:hover {
-  background: #0099cc;
-}
-
-/* --- Menu --- */
-nav {
-  background: #00c4ff;
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 10px;
-}
-
-nav a {
-  color: white;
-  font-weight: bold;
-  text-decoration: none;
-  transition: opacity 0.3s;
-}
-nav a:hover {
-  opacity: 0.8;
-}
-
-/* --- Sections --- */
-section {
-  padding: 20px;
-  margin: 15px auto;
-  max-width: 1100px;
-}
-
-section h2 {
-  font-size: 1.4rem;
-  margin-bottom: 10px;
-  color: #0066cc;
-}
-
-/* --- Cards --- */
-.card {
-  background: white;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-  margin-bottom: 15px;
-}
-
-.error {
-  border-left: 5px solid red;
-}
-
-/* --- Prévisions 7 jours --- */
-.forecast-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-.forecast-grid .day-card {
-  background: white;
-  border-radius: 8px;
-  padding: 12px;
-  text-align: center;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
-}
-
-.forecast-grid .day-card h3 {
-  font-size: 1rem;
-  margin-bottom: 8px;
-  color: #444;
-}
-
-.forecast-grid .day-card p {
-  font-size: 0.9rem;
-  color: #555;
-}
-
-/* --- Bulletin météo --- */
-.bulletin {
-  background: #eef7ff;
-  border-left: 4px solid #00c4ff;
-  padding: 15px;
-  border-radius: 6px;
-  font-style: italic;
-}
-
-/* --- Radar --- */
-#radar {
-  width: 100%;
-  height: 300px;
-  background: #ddd;
-  border-radius: 6px;
-}
-
-/* --- Alertes --- */
-#alerts {
-  background: #fff3cd;
-  color: #856404;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #ffeeba;
-}
-
-/* --- Podcast --- */
-#podcast {
-  width: 100%;
-  margin-top: 10px;
-}
-
-/* --- Publicité --- */
-.pub {
-  text-align: center;
-}
-
-.ad-slot {
-  background: #f1f1f1;
-  border: 2px dashed #aaa;
-  height: 100px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #777;
-  font-size: 0.9rem;
-}
-
-/* --- Footer --- */
-footer {
-  text-align: center;
-  padding: 15px;
-  margin-top: 20px;
-  background: #00c4ff;
-  color: white;
-  font-weight: bold;
-}
+// ==============================
+// 🚀 Initialisation
+// ==============================
+(async function init() {
+  try {
+    const pos = await getUserPosition();
+    await loadLocalForecast(pos.lat, pos.lon);
+    await loadNationalForecast("Belgium");
+    await loadForecastDays("Belgium");
+    await loadBulletin("Belgium");
+    await loadRadar("Belgium");
+    await loadAlerts("Belgium");
+  } catch (err) {
+    console.error("Erreur init:", err);
+    document.getElementById("local-content").innerText =
+      "❌ Impossible de récupérer votre position";
+  }
+})();
