@@ -2,117 +2,313 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>⚙️ Console Admin - Centrale Météo</title>
+  <title>🛰️ Console Admin TINSFLASH</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    nav { margin-bottom: 20px; }
-    nav button { margin-right: 10px; padding: 8px 15px; cursor: pointer; }
-    section { display: none; }
-    section.active { display: block; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #f4f4f4; }
-    .ok { color: green; font-weight: bold; }
-    .warn { color: orange; font-weight: bold; }
-    .error { color: red; font-weight: bold; }
+    body { background:#0a0f1c; color:#00ffea; font-family:"Orbitron", Arial, sans-serif; margin:0; }
+    header { text-align:center; padding:20px; border-bottom:2px solid #00ffea; }
+    h1 { margin:0; color:#00ffea; text-shadow:0 0 10px #00fbe7; }
+    .container { padding:20px; max-width:1200px; margin:auto; display:grid; gap:20px; }
+    .card { background:#111830; border:1px solid #00ffea; border-radius:12px; padding:20px; box-shadow:0 0 15px rgba(0,255,234,0.3); }
+    h2 { color:#00fbe7; margin-top:0; text-shadow:0 0 8px #00d9ff; }
+    .btn { background:#00ffea; color:#000; border:none; padding:10px 15px; margin:5px; border-radius:8px; font-weight:bold; cursor:pointer; }
+    .btn:hover { background:#00d9ff; }
+    .row { display:flex; gap:16px; flex-wrap:wrap; }
+    .col { flex:1 1 320px; }
+    #logs { background:#000; color:#0f0; font-family:monospace; padding:10px; height:220px; overflow-y:auto; border-radius:6px; white-space:pre-wrap; }
+    textarea,input,select { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none; background:#0c1a2b; color:#fff; }
+    .pill { display:inline-block; padding:4px 10px; border-radius:999px; margin:0 6px 6px 0; font-size:12px; }
+    .ok { background:#003c2b; color:#31ffb1; border:1px solid #31ffb1; }
+    .ko { background:#3c0000; color:#ff7b7b; border:1px solid #ff7b7b; }
+    .warn { background:#2b2b00; color:#fff57b; border:1px solid #fff57b; }
+    .alert-item { background:#0b1230; border-left:4px solid #ff6a6a; padding:10px; border-radius:6px; margin:8px 0; }
+    .muted { opacity:0.75; }
+    #radar { height:320px; border-radius:10px; background:#0b1230; }
+    .small { font-size:12px; }
+    .section-actions { margin-bottom:10px; }
   </style>
+  <script>
+    // Sécurité simple (code admin)
+    document.addEventListener("DOMContentLoaded", () => {
+      const pass = prompt("Mot de passe Admin ?");
+      if (pass !== "202679") {
+        alert("⛔ Accès refusé");
+        window.location.href = "index.html";
+      }
+    });
+  </script>
+
+  <!-- Leaflet (radar admin light) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-  <h1>⚙️ Console Admin - Centrale Nucléaire Météo</h1>
+  <header>
+    <h1>🛰️ Console Administrateur – Mode NASA</h1>
+  </header>
 
-  <nav>
-    <button onclick="showTab('checkup')">🔎 Check moteur</button>
-    <button onclick="showTab('alerts')">📡 Alertes</button>
-    <!-- autres onglets existants (Logs, Chat IA, News...) -->
-  </nav>
+  <div class="container">
 
-  <!-- Section Check moteur -->
-  <section id="checkup">
-    <h2>🔎 Check moteur</h2>
-    <button onclick="loadCheckup()">Lancer Checkup</button>
-    <table id="checkupTable">
-      <thead>
-        <tr>
-          <th>Zone</th>
-          <th>Couverte</th>
-          <th>Statut</th>
-          <th>Détails</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <!-- Supercalculateur -->
+    <div class="card">
+      <h2>⚡ Supercalculateur Météo</h2>
+      <div class="section-actions">
+        <button class="btn" onclick="runForecast()">🚀 Lancer un Run (manual)</button>
+        <span class="small muted">Planning actuel: 07:10 / 12:10 / 19:10 (BE)</span>
+      </div>
+      <div id="forecast-status">⏳ En attente...</div>
+    </div>
 
-  <!-- Section Alertes -->
-  <section id="alerts">
-    <h2>📡 Liste des Alertes</h2>
-    <button onclick="loadAlerts()">🔄 Rafraîchir</button>
-    <table id="alertsTable">
-      <thead>
-        <tr>
-          <th>Zone</th>
-          <th>Type</th>
-          <th>Fiabilité</th>
-          <th>Premier ?</th>
-          <th>Statut</th>
-          <th>Explication</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <!-- Logs + Voyants moteur (Checkup) -->
+    <div class="card">
+      <h2>📡 Monitoring & Voyants</h2>
+      <div class="row">
+        <div class="col">
+          <button class="btn" onclick="loadCheckup()">🔁 Rafraîchir état</button>
+          <div id="status-pills" style="margin-top:10px">⏳ Checkup...</div>
+        </div>
+        <div class="col">
+          <div id="logs" title="Résumé pipeline / checkup">⏳ Lecture...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alertes -->
+    <div class="card">
+      <h2>⚠️ Alertes (Locales, Nationales, Mondiales)</h2>
+      <div class="section-actions">
+        <button class="btn" onclick="loadAlerts()">🔁 Rafraîchir</button>
+        <span class="small muted">Règles: &lt;70% mémoire, 70–89% contrôle, ≥90% auto</span>
+      </div>
+      <div id="alerts-list">⏳ Chargement alertes...</div>
+    </div>
+
+    <!-- Prévisions Nationales -->
+    <div class="card">
+      <h2>🌍 Prévisions Nationales BE / FR</h2>
+      <div class="row">
+        <div class="col"><div id="forecast-be">⏳ Belgique...</div></div>
+        <div class="col"><div id="forecast-fr">⏳ France...</div></div>
+      </div>
+    </div>
+
+    <!-- Utilisateurs -->
+    <div class="card">
+      <h2>📊 Utilisateurs (zones couvertes / non couvertes)</h2>
+      <div class="section-actions">
+        <button class="btn" onclick="loadUsers()">🔁 Rafraîchir</button>
+      </div>
+      <div id="user-stats">⏳ Chargement...</div>
+    </div>
+
+    <!-- Chat IA -->
+    <div class="card">
+      <h2>🤖 IA J.E.A.N (moteur & expert météo/climat)</h2>
+      <textarea id="ai-input" placeholder="Posez une question..."></textarea>
+      <button class="btn" onclick="sendChat()">Envoyer</button>
+      <div id="ai-response" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- Radar (Admin) -->
+    <div class="card">
+      <h2>🛰️ Radar – Vue admin</h2>
+      <div id="radar">⏳ Radar...</div>
+    </div>
+
+    <!-- News météo -->
+    <div class="card">
+      <h2>📰 Actualités météo (monde)</h2>
+      <div class="section-actions">
+        <button class="btn" onclick="loadNews()">🔁 Rafraîchir</button>
+      </div>
+      <div id="news">⏳ Chargement...</div>
+    </div>
+
+  </div>
 
   <script>
-    function showTab(tabId) {
-      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
-      document.getElementById(tabId).classList.add("active");
+    const API = "/api";
+
+    // ---- Run manuel ----
+    async function runForecast() {
+      setText("forecast-status", "⏳ Calcul...");
+      try {
+        const res = await fetch(`${API}/superforecast`);
+        const data = await res.json();
+        setText("forecast-status", `✅ Run OK – ${truncate(data.analysis || "Analyse disponible", 280)}`);
+        // Auto-refresh sections critiques après run
+        loadAlerts();
+        loadNational();
+        loadCheckup();
+      } catch (e) {
+        setText("forecast-status", "❌ Erreur Run");
+      }
     }
 
+    // ---- Checkup & Logs (voyants) ----
     async function loadCheckup() {
+      setHTML("status-pills", "⏳ Checkup...");
+      setText("logs", "⏳ Lecture...");
       try {
-        const res = await fetch("/api/checkup");
+        const res = await fetch(`${API}/checkup`);
         const data = await res.json();
-        const tbody = document.querySelector("#checkupTable tbody");
-        tbody.innerHTML = "";
-        data.checkup.forEach(row => {
-          tbody.innerHTML += `
-            <tr>
-              <td>${row.zone}</td>
-              <td>${row.covered ? "✅ Oui" : "❌ Non"}</td>
-              <td>${row.status}</td>
-              <td>${row.details}</td>
-            </tr>`;
+        const rows = (data.checkup || []).map(it => {
+          const ok = it.status && it.status.startsWith("✅");
+          const pill = `<span class="pill ${ok ? "ok" : "ko"}">${it.zone}: ${ok ? "OK" : "KO"}</span>`;
+          return { pill, line: `${it.zone} – ${it.status} – ${truncate(it.details||"", 160)}` };
         });
-      } catch (err) {
-        alert("Erreur lors du check moteur: " + err.message);
+        setHTML("status-pills", rows.map(r => r.pill).join(" "));
+        setText("logs", rows.map(r => r.line).join("\n"));
+      } catch (e) {
+        setHTML("status-pills", `<span class="pill ko">Checkup KO</span>`);
+        setText("logs", "❌ Erreur récupération checkup");
       }
     }
 
+    // ---- Alertes (EU27+UK+UA+USA : exemple BE/FR/USA) ----
     async function loadAlerts() {
+      setHTML("alerts-list", "⏳ Chargement alertes...");
       try {
-        const res = await fetch("/api/alerts/Belgium"); // 👉 zone test (Belgique)
-        const data = await res.json();
-        const tbody = document.querySelector("#alertsTable tbody");
-        tbody.innerHTML = "";
-        data.alerts.forEach(alert => {
-          let fiabClass = alert.fiabilite >= 90 ? "ok" : (alert.fiabilite >= 70 ? "warn" : "error");
-          tbody.innerHTML += `
-            <tr>
-              <td>${alert.zoneInfo?.zone || data.zone}</td>
-              <td>${alert.type || "Inconnu"}</td>
-              <td class="${fiabClass}">${alert.fiabilite}%</td>
-              <td>${alert.premier ? "✅ Oui" : "❌ Non"}</td>
-              <td>${alert.statut}</td>
-              <td>${alert.explication}</td>
-            </tr>`;
-        });
-      } catch (err) {
-        alert("Erreur lors du chargement des alertes: " + err.message);
+        const zones = ["Belgium","France","USA"]; // extensible (UK, Ukraine, etc.)
+        const all = [];
+        for (const z of zones) {
+          const r = await fetch(`${API}/alerts/${encodeURIComponent(z)}`);
+          const d = await r.json();
+          const arr = (d.alerts || []).map(a => ({ zone: z, ...a }));
+          all.push(...arr);
+        }
+        // Classement par fiabilité
+        const auto = all.filter(a => toNum(a.reliability) >= 90);
+        const review = all.filter(a => toNum(a.reliability) >= 70 && toNum(a.reliability) < 90);
+        const mem = all.filter(a => toNum(a.reliability) < 70);
+
+        const block = (title, list) => `
+          <h3>${title} (${list.length})</h3>
+          ${list.length===0 ? `<div class="muted small">Rien</div>` :
+            list.map(a => `
+              <div class="alert-item">
+                <div><strong>${a.type || "Alerte"}</strong> – ${a.zone} – ${toNum(a.reliability)}%</div>
+                <div class="small muted">${a.message || a.detail || "—"}</div>
+                ${a.first ? `<div class="pill ok small">Premiers à détecter</div>` : ""}
+              </div>
+            `).join("")}
+        `;
+
+        setHTML("alerts-list", block("Publication auto (≥90%)", auto)
+          + block("À valider (70–89%)", review)
+          + block("En mémoire (<70%)", mem));
+      } catch (e) {
+        setHTML("alerts-list", `<div class="muted">❌ Erreur récupération alertes</div>`);
       }
     }
 
-    // Tab par défaut
-    showTab('checkup');
+    // ---- Prévisions nationales BE / FR ----
+    async function loadNational() {
+      await loadCountryForecast("Belgium", "forecast-be");
+      await loadCountryForecast("France", "forecast-fr");
+    }
+
+    async function loadCountryForecast(country, elId) {
+      setText(elId, `⏳ ${country}...`);
+      try {
+        const res = await fetch(`${API}/forecast/${encodeURIComponent(country)}`);
+        const d = await res.json();
+        const days = Array.isArray(d.days) ? d.days.slice(0,7) : [];
+        const line = (t) => t!=null ? `${Math.round(t)}°C` : "—";
+        const html = `
+          <div><strong>${country}</strong></div>
+          <div class="small muted">${d.summary || "Résumé indisponible"}</div>
+          <div class="small muted">Min/Max: ${line(d.temp_min)} / ${line(d.temp_max)} – Fiabilité: ${toNum(d.confidence)}%</div>
+          <div class="small" style="margin-top:6px;">
+            ${days.map(x => `<span class="pill warn">${(x.date||"").slice(0,10)} • ${line(x.temp_min)} / ${line(x.temp_max)}</span>`).join(" ")}
+          </div>
+        `;
+        setHTML(elId, html);
+      } catch (e) {
+        setText(elId, `❌ Erreur ${country}`);
+      }
+    }
+
+    // ---- Chat IA ----
+    async function sendChat() {
+      const msg = document.getElementById("ai-input").value.trim();
+      if (!msg) return;
+      setText("ai-response", "⏳ IA en cours...");
+      try {
+        const res = await fetch(`${API}/chat`, {
+          method:"POST", headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ message: msg })
+        });
+        const data = await res.json();
+        // backend peut renvoyer {reply: "..."} ou texte
+        const reply = data.reply || data.answer || JSON.stringify(data);
+        setText("ai-response", reply);
+      } catch (e) {
+        setText("ai-response", "❌ Erreur IA");
+      }
+    }
+
+    // ---- Utilisateurs ----
+    async function loadUsers() {
+      setText("user-stats", "⏳ Chargement...");
+      try {
+        const r = await fetch(`${API}/users`); // si absent → 404 géré
+        if (!r.ok) throw new Error("not ok");
+        const d = await r.json();
+        setHTML("user-stats", `
+          <div>Couvertes: ${safe(d.covered_total)} — Non couvertes: ${safe(d.uncovered_total)}</div>
+          <div class="small">BE: G:${safe(d.BE?.free)} P:${safe(d.BE?.premium)} Pro:${safe(d.BE?.pro)} Pro+:${safe(d.BE?.proplus)}</div>
+        `);
+      } catch {
+        setHTML("user-stats", `<span class="muted">Endpoint non disponible pour le moment</span>`);
+      }
+    }
+
+    // ---- News météo ----
+    async function loadNews() {
+      setText("news", "⏳ Chargement...");
+      try {
+        const r = await fetch(`${API}/news`);
+        if (!r.ok) throw new Error("not ok");
+        const d = await r.json();
+        const items = Array.isArray(d.articles) ? d.articles : [];
+        setHTML("news", items.slice(0,10).map(n =>
+          `<div class="pill ok small"><a href="${n.url}" target="_blank" rel="noopener" style="color:#31ffb1;">${n.title}</a></div>`
+        ).join(" "));
+      } catch {
+        setHTML("news", `<span class="muted">Endpoint non disponible pour le moment</span>`);
+      }
+    }
+
+    // ---- Radar (admin light) ----
+    async function initRadar() {
+      try {
+        // Optionnel : récupérer des métadonnées radar côté backend
+        await fetch(`${API}/radar/Belgium`).then(_ => _).catch(_=>{});
+      } catch {}
+      const map = L.map("radar").setView([50.5, 4.7], 6);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap"
+      }).addTo(map);
+    }
+
+    // ---- Helpers ----
+    const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+    const setHTML = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
+    const truncate = (s, n) => (s||"").length>n ? (s.slice(0,n)+"…") : (s||"");
+    const toNum = (x) => isNaN(Number(x)) ? 0 : Number(x);
+    const safe = (x) => (x==null ? 0 : x);
+
+    // ---- Init ----
+    (async function init() {
+      await initRadar();
+      await loadCheckup();
+      await loadAlerts();
+      await loadNational();
+      await loadUsers();
+      await loadNews();
+    })();
   </script>
 </body>
 </html>
