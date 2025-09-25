@@ -6,13 +6,13 @@ import cors from "cors";
 
 // === Services ===
 import forecastService from "./services/forecastService.js";
-import { runSuperForecast } from "./services/superForecast.js";
+import superForecast from "./services/superForecast.js";
 import alertsRouter from "./services/alertsService.js";
-import { radarHandler } from "./services/radarService.js";
-import { generateBulletin } from "./services/bulletinService.js";
-import chatWithJean from "./services/chatService.js";
-import { addLog } from "./services/logsService.js";
-import checkCoverage from "./services/checkCoverage.js"; // ✅ middleware
+import radarService from "./services/radarService.js";
+import bulletinService from "./services/bulletinService.js";
+import { chatWithJean } from "./services/chatService.js"; // ✅ correction
+import logsService from "./services/logsService.js";
+import checkCoverage from "./services/checkCoverage.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
@@ -58,7 +58,7 @@ app.get("/api/localforecast/:lat/:lon", checkCoverage, async (req, res) => {
 // --- SuperForecast ---
 app.get("/api/superforecast", checkCoverage, async (req, res) => {
   try {
-    const result = await runSuperForecast({ lat: 50.5, lon: 4.7 }); // 📍 valeurs par défaut
+    const result = await superForecast({ lat: 50.5, lon: 4.7 }); // default export → fonction
     res.json(result);
   } catch (err) {
     console.error("❌ SuperForecast error:", err);
@@ -72,7 +72,7 @@ app.use("/api/alerts", checkCoverage, alertsRouter);
 // --- Radar ---
 app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   try {
-    const data = await radarHandler(req.params.zone);
+    const data = await radarService(req.params.zone); // default export → fonction
     res.json(data);
   } catch (err) {
     console.error("❌ Radar error:", err);
@@ -83,7 +83,7 @@ app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
 // --- Bulletins ---
 app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   try {
-    const data = await generateBulletin(req.params.zone);
+    const data = await bulletinService(req.params.zone); // default export → fonction
     res.json(data);
   } catch (err) {
     console.error("❌ Bulletin error:", err);
@@ -95,7 +95,7 @@ app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
 app.post("/api/chat", checkCoverage, async (req, res) => {
   try {
     const { message } = req.body;
-    const response = await chatWithJean(message);
+    const response = await chatWithJean(message); // ✅ ok
     res.json(response);
   } catch (err) {
     console.error("❌ Chat error:", err);
@@ -107,7 +107,7 @@ app.post("/api/chat", checkCoverage, async (req, res) => {
 app.post("/api/logs", async (req, res) => {
   try {
     const { service, message } = req.body;
-    await addLog(service, message);
+    await logsService(service, message); // default export → fonction
     res.json({ success: true });
   } catch (err) {
     console.error("❌ Logs error:", err);
