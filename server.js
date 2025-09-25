@@ -4,13 +4,13 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
-// === Services (on conserve tes imports historiques) ===
+// === Services ===
 import forecastService from "./services/forecastService.js";
 import { runSuperForecast } from "./services/superForecast.js";
-// ✖️ SUPPR: import alertsRouter from "./services/alertsService.js";
+// ❌ plus d'import alertsService.js
 import { radarHandler } from "./services/radarService.js";
 import { generateBulletin } from "./services/bulletinService.js";
-import chatWithJean from "./services/chatService.js";
+import { chatWithJean } from "./services/chatService.js"; // ✅ import nommé
 import { addLog } from "./services/logsService.js";
 import checkCoverage from "./services/checkCoverage.js";
 
@@ -71,24 +71,22 @@ app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
   try {
     const zone = req.params.zone;
 
-    // Charge le détecteur brut (supporte export nommé OU défaut)
     const detMod = await import("./services/alertDetector.js");
     const detectAlerts =
       detMod.detectAlerts ||
       detMod.default ||
       detMod.detect ||
       detMod.alertsDetector;
+
     if (typeof detectAlerts !== "function") {
       return res.status(500).json({ error: "alertDetector introuvable (export manquant)" });
     }
 
-    // Charge le moteur d’enrichissement (optionnel, export nommé OU défaut)
     let processAlerts = null;
     try {
       const engMod = await import("./services/alertsEngine.js");
       processAlerts = engMod.processAlerts || engMod.default || null;
     } catch {
-      // pourquoi: si le fichier n’existe pas ou bug, on renvoie les brutes.
       processAlerts = null;
     }
 
