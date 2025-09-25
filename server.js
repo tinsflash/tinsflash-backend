@@ -3,115 +3,149 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // === Services ===
-import { getForecast, getLocalForecast } from "./services/forecastService.js";
 import { runSuperForecast } from "./services/superForecast.js";
-import alertsRouter from "./services/alertsService.js";
-import { radarHandler } from "./services/radarService.js";
-import { generateBulletin } from "./services/bulletinService.js";
-import { chatWithJean } from "./services/chatService.js";
-import { addLog } from "./services/logsService.js";
-import checkCoverage from "./services/checkCoverage.js"; // ✅ middleware
+import forecastService from "./services/forecastService.js";
+import radarService from "./services/radarService.js";
+import alertsService from "./services/alertsService.js";
+import bulletinService from "./services/bulletinService.js";
+import chatService from "./services/chatService.js";
+import { addLog, getLogs } from "./services/logsService.js";
+import checkCoverage from "./services/checkCoverage.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
 
+// === Setup ===
 dotenv.config();
-
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// === MongoDB connection ===
+// === Fix __dirname (ESM) ===
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// === Static files ===
+app.use(express.static(path.join(__dirname, "public")));
+
+// === MongoDB ===
 mongoose
   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .then(() => console.log("✅ MongoDB connecté"))
+  .catch((err) => console.error("❌ Erreur MongoDB:", err.message));
 
 // ==============================
 // 📡 API ROUTES
 // ==============================
 
-// --- Forecasts ---
-app.get("/api/forecast/:zone", checkCoverage, async (req, res) => {
-  try {
-    const forecast = await getForecast(req.params.zone);
-    res.json(forecast);
-  } catch (err) {
-    console.error("❌ Forecast error:", err);
-    res.status(500).json({ error: "Forecast service failed" });
-  }
-});
-
-app.get("/api/localforecast/:lat/:lon", checkCoverage, async (req, res) => {
-  try {
-    const forecast = await getLocalForecast(req.params.lat, req.params.lon);
-    res.json(forecast);
-  } catch (err) {
-    console.error("❌ Local forecast error:", err);
-    res.status(500).json({ error: "Local forecast service failed" });
-  }
-});
-
 // --- SuperForecast ---
-app.get("/api/superforecast", checkCoverage, async (req, res) => {
+app.post("/api/superforecast/run", async (req, res) => {
   try {
-    const result = await runSuperForecast();
+    const { lat, lon } = req.body;
+    const result = await runSuperForecast({ lat, lon });
     res.json(result);
   } catch (err) {
     console.error("❌ SuperForecast error:", err);
-    res.status(500).json({ error: "SuperForecast failed" });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Forecast ---
+app.get("/api/forecast/local", checkCoverage, async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    const data = await forecastService.getLocalForecast(lat, lon);
+    res.json(data);
+  } catch (err) {
+    console.error("❌ Local forecast error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/forecast/7days", checkCoverage, async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    const data = await forecastService.get7DayForecast(lat, lon);
+    res.json(data);
+  } catch (err) {
+    console.error("❌ 7-day forecast error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 // --- Alerts ---
-app.use("/api/alerts", checkCoverage, alertsRouter);
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const alerts = await alertsService.getAlerts();
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.post("/api/alerts", async (req, res) => {
+  try {
+    const alert = await alertsService.addAlert(req.body);
+    res.json(alert);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.delete("/api/alerts/:id", async (req, res) => {
+  try {
+    const result = await alertsService.deleteAlert(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- Radar ---
-app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
+app.get("/api/radar", async (req, res) => {
   try {
-    const data = await radarHandler(req.params.zone);
-    res.json(data);
+    const radar = await radarService.getRadar();
+    res.json(radar);
   } catch (err) {
-    console.error("❌ Radar error:", err);
-    res.status(500).json({ error: "Radar service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // --- Bulletins ---
-app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
+app.get("/api/bulletin/:zone", async (req, res) => {
   try {
-    const data = await generateBulletin(req.params.zone);
+    const data = await bulletinService.generateBulletin(req.params.zone);
     res.json(data);
   } catch (err) {
-    console.error("❌ Bulletin error:", err);
-    res.status(500).json({ error: "Bulletin service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- Chat with J.E.A.N. ---
-app.post("/api/chat", checkCoverage, async (req, res) => {
+// --- Chat IA (J.E.A.N.) ---
+app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    const response = await chatWithJean(message);
-    res.json(response);
+    const response = await chatService.askJean(message);
+    res.json({ text: response });
   } catch (err) {
-    console.error("❌ Chat error:", err);
-    res.status(500).json({ error: "Chat service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // --- Logs ---
+app.get("/api/logs", (req, res) => {
+  res.json(getLogs());
+});
 app.post("/api/logs", async (req, res) => {
   try {
     const { service, message } = req.body;
     await addLog(service, message);
     res.json({ success: true });
   } catch (err) {
-    console.error("❌ Logs error:", err);
-    res.status(500).json({ error: "Logs service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
