@@ -1,145 +1,111 @@
-// services/superForecast.js
-import fetch from "node-fetch";
-import { addLog } from "./logsService.js";
-import { injectForecasts } from "./forecastService.js";
-import ClimateFactors from "./climateFactors.js";
+// PATH: services/superForecast.js
+// Fusion multi-modèles météo + IA pour interprétation
 
-// ==============================
-// 🌍 Zones couvertes
-// ==============================
-const COVERED_EUROPE = [
-  "DE", "AT", "BE", "BG", "CY", "HR", "DK", "ES", "EE", "FI", "FR", "GR", "HU",
-  "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "CZ", "RO", "SK", "SI", "SE"
+import gfs from "./gfs.js";
+import ecmwf from "./ecmwf.js";
+import icon from "./icon.js";
+import openweather from "./openweather.js";
+import { askAI } from "./aiService.js";
+
+// ======================
+// Zones couvertes
+// ======================
+const COVERED_REGIONS = [
+  // UE27
+  "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
+  "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
+  "Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands",
+  "Poland","Portugal","Czechia","Czech Republic","Romania","Slovakia",
+  "Slovenia","Sweden",
+
+  // Ajouts
+  "Ukraine",
+  "United Kingdom","UK","England","Scotland","Wales","Northern Ireland",
+  "Norway",
+  "USA","United States"
 ];
-const EXTRA_COVERED = ["UK", "UA"];
-const USA_STATES = ["CA", "NY", "TX", "FL", "WA"]; // 🔥 à enrichir progressivement
 
 /**
- * Génère un tableau forecastData structuré pour injectForecasts
+ * Vérifie si une zone est couverte
  */
-function buildForecastData(fusionData) {
-  const today = new Date().toISOString().split("T")[0];
-  const results = [];
-
-  // 🇧🇪 Belgique
-  results.push({
-    country: "BE",
-    date: today,
-    minTemp: fusionData.BE?.min || null,
-    maxTemp: fusionData.BE?.max || null,
-    rainProbability: fusionData.BE?.rain || null,
-    windSpeed: fusionData.BE?.wind || null,
-  });
-
-  // 🇫🇷 France (multi-zones)
-  ["NO", "NE", "SO", "SE", "COR"].forEach((zone) => {
-    results.push({
-      country: `FR-${zone}`,
-      date: today,
-      minTemp: fusionData[`FR-${zone}`]?.min || fusionData.FR?.min || null,
-      maxTemp: fusionData[`FR-${zone}`]?.max || fusionData.FR?.max || null,
-      rainProbability: fusionData[`FR-${zone}`]?.rain || fusionData.FR?.rain || null,
-      windSpeed: fusionData[`FR-${zone}`]?.wind || fusionData.FR?.wind || null,
-    });
-  });
-
-  // 🇺🇸 USA (par État + national)
-  USA_STATES.forEach((state) => {
-    results.push({
-      country: `USA-${state}`,
-      date: today,
-      minTemp: fusionData[`USA-${state}`]?.min || fusionData.USA?.min || null,
-      maxTemp: fusionData[`USA-${state}`]?.max || fusionData.USA?.max || null,
-      rainProbability: fusionData[`USA-${state}`]?.rain || fusionData.USA?.rain || null,
-      windSpeed: fusionData[`USA-${state}`]?.wind || fusionData.USA?.wind || null,
-    });
-  });
-  results.push({
-    country: "USA",
-    date: today,
-    minTemp: fusionData.USA?.min || null,
-    maxTemp: fusionData.USA?.max || null,
-    rainProbability: fusionData.USA?.rain || null,
-    windSpeed: fusionData.USA?.wind || null,
-  });
-
-  // 🌍 Autres pays couverts (Europe élargie + UK + UA)
-  [...COVERED_EUROPE, ...EXTRA_COVERED].forEach((cc) => {
-    if (cc !== "FR" && cc !== "BE") {
-      results.push({
-        country: cc,
-        date: today,
-        minTemp: fusionData[cc]?.min || null,
-        maxTemp: fusionData[cc]?.max || null,
-        rainProbability: fusionData[cc]?.rain || null,
-        windSpeed: fusionData[cc]?.wind || null,
-      });
-    }
-  });
-
-  return results;
+function isCovered(country) {
+  if (!country) return false;
+  return COVERED_REGIONS.includes(country);
 }
 
 /**
- * Lance un run SuperForecast (fusion multi-modèles + IA + facteurs climat)
+ * SuperForecast = moteur principal
+ * - Zones couvertes → multi-modèles météo + IA
+ * - Zones non couvertes → Open Data météo + IA
  */
-export async function runSuperForecast(fusionData, lat = 50.5, lon = 4.5) {
+export default async function runSuperForecast(location) {
   try {
-    await addLog("🚀 Run SuperForecast lancé");
+    const covered = isCovered(location.country ?? "");
+    let combined = {};
+    let prompt = "";
 
-    // === Étape 1 : Analyse IA via Cohere ===
-    const prompt = `
-      Analyse météorologique nucléaire mondiale.
-      Croise GFS, ECMWF, ICON, Copernicus, Meteomatics, NASA POWER, Trullemans, Wetterzentrale.
-      Intègre relief, altitude, climat local, proximité mers/rivières, facteurs urbains.
-      Détaille risques pluie, vent, neige, orages, inondations.
-      Mets en évidence toute anomalie majeure détectée.
-      Précision maximale pour 🇧🇪 BE, 🇫🇷 FR multi-zones, 🇺🇸 USA (états + national), 🇪🇺 UE27, 🇬🇧 UK, 🇺🇦 UA.
-    `;
+    if (covered) {
+      // Données multi-modèles
+      const [gfsData, ecmwfData, iconData] = await Promise.all([
+        gfs(location),
+        ecmwf(location),
+        icon(location),
+      ]);
 
-    const res = await fetch("https://api.cohere.ai/v1/chat", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.COHERE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "command-a-03-2025",
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+      combined = {
+        location,
+        gfs: gfsData,
+        ecmwf: ecmwfData,
+        icon: iconData,
+        covered,
+        generatedAt: new Date().toISOString(),
+      };
 
-    const data = await res.json();
+      prompt = `
+Prévisions météorologiques détaillées pour ${location.country}.
+Localisation: ${JSON.stringify(location)}.
 
-    const analysis =
-      data?.text ||
-      data?.message?.content?.[0]?.text ||
-      "⚠️ Analyse IA indisponible";
+Données modèles:
+- GFS: ${JSON.stringify(gfsData)}
+- ECMWF: ${JSON.stringify(ecmwfData)}
+- ICON: ${JSON.stringify(iconData)}
 
-    await addLog(`📊 Analyse IA SuperForecast: ${analysis}`);
+Consignes:
+- Analyse locale (géolocalisation) + nationale.
+- Inclure tendances sur 7 jours.
+- Mentionner incertitudes et risques.
+- Style: bulletin météo précis et concis en français.
+`;
+    } else {
+      // Données Open Data
+      const owData = await openweather(location.lat, location.lon);
 
-    // === Étape 2 : Construire forecastData ===
-    let forecastData = buildForecastData(fusionData);
+      combined = {
+        location,
+        openweather: owData,
+        covered,
+        generatedAt: new Date().toISOString(),
+      };
 
-    // === Étape 3 : Application ClimateFactors sur chaque entrée ===
-    const adjustedData = [];
-    for (const entry of forecastData) {
-      const adjusted = await ClimateFactors.applyClimateFactors(entry, lat, lon, {
-        zoneType: entry.country.startsWith("USA-") ? "urban" : "rural",
-      });
-      adjustedData.push(adjusted);
+      prompt = `
+Prévisions météo simplifiées pour ${location.country ?? "zone non couverte"}.
+Localisation: ${JSON.stringify(location)}.
+
+Données disponibles (Open Data):
+${JSON.stringify(owData)}
+
+Consignes:
+- Synthèse locale/nationale simple.
+- Mentionner continent et tendances globales.
+- Pas d'alertes locales (uniquement continentales).
+- Style: clair, concis, en français.
+`;
     }
 
-    // === Étape 4 : Injection MongoDB ===
-    await injectForecasts(adjustedData);
-
-    await addLog("🎯 SuperForecast terminé avec succès");
-    return { analysis, forecastData: adjustedData };
+    const analysis = await askAI(prompt);
+    return { zone: location.country, covered, raw: combined, analysis };
   } catch (err) {
-    console.error("❌ Erreur runSuperForecast:", err.message);
-    await addLog("❌ Erreur SuperForecast: " + err.message);
-    return { analysis: null, forecastData: [] };
+    console.error("❌ Erreur superForecast:", err);
+    return { error: "SuperForecast failed", details: err.message };
   }
 }
-
-export default { runSuperForecast };
