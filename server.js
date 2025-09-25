@@ -10,7 +10,7 @@ import superForecast from "./services/superForecast.js";
 import alertsRouter from "./services/alertsService.js";
 import radarService from "./services/radarService.js";
 import bulletinService from "./services/bulletinService.js";
-import { chatWithJean } from "./services/chatService.js"; // ✅ correction
+import { chatWithJean } from "./services/chatService.js";
 import logsService from "./services/logsService.js";
 import checkCoverage from "./services/checkCoverage.js";
 
@@ -58,7 +58,7 @@ app.get("/api/localforecast/:lat/:lon", checkCoverage, async (req, res) => {
 // --- SuperForecast ---
 app.get("/api/superforecast", checkCoverage, async (req, res) => {
   try {
-    const result = await superForecast({ lat: 50.5, lon: 4.7 }); // default export → fonction
+    const result = await superForecast({ lat: 50.5, lon: 4.7, country: "Belgium" });
     res.json(result);
   } catch (err) {
     console.error("❌ SuperForecast error:", err);
@@ -72,7 +72,7 @@ app.use("/api/alerts", checkCoverage, alertsRouter);
 // --- Radar ---
 app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   try {
-    const data = await radarService(req.params.zone); // default export → fonction
+    const data = await radarService(req.params.zone);
     res.json(data);
   } catch (err) {
     console.error("❌ Radar error:", err);
@@ -83,7 +83,7 @@ app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
 // --- Bulletins ---
 app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   try {
-    const data = await bulletinService(req.params.zone); // default export → fonction
+    const data = await bulletinService(req.params.zone);
     res.json(data);
   } catch (err) {
     console.error("❌ Bulletin error:", err);
@@ -95,7 +95,7 @@ app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
 app.post("/api/chat", checkCoverage, async (req, res) => {
   try {
     const { message } = req.body;
-    const response = await chatWithJean(message); // ✅ ok
+    const response = await chatWithJean(message);
     res.json(response);
   } catch (err) {
     console.error("❌ Chat error:", err);
@@ -107,11 +107,56 @@ app.post("/api/chat", checkCoverage, async (req, res) => {
 app.post("/api/logs", async (req, res) => {
   try {
     const { service, message } = req.body;
-    await logsService(service, message); // default export → fonction
+    await logsService(service, message);
     res.json({ success: true });
   } catch (err) {
     console.error("❌ Logs error:", err);
     res.status(500).json({ error: "Logs service failed" });
+  }
+});
+
+// ==============================
+// 🛠️ Check moteur (zones couvertes / non couvertes)
+// ==============================
+
+import runSuperForecast from "./services/superForecast.js";
+
+app.get("/api/checkup", async (req, res) => {
+  try {
+    const zonesTest = [
+      { country: "Belgium", lat: 50.5, lon: 4.7 },
+      { country: "France", lat: 48.8, lon: 2.3 },
+      { country: "USA", lat: 38.9, lon: -77.0 },
+      { country: "Norway", lat: 59.9, lon: 10.7 },
+      { country: "Brazil", lat: -15.8, lon: -47.9 } // exemple zone non couverte
+    ];
+
+    const results = [];
+    for (const z of zonesTest) {
+      try {
+        const forecast = await runSuperForecast(z);
+        results.push({
+          zone: z.country,
+          covered: !!forecast.covered,
+          status: forecast.analysis ? "✅ OK" : "❌ KO",
+          details: typeof forecast.analysis === "string"
+                    ? forecast.analysis.slice(0, 300)
+                    : (forecast.analysis || forecast.error || "").toString().slice(0,300)
+        });
+      } catch (err) {
+        results.push({
+          zone: z.country,
+          covered: false,
+          status: "❌ KO",
+          details: err.message || String(err)
+        });
+      }
+    }
+
+    res.json({ checkup: results });
+  } catch (err) {
+    console.error("❌ Checkup error:", err);
+    res.status(500).json({ error: "Checkup failed" });
   }
 });
 
