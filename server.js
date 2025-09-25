@@ -4,15 +4,15 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
-// === Services ===
+// === Services (on conserve tes imports historiques) ===
 import forecastService from "./services/forecastService.js";
 import { runSuperForecast } from "./services/superForecast.js";
-import alertsRouter from "./services/alertsService.js";
+// ✖️ SUPPR: import alertsRouter from "./services/alertsService.js";
 import { radarHandler } from "./services/radarService.js";
 import { generateBulletin } from "./services/bulletinService.js";
 import chatWithJean from "./services/chatService.js";
 import { addLog } from "./services/logsService.js";
-import checkCoverage from "./services/checkCoverage.js"; // ✅ middleware
+import checkCoverage from "./services/checkCoverage.js";
 
 // === DB Models ===
 import Forecast from "./models/Forecast.js";
@@ -58,7 +58,7 @@ app.get("/api/localforecast/:lat/:lon", checkCoverage, async (req, res) => {
 // --- SuperForecast ---
 app.get("/api/superforecast", checkCoverage, async (req, res) => {
   try {
-    const result = await runSuperForecast({ lat: 50.5, lon: 4.7 }); // 📍 valeurs par défaut
+    const result = await runSuperForecast({ lat: 50.5, lon: 4.7, country: "Belgium" });
     res.json(result);
   } catch (err) {
     console.error("❌ SuperForecast error:", err);
@@ -66,8 +66,41 @@ app.get("/api/superforecast", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Alerts ---
-app.use("/api/alerts", checkCoverage, alertsRouter);
+// --- Alerts (bypass alertsService.js + imports dynamiques sûrs) ---
+app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
+  try {
+    const zone = req.params.zone;
+
+    // Charge le détecteur brut (supporte export nommé OU défaut)
+    const detMod = await import("./services/alertDetector.js");
+    const detectAlerts =
+      detMod.detectAlerts ||
+      detMod.default ||
+      detMod.detect ||
+      detMod.alertsDetector;
+    if (typeof detectAlerts !== "function") {
+      return res.status(500).json({ error: "alertDetector introuvable (export manquant)" });
+    }
+
+    // Charge le moteur d’enrichissement (optionnel, export nommé OU défaut)
+    let processAlerts = null;
+    try {
+      const engMod = await import("./services/alertsEngine.js");
+      processAlerts = engMod.processAlerts || engMod.default || null;
+    } catch {
+      // pourquoi: si le fichier n’existe pas ou bug, on renvoie les brutes.
+      processAlerts = null;
+    }
+
+    const rawAlerts = await detectAlerts(zone);
+    const enriched = processAlerts ? await processAlerts(rawAlerts, { zone }) : rawAlerts;
+
+    res.json({ zone, alerts: enriched });
+  } catch (err) {
+    console.error("❌ Alerts route error:", err);
+    res.status(500).json({ error: "Alerts service failed" });
+  }
+});
 
 // --- Radar ---
 app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
@@ -125,7 +158,7 @@ app.get("/api/checkup", async (req, res) => {
       { country: "France", lat: 48.8, lon: 2.3 },
       { country: "USA", lat: 38.9, lon: -77.0 },
       { country: "Norway", lat: 59.9, lon: 10.7 },
-      { country: "Brazil", lat: -15.8, lon: -47.9 } // zone non couverte
+      { country: "Brazil", lat: -15.8, lon: -47.9 } // non couverte
     ];
 
     const results = [];
@@ -134,16 +167,19 @@ app.get("/api/checkup", async (req, res) => {
         const forecast = await runSuperForecast(z);
         results.push({
           zone: z.country,
-          covered: forecast.covered || false,
+          covered: !!forecast.covered,
           status: forecast.analysis ? "✅ OK" : "❌ KO",
-          details: forecast.analysis?.slice(0, 200) || forecast.error
+          details:
+            typeof forecast.analysis === "string"
+              ? forecast.analysis.slice(0, 300)
+              : (forecast.analysis || forecast.error || "").toString().slice(0, 300),
         });
       } catch (err) {
         results.push({
           zone: z.country,
           covered: false,
           status: "❌ KO",
-          details: err.message || String(err)
+          details: err.message || String(err),
         });
       }
     }
