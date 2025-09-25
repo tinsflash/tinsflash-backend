@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>🛰️ Console Admin TINSFLASH</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="style.css">
   <style>
     body { background:#0a0f1c; color:#00ffea; font-family:"Orbitron", Arial, sans-serif; margin:0; }
     header { text-align:center; padding:20px; border-bottom:2px solid #00ffea; }
@@ -14,91 +15,64 @@
     h2 { color:#00fbe7; margin-top:0; text-shadow:0 0 8px #00d9ff; }
     .btn { background:#00ffea; color:#000; border:none; padding:10px 15px; margin:5px; border-radius:8px; font-weight:bold; cursor:pointer; }
     .btn:hover { background:#00d9ff; }
-    .row { display:flex; gap:16px; flex-wrap:wrap; }
-    .col { flex:1 1 320px; }
-    #logs { background:#000; color:#0f0; font-family:monospace; padding:10px; height:220px; overflow-y:auto; border-radius:6px; white-space:pre-wrap; }
+    #logs, #ai-response, #news-list { background:#000; color:#0f0; font-family:monospace; padding:10px; border-radius:6px; white-space:pre-wrap; }
+    #logs { height:200px; overflow-y:auto; }
     textarea,input,select { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none; background:#0c1a2b; color:#fff; }
-    .pill { display:inline-block; padding:4px 10px; border-radius:999px; margin:0 6px 6px 0; font-size:12px; }
-    .ok { background:#003c2b; color:#31ffb1; border:1px solid #31ffb1; }
-    .ko { background:#3c0000; color:#ff7b7b; border:1px solid #ff7b7b; }
-    .warn { background:#2b2b00; color:#fff57b; border:1px solid #fff57b; }
-    .alert-item { background:#0b1230; border-left:4px solid #ff6a6a; padding:10px; border-radius:6px; margin:8px 0; }
-    .muted { opacity:0.75; }
-    #radar { height:320px; border-radius:10px; background:#0b1230; }
-    .small { font-size:12px; }
-    .section-actions { margin-bottom:10px; }
+    ul { padding-left:20px; }
+    li { margin:4px 0; }
   </style>
   <script>
-    // Sécurité simple (code admin)
+    // Sécurité simple par mot de passe
     document.addEventListener("DOMContentLoaded", () => {
       const pass = prompt("Mot de passe Admin ?");
-      if (pass !== "202679") {
+      if(pass !== "202679") {
         alert("⛔ Accès refusé");
         window.location.href = "index.html";
       }
     });
   </script>
-
-  <!-- Leaflet (radar admin light) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
   <header>
     <h1>🛰️ Console Administrateur – Mode NASA</h1>
   </header>
-
   <div class="container">
 
     <!-- Supercalculateur -->
     <div class="card">
       <h2>⚡ Supercalculateur Météo</h2>
-      <div class="section-actions">
-        <button class="btn" onclick="runForecast()">🚀 Lancer un Run (manual)</button>
-        <span class="small muted">Planning actuel: 07:10 / 12:10 / 19:10 (BE)</span>
-      </div>
+      <button class="btn" onclick="runForecast()">🚀 Lancer un Run (manual)</button>
+      <div>Planning actuel: 07:10 / 12:10 / 19:10 (BE)</div>
       <div id="forecast-status">⏳ En attente...</div>
     </div>
 
-    <!-- Logs + Voyants moteur (Checkup) -->
+    <!-- Monitoring & Logs -->
     <div class="card">
-      <h2>📡 Monitoring & Voyants</h2>
-      <div class="row">
-        <div class="col">
-          <button class="btn" onclick="loadCheckup()">🔁 Rafraîchir état</button>
-          <div id="status-pills" style="margin-top:10px">⏳ Checkup...</div>
-        </div>
-        <div class="col">
-          <div id="logs" title="Résumé pipeline / checkup">⏳ Lecture...</div>
-        </div>
-      </div>
+      <h2>📡 Monitoring & Logs</h2>
+      <button class="btn" onclick="loadLogs()">📖 Charger logs</button>
+      <div id="logs">⏳ Attente logs...</div>
     </div>
 
     <!-- Alertes -->
     <div class="card">
-      <h2>⚠️ Alertes (Locales, Nationales, Mondiales)</h2>
-      <div class="section-actions">
-        <button class="btn" onclick="loadAlerts()">🔁 Rafraîchir</button>
-        <span class="small muted">Règles: &lt;70% mémoire, 70–89% contrôle, ≥90% auto</span>
-      </div>
-      <div id="alerts-list">⏳ Chargement alertes...</div>
+      <h2>⚠️ Alertes météo</h2>
+      <button class="btn" onclick="loadAlerts()">⚠️ Charger alertes (BE)</button>
+      <div id="alerts-content">⏳ Attente alertes...</div>
     </div>
 
     <!-- Prévisions Nationales -->
     <div class="card">
       <h2>🌍 Prévisions Nationales BE / FR</h2>
-      <div class="row">
-        <div class="col"><div id="forecast-be">⏳ Belgique...</div></div>
-        <div class="col"><div id="forecast-fr">⏳ France...</div></div>
-      </div>
+      <button class="btn" onclick="loadForecast('BE')">🇧🇪 Belgique</button>
+      <button class="btn" onclick="loadForecast('FR')">🇫🇷 France</button>
+      <div id="forecast-be">⏳ En attente BE...</div>
+      <div id="forecast-fr">⏳ En attente FR...</div>
     </div>
 
-    <!-- Utilisateurs -->
+    <!-- Statistiques utilisateurs -->
     <div class="card">
       <h2>📊 Utilisateurs (zones couvertes / non couvertes)</h2>
-      <div class="section-actions">
-        <button class="btn" onclick="loadUsers()">🔁 Rafraîchir</button>
-      </div>
+      <button class="btn" onclick="loadUsers()">🔄 Rafraîchir</button>
       <div id="user-stats">⏳ Chargement...</div>
     </div>
 
@@ -107,208 +81,120 @@
       <h2>🤖 IA J.E.A.N (moteur & expert météo/climat)</h2>
       <textarea id="ai-input" placeholder="Posez une question..."></textarea>
       <button class="btn" onclick="sendChat()">Envoyer</button>
-      <div id="ai-response" style="margin-top:10px;"></div>
+      <div id="ai-response">⏳ Attente...</div>
     </div>
 
-    <!-- Radar (Admin) -->
+    <!-- Radar -->
     <div class="card">
       <h2>🛰️ Radar – Vue admin</h2>
-      <div id="radar">⏳ Radar...</div>
+      <div id="radar-map" style="height:300px; border-radius:8px;"></div>
     </div>
 
-    <!-- News météo -->
+    <!-- Actualités météo -->
     <div class="card">
       <h2>📰 Actualités météo (monde)</h2>
-      <div class="section-actions">
-        <button class="btn" onclick="loadNews()">🔁 Rafraîchir</button>
-      </div>
-      <div id="news">⏳ Chargement...</div>
+      <button class="btn" onclick="loadNews()">🔄 Rafraîchir</button>
+      <div id="news-list">⏳ Chargement...</div>
     </div>
-
   </div>
 
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    const API = "/api";
+    const API_BASE = "/api"; // le backend est sur le même domaine Render
 
-    // ---- Run manuel ----
     async function runForecast() {
-      setText("forecast-status", "⏳ Calcul...");
+      document.getElementById("forecast-status").innerText = "⏳ Calcul...";
       try {
-        const res = await fetch(`${API}/superforecast`);
+        const res = await fetch(`${API_BASE}/superforecast`);
         const data = await res.json();
-        setText("forecast-status", `✅ Run OK – ${truncate(data.analysis || "Analyse disponible", 280)}`);
-        // Auto-refresh sections critiques après run
-        loadAlerts();
-        loadNational();
-        loadCheckup();
-      } catch (e) {
-        setText("forecast-status", "❌ Erreur Run");
+        document.getElementById("forecast-status").innerText =
+          data.analysis ? `✅ Run OK : ${data.analysis.slice(0,120)}...` : "❌ Erreur Run";
+      } catch (err) {
+        document.getElementById("forecast-status").innerText = "❌ Erreur Run";
       }
     }
 
-    // ---- Checkup & Logs (voyants) ----
-    async function loadCheckup() {
-      setHTML("status-pills", "⏳ Checkup...");
-      setText("logs", "⏳ Lecture...");
+    async function loadLogs() {
+      document.getElementById("logs").innerText = "⏳ Chargement logs...";
       try {
-        const res = await fetch(`${API}/checkup`);
+        const res = await fetch(`${API_BASE}/logs`);
         const data = await res.json();
-        const rows = (data.checkup || []).map(it => {
-          const ok = it.status && it.status.startsWith("✅");
-          const pill = `<span class="pill ${ok ? "ok" : "ko"}">${it.zone}: ${ok ? "OK" : "KO"}</span>`;
-          return { pill, line: `${it.zone} – ${it.status} – ${truncate(it.details||"", 160)}` };
-        });
-        setHTML("status-pills", rows.map(r => r.pill).join(" "));
-        setText("logs", rows.map(r => r.line).join("\n"));
-      } catch (e) {
-        setHTML("status-pills", `<span class="pill ko">Checkup KO</span>`);
-        setText("logs", "❌ Erreur récupération checkup");
+        document.getElementById("logs").innerText = Array.isArray(data) ? data.join("\n") : JSON.stringify(data);
+      } catch {
+        document.getElementById("logs").innerText = "❌ Erreur logs";
       }
     }
 
-    // ---- Alertes (EU27+UK+UA+USA : exemple BE/FR/USA) ----
     async function loadAlerts() {
-      setHTML("alerts-list", "⏳ Chargement alertes...");
+      document.getElementById("alerts-content").innerText = "⏳ Chargement alertes...";
       try {
-        const zones = ["Belgium","France","USA"]; // extensible (UK, Ukraine, etc.)
-        const all = [];
-        for (const z of zones) {
-          const r = await fetch(`${API}/alerts/${encodeURIComponent(z)}`);
-          const d = await r.json();
-          const arr = (d.alerts || []).map(a => ({ zone: z, ...a }));
-          all.push(...arr);
-        }
-        // Classement par fiabilité
-        const auto = all.filter(a => toNum(a.reliability) >= 90);
-        const review = all.filter(a => toNum(a.reliability) >= 70 && toNum(a.reliability) < 90);
-        const mem = all.filter(a => toNum(a.reliability) < 70);
-
-        const block = (title, list) => `
-          <h3>${title} (${list.length})</h3>
-          ${list.length===0 ? `<div class="muted small">Rien</div>` :
-            list.map(a => `
-              <div class="alert-item">
-                <div><strong>${a.type || "Alerte"}</strong> – ${a.zone} – ${toNum(a.reliability)}%</div>
-                <div class="small muted">${a.message || a.detail || "—"}</div>
-                ${a.first ? `<div class="pill ok small">Premiers à détecter</div>` : ""}
-              </div>
-            `).join("")}
-        `;
-
-        setHTML("alerts-list", block("Publication auto (≥90%)", auto)
-          + block("À valider (70–89%)", review)
-          + block("En mémoire (<70%)", mem));
-      } catch (e) {
-        setHTML("alerts-list", `<div class="muted">❌ Erreur récupération alertes</div>`);
+        const res = await fetch(`${API_BASE}/alerts/Belgium`);
+        const data = await res.json();
+        document.getElementById("alerts-content").innerText =
+          data.alerts ? data.alerts.map(a => `⚠️ ${a.type || "?"} (${a.confidence||"?"}%)`).join("\n")
+                      : JSON.stringify(data);
+      } catch {
+        document.getElementById("alerts-content").innerText = "❌ Erreur alertes";
       }
     }
 
-    // ---- Prévisions nationales BE / FR ----
-    async function loadNational() {
-      await loadCountryForecast("Belgium", "forecast-be");
-      await loadCountryForecast("France", "forecast-fr");
-    }
-
-    async function loadCountryForecast(country, elId) {
-      setText(elId, `⏳ ${country}...`);
+    async function loadForecast(country) {
+      const el = document.getElementById(`forecast-${country.toLowerCase()}`);
+      el.innerText = "⏳ Chargement...";
       try {
-        const res = await fetch(`${API}/forecast/${encodeURIComponent(country)}`);
-        const d = await res.json();
-        const days = Array.isArray(d.days) ? d.days.slice(0,7) : [];
-        const line = (t) => t!=null ? `${Math.round(t)}°C` : "—";
-        const html = `
-          <div><strong>${country}</strong></div>
-          <div class="small muted">${d.summary || "Résumé indisponible"}</div>
-          <div class="small muted">Min/Max: ${line(d.temp_min)} / ${line(d.temp_max)} – Fiabilité: ${toNum(d.confidence)}%</div>
-          <div class="small" style="margin-top:6px;">
-            ${days.map(x => `<span class="pill warn">${(x.date||"").slice(0,10)} • ${line(x.temp_min)} / ${line(x.temp_max)}</span>`).join(" ")}
-          </div>
-        `;
-        setHTML(elId, html);
-      } catch (e) {
-        setText(elId, `❌ Erreur ${country}`);
+        const res = await fetch(`${API_BASE}/forecast/${country}`);
+        const data = await res.json();
+        el.innerText = data ? JSON.stringify(data).slice(0,200)+"..." : "❌ Erreur";
+      } catch {
+        el.innerText = "❌ Erreur forecast";
       }
     }
 
-    // ---- Chat IA ----
+    async function loadUsers() {
+      const el = document.getElementById("user-stats");
+      el.innerText = "⏳ Chargement...";
+      try {
+        const res = await fetch(`${API_BASE}/users`);
+        const data = await res.json();
+        el.innerText = JSON.stringify(data, null, 2);
+      } catch {
+        el.innerText = "❌ Erreur users";
+      }
+    }
+
     async function sendChat() {
-      const msg = document.getElementById("ai-input").value.trim();
-      if (!msg) return;
-      setText("ai-response", "⏳ IA en cours...");
+      const msg = document.getElementById("ai-input").value;
+      const el = document.getElementById("ai-response");
+      el.innerText = "⏳ Envoi...";
       try {
-        const res = await fetch(`${API}/chat`, {
-          method:"POST", headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ message: msg })
+        const res = await fetch(`${API_BASE}/chat`, {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ message: msg })
         });
         const data = await res.json();
-        // backend peut renvoyer {reply: "..."} ou texte
-        const reply = data.reply || data.answer || JSON.stringify(data);
-        setText("ai-response", reply);
-      } catch (e) {
-        setText("ai-response", "❌ Erreur IA");
-      }
-    }
-
-    // ---- Utilisateurs ----
-    async function loadUsers() {
-      setText("user-stats", "⏳ Chargement...");
-      try {
-        const r = await fetch(`${API}/users`); // si absent → 404 géré
-        if (!r.ok) throw new Error("not ok");
-        const d = await r.json();
-        setHTML("user-stats", `
-          <div>Couvertes: ${safe(d.covered_total)} — Non couvertes: ${safe(d.uncovered_total)}</div>
-          <div class="small">BE: G:${safe(d.BE?.free)} P:${safe(d.BE?.premium)} Pro:${safe(d.BE?.pro)} Pro+:${safe(d.BE?.proplus)}</div>
-        `);
+        el.innerText = data.reply || JSON.stringify(data);
       } catch {
-        setHTML("user-stats", `<span class="muted">Endpoint non disponible pour le moment</span>`);
+        el.innerText = "❌ Erreur IA";
       }
     }
 
-    // ---- News météo ----
     async function loadNews() {
-      setText("news", "⏳ Chargement...");
+      const el = document.getElementById("news-list");
+      el.innerText = "⏳ Chargement...";
       try {
-        const r = await fetch(`${API}/news`);
-        if (!r.ok) throw new Error("not ok");
-        const d = await r.json();
-        const items = Array.isArray(d.articles) ? d.articles : [];
-        setHTML("news", items.slice(0,10).map(n =>
-          `<div class="pill ok small"><a href="${n.url}" target="_blank" rel="noopener" style="color:#31ffb1;">${n.title}</a></div>`
-        ).join(" "));
+        const res = await fetch(`${API_BASE}/news`);
+        const data = await res.json();
+        el.innerText = Array.isArray(data) ? data.map(n => `📰 ${n.title} (${n.source})`).join("\n") : JSON.stringify(data);
       } catch {
-        setHTML("news", `<span class="muted">Endpoint non disponible pour le moment</span>`);
+        el.innerText = "❌ Erreur news";
       }
     }
 
-    // ---- Radar (admin light) ----
-    async function initRadar() {
-      try {
-        // Optionnel : récupérer des métadonnées radar côté backend
-        await fetch(`${API}/radar/Belgium`).then(_ => _).catch(_=>{});
-      } catch {}
-      const map = L.map("radar").setView([50.5, 4.7], 6);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap"
-      }).addTo(map);
-    }
-
-    // ---- Helpers ----
-    const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
-    const setHTML = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
-    const truncate = (s, n) => (s||"").length>n ? (s.slice(0,n)+"…") : (s||"");
-    const toNum = (x) => isNaN(Number(x)) ? 0 : Number(x);
-    const safe = (x) => (x==null ? 0 : x);
-
-    // ---- Init ----
-    (async function init() {
-      await initRadar();
-      await loadCheckup();
-      await loadAlerts();
-      await loadNational();
-      await loadUsers();
-      await loadNews();
-    })();
+    // Init Radar
+    const map = L.map("radar-map").setView([50.85, 4.35], 6);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
   </script>
 </body>
 </html>
