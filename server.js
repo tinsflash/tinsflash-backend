@@ -4,16 +4,16 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
-// === Services (robustes, pas de crash si export différent) ===
+// === Services (imports robustes) ===
 import forecastService from "./services/forecastService.js";
 import { runSuperForecast } from "./services/superForecast.js";
-import { radarHandler } from "./services/radarService.js";
-import * as bulletinService from "./services/bulletinService.js";
-import * as chatService from "./services/chatService.js";
+import * as radarService from "./services/radarService.js";           // ✅ robust
+import * as bulletinService from "./services/bulletinService.js";     // ✅ robust
+import * as chatService from "./services/chatService.js";             // ✅ robust
 import { addLog } from "./services/logsService.js";
 import checkCoverage from "./services/checkCoverage.js";
 
-// === DB Models ===
+// === DB Models (inchangés) ===
 import Forecast from "./models/Forecast.js";
 import Alert from "./models/Alert.js";
 
@@ -65,19 +65,24 @@ app.get("/api/superforecast", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Alerts ---
+// --- Alerts (bypass alertsService.js + imports dynamiques sûrs) ---
 app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
   try {
+    const zone = req.params.zone;
+
+    // detecteur brut (supporte named/default)
     const detMod = await import("./services/alertDetector.js");
     const detectAlerts =
       detMod.detectAlerts ||
       detMod.default ||
       detMod.detect ||
       detMod.alertsDetector;
+
     if (typeof detectAlerts !== "function") {
-      return res.status(500).json({ error: "alertDetector introuvable" });
+      return res.status(500).json({ error: "alertDetector introuvable (export)" });
     }
 
+    // moteur enrichissement (optionnel)
     let processAlerts = null;
     try {
       const engMod = await import("./services/alertsEngine.js");
@@ -86,20 +91,30 @@ app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
       processAlerts = null;
     }
 
-    const rawAlerts = await detectAlerts(req.params.zone);
-    const enriched = processAlerts ? await processAlerts(rawAlerts, { zone: req.params.zone }) : rawAlerts;
+    const rawAlerts = await detectAlerts(zone);
+    const enriched = processAlerts ? await processAlerts(rawAlerts, { zone }) : rawAlerts;
 
-    res.json({ zone: req.params.zone, alerts: enriched });
+    res.json({ zone, alerts: enriched });
   } catch (err) {
     console.error("❌ Alerts route error:", err);
     res.status(500).json({ error: "Alerts service failed" });
   }
 });
 
-// --- Radar ---
+// --- Radar (fix export: named OU default) ---
 app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   try {
-    const data = await radarHandler(req.params.zone);
+    const radarFn =
+      radarService.radarHandler ||
+      radarService.default ||
+      radarService.getRadar ||
+      radarService.handler;
+
+    if (typeof radarFn !== "function") {
+      return res.status(500).json({ error: "radarService introuvable (export)" });
+    }
+
+    const data = await radarFn(req.params.zone);
     res.json(data);
   } catch (err) {
     console.error("❌ Radar error:", err);
@@ -107,15 +122,17 @@ app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Bulletins ---
+// --- Bulletins (fix export: named OU default) ---
 app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   try {
     const generateBulletin =
       bulletinService.generateBulletin ||
       bulletinService.default;
+
     if (typeof generateBulletin !== "function") {
-      return res.status(500).json({ error: "generateBulletin introuvable" });
+      return res.status(500).json({ error: "generateBulletin introuvable (export)" });
     }
+
     const data = await generateBulletin(req.params.zone);
     res.json(data);
   } catch (err) {
@@ -124,16 +141,19 @@ app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Chat with J.E.A.N. ---
+// --- Chat with J.E.A.N. (fix export: named OU default) ---
 app.post("/api/chat", checkCoverage, async (req, res) => {
   try {
     const { message } = req.body;
+
     const chatWithJean =
       chatService.chatWithJean ||
       chatService.default;
+
     if (typeof chatWithJean !== "function") {
-      return res.status(500).json({ error: "chatWithJean introuvable" });
+      return res.status(500).json({ error: "chatWithJean introuvable (export)" });
     }
+
     const response = await chatWithJean(message);
     res.json(response);
   } catch (err) {
@@ -154,7 +174,7 @@ app.post("/api/logs", async (req, res) => {
   }
 });
 
-// --- Checkup ---
+// --- Checkup (diagnostic zones) ---
 app.get("/api/checkup", async (req, res) => {
   try {
     const zonesTest = [
@@ -162,7 +182,7 @@ app.get("/api/checkup", async (req, res) => {
       { country: "France", lat: 48.8, lon: 2.3 },
       { country: "USA", lat: 38.9, lon: -77.0 },
       { country: "Norway", lat: 59.9, lon: 10.7 },
-      { country: "Brazil", lat: -15.8, lon: -47.9 },
+      { country: "Brazil", lat: -15.8, lon: -47.9 }, // non couverte
     ];
 
     const results = [];
