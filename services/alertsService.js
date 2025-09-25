@@ -1,44 +1,25 @@
-// services/alertsService.js
+// PATH: services/alertsService.js
+// Expose les alertes via API
 import express from "express";
-import Alert from "../models/Alert.js";
+import { processAlerts } from "./alertsEngine.js";
+import detectAlerts from "./alertDetector.js"; // détecteur brut
 
 const router = express.Router();
 
-// ================================
-// 🚨 Gestion des alertes météo
-// ================================
-
-// Toutes les alertes
-router.get("/", async (req, res) => {
+/**
+ * GET /api/alerts/:zone
+ * Retourne la liste des alertes enrichies (avec fiabilité)
+ */
+router.get("/:zone", async (req, res) => {
   try {
-    const alerts = await Alert.find();
-    res.json(alerts);
-  } catch (err) {
-    console.error("❌ Erreur alertsService:", err.message);
-    res.status(500).json({ error: "Erreur lors du chargement des alertes" });
-  }
-});
+    const zone = req.params.zone;
+    const rawAlerts = await detectAlerts(zone); // détection brute
+    const enriched = await processAlerts(rawAlerts, { zone });
 
-// Nouvelle alerte
-router.post("/", async (req, res) => {
-  try {
-    const newAlert = new Alert(req.body);
-    await newAlert.save();
-    res.json(newAlert);
+    res.json({ zone, alerts: enriched });
   } catch (err) {
-    console.error("❌ Erreur création alerte:", err.message);
-    res.status(500).json({ error: "Erreur lors de la création de l'alerte" });
-  }
-});
-
-// Supprimer une alerte
-router.delete("/:id", async (req, res) => {
-  try {
-    await Alert.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ Erreur suppression alerte:", err.message);
-    res.status(500).json({ error: "Erreur lors de la suppression de l'alerte" });
+    console.error("❌ Erreur alertsService:", err);
+    res.status(500).json({ error: "Erreur moteur alertes" });
   }
 });
 
