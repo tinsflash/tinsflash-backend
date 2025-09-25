@@ -3,8 +3,10 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// === Services (imports alignés aux exports réels) ===
+// === Services ===
 import forecastService from "./services/forecastService.js";
 import runSuperForecast from "./services/superForecast.js";
 import radarService from "./services/radarService.js";
@@ -30,10 +32,29 @@ mongoose
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ==============================
-// 📡 API ROUTES
+// 🌍 STATIC FILES (fix affichage des pages HTML)
+// ==============================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Sert tout le contenu du dossier "public"
+app.use(express.static(path.join(__dirname, "public")));
+
+// Route spéciale pour index.html (page vitrine)
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Route spéciale pour admin-pp.html (console)
+app.get("/admin-pp", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
+});
+
+// ==============================
+// 📡 API ROUTES (inchangées)
 // ==============================
 
-// --- Forecasts ---
+// Forecasts
 app.get("/api/forecast/:zone", checkCoverage, async (req, res) => {
   try {
     const forecast = await forecastService.getForecast(req.params.zone);
@@ -54,7 +75,7 @@ app.get("/api/localforecast/:lat/:lon", checkCoverage, async (req, res) => {
   }
 });
 
-// --- SuperForecast ---
+// SuperForecast
 app.get("/api/superforecast", checkCoverage, async (req, res) => {
   try {
     const result = await runSuperForecast({ lat: 50.5, lon: 4.7, country: "Belgium" });
@@ -65,7 +86,7 @@ app.get("/api/superforecast", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Alerts ---
+// Alerts
 app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
   try {
     const detMod = await import("./services/alertDetector.js");
@@ -93,7 +114,7 @@ app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Radar ---
+// Radar
 app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   try {
     const data = await radarService.radarHandler(req.params.zone);
@@ -104,7 +125,7 @@ app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Bulletins ---
+// Bulletins
 app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   try {
     const data = await generateBulletin(req.params.zone);
@@ -115,30 +136,19 @@ app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// --- Chat with J.E.A.N. ---
+// Chat
 app.post("/api/chat", checkCoverage, async (req, res) => {
   try {
     const { message } = req.body;
     const response = await chatWithJean(message);
-    res.json({ reply: response });
+    res.json(response);
   } catch (err) {
     console.error("❌ Chat error:", err);
     res.status(500).json({ error: "Chat service failed" });
   }
 });
 
-// --- Logs ---
-app.get("/api/logs", async (req, res) => {
-  try {
-    // Exemple : renvoyer les 20 derniers logs
-    const logs = await Forecast.find().sort({ createdAt: -1 }).limit(20).lean();
-    res.json(logs.map(l => `[${l.createdAt}] ${l.zone || "?"} - ${l.summary || "log"}`));
-  } catch (err) {
-    console.error("❌ Logs error:", err);
-    res.status(500).json({ error: "Logs service failed" });
-  }
-});
-
+// Logs
 app.post("/api/logs", async (req, res) => {
   try {
     const { service, message } = req.body;
@@ -150,36 +160,7 @@ app.post("/api/logs", async (req, res) => {
   }
 });
 
-// --- Users stats (zones couvertes / non couvertes) ---
-app.get("/api/users", async (req, res) => {
-  try {
-    // ⚠️ À remplacer plus tard par ta vraie DB utilisateurs
-    res.json({
-      covered: { Belgium: { free: 120, premium: 12, pro: 5 }, France: { free: 200, premium: 20, pro: 8 } },
-      uncovered: { Africa: { free: 50, premium: 0, pro: 0 }, Asia: { free: 90, premium: 3, pro: 1 } },
-    });
-  } catch (err) {
-    console.error("❌ Users stats error:", err);
-    res.status(500).json({ error: "Users stats failed" });
-  }
-});
-
-// --- News (actualités météo monde) ---
-app.get("/api/news", async (req, res) => {
-  try {
-    // ⚠️ À remplacer plus tard par API externe (Google News, Open Meteo News, etc.)
-    const news = [
-      { title: "Tempête en Europe de l'Ouest", date: new Date(), source: "TINSFLASH AI", summary: "Fortes rafales et pluies attendues." },
-      { title: "Vague de chaleur aux USA", date: new Date(), source: "TINSFLASH AI", summary: "Températures record dans plusieurs États." },
-    ];
-    res.json(news);
-  } catch (err) {
-    console.error("❌ News error:", err);
-    res.status(500).json({ error: "News service failed" });
-  }
-});
-
-// --- Checkup ---
+// Checkup
 app.get("/api/checkup", async (req, res) => {
   try {
     const zonesTest = [
@@ -187,7 +168,7 @@ app.get("/api/checkup", async (req, res) => {
       { country: "France", lat: 48.8, lon: 2.3 },
       { country: "USA", lat: 38.9, lon: -77.0 },
       { country: "Norway", lat: 59.9, lon: 10.7 },
-      { country: "Brazil", lat: -15.8, lon: -47.9 }, // non couverte
+      { country: "Brazil", lat: -15.8, lon: -47.9 },
     ];
 
     const results = [];
