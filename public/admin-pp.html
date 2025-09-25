@@ -2,116 +2,117 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Tinsflash – Console Admin</title>
-  <meta name="robots" content="noindex, nofollow" /> <!-- empêche indexation -->
+  <title>⚙️ Console Admin - Centrale Météo</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0b0c10;
-      color: #f1f1f1;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #1f2833;
-      padding: 20px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-    }
-    section {
-      padding: 20px;
-      border-bottom: 1px solid #333;
-    }
-    h2 {
-      color: #66fcf1;
-    }
-    button {
-      background: #45a29e;
-      border: none;
-      color: #fff;
-      padding: 10px 20px;
-      margin-top: 10px;
-      cursor: pointer;
-      border-radius: 6px;
-    }
-    button:hover {
-      background: #66fcf1;
-      color: #000;
-    }
-    #radarImage {
-      margin-top: 20px;
-      max-width: 100%;
-      border: 2px solid #66fcf1;
-      border-radius: 8px;
-    }
-    #lockscreen {
-      text-align: center;
-      padding: 100px 20px;
-    }
-    input {
-      padding: 10px;
-      font-size: 16px;
-      margin-top: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    nav { margin-bottom: 20px; }
+    nav button { margin-right: 10px; padding: 8px 15px; cursor: pointer; }
+    section { display: none; }
+    section.active { display: block; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f4f4f4; }
+    .ok { color: green; font-weight: bold; }
+    .warn { color: orange; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div id="lockscreen">
-    <h2>🔒 Accès restreint</h2>
-    <p>Veuillez entrer le code d'accès :</p>
-    <input type="password" id="accessCode" placeholder="Code PIN" />
-    <button onclick="checkCode()">Entrer</button>
-    <p id="errorMsg" style="color:red;"></p>
-  </div>
+  <h1>⚙️ Console Admin - Centrale Nucléaire Météo</h1>
 
-  <div id="adminConsole" style="display:none;">
-    <header>
-      ⚡ Centrale Nucléaire Météo – Console Admin ⚡
-    </header>
+  <nav>
+    <button onclick="showTab('checkup')">🔎 Check moteur</button>
+    <button onclick="showTab('alerts')">📡 Alertes</button>
+    <!-- autres onglets existants (Logs, Chat IA, News...) -->
+  </nav>
 
-    <section id="radar">
-      <h2>🌍 Radar Météo</h2>
-      <p>Visualisation radar en temps réel (Windy) avec fallback Meteologix.</p>
-      <button onclick="loadRadar()">Charger Radar</button>
-      <div id="radarResult"></div>
-    </section>
-  </div>
+  <!-- Section Check moteur -->
+  <section id="checkup">
+    <h2>🔎 Check moteur</h2>
+    <button onclick="loadCheckup()">Lancer Checkup</button>
+    <table id="checkupTable">
+      <thead>
+        <tr>
+          <th>Zone</th>
+          <th>Couverte</th>
+          <th>Statut</th>
+          <th>Détails</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- Section Alertes -->
+  <section id="alerts">
+    <h2>📡 Liste des Alertes</h2>
+    <button onclick="loadAlerts()">🔄 Rafraîchir</button>
+    <table id="alertsTable">
+      <thead>
+        <tr>
+          <th>Zone</th>
+          <th>Type</th>
+          <th>Fiabilité</th>
+          <th>Premier ?</th>
+          <th>Statut</th>
+          <th>Explication</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
 
   <script>
-    function checkCode() {
-      const code = document.getElementById("accessCode").value;
-      if (code === "202679") {
-        document.getElementById("lockscreen").style.display = "none";
-        document.getElementById("adminConsole").style.display = "block";
-      } else {
-        document.getElementById("errorMsg").textContent = "❌ Code incorrect";
-      }
+    function showTab(tabId) {
+      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(tabId).classList.add("active");
     }
 
-    async function loadRadar() {
+    async function loadCheckup() {
       try {
-        const res = await fetch("/api/radar?lat=50.85&lon=4.35"); // par défaut Bruxelles
+        const res = await fetch("/api/checkup");
         const data = await res.json();
-
-        let html = `<p><strong>Source :</strong> ${data.provider}</p>`;
-        if (data.imageUrl) {
-          html += `<img id="radarImage" src="${data.imageUrl}" alt="Radar Image">`;
-        } else if (data.url) {
-          html += `<p><a href="${data.url}" target="_blank">Voir sur Meteologix</a></p>`;
-        } else {
-          html += `<p>⚠️ Radar indisponible.</p>`;
-        }
-
-        document.getElementById("radarResult").innerHTML = html;
+        const tbody = document.querySelector("#checkupTable tbody");
+        tbody.innerHTML = "";
+        data.checkup.forEach(row => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${row.zone}</td>
+              <td>${row.covered ? "✅ Oui" : "❌ Non"}</td>
+              <td>${row.status}</td>
+              <td>${row.details}</td>
+            </tr>`;
+        });
       } catch (err) {
-        document.getElementById("radarResult").innerHTML =
-          "<p>❌ Erreur chargement radar</p>";
-        console.error(err);
+        alert("Erreur lors du check moteur: " + err.message);
       }
     }
+
+    async function loadAlerts() {
+      try {
+        const res = await fetch("/api/alerts/Belgium"); // 👉 zone test (Belgique)
+        const data = await res.json();
+        const tbody = document.querySelector("#alertsTable tbody");
+        tbody.innerHTML = "";
+        data.alerts.forEach(alert => {
+          let fiabClass = alert.fiabilite >= 90 ? "ok" : (alert.fiabilite >= 70 ? "warn" : "error");
+          tbody.innerHTML += `
+            <tr>
+              <td>${alert.zoneInfo?.zone || data.zone}</td>
+              <td>${alert.type || "Inconnu"}</td>
+              <td class="${fiabClass}">${alert.fiabilite}%</td>
+              <td>${alert.premier ? "✅ Oui" : "❌ Non"}</td>
+              <td>${alert.statut}</td>
+              <td>${alert.explication}</td>
+            </tr>`;
+        });
+      } catch (err) {
+        alert("Erreur lors du chargement des alertes: " + err.message);
+      }
+    }
+
+    // Tab par défaut
+    showTab('checkup');
   </script>
 </body>
 </html>
