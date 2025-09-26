@@ -1,8 +1,9 @@
-// PATH: services/alertsService.js
+// services/alertsService.js
 // Expose les alertes via API
+
 import express from "express";
 import { processAlerts } from "./alertsEngine.js";
-import detectAlerts from "./alertDetector.js"; // détecteur brut
+import { detectAlerts } from "./alertDetector.js"; // ✅ correction : named import
 
 const router = express.Router();
 
@@ -13,7 +14,11 @@ const router = express.Router();
 router.get("/:zone", async (req, res) => {
   try {
     const zone = req.params.zone;
-    const rawAlerts = await detectAlerts(zone); // détection brute
+
+    // ⚠️ detectAlerts attend normalement un "forecast"
+    // Pour l’instant on lui passe juste un objet minimal avec zone
+    const rawAlerts = detectAlerts({ zone });
+
     const enriched = await processAlerts(rawAlerts, { zone });
 
     res.json({ zone, alerts: enriched });
