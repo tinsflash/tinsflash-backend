@@ -1,64 +1,66 @@
+// server.js
 import express from "express";
-import bodyParser from "body-parser";
 import cors from "cors";
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Import des services
+// === Chargement des services ===
+import { getForecast, getNationalForecast } from "./services/forecastService.js";
 import { runSuperForecast } from "./services/superForecast.js";
-import { getForecast } from "./services/forecastService.js";
-import { visionForecast } from "./services/forecastVision.js";
-import { detectAlerts } from "./services/alertsEngine.js";
-import { getAlerts, saveAlerts } from "./services/alertsService.js";
+import { detectAlerts } from "./services/alertDetector.js";
+import { getAlerts } from "./services/alertsService.js";
+import { getRadar } from "./services/radarService.js";
 import { generateBulletin } from "./services/bulletinService.js";
-import { generateForecastText } from "./services/textGenService.js";
-import { getRadarData } from "./services/radarService.js";
-import { askAI } from "./services/aiService.js";
-import { saveLog, getLogs } from "./services/logsService.js";
+import { chatWithAI } from "./services/chatService.js";
+import { logEvent, getLogs } from "./services/logsService.js";
 import { checkCoverage } from "./services/checkCoverage.js";
-import { fetchNews } from "./services/newsService.js";
-import { getUsers, addUser } from "./services/userService.js";
+import { getNews } from "./services/newsService.js";
+import { getUsers } from "./services/userService.js";
+
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(bodyParser.json());
 
-// Fix __dirname dans ES modules
+// === Correction __dirname pour ES Modules ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Servir le frontend (index.html, admin-pp.html, etc.)
+// === Servir les fichiers statiques (index.html, admin-pp.html, etc.) ===
 app.use(express.static(path.join(__dirname, "public")));
 
+// === Routes API ===
 
-// ==================== ROUTES API ====================
+// Prévisions locales
+app.get("/api/localforecast/:lat/:lon", async (req, res) => {
+  try {
+    const { lat, lon } = req.params;
+    const data = await getForecast(lat, lon);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-// Prévisions météo
+// Prévisions nationales
 app.get("/api/forecast/:zone", async (req, res) => {
   try {
-    const data = await getForecast(req.params.zone);
+    const { zone } = req.params;
+    const data = await getNationalForecast(zone);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Vision Forecast (optionnel, IA météo étendue)
-app.get("/api/forecastvision/:zone", async (req, res) => {
-  try {
-    const data = await visionForecast(req.params.zone);
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Super Forecast (Run global)
+// SuperForecast (Run global)
 app.post("/api/superforecast", async (req, res) => {
   try {
     const result = await runSuperForecast();
+    logEvent("Superforecast lancé");
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -68,37 +70,9 @@ app.post("/api/superforecast", async (req, res) => {
 // Alertes météo
 app.get("/api/alerts/:zone", async (req, res) => {
   try {
-    const alerts = await getAlerts(req.params.zone);
+    const { zone } = req.params;
+    const alerts = await getAlerts(zone);
     res.json(alerts);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/alerts", async (req, res) => {
-  try {
-    const result = await saveAlerts(req.body);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Bulletin météo (texte généré)
-app.get("/api/bulletin/:zone", async (req, res) => {
-  try {
-    const bulletin = await generateBulletin(req.params.zone);
-    res.json(bulletin);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Texte prévisionnel (éditable)
-app.post("/api/textforecast", async (req, res) => {
-  try {
-    const text = await generateForecastText(req.body);
-    res.json(text);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -107,19 +81,31 @@ app.post("/api/textforecast", async (req, res) => {
 // Radar météo
 app.get("/api/radar/:zone", async (req, res) => {
   try {
-    const radar = await getRadarData(req.params.zone);
+    const { zone } = req.params;
+    const radar = await getRadar(zone);
     res.json(radar);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Chat IA
+// Bulletin texte
+app.get("/api/bulletin/:zone", async (req, res) => {
+  try {
+    const { zone } = req.params;
+    const text = await generateBulletin(zone);
+    res.json({ bulletin: text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Chat IA (Cohere pour l’instant)
 app.post("/api/chat", async (req, res) => {
   try {
-    const { question } = req.body;
-    const response = await askAI(question);
-    res.json(response);
+    const { message, zone } = req.body;
+    const reply = await chatWithAI(message, zone);
+    res.json({ reply });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -135,20 +121,11 @@ app.get("/api/logs", async (req, res) => {
   }
 });
 
-app.post("/api/logs", async (req, res) => {
-  try {
-    const log = await saveLog(req.body);
-    res.json(log);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Check Coverage (zones couvertes / non couvertes)
+// Check moteur (zones couvertes vs non)
 app.get("/api/checkup", async (req, res) => {
   try {
-    const result = await checkCoverage();
-    res.json(result);
+    const status = await checkCoverage();
+    res.json(status);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -157,7 +134,7 @@ app.get("/api/checkup", async (req, res) => {
 // Actualités météo
 app.get("/api/news", async (req, res) => {
   try {
-    const news = await fetchNews();
+    const news = await getNews();
     res.json(news);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -174,17 +151,8 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-app.post("/api/users", async (req, res) => {
-  try {
-    const user = await addUser(req.body);
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-// ==================== LANCEMENT ====================
+// === Démarrage serveur ===
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur météo en ligne sur http://localhost:${PORT}`);
+  console.log(`🚀 Serveur TINSFLASH en marche sur le port ${PORT}`);
 });
