@@ -5,97 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
   <style>
-    body {
-      background: #0a0a0a;
-      color: #00ffe0;
-      font-family: "Courier New", monospace;
-      margin: 0;
-      padding: 0;
-    }
-    h1, h2 {
-      text-align: center;
-      text-shadow: 0 0 10px #00ffe0;
-    }
-    .section {
-      margin: 20px;
-      padding: 20px;
-      border-radius: 10px;
-      background: #111;
-      box-shadow: 0 0 15px rgba(0,255,224,0.3);
-    }
-    button {
-      background: #00ffe0;
-      color: #000;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      margin: 5px 0;
-    }
-    button:hover {
-      background: #00c2a8;
-    }
-    pre, .output {
-      background: #000;
-      padding: 10px;
-      border-radius: 8px;
-      overflow-x: auto;
-      color: #00ffe0;
-    }
-    img {
-      max-width: 100%;
-      margin: 5px 0;
-      border: 1px solid #00ffe0;
-      border-radius: 6px;
-    }
-    input, select, textarea {
-      padding: 10px;
-      margin: 5px 0;
-      width: 95%;
-      border-radius: 6px;
-      border: 1px solid #00ffe0;
-      background: #000;
-      color: #00ffe0;
-    }
+    body { background:#0a0a0a; color:#00ffe0; font-family:"Courier New", monospace; margin:0; padding:0;}
+    h1,h2 { text-align:center; text-shadow:0 0 10px #00ffe0;}
+    .section { margin:20px; padding:20px; border-radius:10px; background:#111; box-shadow:0 0 15px rgba(0,255,224,0.3);}
+    button { background:#00ffe0; color:#000; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;}
+    button:hover { background:#00c2a8;}
+    pre,.output { background:#000; padding:10px; border-radius:8px; overflow-x:auto; color:#00ffe0;}
+    img { max-width:100%; margin:5px 0; border:1px solid #00ffe0; border-radius:6px;}
+    input,select,textarea { padding:10px; margin:5px 0; width:95%; border-radius:6px; border:1px solid #00ffe0; background:#000; color:#00ffe0;}
   </style>
 </head>
 <body>
-
   <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
 
   <!-- RUN GLOBAL -->
   <div class="section">
     <h2>🚀 Lancer un Run Global</h2>
-    <button onclick="runGlobal()">Lancer le moteur</button>
+    <button onclick="callAPI('/api/superforecast','runOutput')">Lancer le moteur</button>
     <div id="runOutput" class="output"></div>
   </div>
 
   <!-- LOGS -->
   <div class="section">
     <h2>📡 Logs moteur</h2>
-    <button onclick="loadLogs()">Actualiser</button>
+    <button onclick="callAPI('/api/logs','logsOutput')">Actualiser</button>
     <div id="logsOutput" class="output"></div>
   </div>
 
   <!-- ÉTAT -->
   <div class="section">
     <h2>🛠️ État du moteur</h2>
-    <button onclick="checkEngine()">Vérifier</button>
+    <button onclick="callAPI('/api/engine','engineOutput')">Vérifier</button>
     <div id="engineOutput" class="output"></div>
   </div>
 
   <!-- ZONES -->
   <div class="section">
     <h2>✅ Checkup zones</h2>
-    <button onclick="checkZones()">Vérifier zones</button>
+    <button onclick="callAPI('/api/zones','zonesOutput')">Vérifier zones</button>
     <div id="zonesOutput" class="output"></div>
   </div>
 
   <!-- ALERTES -->
   <div class="section">
     <h2>⚠️ Alertes météo</h2>
-    <button onclick="loadAlerts()">Charger</button>
+    <button onclick="callAPI('/api/alerts','alertsOutput')">Charger</button>
     <div id="alertsOutput" class="output"></div>
   </div>
 
@@ -116,7 +70,7 @@
   <!-- UTILISATEURS -->
   <div class="section">
     <h2>👥 Utilisateurs</h2>
-    <button onclick="loadUsers()">Lister</button>
+    <button onclick="callAPI('/api/users','usersOutput')">Lister</button>
     <div id="usersOutput" class="output"></div>
   </div>
 
@@ -142,37 +96,22 @@
   <!-- CHAT IA -->
   <div class="section">
     <h2>🤖 Chat IA – Moteur météo nucléaire</h2>
-    <textarea id="chatInput" rows="3" placeholder="Posez une question (ex: 'Quel temps demain à Paris ?')"></textarea>
+    <textarea id="chatInput" rows="3" placeholder="Posez une question..."></textarea>
     <button onclick="askChat()">Envoyer</button>
     <div id="chatOutput" class="output"></div>
   </div>
 
 <script>
-async function runGlobal() {
-  const res = await fetch("/api/superforecast");
-  const data = await res.json();
-  document.getElementById("runOutput").innerText = JSON.stringify(data, null, 2);
+async function callAPI(endpoint, targetId) {
+  try {
+    const res = await fetch(endpoint);
+    const data = await res.json();
+    document.getElementById(targetId).innerText = JSON.stringify(data, null, 2);
+  } catch (err) {
+    document.getElementById(targetId).innerText = "❌ Erreur: " + err.message;
+  }
 }
-async function loadLogs() {
-  const res = await fetch("/api/logs");
-  const data = await res.json();
-  document.getElementById("logsOutput").innerText = JSON.stringify(data, null, 2);
-}
-async function checkEngine() {
-  const res = await fetch("/api/engine");
-  const data = await res.json();
-  document.getElementById("engineOutput").innerText = JSON.stringify(data, null, 2);
-}
-async function checkZones() {
-  const res = await fetch("/api/zones");
-  const data = await res.json();
-  document.getElementById("zonesOutput").innerText = JSON.stringify(data, null, 2);
-}
-async function loadAlerts() {
-  const res = await fetch("/api/alerts");
-  const data = await res.json();
-  document.getElementById("alertsOutput").innerText = JSON.stringify(data, null, 2);
-}
+
 async function loadRadar() {
   const res = await fetch("/api/radar");
   const data = await res.json();
@@ -186,29 +125,27 @@ async function loadRadar() {
   }
   document.getElementById("radarOutput").innerHTML = html;
 }
+
 async function loadNews() {
   const res = await fetch("/api/news");
   const data = await res.json();
   let html = "";
-  if (data && data.length > 0) {
+  if (Array.isArray(data)) {
     data.forEach(n => {
       html += `<p><strong>${n.title}</strong> – ${n.source}<br/><a href="${n.url}" target="_blank">Lire</a></p>`;
     });
   }
-  document.getElementById("newsOutput").innerHTML = html;
+  document.getElementById("newsOutput").innerHTML = html || "⚠️ Pas de news";
 }
-async function loadUsers() {
-  const res = await fetch("/api/users");
-  const data = await res.json();
-  document.getElementById("usersOutput").innerText = JSON.stringify(data, null, 2);
-}
+
 async function searchLocal() {
   const city = document.getElementById("city").value;
   const country = document.getElementById("country").value;
-  const res = await fetch(`/api/localforecast?city=${city}&country=${country}`);
+  const res = await fetch(`/api/localforecast?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}`);
   const data = await res.json();
   document.getElementById("localOutput").innerText = JSON.stringify(data, null, 2);
 }
+
 async function askChat() {
   const message = document.getElementById("chatInput").value;
   const res = await fetch("/api/chat", {
@@ -217,7 +154,7 @@ async function askChat() {
     body: JSON.stringify({ message })
   });
   const data = await res.json();
-  document.getElementById("chatOutput").innerText = data.reply?.reply || "⚠️ Pas de réponse IA";
+  document.getElementById("chatOutput").innerText = data.reply?.reply || JSON.stringify(data, null, 2);
 }
 </script>
 </body>
