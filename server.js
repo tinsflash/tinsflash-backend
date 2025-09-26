@@ -9,10 +9,10 @@ import { fileURLToPath } from "url";
 // === Services internes ===
 import alertsRouter from "./services/alertsService.js";
 import generateBulletin from "./services/bulletinService.js";
-import { chatWithJean } from "./services/chatService.js";
 import { addLog, getLogs } from "./services/adminLogs.js";
 import checkCoverage from "./services/checkCoverage.js";
 import { getWeatherIcon, generateCode } from "./services/codesService.js";
+import aiRouter from "./services/aiRouter.js";
 
 // === Services météo ===
 import forecastService from "./services/forecastService.js";
@@ -31,7 +31,7 @@ app.use(bodyParser.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// === Fichiers statiques (index.html, admin-pp.html, etc.) ===
+// === Fichiers statiques ===
 app.use(express.static(path.join(__dirname, "public")));
 
 // ==========================
@@ -97,16 +97,8 @@ app.get("/api/bulletin/:zone", async (req, res) => {
   }
 });
 
-// 🤖 Chat IA
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { message, zone } = req.body;
-    const reply = await chatWithJean(message, { zone });
-    res.json(reply);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// 🤖 Chat IA (OpenAI ou Cohere via aiRouter)
+app.use("/api/chat", aiRouter);
 
 // 🗂️ Logs
 app.get("/api/logs", (req, res) => {
