@@ -2,210 +2,185 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🛰️ Console Admin TINSFLASH</title>
+  <title>🛰️ Console Administrateur – Mode NASA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="style.css">
   <style>
-    body { background:#0a0f1c; color:#00ffea; font-family:"Orbitron", Arial, sans-serif; margin:0; }
-    header { text-align:center; padding:20px; border-bottom:2px solid #00ffea; }
-    h1 { margin:0; color:#00ffea; text-shadow:0 0 10px #00fbe7; }
-    .container { padding:20px; max-width:1200px; margin:auto; display:grid; gap:20px; }
-    .card { background:#111830; border:1px solid #00ffea; border-radius:12px; padding:20px; box-shadow:0 0 15px rgba(0,255,234,0.3); }
-    h2 { color:#00fbe7; margin-top:0; text-shadow:0 0 8px #00d9ff; }
-    .btn { background:#00ffea; color:#000; border:none; padding:10px 15px; margin:5px; border-radius:8px; font-weight:bold; cursor:pointer; }
-    .btn:hover { background:#00d9ff; }
-    #logs, #alerts-list, #news-feed { background:#000; color:#0f0; font-family:monospace; padding:10px; height:200px; overflow-y:auto; border-radius:6px; }
-    textarea,input,select { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none; background:#0c1a2b; color:#fff; }
-    #radar-map { height:300px; border-radius:10px; }
+    body { background:#0a0f1c; color:#0ff; font-family:Arial, sans-serif; margin:0; padding:0; }
+    h1, h2 { text-align:center; text-shadow:0 0 10px #0ff; }
+    .section { border:1px solid #0ff; border-radius:10px; margin:15px; padding:15px; background:#111a2d; box-shadow:0 0 15px #0ff3; }
+    button { background:#0ff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; }
+    button:hover { background:#0cc; }
+    pre, .log-box { background:#000; color:#0f0; padding:10px; border-radius:8px; overflow:auto; max-height:200px; font-size:13px; }
+    .error { color:red; font-weight:bold; }
+    .ok { color:lime; font-weight:bold; }
+    iframe { width:100%; height:300px; border:0; border-radius:10px; }
   </style>
-  <script>
-    // Sécurité simple par mot de passe
-    document.addEventListener("DOMContentLoaded", () => {
-      const pass = prompt("Mot de passe Admin ?");
-      if(pass !== "202679") {
-        alert("⛔ Accès refusé");
-        window.location.href = "index.html";
-      }
-    });
-  </script>
 </head>
 <body>
-  <header>
-    <h1>🛰️ Console Administrateur – Centrale Nucléaire Météo</h1>
-  </header>
-  <div class="container">
+  <h1>🛰️ Console Administrateur – Mode NASA</h1>
 
-    <!-- Supercalculateur -->
-    <div class="card">
-      <h2>⚡ Lancer un Run</h2>
-      <button class="btn" onclick="runForecast()">🚀 Lancer le moteur</button>
-      <div id="forecast-status">⏳ En attente...</div>
-    </div>
+  <!-- Supercalculateur -->
+  <div class="section">
+    <h2>⚡ Supercalculateur Météo</h2>
+    <button onclick="runForecast()">🚀 Lancer un Run (manual)</button>
+    <div id="forecastResult"></div>
+  </div>
 
-    <!-- Logs -->
-    <div class="card">
-      <h2>📖 Logs du moteur</h2>
-      <button class="btn" onclick="loadLogs()">🔄 Rafraîchir Logs</button>
-      <div id="logs">⏳ Attente logs...</div>
-    </div>
+  <!-- Monitoring & Logs -->
+  <div class="section">
+    <h2>📊 Monitoring & Logs</h2>
+    <button onclick="checkup()">🔍 Rafraîchir état</button>
+    <pre id="checkupResult">Attente...</pre>
+    <button onclick="loadLogs()">📖 Charger logs</button>
+    <div class="log-box" id="logsBox">Logs...</div>
+  </div>
 
-    <!-- Alertes -->
-    <div class="card">
-      <h2>⚠️ Alertes météo</h2>
-      <button class="btn" onclick="loadAlerts()">🔄 Charger Alertes</button>
-      <div id="alerts-list">⏳ Chargement...</div>
-    </div>
+  <!-- Alertes -->
+  <div class="section">
+    <h2>🚨 Alertes détectées</h2>
+    <button onclick="loadAlerts()">🔄 Rafraîchir alertes</button>
+    <pre id="alertsBox">En attente...</pre>
+  </div>
 
-    <!-- Prévisions Nationales -->
-    <div class="card">
-      <h2>🌍 Prévisions BE / FR (texte modifiable)</h2>
-      <h3>Belgique</h3>
-      <textarea id="forecast-be"></textarea>
-      <button class="btn" onclick="saveForecast('BE')">💾 Sauver BE</button>
-      <h3>France</h3>
-      <textarea id="forecast-fr"></textarea>
-      <button class="btn" onclick="saveForecast('FR')">💾 Sauver FR</button>
-    </div>
+  <!-- Prévisions Nationales -->
+  <div class="section">
+    <h2>🌍 Prévisions Nationales BE / FR</h2>
+    <button onclick="loadBulletin('BE')">🇧🇪 Belgique</button>
+    <button onclick="loadBulletin('FR')">🇫🇷 France</button>
+    <pre id="bulletinBox">Bulletins météo...</pre>
+  </div>
 
-    <!-- Statistiques utilisateurs -->
-    <div class="card">
-      <h2>📊 Statistiques Utilisateurs</h2>
-      <button class="btn" onclick="loadUsers()">🔄 Rafraîchir</button>
-      <div id="user-stats">⏳ Chargement...</div>
-    </div>
+  <!-- IA J.E.A.N -->
+  <div class="section">
+    <h2>🤖 IA J.E.A.N (moteur & expert météo/climat)</h2>
+    <textarea id="aiQuestion" placeholder="Posez une question..." rows="3" style="width:100%;"></textarea>
+    <button onclick="askAI()">Envoyer</button>
+    <pre id="aiResponse">Réponse IA...</pre>
+  </div>
 
-    <!-- Radar -->
-    <div class="card">
-      <h2>🛰️ Radar Global</h2>
-      <button class="btn" onclick="loadRadar()">🔄 Charger Radar</button>
-      <div id="radar-map">⏳ Radar...</div>
-    </div>
+  <!-- Radar -->
+  <div class="section">
+    <h2>📡 Radar – Vue admin</h2>
+    <iframe src="/api/radar/Europe"></iframe>
+    <small>Données réelles RainViewer (radar mondial), fond OpenStreetMap. 100% live.</small>
+  </div>
 
-    <!-- Actualités météo -->
-    <div class="card">
-      <h2>📰 Actualités Météo</h2>
-      <button class="btn" onclick="loadNews()">🔄 Charger News</button>
-      <div id="news-feed">⏳ Chargement...</div>
-    </div>
+  <!-- Actualités météo -->
+  <div class="section">
+    <h2>📰 Actualités météo (monde)</h2>
+    <button onclick="loadNews()">🔄 Rafraîchir</button>
+    <div id="newsBox">Chargement...</div>
+  </div>
 
-    <!-- Chat IA -->
-    <div class="card">
-      <h2>🤖 IA J.E.A.N</h2>
-      <textarea id="ai-input" placeholder="Posez une question..."></textarea>
-      <button class="btn" onclick="sendChat()">Envoyer</button>
-      <div id="ai-response"></div>
-    </div>
+  <!-- Utilisateurs -->
+  <div class="section">
+    <h2>📈 Utilisateurs (zones couvertes / non couvertes)</h2>
+    <button onclick="loadUsers()">🔄 Rafraîchir</button>
+    <pre id="usersBox">En attente...</pre>
   </div>
 
   <script>
-    const API_BASE = "https://tinsflash-backend.onrender.com/api";
-
-    // === Run moteur ===
+    // Run Forecast
     async function runForecast() {
-      document.getElementById("forecast-status").innerText = "⏳ Calcul...";
+      document.getElementById("forecastResult").innerText = "⏳ Run en cours...";
       try {
-        const res = await fetch(`${API_BASE}/superforecast`);
+        const res = await fetch("/api/superforecast", { method:"POST" });
         const data = await res.json();
-        document.getElementById("forecast-status").innerText =
-          `✅ Run terminé : ${data.analysis || "Analyse générée"} `;
+        document.getElementById("forecastResult").innerText = JSON.stringify(data, null, 2);
       } catch (err) {
-        document.getElementById("forecast-status").innerText = "❌ Erreur moteur";
+        document.getElementById("forecastResult").innerHTML = `<span class="error">Erreur Run: ${err}</span>`;
       }
     }
 
-    // === Logs ===
+    // Logs
     async function loadLogs() {
-      document.getElementById("logs").innerText = "⏳ Chargement logs...";
+      document.getElementById("logsBox").innerText = "⏳ Chargement logs...";
       try {
-        const res = await fetch(`${API_BASE}/logs`);
+        const res = await fetch("/api/logs");
         const data = await res.json();
-        document.getElementById("logs").innerText =
-          Array.isArray(data) ? data.join("\n") : JSON.stringify(data, null, 2);
-      } catch {
-        document.getElementById("logs").innerText = "❌ Erreur chargement logs";
+        document.getElementById("logsBox").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("logsBox").innerHTML = `<span class="error">Erreur logs: ${err}</span>`;
       }
     }
 
-    // === Alertes ===
+    // Checkup
+    async function checkup() {
+      document.getElementById("checkupResult").innerText = "⏳ Vérification...";
+      try {
+        const res = await fetch("/api/checkup");
+        const data = await res.json();
+        document.getElementById("checkupResult").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("checkupResult").innerHTML = `<span class="error">Erreur checkup: ${err}</span>`;
+      }
+    }
+
+    // Alertes
     async function loadAlerts() {
-      document.getElementById("alerts-list").innerText = "⏳ Chargement alertes...";
+      document.getElementById("alertsBox").innerText = "⏳ Chargement alertes...";
       try {
-        const res = await fetch(`${API_BASE}/alerts/Belgium`);
+        const res = await fetch("/api/alerts/Europe");
         const data = await res.json();
-        document.getElementById("alerts-list").innerText =
-          data.alerts && data.alerts.length
-            ? data.alerts.map(a => `⚠️ ${a.level || "?"} - ${a.message || JSON.stringify(a)}`).join("\n")
-            : "✅ Aucune alerte";
-      } catch {
-        document.getElementById("alerts-list").innerText = "❌ Erreur chargement alertes";
+        document.getElementById("alertsBox").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("alertsBox").innerHTML = `<span class="error">Erreur alertes: ${err}</span>`;
       }
     }
 
-    // === Prévisions nationales ===
-    async function saveForecast(country) {
-      const content = document.getElementById(`forecast-${country.toLowerCase()}`).value;
+    // Bulletin
+    async function loadBulletin(zone) {
+      document.getElementById("bulletinBox").innerText = `⏳ Bulletin ${zone}...`;
       try {
-        await fetch(`${API_BASE}/logs`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ service: `forecast-${country}`, message: content })
+        const res = await fetch(`/api/bulletin/${zone}`);
+        const data = await res.json();
+        document.getElementById("bulletinBox").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("bulletinBox").innerHTML = `<span class="error">Erreur bulletin: ${err}</span>`;
+      }
+    }
+
+    // Chat IA
+    async function askAI() {
+      const question = document.getElementById("aiQuestion").value;
+      document.getElementById("aiResponse").innerText = "⏳ Réponse en cours...";
+      try {
+        const res = await fetch("/api/chat", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ question })
         });
-        alert(`✅ Prévisions ${country} sauvegardées`);
-      } catch {
-        alert("❌ Erreur sauvegarde");
-      }
-    }
-
-    // === Stats utilisateurs ===
-    async function loadUsers() {
-      document.getElementById("user-stats").innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch(`${API_BASE}/checkup`);
         const data = await res.json();
-        document.getElementById("user-stats").innerText = JSON.stringify(data, null, 2);
-      } catch {
-        document.getElementById("user-stats").innerText = "❌ Erreur chargement";
+        document.getElementById("aiResponse").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("aiResponse").innerHTML = `<span class="error">Erreur IA: ${err}</span>`;
       }
     }
 
-    // === Radar ===
-    async function loadRadar() {
-      document.getElementById("radar-map").innerText = "⏳ Chargement radar...";
-      try {
-        const res = await fetch(`${API_BASE}/radar/Belgium`);
-        const data = await res.json();
-        document.getElementById("radar-map").innerText = JSON.stringify(data, null, 2);
-      } catch {
-        document.getElementById("radar-map").innerText = "❌ Erreur radar";
-      }
-    }
-
-    // === News ===
+    // News
     async function loadNews() {
-      document.getElementById("news-feed").innerText = "⏳ Chargement actu...";
+      document.getElementById("newsBox").innerText = "⏳ Chargement news...";
       try {
-        const res = await fetch(`${API_BASE}/news`);
+        const res = await fetch("/api/news");
         const data = await res.json();
-        document.getElementById("news-feed").innerText =
-          data.articles ? data.articles.map(n => `📰 ${n.title}`).join("\n") : JSON.stringify(data, null, 2);
-      } catch {
-        document.getElementById("news-feed").innerText = "❌ Erreur news";
+        let html = "<ul>";
+        data.forEach(n => html += `<li><a href="${n.url}" target="_blank">${n.title}</a></li>`);
+        html += "</ul>";
+        document.getElementById("newsBox").innerHTML = html;
+      } catch (err) {
+        document.getElementById("newsBox").innerHTML = `<span class="error">Erreur news: ${err}</span>`;
       }
     }
 
-    // === Chat IA ===
-    async function sendChat() {
-      const msg = document.getElementById("ai-input").value;
+    // Users
+    async function loadUsers() {
+      document.getElementById("usersBox").innerText = "⏳ Chargement utilisateurs...";
       try {
-        const res = await fetch(`${API_BASE}/chat`, {
-          method:"POST", headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({ message: msg })
-        });
+        const res = await fetch("/api/users");
         const data = await res.json();
-        document.getElementById("ai-response").innerText = data.reply || JSON.stringify(data);
-      } catch {
-        document.getElementById("ai-response").innerText = "❌ Erreur IA";
+        document.getElementById("usersBox").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("usersBox").innerHTML = `<span class="error">Erreur users: ${err}</span>`;
       }
     }
   </script>
