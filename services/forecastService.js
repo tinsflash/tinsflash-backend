@@ -1,13 +1,20 @@
 // PATH: services/forecastService.js
-// Service prévisions météo locales et nationales
+// Service prévisions météo locales et nationales enrichi
 
 import gfs from "./gfs.js";
 import ecmwf from "./ecmwf.js";
 import icon from "./icon.js";
 import openweather from "./openweather.js";
+import meteomatics from "./meteomatics.js";
+import nasaSat from "./nasaSat.js";
+import copernicus from "./copernicusService.js";
+import trullemans from "./trullemans.js";
+import wetterzentrale from "./wetterzentrale.js";
 import { askAI } from "./aiService.js";
 
+// ======================
 // Zones couvertes
+// ======================
 const COVERED_REGIONS = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
   "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
@@ -30,47 +37,78 @@ function isCovered(country) {
  */
 async function getLocalForecast(lat, lon, country = null) {
   if (isCovered(country)) {
-    const [gfsData, ecmwfData, iconData] = await Promise.all([
+    // Multi-sources en parallèle
+    const [
+      gfsData, ecmwfData, iconData,
+      meteomaticsData, nasaData, copernicusData,
+      trullemansData, wetterzentraleData
+    ] = await Promise.allSettled([
       gfs({ lat, lon, country }),
       ecmwf({ lat, lon, country }),
       icon({ lat, lon, country }),
+      meteomatics({ lat, lon, country }),
+      nasaSat({ lat, lon, country }),
+      copernicus({ lat, lon, country }),
+      trullemans({ lat, lon, country }),
+      wetterzentrale({ lat, lon, country })
     ]);
 
+    const sources = {
+      gfs: gfsData.value ?? { error: gfsData.reason?.message },
+      ecmwf: ecmwfData.value ?? { error: ecmwfData.reason?.message },
+      icon: iconData.value ?? { error: iconData.reason?.message },
+      meteomatics: meteomaticsData.value ?? { error: meteomaticsData.reason?.message },
+      nasaSat: nasaData.value ?? { error: nasaData.reason?.message },
+      copernicus: copernicusData.value ?? { error: copernicusData.reason?.message },
+      trullemans: trullemansData.value ?? { error: trullemansData.reason?.message },
+      wetterzentrale: wetterzentraleData.value ?? { error: wetterzentraleData.reason?.message }
+    };
+
     const prompt = `
-Prévisions météo locales pour coordonnées: lat=${lat}, lon=${lon}.
-Pays: ${country}.
+Prévisions météo locales pour lat=${lat}, lon=${lon}, pays=${country}.
+Sources principales:
+- GFS: ${JSON.stringify(sources.gfs)}
+- ECMWF: ${JSON.stringify(sources.ecmwf)}
+- ICON: ${JSON.stringify(sources.icon)}
+- Meteomatics: ${JSON.stringify(sources.meteomatics)}
+- NASA POWER / Satellites: ${JSON.stringify(sources.nasaSat)}
+- Copernicus ERA5: ${JSON.stringify(sources.copernicus)}
 
-Données modèles:
-- GFS: ${JSON.stringify(gfsData)}
-- ECMWF: ${JSON.stringify(ecmwfData)}
-- ICON: ${JSON.stringify(iconData)}
+Données comparatives (benchmark qualité, ne pas copier):
+- Trullemans: ${JSON.stringify(sources.trullemans)}
+- Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
 
-Consignes:
-- Résumé pour aujourd'hui + 7 jours.
-- Inclure températures, précipitations, vents.
-- Mentionner incertitudes.
-- Style clair en français.
+Consignes IA:
+- Croiser et fusionner les données principales.
+- Comparer avec Trullemans/Wetterzentrale uniquement pour ajuster la fiabilité.
+- Fournir tendances aujourd'hui + 7 jours.
+- Inclure températures, précipitations, vents, risques météo.
+- Mentionner incertitudes et fiabilité.
+- Style clair, bulletin météo professionnel en français.
 `;
 
     const analysis = await askAI(prompt);
-    return { lat, lon, country, covered: true, forecast: analysis };
+    return { lat, lon, country, covered: true, forecast: analysis, raw: sources };
   } else {
+    // Zone non couverte → fallback OpenWeather
     const owData = await openweather(lat, lon);
+
     const prompt = `
 Prévisions météo simplifiées (zone non couverte).
-Coordonnées: lat=${lat}, lon=${lon}.
-Pays: ${country ?? "inconnu"}.
+Coordonnées: lat=${lat}, lon=${lon}, pays=${country ?? "inconnu"}.
 
 Données Open Data:
 ${JSON.stringify(owData)}
 
-Consignes:
-- Fournir tendances générales locales/nationales.
+Consignes IA:
+- Fournir tendances locales/nationales simplifiées.
+- Horizon: aujourd'hui + 7 jours.
 - Pas d'alertes locales (continentales seulement).
 - Style concis en français.
 `;
+
     const analysis = await askAI(prompt);
-    return { lat, lon, country, covered: false, forecast: analysis };
+    return { lat, lon, country, covered: false, forecast: analysis, raw: owData };
   }
 }
 
@@ -79,33 +117,64 @@ Consignes:
  */
 async function getForecast(country) {
   if (isCovered(country)) {
-    const [gfsData, ecmwfData, iconData] = await Promise.all([
+    const [
+      gfsData, ecmwfData, iconData,
+      meteomaticsData, nasaData, copernicusData,
+      trullemansData, wetterzentraleData
+    ] = await Promise.allSettled([
       gfs({ country }),
       ecmwf({ country }),
       icon({ country }),
+      meteomatics({ country }),
+      nasaSat({ country }),
+      copernicus({ country }),
+      trullemans({ country }),
+      wetterzentrale({ country })
     ]);
+
+    const sources = {
+      gfs: gfsData.value ?? { error: gfsData.reason?.message },
+      ecmwf: ecmwfData.value ?? { error: ecmwfData.reason?.message },
+      icon: iconData.value ?? { error: iconData.reason?.message },
+      meteomatics: meteomaticsData.value ?? { error: meteomaticsData.reason?.message },
+      nasaSat: nasaData.value ?? { error: nasaData.reason?.message },
+      copernicus: copernicusData.value ?? { error: copernicusData.reason?.message },
+      trullemans: trullemansData.value ?? { error: trullemansData.reason?.message },
+      wetterzentrale: wetterzentraleData.value ?? { error: wetterzentraleData.reason?.message }
+    };
 
     const prompt = `
 Prévisions météo nationales pour ${country}.
-Données modèles:
-- GFS: ${JSON.stringify(gfsData)}
-- ECMWF: ${JSON.stringify(ecmwfData)}
-- ICON: ${JSON.stringify(iconData)}
+Sources principales:
+- GFS: ${JSON.stringify(sources.gfs)}
+- ECMWF: ${JSON.stringify(sources.ecmwf)}
+- ICON: ${JSON.stringify(sources.icon)}
+- Meteomatics: ${JSON.stringify(sources.meteomatics)}
+- NASA POWER / Satellites: ${JSON.stringify(sources.nasaSat)}
+- Copernicus ERA5: ${JSON.stringify(sources.copernicus)}
 
-Consignes:
-- Résumé national (aujourd'hui + 7 jours).
+Données comparatives (benchmark qualité, ne pas copier):
+- Trullemans: ${JSON.stringify(sources.trullemans)}
+- Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
+
+Consignes IA:
+- Croiser et fusionner les données principales.
+- Comparer avec Trullemans/Wetterzentrale uniquement pour fiabilité.
+- Fournir résumé national aujourd'hui + 7 jours.
 - Inclure températures, précipitations, vents, risques météo.
-- Mentionner incertitudes.
-- Style clair en français.
+- Mentionner incertitudes et fiabilité.
+- Style clair, bulletin météo professionnel en français.
 `;
+
     const analysis = await askAI(prompt);
-    return { country, covered: true, forecast: analysis };
+    return { country, covered: true, forecast: analysis, raw: sources };
   } else {
     const prompt = `
 Prévisions météo nationales simplifiées pour ${country} (zone non couverte).
-Consignes:
-- Résumé global basé sur tendances continentales.
+Consignes IA:
+- Fournir résumé global basé sur tendances continentales.
 - Pas de détail local.
+- Horizon: aujourd'hui + 7 jours.
 - Style concis en français.
 `;
     const analysis = await askAI(prompt);
