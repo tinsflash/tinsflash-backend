@@ -1,12 +1,15 @@
 // services/trullemans.js
 import axios from "axios";
 
-const TRULLEMANS_API = "https://www.meteo-trullemans.be/api/forecast"; // 🔧 URL fictive, à remplacer si besoin
+const TRULLEMANS_API = "https://www.bmcb.be/forecast-europ-maps/";
 
 /**
- * Récupère la prévision Trullemans (comparaison interne uniquement)
+ * Récupère les prévisions Trullemans (comparaison interne uniquement)
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @returns {Object} Prévisions formatées
  */
-async function getForecast(lat, lon) {
+async function trullemans(lat, lon) {
   try {
     const response = await axios.get(TRULLEMANS_API, {
       params: { lat, lon },
@@ -33,4 +36,5 @@ async function getForecast(lat, lon) {
   }
 }
 
-export default { getForecast };
+// ✅ Export direct
+export default trullemans;
