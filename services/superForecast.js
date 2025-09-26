@@ -1,115 +1,81 @@
 // PATH: services/superForecast.js
-// Fusion multi-modèles météo + IA pour interprétation
+// SuperForecast — prévisions enrichies multi-sources par point unique
 
 import gfs from "./gfs.js";
 import ecmwf from "./ecmwf.js";
 import icon from "./icon.js";
+import meteomatics from "./meteomatics.js";
+import nasaSat from "./nasaSat.js";
+import copernicus from "./copernicusService.js";
+import trullemans from "./trullemans.js";
+import wetterzentrale from "./wetterzentrale.js";
 import openweather from "./openweather.js";
 import { askAI } from "./aiService.js";
 
-// ======================
-// Zones couvertes
-// ======================
-const COVERED_REGIONS = [
-  // UE27
-  "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
-  "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
-  "Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands",
-  "Poland","Portugal","Czechia","Czech Republic","Romania","Slovakia",
-  "Slovenia","Sweden",
-
-  // Ajouts
-  "Ukraine",
-  "United Kingdom","UK","England","Scotland","Wales","Northern Ireland",
-  "Norway",
-  "USA","United States"
-];
-
-/**
- * Vérifie si une zone est couverte
- */
-function isCovered(country) {
-  if (!country) return false;
-  return COVERED_REGIONS.includes(country);
-}
-
-/**
- * SuperForecast = moteur principal
- * - Zones couvertes → multi-modèles météo + IA
- * - Zones non couvertes → Open Data météo + IA
- */
-export default async function runSuperForecast(location) {
+export default async function runSuperForecast({ lat, lon, country }) {
   try {
-    const covered = isCovered(location.country ?? "");
-    let combined = {};
-    let prompt = "";
+    // Multi-sources en parallèle
+    const [
+      gfsData, ecmwfData, iconData,
+      meteomaticsData, nasaData, copernicusData,
+      trullemansData, wetterzentraleData
+    ] = await Promise.allSettled([
+      gfs({ lat, lon, country }),
+      ecmwf({ lat, lon, country }),
+      icon({ lat, lon, country }),
+      meteomatics({ lat, lon, country }),
+      nasaSat({ lat, lon, country }),
+      copernicus({ lat, lon, country }),
+      trullemans({ lat, lon, country }),
+      wetterzentrale({ lat, lon, country })
+    ]);
 
-    if (covered) {
-      console.log("🌍 SuperForecast → zone couverte:", location.country);
+    const sources = {
+      gfs: gfsData.value ?? { error: gfsData.reason?.message },
+      ecmwf: ecmwfData.value ?? { error: ecmwfData.reason?.message },
+      icon: iconData.value ?? { error: iconData.reason?.message },
+      meteomatics: meteomaticsData.value ?? { error: meteomaticsData.reason?.message },
+      nasaSat: nasaData.value ?? { error: nasaData.reason?.message },
+      copernicus: copernicusData.value ?? { error: copernicusData.reason?.message },
+      trullemans: trullemansData.value ?? { error: trullemansData.reason?.message },
+      wetterzentrale: wetterzentraleData.value ?? { error: wetterzentraleData.reason?.message }
+    };
 
-      // Données multi-modèles
-      const [gfsData, ecmwfData, iconData] = await Promise.all([
-        gfs(location),
-        ecmwf(location),
-        icon(location),
-      ]);
+    const prompt = `
+Prévisions météo enrichies pour un point précis.
+Coordonnées: lat=${lat}, lon=${lon}, pays=${country}
 
-      combined = {
-        location,
-        gfs: gfsData,
-        ecmwf: ecmwfData,
-        icon: iconData,
-        covered,
-        generatedAt: new Date().toISOString(),
-      };
+Sources principales:
+- GFS: ${JSON.stringify(sources.gfs)}
+- ECMWF: ${JSON.stringify(sources.ecmwf)}
+- ICON: ${JSON.stringify(sources.icon)}
+- Meteomatics: ${JSON.stringify(sources.meteomatics)}
+- NASA POWER / Satellites: ${JSON.stringify(sources.nasaSat)}
+- Copernicus ERA5: ${JSON.stringify(sources.copernicus)}
 
-      prompt = `
-Prévisions météorologiques détaillées pour ${location.country}.
-Localisation: ${JSON.stringify(location)}.
+Données comparatives (benchmarks qualité, ne pas copier):
+- Trullemans: ${JSON.stringify(sources.trullemans)}
+- Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
 
-Données modèles:
-- GFS: ${JSON.stringify(gfsData)}
-- ECMWF: ${JSON.stringify(ecmwfData)}
-- ICON: ${JSON.stringify(iconData)}
-
-Consignes:
-- Analyse locale (géolocalisation) + nationale.
-- Inclure tendances sur 7 jours.
-- Mentionner incertitudes et risques.
-- Style: bulletin météo précis et concis en français.
+Consignes IA:
+- Croiser et fusionner uniquement les données principales.
+- Comparer avec Trullemans/Wetterzentrale uniquement pour ajuster la fiabilité.
+- Fournir un bulletin détaillé: températures, précipitations, vent, risques météo.
+- Horizon: aujourd'hui + 7 jours.
+- Mentionner incertitudes et fiabilité globale.
+- Style clair, professionnel, bulletin météo en français.
 `;
-    } else {
-      console.log("🌍 SuperForecast → zone NON couverte:", location.country);
-
-      // Données Open Data
-      const owData = await openweather(location.lat, location.lon);
-
-      combined = {
-        location,
-        openweather: owData,
-        covered,
-        generatedAt: new Date().toISOString(),
-      };
-
-      prompt = `
-Prévisions météo simplifiées pour ${location.country ?? "zone non couverte"}.
-Localisation: ${JSON.stringify(location)}.
-
-Données disponibles (Open Data):
-${JSON.stringify(owData)}
-
-Consignes:
-- Synthèse locale/nationale simple.
-- Mentionner continent et tendances globales.
-- Pas d'alertes locales (uniquement continentales).
-- Style: clair, concis, en français.
-`;
-    }
 
     const analysis = await askAI(prompt);
-    return { zone: location.country, covered, raw: combined, analysis };
+
+    return {
+      lat,
+      lon,
+      country,
+      forecast: analysis,
+      sources
+    };
   } catch (err) {
-    console.error("❌ Erreur superForecast:", err);
-    return { error: "SuperForecast failed", details: err.message };
+    return { error: err.message };
   }
 }
