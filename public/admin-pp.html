@@ -2,88 +2,213 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>⚡ Centrale Nucléaire Météo - Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centrale Nucléaire Météo - Admin</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; padding:20px; }
-    h1,h2,h3 { color:#00ffcc; }
-    input,select,button,textarea {
-      padding:8px; margin:5px; border-radius:6px; border:1px solid #444;
+    body {
+      background-color: #0d0d0d;
+      color: #00f5d4;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-    button { background:#00ffcc; color:#111; font-weight:bold; cursor:pointer; }
-    pre { background:#222; padding:10px; border-radius:6px; overflow-x:auto; }
-    #forecastResult { margin-top:20px; }
-    #chatBox { background:#222; padding:10px; border-radius:6px; margin-top:20px; }
+    header {
+      background: #111;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.5em;
+      font-weight: bold;
+      border-bottom: 2px solid #00f5d4;
+    }
+    section {
+      margin: 20px;
+      padding: 20px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,255,200,0.2);
+    }
+    h2 {
+      margin-top: 0;
+    }
+    button {
+      background: #00f5d4;
+      border: none;
+      padding: 10px 20px;
+      color: #000;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #00c2a8;
+    }
+    input, select, textarea {
+      width: 95%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: none;
+      font-size: 1em;
+    }
+    .output {
+      margin-top: 10px;
+      padding: 10px;
+      background: #000;
+      color: #0ff;
+      border-radius: 5px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo - Cockpit Admin</h1>
+  <header>⚡ Centrale Nucléaire Météo – Console Admin</header>
 
-  <!-- 🔎 Recherche ville + pays -->
-  <div class="city-search">
-    <h2>🌍 Rechercher une localité (zones couvertes)</h2>
-    <input type="text" id="cityInput" placeholder="Ville (ex: Marseille)" />
-    
-    <select id="countrySelect">
+  <!-- Bouton RUN -->
+  <section>
+    <h2>🚀 Lancer un Run Global</h2>
+    <button onclick="launchRun()">Lancer le moteur</button>
+    <div id="runResult" class="output"></div>
+  </section>
+
+  <!-- Logs -->
+  <section>
+    <h2>📡 Logs moteur</h2>
+    <button onclick="loadLogs()">Actualiser</button>
+    <div id="logs" class="output"></div>
+  </section>
+
+  <!-- État du moteur -->
+  <section>
+    <h2>🔧 État du moteur</h2>
+    <button onclick="checkEngine()">Vérifier</button>
+    <div id="engineStatus" class="output"></div>
+  </section>
+
+  <!-- Checkup -->
+  <section>
+    <h2>✅ Checkup zones</h2>
+    <button onclick="checkCoverage()">Vérifier zones</button>
+    <div id="coverage" class="output"></div>
+  </section>
+
+  <!-- Alertes -->
+  <section>
+    <h2>⚠️ Alertes météo</h2>
+    <button onclick="loadAlerts()">Charger</button>
+    <div id="alerts" class="output"></div>
+  </section>
+
+  <!-- Radar -->
+  <section>
+    <h2>🌍 Radar météo global</h2>
+    <button onclick="loadRadar()">Afficher</button>
+    <div id="radar" class="output"></div>
+  </section>
+
+  <!-- Actualités météo -->
+  <section>
+    <h2>📰 Actualités météo</h2>
+    <button onclick="loadNews()">Charger</button>
+    <div id="news" class="output"></div>
+  </section>
+
+  <!-- Utilisateurs -->
+  <section>
+    <h2>👥 Utilisateurs</h2>
+    <button onclick="loadUsers()">Voir stats</button>
+    <div id="users" class="output"></div>
+  </section>
+
+  <!-- Recherche ville/pays -->
+  <section>
+    <h2>🌐 Rechercher une localité (zones couvertes)</h2>
+    <input type="text" id="city" placeholder="Ville (ex: Marseille)">
+    <select id="country">
       <option value="FR">France</option>
       <option value="BE">Belgique</option>
       <option value="DE">Allemagne</option>
       <option value="UK">Royaume-Uni</option>
       <option value="NO">Norvège</option>
+      <option value="SE">Suède</option>
       <option value="UA">Ukraine</option>
       <option value="US">États-Unis</option>
-      <!-- tu peux ajouter les 27 pays ici -->
     </select>
-    
-    <button onclick="searchCity()">🔎 Voir prévisions</button>
-  </div>
+    <button onclick="searchForecast()">Chercher</button>
+    <div id="forecastResult" class="output"></div>
+  </section>
 
-  <div id="forecastResult"></div>
-
-  <!-- 🤖 Chat IA moteur -->
-  <div id="chatBox">
-    <h2>🤖 Chat IA - Moteur météo nucléaire</h2>
-    <textarea id="chatInput" rows="3" placeholder="Posez une question (ex: 'Quel temps demain à Marseille ?')"></textarea>
-    <br>
-    <button onclick="sendChat()">Envoyer</button>
-    <div id="chatResponse"></div>
-  </div>
+  <!-- Chat IA -->
+  <section>
+    <h2>🤖 Chat IA – Moteur météo nucléaire</h2>
+    <textarea id="chatInput" rows="3" placeholder="Posez une question (ex: Quel temps demain à Marseille ?)"></textarea>
+    <button onclick="askChat()">Envoyer</button>
+    <div id="chatReply" class="output"></div>
+  </section>
 
   <script>
-  async function searchCity() {
-    const city = document.getElementById("cityInput").value;
-    const country = document.getElementById("countrySelect").value;
-
-    // 🌍 Géolocalisation via Nominatim (limité au pays sélectionné)
-    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=${country.toLowerCase()}&q=${encodeURIComponent(city)}`);
-    const geoData = await geoRes.json();
-
-    if (!geoData.length) {
-      document.getElementById("forecastResult").innerHTML = "❌ Ville introuvable.";
-      return;
+    async function launchRun() {
+      const res = await fetch("/api/superforecast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
+      document.getElementById("runResult").innerText = JSON.stringify(await res.json(), null, 2);
     }
 
-    const { lat, lon, display_name } = geoData[0];
+    async function loadLogs() {
+      const res = await fetch("/api/logs");
+      document.getElementById("logs").innerText = JSON.stringify(await res.json(), null, 2);
+    }
 
-    // 🔗 Appel moteur nucléaire météo
-    const forecastRes = await fetch(`/api/localforecast/${lat}/${lon}/${country}`);
-    const forecast = await forecastRes.json();
+    async function checkEngine() {
+      const res = await fetch("/api/checkup");
+      document.getElementById("engineStatus").innerText = JSON.stringify(await res.json(), null, 2);
+    }
 
-    document.getElementById("forecastResult").innerHTML = `
-      <h3>📍 ${display_name}</h3>
-      <pre>${JSON.stringify(forecast.forecast, null, 2)}</pre>
-    `;
-  }
+    async function checkCoverage() {
+      const res = await fetch("/api/checkup");
+      document.getElementById("coverage").innerText = JSON.stringify(await res.json(), null, 2);
+    }
 
-  async function sendChat() {
-    const msg = document.getElementById("chatInput").value;
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg })
-    });
-    const data = await res.json();
-    document.getElementById("chatResponse").innerHTML = `<pre>${data.reply}</pre>`;
-  }
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      document.getElementById("alerts").innerText = JSON.stringify(await res.json(), null, 2);
+    }
+
+    async function loadRadar() {
+      const res = await fetch("/api/radar/Europe");
+      document.getElementById("radar").innerText = JSON.stringify(await res.json(), null, 2);
+    }
+
+    async function loadNews() {
+      const res = await fetch("/api/news");
+      document.getElementById("news").innerText = JSON.stringify(await res.json(), null, 2);
+    }
+
+    async function loadUsers() {
+      const res = await fetch("/api/users");
+      document.getElementById("users").innerText = JSON.stringify(await res.json(), null, 2);
+    }
+
+    async function searchForecast() {
+      const city = document.getElementById("city").value;
+      const country = document.getElementById("country").value;
+      const res = await fetch(`/api/forecast/${country}`);
+      document.getElementById("forecastResult").innerText = JSON.stringify(await res.json(), null, 2);
+    }
+
+    async function askChat() {
+      const question = document.getElementById("chatInput").value;
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: question })
+      });
+      document.getElementById("chatReply").innerText = JSON.stringify(await res.json(), null, 2);
+    }
   </script>
 </body>
 </html>
