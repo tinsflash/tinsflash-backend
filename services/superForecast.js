@@ -1,12 +1,13 @@
 // PATH: services/superForecast.js
 // SuperForecast — prévisions enrichies multi-sources par point unique
+// ⚡ Centrale nucléaire météo – Moteur atomique
 
 import gfs from "./gfs.js";
 import ecmwf from "./ecmwf.js";
 import icon from "./icon.js";
 import meteomatics from "./meteomatics.js";
 import nasaSat from "./nasaSat.js";
-import copernicus from "./copernicusService.js";
+import copernicus from "./copernicusService.js"; // ⚠️ on l’utilise correctement
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
 import openweather from "./openweather.js";
@@ -14,6 +15,18 @@ import { askAI } from "./aiService.js";
 
 export default async function runSuperForecast({ lat, lon, country }) {
   try {
+    // Préparer la requête Copernicus ERA5 (exemple simplifié)
+    const copernicusRequest = {
+      variable: ["2m_temperature", "total_precipitation"],
+      product_type: "reanalysis",
+      year: new Date().getUTCFullYear(),
+      month: String(new Date().getUTCMonth() + 1).padStart(2, "0"),
+      day: String(new Date().getUTCDate()).padStart(2, "0"),
+      time: ["00:00", "06:00", "12:00", "18:00"],
+      area: [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25], // bbox ~0.5° autour du point
+      format: "json"
+    };
+
     // Multi-sources en parallèle
     const [
       gfsData, ecmwfData, iconData,
@@ -25,7 +38,7 @@ export default async function runSuperForecast({ lat, lon, country }) {
       icon({ lat, lon, country }),
       meteomatics({ lat, lon, country }),
       nasaSat({ lat, lon, country }),
-      copernicus({ lat, lon, country }),
+      copernicus("reanalysis-era5-land", copernicusRequest), // ✅ appel correct
       trullemans({ lat, lon, country }),
       wetterzentrale({ lat, lon, country })
     ]);
