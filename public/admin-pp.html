@@ -1,214 +1,224 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Centrale Nucléaire Météo - Admin</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
   <style>
     body {
-      background-color: #0d0d0d;
-      color: #00f5d4;
-      font-family: Arial, sans-serif;
+      background: #0a0a0a;
+      color: #00ffe0;
+      font-family: "Courier New", monospace;
       margin: 0;
       padding: 0;
     }
-    header {
-      background: #111;
-      padding: 20px;
+    h1, h2 {
       text-align: center;
-      font-size: 1.5em;
-      font-weight: bold;
-      border-bottom: 2px solid #00f5d4;
+      text-shadow: 0 0 10px #00ffe0;
     }
-    section {
+    .section {
       margin: 20px;
       padding: 20px;
-      background: #1a1a1a;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,255,200,0.2);
-    }
-    h2 {
-      margin-top: 0;
+      border-radius: 10px;
+      background: #111;
+      box-shadow: 0 0 15px rgba(0,255,224,0.3);
     }
     button {
-      background: #00f5d4;
+      background: #00ffe0;
+      color: #000;
       border: none;
       padding: 10px 20px;
-      color: #000;
-      font-weight: bold;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
+      font-weight: bold;
+      margin: 5px 0;
     }
     button:hover {
       background: #00c2a8;
     }
-    input, select, textarea {
-      width: 95%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 5px;
-      border: none;
-      font-size: 1em;
-    }
-    .output {
-      margin-top: 10px;
-      padding: 10px;
+    pre, .output {
       background: #000;
-      color: #0ff;
-      border-radius: 5px;
-      font-family: monospace;
-      white-space: pre-wrap;
-      max-height: 300px;
-      overflow-y: auto;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      color: #00ffe0;
+    }
+    img {
+      max-width: 100%;
+      margin: 5px 0;
+      border: 1px solid #00ffe0;
+      border-radius: 6px;
+    }
+    input, select, textarea {
+      padding: 10px;
+      margin: 5px 0;
+      width: 95%;
+      border-radius: 6px;
+      border: 1px solid #00ffe0;
+      background: #000;
+      color: #00ffe0;
     }
   </style>
 </head>
 <body>
-  <header>⚡ Centrale Nucléaire Météo – Console Admin</header>
 
-  <!-- Bouton RUN -->
-  <section>
+  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+
+  <!-- RUN GLOBAL -->
+  <div class="section">
     <h2>🚀 Lancer un Run Global</h2>
-    <button onclick="launchRun()">Lancer le moteur</button>
-    <div id="runResult" class="output"></div>
-  </section>
+    <button onclick="runGlobal()">Lancer le moteur</button>
+    <div id="runOutput" class="output"></div>
+  </div>
 
-  <!-- Logs -->
-  <section>
+  <!-- LOGS -->
+  <div class="section">
     <h2>📡 Logs moteur</h2>
     <button onclick="loadLogs()">Actualiser</button>
-    <div id="logs" class="output"></div>
-  </section>
+    <div id="logsOutput" class="output"></div>
+  </div>
 
-  <!-- État du moteur -->
-  <section>
-    <h2>🔧 État du moteur</h2>
+  <!-- ÉTAT -->
+  <div class="section">
+    <h2>🛠️ État du moteur</h2>
     <button onclick="checkEngine()">Vérifier</button>
-    <div id="engineStatus" class="output"></div>
-  </section>
+    <div id="engineOutput" class="output"></div>
+  </div>
 
-  <!-- Checkup -->
-  <section>
+  <!-- ZONES -->
+  <div class="section">
     <h2>✅ Checkup zones</h2>
-    <button onclick="checkCoverage()">Vérifier zones</button>
-    <div id="coverage" class="output"></div>
-  </section>
+    <button onclick="checkZones()">Vérifier zones</button>
+    <div id="zonesOutput" class="output"></div>
+  </div>
 
-  <!-- Alertes -->
-  <section>
+  <!-- ALERTES -->
+  <div class="section">
     <h2>⚠️ Alertes météo</h2>
     <button onclick="loadAlerts()">Charger</button>
-    <div id="alerts" class="output"></div>
-  </section>
+    <div id="alertsOutput" class="output"></div>
+  </div>
 
-  <!-- Radar -->
-  <section>
+  <!-- RADAR -->
+  <div class="section">
     <h2>🌍 Radar météo global</h2>
     <button onclick="loadRadar()">Afficher</button>
-    <div id="radar" class="output"></div>
-  </section>
+    <div id="radarOutput" class="output"></div>
+  </div>
 
-  <!-- Actualités météo -->
-  <section>
+  <!-- ACTUALITÉS -->
+  <div class="section">
     <h2>📰 Actualités météo</h2>
     <button onclick="loadNews()">Charger</button>
-    <div id="news" class="output"></div>
-  </section>
+    <div id="newsOutput" class="output"></div>
+  </div>
 
-  <!-- Utilisateurs -->
-  <section>
+  <!-- UTILISATEURS -->
+  <div class="section">
     <h2>👥 Utilisateurs</h2>
-    <button onclick="loadUsers()">Voir stats</button>
-    <div id="users" class="output"></div>
-  </section>
+    <button onclick="loadUsers()">Lister</button>
+    <div id="usersOutput" class="output"></div>
+  </div>
 
-  <!-- Recherche ville/pays -->
-  <section>
+  <!-- RECHERCHE LOCALE -->
+  <div class="section">
     <h2>🌐 Rechercher une localité (zones couvertes)</h2>
-    <input type="text" id="city" placeholder="Ville (ex: Marseille)">
+    <input id="city" placeholder="Ville (ex: Marseille)"/>
     <select id="country">
-      <option value="FR">France</option>
-      <option value="BE">Belgique</option>
-      <option value="DE">Allemagne</option>
-      <option value="UK">Royaume-Uni</option>
-      <option value="NO">Norvège</option>
-      <option value="SE">Suède</option>
-      <option value="UA">Ukraine</option>
-      <option value="US">États-Unis</option>
+      <option>France</option>
+      <option>Belgium</option>
+      <option>Germany</option>
+      <option>Spain</option>
+      <option>Italy</option>
+      <option>United Kingdom</option>
+      <option>Norway</option>
+      <option>Ukraine</option>
+      <option>United States</option>
     </select>
-    <button onclick="searchForecast()">Chercher</button>
-    <div id="forecastResult" class="output"></div>
-  </section>
+    <button onclick="searchLocal()">Chercher</button>
+    <div id="localOutput" class="output"></div>
+  </div>
 
-  <!-- Chat IA -->
-  <section>
+  <!-- CHAT IA -->
+  <div class="section">
     <h2>🤖 Chat IA – Moteur météo nucléaire</h2>
-    <textarea id="chatInput" rows="3" placeholder="Posez une question (ex: Quel temps demain à Marseille ?)"></textarea>
+    <textarea id="chatInput" rows="3" placeholder="Posez une question (ex: 'Quel temps demain à Paris ?')"></textarea>
     <button onclick="askChat()">Envoyer</button>
-    <div id="chatReply" class="output"></div>
-  </section>
+    <div id="chatOutput" class="output"></div>
+  </div>
 
-  <script>
-    async function launchRun() {
-      const res = await fetch("/api/superforecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
-      });
-      document.getElementById("runResult").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function loadLogs() {
-      const res = await fetch("/api/logs");
-      document.getElementById("logs").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function checkEngine() {
-      const res = await fetch("/api/checkup");
-      document.getElementById("engineStatus").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function checkCoverage() {
-      const res = await fetch("/api/checkup");
-      document.getElementById("coverage").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function loadAlerts() {
-      const res = await fetch("/api/alerts");
-      document.getElementById("alerts").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function loadRadar() {
-      const res = await fetch("/api/radar/Europe");
-      document.getElementById("radar").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function loadNews() {
-      const res = await fetch("/api/news");
-      document.getElementById("news").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function loadUsers() {
-      const res = await fetch("/api/users");
-      document.getElementById("users").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function searchForecast() {
-      const city = document.getElementById("city").value;
-      const country = document.getElementById("country").value;
-      const res = await fetch(`/api/forecast/${country}`);
-      document.getElementById("forecastResult").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-
-    async function askChat() {
-      const question = document.getElementById("chatInput").value;
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: question })
-      });
-      document.getElementById("chatReply").innerText = JSON.stringify(await res.json(), null, 2);
-    }
-  </script>
+<script>
+async function runGlobal() {
+  const res = await fetch("/api/superforecast");
+  const data = await res.json();
+  document.getElementById("runOutput").innerText = JSON.stringify(data, null, 2);
+}
+async function loadLogs() {
+  const res = await fetch("/api/logs");
+  const data = await res.json();
+  document.getElementById("logsOutput").innerText = JSON.stringify(data, null, 2);
+}
+async function checkEngine() {
+  const res = await fetch("/api/engine");
+  const data = await res.json();
+  document.getElementById("engineOutput").innerText = JSON.stringify(data, null, 2);
+}
+async function checkZones() {
+  const res = await fetch("/api/zones");
+  const data = await res.json();
+  document.getElementById("zonesOutput").innerText = JSON.stringify(data, null, 2);
+}
+async function loadAlerts() {
+  const res = await fetch("/api/alerts");
+  const data = await res.json();
+  document.getElementById("alertsOutput").innerText = JSON.stringify(data, null, 2);
+}
+async function loadRadar() {
+  const res = await fetch("/api/radar");
+  const data = await res.json();
+  let html = "";
+  if (data.success && data.tiles) {
+    data.tiles.forEach(tile => {
+      html += `<p>${tile.name}</p><img src="${tile.url}" alt="${tile.name}"/>`;
+    });
+  } else {
+    html = "<p>⚠️ Radar indisponible</p>";
+  }
+  document.getElementById("radarOutput").innerHTML = html;
+}
+async function loadNews() {
+  const res = await fetch("/api/news");
+  const data = await res.json();
+  let html = "";
+  if (data && data.length > 0) {
+    data.forEach(n => {
+      html += `<p><strong>${n.title}</strong> – ${n.source}<br/><a href="${n.url}" target="_blank">Lire</a></p>`;
+    });
+  }
+  document.getElementById("newsOutput").innerHTML = html;
+}
+async function loadUsers() {
+  const res = await fetch("/api/users");
+  const data = await res.json();
+  document.getElementById("usersOutput").innerText = JSON.stringify(data, null, 2);
+}
+async function searchLocal() {
+  const city = document.getElementById("city").value;
+  const country = document.getElementById("country").value;
+  const res = await fetch(`/api/localforecast?city=${city}&country=${country}`);
+  const data = await res.json();
+  document.getElementById("localOutput").innerText = JSON.stringify(data, null, 2);
+}
+async function askChat() {
+  const message = document.getElementById("chatInput").value;
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message })
+  });
+  const data = await res.json();
+  document.getElementById("chatOutput").innerText = data.reply?.reply || "⚠️ Pas de réponse IA";
+}
+</script>
 </body>
 </html>
