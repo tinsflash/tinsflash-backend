@@ -6,18 +6,20 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// === Chargement des services ===
-import { getForecast, getNationalForecast } from "./services/forecastService.js";
-import { runSuperForecast } from "./services/superForecast.js";
-import { detectAlerts } from "./services/alertDetector.js";
-import { getAlerts } from "./services/alertsService.js";
-import { getRadar } from "./services/radarService.js";
-import { generateBulletin } from "./services/bulletinService.js";
-import { chatWithAI } from "./services/chatService.js";
-import { logEvent, getLogs } from "./services/logsService.js";
-import { checkCoverage } from "./services/checkCoverage.js";
+// === Services internes ===
+import alertsRouter from "./services/alertsService.js";
+import generateBulletin from "./services/bulletinService.js";
+import { chatWithJean } from "./services/chatService.js";
+import { addLog, getLogs } from "./services/adminLogs.js";
+import checkCoverage from "./services/checkCoverage.js";
+import { getWeatherIcon, generateCode } from "./services/codesService.js";
+
+// === Services météo ===
+import forecastService from "./services/forecastService.js";
+import runSuperForecast from "./services/superForecast.js";
+import { radarHandler } from "./services/radarService.js";
 import { getNews } from "./services/newsService.js";
-import { getUsers } from "./services/userService.js";
+import { getUserStats } from "./services/userService.js";
 
 dotenv.config();
 
@@ -29,109 +31,98 @@ app.use(bodyParser.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// === Servir les fichiers statiques (index.html, admin-pp.html, etc.) ===
+// === Fichiers statiques (index.html, admin-pp.html, etc.) ===
 app.use(express.static(path.join(__dirname, "public")));
 
-// === Routes API ===
+// ==========================
+// ROUTES API
+// ==========================
 
-// Prévisions locales
-app.get("/api/localforecast/:lat/:lon", async (req, res) => {
+// 🌍 Prévisions locales
+app.get("/api/localforecast/:lat/:lon/:country?", async (req, res) => {
   try {
-    const { lat, lon } = req.params;
-    const data = await getForecast(lat, lon);
+    const { lat, lon, country } = req.params;
+    const data = await forecastService.getLocalForecast(lat, lon, country);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Prévisions nationales
-app.get("/api/forecast/:zone", async (req, res) => {
+// 🌐 Prévisions nationales
+app.get("/api/forecast/:country", async (req, res) => {
   try {
-    const { zone } = req.params;
-    const data = await getNationalForecast(zone);
+    const { country } = req.params;
+    const data = await forecastService.getForecast(country);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// SuperForecast (Run global)
+// 🚀 SuperForecast
 app.post("/api/superforecast", async (req, res) => {
   try {
-    const result = await runSuperForecast();
-    logEvent("Superforecast lancé");
+    const { lat, lon, country } = req.body;
+    const result = await runSuperForecast({ lat, lon, country });
+    addLog("Superforecast lancé");
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Alertes météo
-app.get("/api/alerts/:zone", async (req, res) => {
-  try {
-    const { zone } = req.params;
-    const alerts = await getAlerts(zone);
-    res.json(alerts);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// 🔔 Alertes météo
+app.use("/api/alerts", alertsRouter);
 
-// Radar météo
+// 📡 Radar météo
 app.get("/api/radar/:zone", async (req, res) => {
   try {
     const { zone } = req.params;
-    const radar = await getRadar(zone);
+    const radar = await radarHandler(zone);
     res.json(radar);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Bulletin texte
+// 📰 Bulletin météo
 app.get("/api/bulletin/:zone", async (req, res) => {
   try {
     const { zone } = req.params;
-    const text = await generateBulletin(zone);
-    res.json({ bulletin: text });
+    const result = await generateBulletin(zone);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Chat IA (Cohere pour l’instant)
+// 🤖 Chat IA
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, zone } = req.body;
-    const reply = await chatWithAI(message, zone);
-    res.json({ reply });
+    const reply = await chatWithJean(message, { zone });
+    res.json(reply);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Logs moteur
-app.get("/api/logs", async (req, res) => {
+// 🗂️ Logs
+app.get("/api/logs", (req, res) => {
   try {
-    const logs = await getLogs();
-    res.json(logs);
+    res.json(getLogs());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Check moteur (zones couvertes vs non)
-app.get("/api/checkup", async (req, res) => {
-  try {
-    const status = await checkCoverage();
-    res.json(status);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// ✅ Couverture
+app.get("/api/checkup/:zone?", checkCoverage, (req, res) => {
+  res.json(req.coverage);
 });
 
-// Actualités météo
+// 📰 Actualités météo
 app.get("/api/news", async (req, res) => {
   try {
     const news = await getNews();
@@ -141,17 +132,29 @@ app.get("/api/news", async (req, res) => {
   }
 });
 
-// Utilisateurs
+// 👥 Utilisateurs
 app.get("/api/users", async (req, res) => {
   try {
-    const users = await getUsers();
-    res.json(users);
+    const stats = await getUserStats();
+    res.json(stats);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// === Démarrage serveur ===
+// 🎟️ Codes promo
+app.get("/api/codes/:type", (req, res) => {
+  try {
+    const { type } = req.params;
+    res.json(generateCode(type));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================
+// DÉMARRAGE SERVEUR
+// ==========================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Serveur TINSFLASH en marche sur le port ${PORT}`);
