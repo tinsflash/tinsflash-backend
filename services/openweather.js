@@ -8,7 +8,7 @@ const API_URL = "https://api.openweathermap.org/data/2.5/weather";
  * Récupère la prévision OpenWeather pour un point donné
  * Retourne un objet normalisé compatible avec comparator
  */
-async function getForecast(lat, lon) {
+export default async function openweather(lat, lon) {
   if (!OPENWEATHER_KEY) {
     throw new Error("Clé API OpenWeather absente. Vérifie ton .env / Render");
   }
@@ -53,5 +53,3 @@ async function getForecast(lat, lon) {
     };
   }
 }
-
-export default { getForecast };
