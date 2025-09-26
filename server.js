@@ -21,6 +21,10 @@ import { radarHandler } from "./services/radarService.js";
 import { getNews } from "./services/newsService.js";
 import { getUserStats } from "./services/userService.js";
 
+// === AJOUTS: moteur global & journal ===
+import runGlobal from "./services/runGlobal.js";             // <— fourni plus bas si pas encore dans ton repo
+import { getEngineState } from "./services/engineState.js";  // <— fourni plus bas si pas encore dans ton repo
+
 dotenv.config();
 
 const app = express();
@@ -60,13 +64,34 @@ app.get("/api/forecast/:country", async (req, res) => {
   }
 });
 
-// 🚀 SuperForecast
+// 🚀 SuperForecast (par point)
 app.post("/api/superforecast", async (req, res) => {
   try {
     const { lat, lon, country } = req.body;
     const result = await runSuperForecast({ lat, lon, country });
     addLog("Superforecast lancé");
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🚀🚀 RUN GLOBAL (toutes zones couvertes) — 100% réel
+app.post("/api/run-global", async (req, res) => {
+  try {
+    const report = await runGlobal();
+    addLog("RUN GLOBAL terminé");
+    res.json(report);
+  } catch (err) {
+    addLog(`RUN GLOBAL erreur: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🧠 Journal moteur (pour admin + chat IA moteur)
+app.get("/api/engine-state", (req, res) => {
+  try {
+    res.json(getEngineState());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -142,6 +167,11 @@ app.get("/api/codes/:type", (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// 🔒 Alias pratique pour l'admin (sert le fichier statique)
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
 });
 
 // ==========================
