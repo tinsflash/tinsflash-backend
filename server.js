@@ -1,200 +1,190 @@
-// server.js
 import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+import bodyParser from "body-parser";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// === Services ===
-import forecastService from "./services/forecastService.js";
-import runSuperForecast from "./services/superForecast.js";
-import radarService from "./services/radarService.js";
-import generateBulletin from "./services/bulletinService.js";
-import { chatWithJean } from "./services/chatService.js";
-import { addLog } from "./services/logsService.js";
-import checkCoverage from "./services/checkCoverage.js";
-
-// === DB Models ===
-import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alert.js";
-
-dotenv.config();
+// Import des services
+import { runSuperForecast } from "./services/superForecast.js";
+import { getForecast } from "./services/forecastService.js";
+import { visionForecast } from "./services/forecastVision.js";
+import { detectAlerts } from "./services/alertsEngine.js";
+import { getAlerts, saveAlerts } from "./services/alertsService.js";
+import { generateBulletin } from "./services/bulletinService.js";
+import { generateForecastText } from "./services/textGenService.js";
+import { getRadarData } from "./services/radarService.js";
+import { askAI } from "./services/aiService.js";
+import { saveLog, getLogs } from "./services/logsService.js";
+import { checkCoverage } from "./services/checkCoverage.js";
+import { fetchNews } from "./services/newsService.js";
+import { getUsers, addUser } from "./services/userService.js";
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
+app.use(bodyParser.json());
 
-// === MongoDB connection ===
-mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+// Fix __dirname dans ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// ==============================
-// 📡 API ROUTES
-// ==============================
+// Servir le frontend (index.html, admin-pp.html, etc.)
+app.use(express.static(path.join(__dirname, "public")));
 
-// --- Forecasts ---
-app.get("/api/forecast/:zone", checkCoverage, async (req, res) => {
+
+// ==================== ROUTES API ====================
+
+// Prévisions météo
+app.get("/api/forecast/:zone", async (req, res) => {
   try {
-    const { zone } = req.params;
-    if (req.coverage.covered) {
-      const forecast = await forecastService.getForecast(zone);
-      return res.json(forecast);
-    } else {
-      return res.json({ zone, source: "open-data", message: "Zone non couverte - prévisions Open Data" });
-    }
-  } catch (err) {
-    console.error("❌ Forecast error:", err);
-    res.status(500).json({ error: "Forecast service failed" });
-  }
-});
-
-// --- Local forecast ---
-app.get("/api/localforecast/:lat/:lon", checkCoverage, async (req, res) => {
-  try {
-    if (req.coverage.covered) {
-      const forecast = await forecastService.getLocalForecast(req.params.lat, req.params.lon);
-      return res.json(forecast);
-    } else {
-      return res.json({ coords: req.params, source: "open-data", message: "Zone non couverte - prévisions Open Data" });
-    }
-  } catch (err) {
-    console.error("❌ Local forecast error:", err);
-    res.status(500).json({ error: "Local forecast service failed" });
-  }
-});
-
-// --- SuperForecast ---
-app.get("/api/superforecast", checkCoverage, async (req, res) => {
-  try {
-    if (req.coverage.covered) {
-      const result = await runSuperForecast({ lat: 50.5, lon: 4.7, country: "Belgium" });
-      return res.json(result);
-    } else {
-      return res.json({ source: "alerts", message: "Zone non couverte - alertes continentales uniquement" });
-    }
-  } catch (err) {
-    console.error("❌ SuperForecast error:", err);
-    res.status(500).json({ error: "SuperForecast failed" });
-  }
-});
-
-// --- Alerts ---
-app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
-  try {
-    const detMod = await import("./services/alertDetector.js");
-    const detectAlerts = detMod.detectAlerts || detMod.default;
-
-    if (typeof detectAlerts !== "function") {
-      return res.status(500).json({ error: "alertDetector introuvable" });
-    }
-
-    let processAlerts = null;
-    try {
-      const engMod = await import("./services/alertsEngine.js");
-      processAlerts = engMod.processAlerts || engMod.default || null;
-    } catch {
-      processAlerts = null;
-    }
-
-    const rawAlerts = await detectAlerts(req.params.zone);
-    const enriched = processAlerts ? await processAlerts(rawAlerts, { zone: req.params.zone }) : rawAlerts;
-
-    res.json({ zone: req.params.zone, alerts: enriched });
-  } catch (err) {
-    console.error("❌ Alerts route error:", err);
-    res.status(500).json({ error: "Alerts service failed" });
-  }
-});
-
-// --- Radar ---
-app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
-  try {
-    const data = await radarService.radarHandler(req.params.zone);
+    const data = await getForecast(req.params.zone);
     res.json(data);
   } catch (err) {
-    console.error("❌ Radar error:", err);
-    res.status(500).json({ error: "Radar service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- Bulletins ---
-app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
+// Vision Forecast (optionnel, IA météo étendue)
+app.get("/api/forecastvision/:zone", async (req, res) => {
   try {
-    const data = await generateBulletin(req.params.zone);
+    const data = await visionForecast(req.params.zone);
     res.json(data);
   } catch (err) {
-    console.error("❌ Bulletin error:", err);
-    res.status(500).json({ error: "Bulletin service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- Chat ---
-app.post("/api/chat", checkCoverage, async (req, res) => {
+// Super Forecast (Run global)
+app.post("/api/superforecast", async (req, res) => {
   try {
-    const { message } = req.body;
-    const response = await chatWithJean(message);
+    const result = await runSuperForecast();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Alertes météo
+app.get("/api/alerts/:zone", async (req, res) => {
+  try {
+    const alerts = await getAlerts(req.params.zone);
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/alerts", async (req, res) => {
+  try {
+    const result = await saveAlerts(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulletin météo (texte généré)
+app.get("/api/bulletin/:zone", async (req, res) => {
+  try {
+    const bulletin = await generateBulletin(req.params.zone);
+    res.json(bulletin);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Texte prévisionnel (éditable)
+app.post("/api/textforecast", async (req, res) => {
+  try {
+    const text = await generateForecastText(req.body);
+    res.json(text);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Radar météo
+app.get("/api/radar/:zone", async (req, res) => {
+  try {
+    const radar = await getRadarData(req.params.zone);
+    res.json(radar);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Chat IA
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { question } = req.body;
+    const response = await askAI(question);
     res.json(response);
   } catch (err) {
-    console.error("❌ Chat error:", err);
-    res.status(500).json({ error: "Chat service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- Logs ---
+// Logs moteur
+app.get("/api/logs", async (req, res) => {
+  try {
+    const logs = await getLogs();
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/logs", async (req, res) => {
   try {
-    const { service, message } = req.body;
-    await addLog(service, message);
-    res.json({ success: true });
+    const log = await saveLog(req.body);
+    res.json(log);
   } catch (err) {
-    console.error("❌ Logs error:", err);
-    res.status(500).json({ error: "Logs service failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- Checkup ---
+// Check Coverage (zones couvertes / non couvertes)
 app.get("/api/checkup", async (req, res) => {
   try {
-    const zonesTest = [
-      { country: "Belgium", lat: 50.5, lon: 4.7 },
-      { country: "France", lat: 48.8, lon: 2.3 },
-      { country: "USA", lat: 38.9, lon: -77.0 },
-      { country: "Norway", lat: 59.9, lon: 10.7 },
-      { country: "Brazil", lat: -15.8, lon: -47.9 }
-    ];
-
-    const results = [];
-    for (const z of zonesTest) {
-      try {
-        const forecast = await runSuperForecast(z);
-        results.push({
-          zone: z.country,
-          covered: !!forecast.covered,
-          status: forecast.analysis ? "✅ OK" : "❌ KO",
-          details: typeof forecast.analysis === "string"
-            ? forecast.analysis.slice(0, 300)
-            : (forecast.analysis || forecast.error || "").toString().slice(0, 300),
-        });
-      } catch (err) {
-        results.push({
-          zone: z.country,
-          covered: false,
-          status: "❌ KO",
-          details: err.message || String(err),
-        });
-      }
-    }
-
-    res.json({ checkup: results });
+    const result = await checkCoverage();
+    res.json(result);
   } catch (err) {
-    console.error("❌ Checkup error:", err);
-    res.status(500).json({ error: "Checkup failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ==============================
-// 🚀 START SERVER
-// ==============================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+// Actualités météo
+app.get("/api/news", async (req, res) => {
+  try {
+    const news = await fetchNews();
+    res.json(news);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Utilisateurs
+app.get("/api/users", async (req, res) => {
+  try {
+    const users = await getUsers();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/users", async (req, res) => {
+  try {
+    const user = await addUser(req.body);
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ==================== LANCEMENT ====================
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur météo en ligne sur http://localhost:${PORT}`);
+});
