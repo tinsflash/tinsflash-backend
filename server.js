@@ -3,8 +3,6 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // === Services ===
 import forecastService from "./services/forecastService.js";
@@ -32,61 +30,56 @@ mongoose
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ==============================
-// 🌍 STATIC FILES (fix affichage des pages HTML)
-// ==============================
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Sert tout le contenu du dossier "public"
-app.use(express.static(path.join(__dirname, "public")));
-
-// Route spéciale pour index.html (page vitrine)
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// Route spéciale pour admin-pp.html (console)
-app.get("/admin-pp", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
-});
-
-// ==============================
-// 📡 API ROUTES (inchangées)
+// 📡 API ROUTES
 // ==============================
 
-// Forecasts
+// --- Forecasts ---
 app.get("/api/forecast/:zone", checkCoverage, async (req, res) => {
   try {
-    const forecast = await forecastService.getForecast(req.params.zone);
-    res.json(forecast);
+    const { zone } = req.params;
+    if (req.coverage.covered) {
+      const forecast = await forecastService.getForecast(zone);
+      return res.json(forecast);
+    } else {
+      return res.json({ zone, source: "open-data", message: "Zone non couverte - prévisions Open Data" });
+    }
   } catch (err) {
     console.error("❌ Forecast error:", err);
     res.status(500).json({ error: "Forecast service failed" });
   }
 });
 
+// --- Local forecast ---
 app.get("/api/localforecast/:lat/:lon", checkCoverage, async (req, res) => {
   try {
-    const forecast = await forecastService.getLocalForecast(req.params.lat, req.params.lon);
-    res.json(forecast);
+    if (req.coverage.covered) {
+      const forecast = await forecastService.getLocalForecast(req.params.lat, req.params.lon);
+      return res.json(forecast);
+    } else {
+      return res.json({ coords: req.params, source: "open-data", message: "Zone non couverte - prévisions Open Data" });
+    }
   } catch (err) {
     console.error("❌ Local forecast error:", err);
     res.status(500).json({ error: "Local forecast service failed" });
   }
 });
 
-// SuperForecast
+// --- SuperForecast ---
 app.get("/api/superforecast", checkCoverage, async (req, res) => {
   try {
-    const result = await runSuperForecast({ lat: 50.5, lon: 4.7, country: "Belgium" });
-    res.json(result);
+    if (req.coverage.covered) {
+      const result = await runSuperForecast({ lat: 50.5, lon: 4.7, country: "Belgium" });
+      return res.json(result);
+    } else {
+      return res.json({ source: "alerts", message: "Zone non couverte - alertes continentales uniquement" });
+    }
   } catch (err) {
     console.error("❌ SuperForecast error:", err);
     res.status(500).json({ error: "SuperForecast failed" });
   }
 });
 
-// Alerts
+// --- Alerts ---
 app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
   try {
     const detMod = await import("./services/alertDetector.js");
@@ -114,7 +107,7 @@ app.get("/api/alerts/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// Radar
+// --- Radar ---
 app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   try {
     const data = await radarService.radarHandler(req.params.zone);
@@ -125,7 +118,7 @@ app.get("/api/radar/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// Bulletins
+// --- Bulletins ---
 app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   try {
     const data = await generateBulletin(req.params.zone);
@@ -136,7 +129,7 @@ app.get("/api/bulletin/:zone", checkCoverage, async (req, res) => {
   }
 });
 
-// Chat
+// --- Chat ---
 app.post("/api/chat", checkCoverage, async (req, res) => {
   try {
     const { message } = req.body;
@@ -148,7 +141,7 @@ app.post("/api/chat", checkCoverage, async (req, res) => {
   }
 });
 
-// Logs
+// --- Logs ---
 app.post("/api/logs", async (req, res) => {
   try {
     const { service, message } = req.body;
@@ -160,7 +153,7 @@ app.post("/api/logs", async (req, res) => {
   }
 });
 
-// Checkup
+// --- Checkup ---
 app.get("/api/checkup", async (req, res) => {
   try {
     const zonesTest = [
@@ -168,7 +161,7 @@ app.get("/api/checkup", async (req, res) => {
       { country: "France", lat: 48.8, lon: 2.3 },
       { country: "USA", lat: 38.9, lon: -77.0 },
       { country: "Norway", lat: 59.9, lon: 10.7 },
-      { country: "Brazil", lat: -15.8, lon: -47.9 },
+      { country: "Brazil", lat: -15.8, lon: -47.9 }
     ];
 
     const results = [];
@@ -179,10 +172,9 @@ app.get("/api/checkup", async (req, res) => {
           zone: z.country,
           covered: !!forecast.covered,
           status: forecast.analysis ? "✅ OK" : "❌ KO",
-          details:
-            typeof forecast.analysis === "string"
-              ? forecast.analysis.slice(0, 300)
-              : (forecast.analysis || forecast.error || "").toString().slice(0, 300),
+          details: typeof forecast.analysis === "string"
+            ? forecast.analysis.slice(0, 300)
+            : (forecast.analysis || forecast.error || "").toString().slice(0, 300),
         });
       } catch (err) {
         results.push({
