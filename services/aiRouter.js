@@ -1,34 +1,61 @@
 // services/aiRouter.js
 import express from "express";
-import { askOpenAI } from "./openaiService.js";
-import { askAI as askCohere } from "./aiService.js";
+import { askAI } from "./aiService.js";
+import forecastService from "./forecastService.js";
+import trullemans from "./trullemans.js";
+import wetterzentrale from "./wetterzentrale.js";
 
 const router = express.Router();
 
 /**
- * POST /api/chat
- * Body: { message, zone, engine }
- *
- * - engine = "openai" → GPT-4o/5 (admin, moteur)
- * - engine = "cohere" → Cohere (utilisateurs)
- * - par défaut → Cohere
+ * Route /api/chat
+ * Questions météo enrichies avec les données de la Centrale Nucléaire Météo
  */
 router.post("/", async (req, res) => {
   try {
-    const { message, zone, engine } = req.body;
+    const { message } = req.body;
 
-    let result;
+    // Détection simple ville/pays (si mentionnés dans la question)
+    const cityMatch = message.match(/à ([A-Za-zÀ-ÿ\s-]+)/i);
+    let forecastData = null;
+    let comparators = null;
 
-    if (engine === "openai") {
-      result = await askOpenAI(message, { zone });
-    } else {
-      result = await askCohere(message, { zone });
+    if (cityMatch) {
+      const city = cityMatch[1].trim();
+
+      // Exemple simplifié : pour la France (Marseille)
+      if (/marseille/i.test(city)) {
+        // Marseille coords
+        const lat = 43.2965, lon = 5.3698, country = "FR";
+        forecastData = await forecastService.getLocalForecast(lat, lon, country);
+
+        // Comparateurs
+        const tru = await trullemans(lat, lon);
+        const wz = await wetterzentrale("arpege"); // ex: modèle Arpège
+        comparators = { trullemans: tru, wetterzentrale: wz };
+      }
     }
 
-    res.json(result);
+    // Construire le prompt IA
+    const prompt = `
+Tu es l'assistant du moteur nucléaire météo.
+Question utilisateur: "${message}"
+
+Prévisions centrales: ${forecastData ? JSON.stringify(forecastData) : "❌ Aucune donnée"}
+Comparateurs: ${comparators ? JSON.stringify(comparators) : "Non disponibles"}
+
+Consignes:
+- Si prévisions disponibles → donne un résumé clair, précis, en français.
+- Si comparateurs présents → indique s'ils confirment ou contredisent nos prévisions.
+- Si rien trouvé → dis que la donnée n'est pas disponible.
+`;
+
+    const reply = await askAI(prompt);
+
+    res.json({ reply });
   } catch (err) {
-    console.error("❌ Chat error:", err);
-    res.status(500).json({ error: "Erreur moteur IA" });
+    console.error("❌ Chat IA error:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
