@@ -1,7 +1,9 @@
 // services/aiService.js
-import cohere from "cohere-ai";
+import { CohereClient } from "cohere-ai";
 
-cohere.init(process.env.COHERE_API_KEY);
+const cohere = new CohereClient({
+  token: process.env.COHERE_API_KEY,
+});
 
 export async function askAI(message, context = {}) {
   try {
