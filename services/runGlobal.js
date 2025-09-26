@@ -1,4 +1,3 @@
-// PATH: services/runGlobal.js
 import forecastService from "./forecastService.js";
 import openweather from "./openweather.js";
 import { detectAlerts } from "./alertDetector.js";
@@ -6,7 +5,6 @@ import { processAlerts } from "./alertsEngine.js";
 import { addLog } from "./adminLogs.js";
 import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
 
-// Liste zones couvertes (synchro avec forecastService)
 const COVERED = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
   "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
@@ -15,7 +13,6 @@ const COVERED = [
   "Ukraine","United Kingdom","Norway","USA"
 ];
 
-// Capitale (approx) pour générer un “local” réel (OpenWeather → détecteur d’alertes)
 const CAPITALS = {
   Belgium: { lat: 50.8503, lon: 4.3517 },
   France: { lat: 48.8566, lon: 2.3522 },
@@ -61,19 +58,18 @@ export default async function runGlobal() {
 
   for (const country of COVERED) {
     try {
-      // 1) Prévision NATIONALE (moteur multi-sources via forecastService)
+      // 1) Prévision NATIONALE (moteur multi-sources)
       const national = await forecastService.getForecast(country);
 
-      // 2) Prévision LOCALE minimale (capitale) → pour déclencher des alertes numériques réelles
+      // 2) Point local minimal (capitale) pour générer des alertes numériques réelles
       const cap = CAPITALS[country];
       let localPoint = null;
       if (cap) {
-        const ow = await openweather(cap.lat, cap.lon); // température/precipitation/wind (numériques)
-        // Map minimal vers le détecteur (qui attend rain/wind/pressure/temp… si dispo)
+        const ow = await openweather(cap.lat, cap.lon);
         const numeric = {
-          rain: ow.precipitation ?? null,
-          wind: typeof ow.wind === "number" ? Math.round(ow.wind * 3.6) : null, // m/s → km/h si besoin
-          temp: ow.temperature ?? null
+          rain: ow?.precipitation ?? ow?.rain ?? null,
+          wind: typeof ow?.wind === "number" ? Math.round(ow.wind * 3.6) : (ow?.wind?.speed_kmh ?? null),
+          temp: ow?.temperature ?? ow?.temp ?? null
         };
         const rawAlerts = detectAlerts(numeric);
         const enriched = await processAlerts(rawAlerts, { country, capital: cap });
@@ -91,19 +87,18 @@ export default async function runGlobal() {
     }
   }
 
-  // Sauvegarde du journal moteur
+  const prev = getEngineState();
   const newState = {
     runTime: startedAt,
     zonesCovered,
-    // NB : les sources détaillées sont déjà dans forecastService (multi-sources)
     sources: {
       gfs: "ok", ecmwf: "ok", icon: "ok",
       meteomatics: "ok", nasaSat: "ok", copernicus: "ok",
       trullemans: "ok", wetterzentrale: "ok", openweather: "ok"
     },
     alerts: allAlerts,
-    errors: getEngineState().errors || [],
-    logs: getEngineState().logs || []
+    errors: prev.errors || [],
+    logs: prev.logs || []
   };
 
   saveEngineState(newState);
