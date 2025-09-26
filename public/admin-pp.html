@@ -1,243 +1,89 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <title>TINSFLASH — Admin Cockpit</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>⚡ Centrale Nucléaire Météo - Admin</title>
   <style>
-    :root { color-scheme: dark; }
-    body { margin:0; font-family: system-ui, Segoe UI, Roboto, Arial; background:#0b0f1a; color:#e7ecf3; }
-    header { padding:16px 20px; border-bottom:1px solid #1d2740; display:flex; align-items:center; gap:12px; }
-    h1 { font-size:18px; margin:0; }
-    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; padding:16px; }
-    .card { background:#11182b; border:1px solid #1d2740; border-radius:14px; padding:16px; }
-    .card h2 { font-size:16px; margin:0 0 12px; color:#a9c1ff; }
-    button { background:#2d47a3; color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
-    button:hover { background:#3958c7; }
-    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    pre { background:#0a1224; border:1px solid #1d2740; padding:12px; border-radius:10px; overflow:auto; max-height:320px; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { border-bottom:1px solid #1d2740; padding:8px; text-align:left; font-size:14px; }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; }
-    .ok { background:#113d2b; color:#a6ffcc; }
-    .warn { background:#3d3311; color:#ffe9a6; }
-    .bad { background:#3d1111; color:#ffb3b3; }
-    .muted { color:#9fb1d6; font-size:12px; }
-    .flex { display:flex; gap:16px; }
-    .grow { flex:1; }
-    input, select, textarea { background:#0a1224; color:#e7ecf3; border:1px solid #1d2740; border-radius:10px; padding:10px; }
-    textarea { width:100%; min-height:110px; }
-    .pin-overlay { position:fixed; inset:0; background:rgba(5,8,16,.92); display:flex; align-items:center; justify-content:center; z-index:9999; }
-    .pin-box { background:#11182b; border:1px solid #1d2740; padding:24px; border-radius:14px; width:320px; }
-    .pin-box h3 { margin:0 0 10px; color:#a9c1ff; }
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; padding:20px; }
+    h1,h2,h3 { color:#00ffcc; }
+    input,select,button,textarea {
+      padding:8px; margin:5px; border-radius:6px; border:1px solid #444;
+    }
+    button { background:#00ffcc; color:#111; font-weight:bold; cursor:pointer; }
+    pre { background:#222; padding:10px; border-radius:6px; overflow-x:auto; }
+    #forecastResult { margin-top:20px; }
+    #chatBox { background:#222; padding:10px; border-radius:6px; margin-top:20px; }
   </style>
 </head>
 <body>
-  <div id="pin" class="pin-overlay" style="display:none">
-    <div class="pin-box">
-      <h3>Accès Admin</h3>
-      <p class="muted">Entre ton code PIN pour afficher la console.</p>
-      <div class="row"><input id="pin-input" placeholder="PIN" type="password" class="grow" /><button onclick="unlock()">Entrer</button></div>
-    </div>
+  <h1>⚡ Centrale Nucléaire Météo - Cockpit Admin</h1>
+
+  <!-- 🔎 Recherche ville + pays -->
+  <div class="city-search">
+    <h2>🌍 Rechercher une localité (zones couvertes)</h2>
+    <input type="text" id="cityInput" placeholder="Ville (ex: Marseille)" />
+    
+    <select id="countrySelect">
+      <option value="FR">France</option>
+      <option value="BE">Belgique</option>
+      <option value="DE">Allemagne</option>
+      <option value="UK">Royaume-Uni</option>
+      <option value="NO">Norvège</option>
+      <option value="UA">Ukraine</option>
+      <option value="US">États-Unis</option>
+      <!-- tu peux ajouter les 27 pays ici -->
+    </select>
+    
+    <button onclick="searchCity()">🔎 Voir prévisions</button>
   </div>
 
-  <header>
-    <h1>⚛️ Centrale Nucléaire Météo — Cockpit</h1>
-    <div class="row">
-      <button id="btn-run">RUN GLOBAL</button>
-      <button id="btn-refresh">Rafraîchir état</button>
-      <span id="run-status" class="muted"></span>
-    </div>
-  </header>
+  <div id="forecastResult"></div>
 
-  <div class="grid">
-    <section class="card">
-      <h2>🧠 Journal moteur</h2>
-      <div class="row">
-        <div class="muted">Dernier run: <span id="state-runTime">—</span></div>
-      </div>
-      <pre id="state-json">{}</pre>
-    </section>
-
-    <section class="card">
-      <h2>🚨 Alertes</h2>
-      <table id="alerts-table">
-        <thead><tr><th>Zone</th><th>Type</th><th>Fiabilité</th><th>Statut</th><th>Premier</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section class="card">
-      <h2>📜 Logs</h2>
-      <pre id="logs-pre">—</pre>
-    </section>
-
-    <section class="card">
-      <h2>🛰️ Radar (zone)</h2>
-      <div class="row">
-        <input id="radar-zone" value="europe" />
-        <button id="btn-radar">Charger radar</button>
-      </div>
-      <div id="radar-view" class="muted" style="margin-top:10px">—</div>
-    </section>
-
-    <section class="card">
-      <h2>📰 News météo</h2>
-      <ul id="news-list" style="margin:0; padding-left:18px;"></ul>
-    </section>
-
-    <section class="card">
-      <h2>🤖 Chat IA moteur</h2>
-      <div class="flex">
-        <textarea id="chat-input" placeholder="Pose une question (moteur, météo, alerte…)"></textarea>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button id="btn-chat">Poser la question</button>
-        <span class="muted">Le journal moteur est joint automatiquement à la question.</span>
-      </div>
-      <pre id="chat-reply" style="margin-top:10px">—</pre>
-    </section>
+  <!-- 🤖 Chat IA moteur -->
+  <div id="chatBox">
+    <h2>🤖 Chat IA - Moteur météo nucléaire</h2>
+    <textarea id="chatInput" rows="3" placeholder="Posez une question (ex: 'Quel temps demain à Marseille ?')"></textarea>
+    <br>
+    <button onclick="sendChat()">Envoyer</button>
+    <div id="chatResponse"></div>
   </div>
 
   <script>
-    // --- Simple PIN Gate (optionnel) ---
-    (function gate(){
-      const urlPIN = new URLSearchParams(location.search).get("pin");
-      const savedPIN = localStorage.getItem("admin_pin");
-      if (urlPIN) localStorage.setItem("admin_pin", urlPIN);
-      const pin = urlPIN || savedPIN;
-      if (!pin) document.getElementById("pin").style.display = "flex";
-    })();
-    function unlock(){
-      const p = document.getElementById("pin-input").value.trim();
-      if (!p) return;
-      localStorage.setItem("admin_pin", p);
-      document.getElementById("pin").style.display = "none";
+  async function searchCity() {
+    const city = document.getElementById("cityInput").value;
+    const country = document.getElementById("countrySelect").value;
+
+    // 🌍 Géolocalisation via Nominatim (limité au pays sélectionné)
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=${country.toLowerCase()}&q=${encodeURIComponent(city)}`);
+    const geoData = await geoRes.json();
+
+    if (!geoData.length) {
+      document.getElementById("forecastResult").innerHTML = "❌ Ville introuvable.";
+      return;
     }
 
-    // --- Helpers ---
-    const $ = (id)=>document.getElementById(id);
-    function fmtJSON(obj){ return JSON.stringify(obj, null, 2); }
+    const { lat, lon, display_name } = geoData[0];
 
-    async function runGlobal(){
-      $("run-status").textContent = "⏳ Lancement…";
-      try{
-        const res = await fetch("/api/run-global", { method:"POST", headers:{ "Content-Type":"application/json" }, body: "{}" });
-        const data = await res.json();
-        $("run-status").textContent = res.ok ? `✅ Terminé (pays traités: ${data.countriesProcessed}, alertes: ${data.alerts})` : `❌ ${data.error}`;
-        await refreshState();
-        await loadLogs();
-      }catch(e){
-        $("run-status").textContent = "❌ " + e.message;
-      }
-    }
+    // 🔗 Appel moteur nucléaire météo
+    const forecastRes = await fetch(`/api/localforecast/${lat}/${lon}/${country}`);
+    const forecast = await forecastRes.json();
 
-    async function refreshState(){
-      const res = await fetch("/api/engine-state");
-      const state = await res.json();
-      $("state-runTime").textContent = state.runTime || "—";
-      $("state-json").textContent = fmtJSON(state);
-      renderAlerts(state.alerts || []);
-    }
+    document.getElementById("forecastResult").innerHTML = `
+      <h3>📍 ${display_name}</h3>
+      <pre>${JSON.stringify(forecast.forecast, null, 2)}</pre>
+    `;
+  }
 
-    function renderAlerts(alerts){
-      const tbody = $("alerts-table").querySelector("tbody");
-      tbody.innerHTML = "";
-      for (const a of alerts){
-        const tr = document.createElement("tr");
-        const fiab = Number(a.fiability ?? a.fiability ?? 0);
-        let badge = `<span class="pill bad">${fiab}%</span>`;
-        if (fiab >= 90) badge = `<span class="pill ok">${fiab}%</span>`;
-        else if (fiab >= 70) badge = `<span class="pill warn">${fiab}%</span>`;
-        tr.innerHTML = `
-          <td>${a.zone ?? a.country ?? "—"}</td>
-          <td>${a.type ?? a.kind ?? "—"}</td>
-          <td>${badge}</td>
-          <td>${a.status ?? "—"}</td>
-          <td>${a.firstDetector ? "✅" : "—"}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-    }
-
-    async function loadLogs(){
-      const res = await fetch("/api/logs");
-      const logs = await res.json();
-      $("logs-pre").textContent = Array.isArray(logs)
-        ? logs.map(l => `[${l.time || l.timestamp || ""}] ${l.msg || l.message || ""}`).join("\n")
-        : fmtJSON(logs);
-    }
-
-    async function loadRadar(){
-      const zone = $("radar-zone").value.trim() || "europe";
-      const res = await fetch(`/api/radar/${encodeURIComponent(zone)}`);
-      const data = await res.json();
-      const c = $("radar-view");
-      c.innerHTML = "";
-      // Si ton radar renvoie une image/tuile
-      if (data?.imageUrl){
-        const img = new Image();
-        img.src = data.imageUrl;
-        img.style.maxWidth = "100%";
-        c.appendChild(img);
-      } else if (Array.isArray(data?.tiles) && data.tiles.length){
-        const img = new Image();
-        img.src = data.tiles[0];
-        img.style.maxWidth = "100%";
-        c.appendChild(img);
-      } else {
-        c.textContent = fmtJSON(data);
-      }
-    }
-
-    async function loadNews(){
-      try{
-        const res = await fetch("/api/news");
-        const news = await res.json();
-        const ul = $("news-list");
-        ul.innerHTML = "";
-        (news || []).slice(0,10).forEach(n => {
-          const li = document.createElement("li");
-          li.innerHTML = `<span>${n.title || "Actualité"}</span> <span class="muted">— ${n.source || ""}</span>`;
-          ul.appendChild(li);
-        });
-      }catch(e){ /* ignore */ }
-    }
-
-    async function askChat(){
-      const q = $("chat-input").value.trim();
-      if (!q) return;
-      const stateRes = await fetch("/api/engine-state");
-      const state = await stateRes.json();
-
-      const message = [
-        "Question:", q,
-        "",
-        "=== Journal Moteur (JSON) ===",
-        fmtJSON(state)
-      ].join("\n");
-
-      const res = await fetch("/api/chat", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ message })
-      });
-      const data = await res.json();
-      $("chat-reply").textContent = data?.reply || fmtJSON(data);
-    }
-
-    // Events
-    $("btn-run").addEventListener("click", runGlobal);
-    $("btn-refresh").addEventListener("click", async ()=>{ await refreshState(); await loadLogs(); await loadNews(); });
-    $("btn-radar").addEventListener("click", loadRadar);
-    $("btn-chat").addEventListener("click", askChat);
-
-    // Init
-    (async function init(){
-      await refreshState();
-      await loadLogs();
-      await loadNews();
-    })();
+  async function sendChat() {
+    const msg = document.getElementById("chatInput").value;
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg })
+    });
+    const data = await res.json();
+    document.getElementById("chatResponse").innerHTML = `<pre>${data.reply}</pre>`;
+  }
   </script>
 </body>
 </html>
