@@ -1,144 +1,243 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Console Admin TINSFLASH</title>
+  <meta charset="utf-8" />
+  <title>TINSFLASH — Admin Cockpit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      background: #0a0f1f;
-      color: #0ff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 { color: #0ff; }
-    .card {
-      background: #111;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 20px;
-      box-shadow: 0 0 10px #0ff3;
-    }
-    button {
-      background: #00f8ff;
-      color: #000;
-      border: none;
-      border-radius: 5px;
-      padding: 8px 12px;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-    button:hover { background: #00c4cc; }
-    #admin-chat-box {
-      height: 250px;
-      overflow-y: auto;
-      background: #000;
-      padding: 10px;
-      border-radius: 5px;
-      font-family: monospace;
-      font-size: 14px;
-      margin-bottom: 10px;
-    }
-    .msg-user { color: #0f0; }
-    .msg-ai { color: #0ff; margin-left: 15px; }
-    input {
-      width: 70%;
-      padding: 6px;
-      border-radius: 5px;
-      border: none;
-      margin-right: 10px;
-    }
+    :root { color-scheme: dark; }
+    body { margin:0; font-family: system-ui, Segoe UI, Roboto, Arial; background:#0b0f1a; color:#e7ecf3; }
+    header { padding:16px 20px; border-bottom:1px solid #1d2740; display:flex; align-items:center; gap:12px; }
+    h1 { font-size:18px; margin:0; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; padding:16px; }
+    .card { background:#11182b; border:1px solid #1d2740; border-radius:14px; padding:16px; }
+    .card h2 { font-size:16px; margin:0 0 12px; color:#a9c1ff; }
+    button { background:#2d47a3; color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    button:hover { background:#3958c7; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    pre { background:#0a1224; border:1px solid #1d2740; padding:12px; border-radius:10px; overflow:auto; max-height:320px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #1d2740; padding:8px; text-align:left; font-size:14px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; }
+    .ok { background:#113d2b; color:#a6ffcc; }
+    .warn { background:#3d3311; color:#ffe9a6; }
+    .bad { background:#3d1111; color:#ffb3b3; }
+    .muted { color:#9fb1d6; font-size:12px; }
+    .flex { display:flex; gap:16px; }
+    .grow { flex:1; }
+    input, select, textarea { background:#0a1224; color:#e7ecf3; border:1px solid #1d2740; border-radius:10px; padding:10px; }
+    textarea { width:100%; min-height:110px; }
+    .pin-overlay { position:fixed; inset:0; background:rgba(5,8,16,.92); display:flex; align-items:center; justify-content:center; z-index:9999; }
+    .pin-box { background:#11182b; border:1px solid #1d2740; padding:24px; border-radius:14px; width:320px; }
+    .pin-box h3 { margin:0 0 10px; color:#a9c1ff; }
   </style>
 </head>
 <body>
-
-  <h2>⚡ Centrale Admin TINSFLASH</h2>
-
-  <!-- Supercalculateur -->
-  <div class="card">
-    <h3>⚡ Supercalculateur</h3>
-    <button onclick="runGlobal()">🚀 Lancer un Run Global</button>
-    <div id="super-status">⏳ En attente…</div>
+  <div id="pin" class="pin-overlay" style="display:none">
+    <div class="pin-box">
+      <h3>Accès Admin</h3>
+      <p class="muted">Entre ton code PIN pour afficher la console.</p>
+      <div class="row"><input id="pin-input" placeholder="PIN" type="password" class="grow" /><button onclick="unlock()">Entrer</button></div>
+    </div>
   </div>
 
-  <!-- Logs moteur -->
-  <div class="card">
-    <h3>📡 Logs moteur</h3>
-    <button onclick="loadLogs()">🔍 Actualiser</button>
-    <pre id="logs-box">[]</pre>
-  </div>
+  <header>
+    <h1>⚛️ Centrale Nucléaire Météo — Cockpit</h1>
+    <div class="row">
+      <button id="btn-run">RUN GLOBAL</button>
+      <button id="btn-refresh">Rafraîchir état</button>
+      <span id="run-status" class="muted"></span>
+    </div>
+  </header>
 
-  <!-- Alertes -->
-  <div class="card">
-    <h3>⚠️ Alertes météo</h3>
-    <button onclick="loadAlerts()">📥 Charger</button>
-    <pre id="alerts-box">⏳ ...</pre>
-  </div>
+  <div class="grid">
+    <section class="card">
+      <h2>🧠 Journal moteur</h2>
+      <div class="row">
+        <div class="muted">Dernier run: <span id="state-runTime">—</span></div>
+      </div>
+      <pre id="state-json">{}</pre>
+    </section>
 
-  <!-- État moteur -->
-  <div class="card">
-    <h3>🛠️ État du moteur</h3>
-    <button onclick="checkEngine()">🔍 Vérifier</button>
-    <pre id="engine-box">{}</pre>
-  </div>
+    <section class="card">
+      <h2>🚨 Alertes</h2>
+      <table id="alerts-table">
+        <thead><tr><th>Zone</th><th>Type</th><th>Fiabilité</th><th>Statut</th><th>Premier</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
 
-  <!-- IA Admin (ChatGPT 5/4o) -->
-  <div class="card">
-    <h3>🤖 IA Admin (ChatGPT)</h3>
-    <div id="admin-chat-box"></div>
-    <input id="admin-chat-input" type="text" placeholder="Pose ta question..."/>
-    <button onclick="sendAdminChat()">Envoyer</button>
+    <section class="card">
+      <h2>📜 Logs</h2>
+      <pre id="logs-pre">—</pre>
+    </section>
+
+    <section class="card">
+      <h2>🛰️ Radar (zone)</h2>
+      <div class="row">
+        <input id="radar-zone" value="europe" />
+        <button id="btn-radar">Charger radar</button>
+      </div>
+      <div id="radar-view" class="muted" style="margin-top:10px">—</div>
+    </section>
+
+    <section class="card">
+      <h2>📰 News météo</h2>
+      <ul id="news-list" style="margin:0; padding-left:18px;"></ul>
+    </section>
+
+    <section class="card">
+      <h2>🤖 Chat IA moteur</h2>
+      <div class="flex">
+        <textarea id="chat-input" placeholder="Pose une question (moteur, météo, alerte…)"></textarea>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="btn-chat">Poser la question</button>
+        <span class="muted">Le journal moteur est joint automatiquement à la question.</span>
+      </div>
+      <pre id="chat-reply" style="margin-top:10px">—</pre>
+    </section>
   </div>
 
   <script>
-    async function runGlobal() {
-      document.getElementById("super-status").innerText = "⏳ Calcul...";
-      const res = await fetch("/api/superforecast", { method: "POST" });
-      const data = await res.json();
-      document.getElementById("super-status").innerText = JSON.stringify(data, null, 2);
+    // --- Simple PIN Gate (optionnel) ---
+    (function gate(){
+      const urlPIN = new URLSearchParams(location.search).get("pin");
+      const savedPIN = localStorage.getItem("admin_pin");
+      if (urlPIN) localStorage.setItem("admin_pin", urlPIN);
+      const pin = urlPIN || savedPIN;
+      if (!pin) document.getElementById("pin").style.display = "flex";
+    })();
+    function unlock(){
+      const p = document.getElementById("pin-input").value.trim();
+      if (!p) return;
+      localStorage.setItem("admin_pin", p);
+      document.getElementById("pin").style.display = "none";
     }
 
-    async function loadLogs() {
-      const res = await fetch("/api/logs");
-      const data = await res.json();
-      document.getElementById("logs-box").innerText = JSON.stringify(data, null, 2);
-    }
+    // --- Helpers ---
+    const $ = (id)=>document.getElementById(id);
+    function fmtJSON(obj){ return JSON.stringify(obj, null, 2); }
 
-    async function loadAlerts() {
-      const res = await fetch("/api/alerts/BE");
-      const data = await res.json();
-      document.getElementById("alerts-box").innerText = JSON.stringify(data, null, 2);
-    }
-
-    async function checkEngine() {
-      const res = await fetch("/api/checkup");
-      const data = await res.json();
-      document.getElementById("engine-box").innerText = JSON.stringify(data, null, 2);
-    }
-
-    async function sendAdminChat() {
-      const input = document.getElementById("admin-chat-input");
-      const chatBox = document.getElementById("admin-chat-box");
-      const msg = input.value.trim();
-      if (!msg) return;
-
-      chatBox.innerHTML += `<div class="msg-user"><b>Moi :</b> ${msg}</div>`;
-      input.value = "";
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: msg, zone: "admin", engine: "openai" })
-        });
+    async function runGlobal(){
+      $("run-status").textContent = "⏳ Lancement…";
+      try{
+        const res = await fetch("/api/run-global", { method:"POST", headers:{ "Content-Type":"application/json" }, body: "{}" });
         const data = await res.json();
-        chatBox.innerHTML += `<div class="msg-ai"><b>GPT :</b> ${data.reply}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-      } catch (err) {
-        chatBox.innerHTML += `<div style="color:red;">❌ Erreur : ${err.message}</div>`;
+        $("run-status").textContent = res.ok ? `✅ Terminé (pays traités: ${data.countriesProcessed}, alertes: ${data.alerts})` : `❌ ${data.error}`;
+        await refreshState();
+        await loadLogs();
+      }catch(e){
+        $("run-status").textContent = "❌ " + e.message;
       }
     }
+
+    async function refreshState(){
+      const res = await fetch("/api/engine-state");
+      const state = await res.json();
+      $("state-runTime").textContent = state.runTime || "—";
+      $("state-json").textContent = fmtJSON(state);
+      renderAlerts(state.alerts || []);
+    }
+
+    function renderAlerts(alerts){
+      const tbody = $("alerts-table").querySelector("tbody");
+      tbody.innerHTML = "";
+      for (const a of alerts){
+        const tr = document.createElement("tr");
+        const fiab = Number(a.fiability ?? a.fiability ?? 0);
+        let badge = `<span class="pill bad">${fiab}%</span>`;
+        if (fiab >= 90) badge = `<span class="pill ok">${fiab}%</span>`;
+        else if (fiab >= 70) badge = `<span class="pill warn">${fiab}%</span>`;
+        tr.innerHTML = `
+          <td>${a.zone ?? a.country ?? "—"}</td>
+          <td>${a.type ?? a.kind ?? "—"}</td>
+          <td>${badge}</td>
+          <td>${a.status ?? "—"}</td>
+          <td>${a.firstDetector ? "✅" : "—"}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function loadLogs(){
+      const res = await fetch("/api/logs");
+      const logs = await res.json();
+      $("logs-pre").textContent = Array.isArray(logs)
+        ? logs.map(l => `[${l.time || l.timestamp || ""}] ${l.msg || l.message || ""}`).join("\n")
+        : fmtJSON(logs);
+    }
+
+    async function loadRadar(){
+      const zone = $("radar-zone").value.trim() || "europe";
+      const res = await fetch(`/api/radar/${encodeURIComponent(zone)}`);
+      const data = await res.json();
+      const c = $("radar-view");
+      c.innerHTML = "";
+      // Si ton radar renvoie une image/tuile
+      if (data?.imageUrl){
+        const img = new Image();
+        img.src = data.imageUrl;
+        img.style.maxWidth = "100%";
+        c.appendChild(img);
+      } else if (Array.isArray(data?.tiles) && data.tiles.length){
+        const img = new Image();
+        img.src = data.tiles[0];
+        img.style.maxWidth = "100%";
+        c.appendChild(img);
+      } else {
+        c.textContent = fmtJSON(data);
+      }
+    }
+
+    async function loadNews(){
+      try{
+        const res = await fetch("/api/news");
+        const news = await res.json();
+        const ul = $("news-list");
+        ul.innerHTML = "";
+        (news || []).slice(0,10).forEach(n => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span>${n.title || "Actualité"}</span> <span class="muted">— ${n.source || ""}</span>`;
+          ul.appendChild(li);
+        });
+      }catch(e){ /* ignore */ }
+    }
+
+    async function askChat(){
+      const q = $("chat-input").value.trim();
+      if (!q) return;
+      const stateRes = await fetch("/api/engine-state");
+      const state = await stateRes.json();
+
+      const message = [
+        "Question:", q,
+        "",
+        "=== Journal Moteur (JSON) ===",
+        fmtJSON(state)
+      ].join("\n");
+
+      const res = await fetch("/api/chat", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      $("chat-reply").textContent = data?.reply || fmtJSON(data);
+    }
+
+    // Events
+    $("btn-run").addEventListener("click", runGlobal);
+    $("btn-refresh").addEventListener("click", async ()=>{ await refreshState(); await loadLogs(); await loadNews(); });
+    $("btn-radar").addEventListener("click", loadRadar);
+    $("btn-chat").addEventListener("click", askChat);
+
+    // Init
+    (async function init(){
+      await refreshState();
+      await loadLogs();
+      await loadNews();
+    })();
   </script>
 </body>
 </html>
