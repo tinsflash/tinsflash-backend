@@ -4,8 +4,30 @@ import { askAI } from "./aiService.js";
 import forecastService from "./forecastService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
+import fetch from "node-fetch";
 
 const router = express.Router();
+
+/**
+ * Utilitaire: chercher lat/lon d'une ville via Nominatim
+ */
+async function geocodeCity(city, country) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=${country.toLowerCase()}&q=${encodeURIComponent(city)}`;
+    const res = await fetch(url, { headers: { "User-Agent": "Tinsflash-Meteo" } });
+    const data = await res.json();
+    if (!data.length) return null;
+
+    return {
+      lat: parseFloat(data[0].lat),
+      lon: parseFloat(data[0].lon),
+      display_name: data[0].display_name
+    };
+  } catch (err) {
+    console.error("❌ Geocoding error:", err.message);
+    return null;
+  }
+}
 
 /**
  * Route /api/chat
@@ -13,46 +35,54 @@ const router = express.Router();
  */
 router.post("/", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, country } = req.body;
 
-    // Détection simple ville/pays (si mentionnés dans la question)
-    const cityMatch = message.match(/à ([A-Za-zÀ-ÿ\s-]+)/i);
+    // Détecter la ville dans la question
+    const cityMatch = message.match(/(?:à|au|en)\s+([A-Za-zÀ-ÿ\s-]+)/i);
+    const city = cityMatch ? cityMatch[1].trim() : null;
+
     let forecastData = null;
     let comparators = null;
+    let locationInfo = null;
 
-    if (cityMatch) {
-      const city = cityMatch[1].trim();
+    if (city && country) {
+      // 🎯 Géocodage (ville + pays choisi dans admin)
+      locationInfo = await geocodeCity(city, country);
 
-      // Exemple simplifié : pour la France (Marseille)
-      if (/marseille/i.test(city)) {
-        // Marseille coords
-        const lat = 43.2965, lon = 5.3698, country = "FR";
-        forecastData = await forecastService.getLocalForecast(lat, lon, country);
+      if (locationInfo) {
+        forecastData = await forecastService.getLocalForecast(
+          locationInfo.lat,
+          locationInfo.lon,
+          country
+        );
 
-        // Comparateurs
-        const tru = await trullemans(lat, lon);
-        const wz = await wetterzentrale("arpege"); // ex: modèle Arpège
-        comparators = { trullemans: tru, wetterzentrale: wz };
+        // Comparateurs uniquement si la question contient "compare"
+        if (/compare/i.test(message)) {
+          const tru = await trullemans(locationInfo.lat, locationInfo.lon);
+          const wz = await wetterzentrale("arpege"); // exemple : modèle Arpège
+          comparators = { trullemans: tru, wetterzentrale: wz };
+        }
       }
     }
 
-    // Construire le prompt IA
     const prompt = `
-Tu es l'assistant du moteur nucléaire météo.
+Tu es l'assistant du moteur nucléaire météo TINSFLASH.
 Question utilisateur: "${message}"
 
+Ville détectée: ${city || "❌ non détectée"}
+Pays: ${country || "❌ non spécifié"}
 Prévisions centrales: ${forecastData ? JSON.stringify(forecastData) : "❌ Aucune donnée"}
-Comparateurs: ${comparators ? JSON.stringify(comparators) : "Non disponibles"}
+Comparateurs: ${comparators ? JSON.stringify(comparators) : "Non demandés"}
 
 Consignes:
-- Si prévisions disponibles → donne un résumé clair, précis, en français.
-- Si comparateurs présents → indique s'ils confirment ou contredisent nos prévisions.
-- Si rien trouvé → dis que la donnée n'est pas disponible.
+- Donne la réponse en français, claire et pro.
+- Si prévisions disponibles → résume (température, précipitations, vent, risques).
+- Si comparateurs présents → indique s'ils confirment ou divergent.
+- Ne jamais inventer → si pas de données → préciser "donnée indisponible".
 `;
 
     const reply = await askAI(prompt);
-
-    res.json({ reply });
+    res.json({ reply, location: locationInfo });
   } catch (err) {
     console.error("❌ Chat IA error:", err.message);
     res.status(500).json({ error: err.message });
