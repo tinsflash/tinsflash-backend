@@ -1,15 +1,15 @@
 // PATH: services/copernicusService.js
-// Copernicus Climate Data Store (ERA5) – Service pour le moteur nucléaire météo
+// Copernicus Climate Data Store (ERA5) – Service intégré au moteur nucléaire météo
 
 import fetch from "node-fetch";
 
 /**
- * Récupère les données Copernicus ERA5 pour un point donné
- * @param {string} dataset - Nom du dataset (ex: "reanalysis-era5-land")
- * @param {object} requestBody - Corps de la requête JSON
- * @returns {object|null} Données Copernicus formatées
+ * Service Copernicus ERA5
+ * @param {string} dataset - Nom du dataset (par défaut: "reanalysis-era5-land")
+ * @param {object} requestBody - Corps de la requête JSON (préparé par superForecast.js)
+ * @returns {object} Données Copernicus formatées ou erreur
  */
-export default async function copernicus(dataset, requestBody) {
+export default async function copernicus(dataset = "reanalysis-era5-land", requestBody = {}) {
   try {
     if (!process.env.CDS_API_KEY || !process.env.CDS_API_URL) {
       throw new Error("❌ CDS_API_KEY ou CDS_API_URL manquant dans .env");
@@ -31,7 +31,7 @@ export default async function copernicus(dataset, requestBody) {
       throw new Error(`Copernicus API error: ${response.status} ${response.statusText}`);
     }
 
-    // Essaie JSON, sinon renvoie brut
+    // Retourne JSON si dispo, sinon texte brut
     const data = await response.json().catch(() => null);
     return data || { raw: await response.text() };
   } catch (err) {
