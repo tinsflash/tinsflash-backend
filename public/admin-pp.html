@@ -1,185 +1,144 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>🛰️ Centrale Nucléaire Météo – Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Console Admin TINSFLASH</title>
   <style>
-    body { background:#0a0f1c; color:#00ffea; font-family:"Orbitron", Arial, sans-serif; margin:0; }
-    header { text-align:center; padding:20px; border-bottom:2px solid #00ffea; }
-    h1 { margin:0; color:#00ffea; text-shadow:0 0 12px #00fbe7; }
-    .container { padding:20px; max-width:1400px; margin:auto; display:grid; gap:20px; }
-    .card { background:#111830; border:1px solid #00ffea; border-radius:12px; padding:20px; box-shadow:0 0 15px rgba(0,255,234,0.3); }
-    h2 { color:#00fbe7; margin-top:0; text-shadow:0 0 8px #00d9ff; }
-    .btn { background:#00ffea; color:#000; border:none; padding:10px 15px; margin:5px; border-radius:8px; font-weight:bold; cursor:pointer; }
-    .btn:hover { background:#00d9ff; }
-    #logs { background:#000; color:#0f0; font-family:monospace; padding:10px; height:220px; overflow-y:auto; border-radius:6px; }
-    textarea,input { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none; background:#0c1a2b; color:#fff; }
-    .status-dot { height:12px; width:12px; border-radius:50%; display:inline-block; margin-right:6px; }
-    .green { background:#0f0; } .yellow { background:#ff0; } .red { background:#f00; }
-    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    body {
+      background: #0a0f1f;
+      color: #0ff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 { color: #0ff; }
+    .card {
+      background: #111;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #0ff3;
+    }
+    button {
+      background: #00f8ff;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    button:hover { background: #00c4cc; }
+    #admin-chat-box {
+      height: 250px;
+      overflow-y: auto;
+      background: #000;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .msg-user { color: #0f0; }
+    .msg-ai { color: #0ff; margin-left: 15px; }
+    input {
+      width: 70%;
+      padding: 6px;
+      border-radius: 5px;
+      border: none;
+      margin-right: 10px;
+    }
   </style>
-  <script>
-    // Sécurité simple par mot de passe
-    document.addEventListener("DOMContentLoaded", () => {
-      const pass = prompt("Mot de passe Admin ?");
-      if(pass !== "202679") {
-        alert("⛔ Accès refusé");
-        window.location.href = "index.html";
-      }
-    });
-  </script>
 </head>
 <body>
-  <header>
-    <h1>🛰️ Centrale Nucléaire Météo – Console Admin</h1>
-  </header>
-  <div class="container">
 
-    <!-- Run -->
-    <div class="card">
-      <h2>⚡ Supercalculateur</h2>
-      <button class="btn" onclick="runForecast()">🚀 Lancer un Run Global</button>
-      <div id="forecast-status">⏳ En attente...</div>
-    </div>
+  <h2>⚡ Centrale Admin TINSFLASH</h2>
 
-    <!-- Logs -->
-    <div class="card">
-      <h2>📡 Logs moteur</h2>
-      <button class="btn" onclick="loadLogs()">🔍 Actualiser</button>
-      <div id="logs">⏳ Attente logs...</div>
-    </div>
-
-    <!-- Alertes -->
-    <div class="card">
-      <h2>⚠️ Alertes météo</h2>
-      <button class="btn" onclick="loadAlerts()">🔍 Charger</button>
-      <div class="two-col">
-        <div>
-          <h3>✅ Publiées</h3>
-          <div id="alerts-published">⏳ ...</div>
-        </div>
-        <div>
-          <h3>⏳ À valider</h3>
-          <div id="alerts-pending">⏳ ...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Checkup -->
-    <div class="card">
-      <h2>🛠️ État du moteur</h2>
-      <button class="btn" onclick="loadCheckup()">🔍 Vérifier</button>
-      <div id="checkup">⏳ ...</div>
-    </div>
-
-    <!-- Prévisions éditables -->
-    <div class="card">
-      <h2>🌍 Prévisions éditables</h2>
-      <h3>🇧🇪 Belgique</h3>
-      <textarea id="forecast-be"></textarea>
-      <button class="btn" onclick="saveForecast('Belgium')">💾 Sauver</button>
-      <h3>🇫🇷 France</h3>
-      <textarea id="forecast-fr"></textarea>
-      <button class="btn" onclick="saveForecast('France')">💾 Sauver</button>
-    </div>
-
-    <!-- Utilisateurs -->
-    <div class="card">
-      <h2>📊 Utilisateurs</h2>
-      <button class="btn" onclick="loadUsers()">🔍 Charger stats</button>
-      <div id="user-stats">⏳ ...</div>
-    </div>
-
-    <!-- Chat IA -->
-    <div class="card">
-      <h2>🤖 IA J.E.A.N</h2>
-      <textarea id="ai-input" placeholder="Posez une question..."></textarea>
-      <button class="btn" onclick="sendChat()">Envoyer</button>
-      <div id="ai-response"></div>
-    </div>
-
-    <!-- Radar -->
-    <div class="card">
-      <h2>🛰️ Radar Global</h2>
-      <div id="radar-map" style="height:400px; border-radius:8px;">⏳ ...</div>
-    </div>
-
-    <!-- News -->
-    <div class="card">
-      <h2>📰 Actualités météo</h2>
-      <button class="btn" onclick="loadNews()">🔍 Charger</button>
-      <div id="news-feed">⏳ ...</div>
-    </div>
-
+  <!-- Supercalculateur -->
+  <div class="card">
+    <h3>⚡ Supercalculateur</h3>
+    <button onclick="runGlobal()">🚀 Lancer un Run Global</button>
+    <div id="super-status">⏳ En attente…</div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    const API_BASE = "/api";
+  <!-- Logs moteur -->
+  <div class="card">
+    <h3>📡 Logs moteur</h3>
+    <button onclick="loadLogs()">🔍 Actualiser</button>
+    <pre id="logs-box">[]</pre>
+  </div>
 
-    async function runForecast() {
-      document.getElementById("forecast-status").innerText = "⏳ Calcul...";
-      const res = await fetch(`${API_BASE}/superforecast`);
+  <!-- Alertes -->
+  <div class="card">
+    <h3>⚠️ Alertes météo</h3>
+    <button onclick="loadAlerts()">📥 Charger</button>
+    <pre id="alerts-box">⏳ ...</pre>
+  </div>
+
+  <!-- État moteur -->
+  <div class="card">
+    <h3>🛠️ État du moteur</h3>
+    <button onclick="checkEngine()">🔍 Vérifier</button>
+    <pre id="engine-box">{}</pre>
+  </div>
+
+  <!-- IA Admin (ChatGPT 5/4o) -->
+  <div class="card">
+    <h3>🤖 IA Admin (ChatGPT)</h3>
+    <div id="admin-chat-box"></div>
+    <input id="admin-chat-input" type="text" placeholder="Pose ta question..."/>
+    <button onclick="sendAdminChat()">Envoyer</button>
+  </div>
+
+  <script>
+    async function runGlobal() {
+      document.getElementById("super-status").innerText = "⏳ Calcul...";
+      const res = await fetch("/api/superforecast", { method: "POST" });
       const data = await res.json();
-      document.getElementById("forecast-status").innerText = "✅ Terminé : " + (data.analysis || "Pas de données");
+      document.getElementById("super-status").innerText = JSON.stringify(data, null, 2);
     }
 
     async function loadLogs() {
-      const res = await fetch(`${API_BASE}/logs`);
+      const res = await fetch("/api/logs");
       const data = await res.json();
-      document.getElementById("logs").innerText = JSON.stringify(data, null, 2);
+      document.getElementById("logs-box").innerText = JSON.stringify(data, null, 2);
     }
 
     async function loadAlerts() {
-      const res = await fetch(`${API_BASE}/alerts/Belgium`);
+      const res = await fetch("/api/alerts/BE");
       const data = await res.json();
-      const published = data.alerts.filter(a => a.reliability >= 90);
-      const pending = data.alerts.filter(a => a.reliability >= 70 && a.reliability < 90);
-      document.getElementById("alerts-published").innerHTML = published.map(a => `✅ ${a.message} (${a.reliability}%)`).join("<br>");
-      document.getElementById("alerts-pending").innerHTML = pending.map(a => `⚠️ ${a.message} (${a.reliability}%)`).join("<br>");
+      document.getElementById("alerts-box").innerText = JSON.stringify(data, null, 2);
     }
 
-    async function loadCheckup() {
-      const res = await fetch(`${API_BASE}/checkup`);
+    async function checkEngine() {
+      const res = await fetch("/api/checkup");
       const data = await res.json();
-      document.getElementById("checkup").innerText = JSON.stringify(data, null, 2);
+      document.getElementById("engine-box").innerText = JSON.stringify(data, null, 2);
     }
 
-    async function saveForecast(zone) {
-      const text = document.getElementById(zone === "Belgium" ? "forecast-be" : "forecast-fr").value;
-      await fetch(`${API_BASE}/bulletin/${zone}`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ text }) });
-      alert("✅ Prévision sauvegardée pour " + zone);
-    }
+    async function sendAdminChat() {
+      const input = document.getElementById("admin-chat-input");
+      const chatBox = document.getElementById("admin-chat-box");
+      const msg = input.value.trim();
+      if (!msg) return;
 
-    async function loadUsers() {
-      const res = await fetch(`${API_BASE}/users`);
-      const data = await res.json();
-      document.getElementById("user-stats").innerText = JSON.stringify(data, null, 2);
-    }
+      chatBox.innerHTML += `<div class="msg-user"><b>Moi :</b> ${msg}</div>`;
+      input.value = "";
 
-    async function sendChat() {
-      const msg = document.getElementById("ai-input").value;
-      const res = await fetch(`${API_BASE}/chat`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ message: msg }) });
-      const data = await res.json();
-      document.getElementById("ai-response").innerText = data.reply || JSON.stringify(data);
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: msg, zone: "admin", engine: "openai" })
+        });
+        const data = await res.json();
+        chatBox.innerHTML += `<div class="msg-ai"><b>GPT :</b> ${data.reply}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (err) {
+        chatBox.innerHTML += `<div style="color:red;">❌ Erreur : ${err.message}</div>`;
+      }
     }
-
-    async function loadNews() {
-      const res = await fetch(`${API_BASE}/news`);
-      const data = await res.json();
-      document.getElementById("news-feed").innerHTML = data.articles.map(n => `📰 <a href="${n.url}" target="_blank">${n.title}</a>`).join("<br>");
-    }
-
-    // Radar Leaflet simple
-    const map = L.map('radar-map').setView([50, 4], 4);
-    L.tileLayer('https://tile.openweathermap.org/map/precipitation/{z}/{x}/{y}.png?appid=YOUR_OPENWEATHER_KEY', {
-      attribution: '&copy; OpenWeather',
-      maxZoom: 10
-    }).addTo(map);
   </script>
 </body>
 </html>
