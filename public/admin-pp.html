@@ -2,23 +2,27 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🛰️ Console Admin TINSFLASH</title>
+  <title>🛰️ Centrale Nucléaire Météo – Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="style.css">
   <style>
     body { background:#0a0f1c; color:#00ffea; font-family:"Orbitron", Arial, sans-serif; margin:0; }
     header { text-align:center; padding:20px; border-bottom:2px solid #00ffea; }
-    h1 { margin:0; color:#00ffea; text-shadow:0 0 10px #00fbe7; }
-    .container { padding:20px; max-width:1300px; margin:auto; display:grid; gap:20px; }
+    h1 { margin:0; color:#00ffea; text-shadow:0 0 12px #00fbe7; }
+    .container { padding:20px; max-width:1400px; margin:auto; display:grid; gap:20px; }
     .card { background:#111830; border:1px solid #00ffea; border-radius:12px; padding:20px; box-shadow:0 0 15px rgba(0,255,234,0.3); }
     h2 { color:#00fbe7; margin-top:0; text-shadow:0 0 8px #00d9ff; }
     .btn { background:#00ffea; color:#000; border:none; padding:10px 15px; margin:5px; border-radius:8px; font-weight:bold; cursor:pointer; }
     .btn:hover { background:#00d9ff; }
-    #logs, #alerts, #checkup, #news, #user-stats { background:#000; color:#0f0; font-family:monospace; padding:10px; height:200px; overflow-y:auto; border-radius:6px; white-space:pre-line; }
+    #logs { background:#000; color:#0f0; font-family:monospace; padding:10px; height:220px; overflow-y:auto; border-radius:6px; }
     textarea,input { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none; background:#0c1a2b; color:#fff; }
-    #radar-map { height:400px; border-radius:12px; }
+    .status-dot { height:12px; width:12px; border-radius:50%; display:inline-block; margin-right:6px; }
+    .green { background:#0f0; } .yellow { background:#ff0; } .red { background:#f00; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
   </style>
   <script>
+    // Sécurité simple par mot de passe
     document.addEventListener("DOMContentLoaded", () => {
       const pass = prompt("Mot de passe Admin ?");
       if(pass !== "202679") {
@@ -27,54 +31,66 @@
       }
     });
   </script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
   <header>
-    <h1>🛰️ Console Centrale – Mode NASA</h1>
+    <h1>🛰️ Centrale Nucléaire Météo – Console Admin</h1>
   </header>
   <div class="container">
 
-    <!-- Run moteur -->
+    <!-- Run -->
     <div class="card">
-      <h2>⚡ Lancer le moteur</h2>
-      <button class="btn" onclick="runEngine()">🚀 Run moteur météo</button>
-      <div id="engine-status">⏳ En attente...</div>
+      <h2>⚡ Supercalculateur</h2>
+      <button class="btn" onclick="runForecast()">🚀 Lancer un Run Global</button>
+      <div id="forecast-status">⏳ En attente...</div>
     </div>
 
     <!-- Logs -->
     <div class="card">
-      <h2>📖 Logs du moteur</h2>
-      <button class="btn" onclick="loadLogs()">🔄 Rafraîchir logs</button>
+      <h2>📡 Logs moteur</h2>
+      <button class="btn" onclick="loadLogs()">🔍 Actualiser</button>
       <div id="logs">⏳ Attente logs...</div>
     </div>
 
     <!-- Alertes -->
     <div class="card">
       <h2>⚠️ Alertes météo</h2>
-      <button class="btn" onclick="loadAlerts()">🔄 Rafraîchir alertes</button>
-      <div id="alerts">⏳ Attente alertes...</div>
+      <button class="btn" onclick="loadAlerts()">🔍 Charger</button>
+      <div class="two-col">
+        <div>
+          <h3>✅ Publiées</h3>
+          <div id="alerts-published">⏳ ...</div>
+        </div>
+        <div>
+          <h3>⏳ À valider</h3>
+          <div id="alerts-pending">⏳ ...</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Prévisions nationales -->
+    <!-- Checkup -->
     <div class="card">
-      <h2>🌍 Prévisions BE / FR</h2>
-      <div id="forecast-be">⏳ Chargement BE...</div>
-      <div id="forecast-fr">⏳ Chargement FR...</div>
-    </div>
-
-    <!-- Checkup moteur -->
-    <div class="card">
-      <h2>🛠️ Checkup du moteur</h2>
+      <h2>🛠️ État du moteur</h2>
       <button class="btn" onclick="loadCheckup()">🔍 Vérifier</button>
-      <div id="checkup">⏳ En attente...</div>
+      <div id="checkup">⏳ ...</div>
+    </div>
+
+    <!-- Prévisions éditables -->
+    <div class="card">
+      <h2>🌍 Prévisions éditables</h2>
+      <h3>🇧🇪 Belgique</h3>
+      <textarea id="forecast-be"></textarea>
+      <button class="btn" onclick="saveForecast('Belgium')">💾 Sauver</button>
+      <h3>🇫🇷 France</h3>
+      <textarea id="forecast-fr"></textarea>
+      <button class="btn" onclick="saveForecast('France')">💾 Sauver</button>
     </div>
 
     <!-- Utilisateurs -->
     <div class="card">
-      <h2>📊 Statistiques Utilisateurs</h2>
-      <div id="user-stats">⏳ Chargement...</div>
+      <h2>📊 Utilisateurs</h2>
+      <button class="btn" onclick="loadUsers()">🔍 Charger stats</button>
+      <div id="user-stats">⏳ ...</div>
     </div>
 
     <!-- Chat IA -->
@@ -82,150 +98,88 @@
       <h2>🤖 IA J.E.A.N</h2>
       <textarea id="ai-input" placeholder="Posez une question..."></textarea>
       <button class="btn" onclick="sendChat()">Envoyer</button>
-      <div id="ai-response">⏳ Attente...</div>
+      <div id="ai-response"></div>
     </div>
 
     <!-- Radar -->
     <div class="card">
-      <h2>🛰️ Radar global</h2>
-      <div id="radar-map">⏳ Radar...</div>
+      <h2>🛰️ Radar Global</h2>
+      <div id="radar-map" style="height:400px; border-radius:8px;">⏳ ...</div>
     </div>
 
-    <!-- Actualités -->
+    <!-- News -->
     <div class="card">
-      <h2>📰 Actualités météo mondiales</h2>
-      <button class="btn" onclick="loadNews()">🔄 Rafraîchir news</button>
-      <div id="news">⏳ Attente news...</div>
+      <h2>📰 Actualités météo</h2>
+      <button class="btn" onclick="loadNews()">🔍 Charger</button>
+      <div id="news-feed">⏳ ...</div>
     </div>
 
   </div>
 
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    const API_BASE = "https://tinsflash-backend.onrender.com/api";
+    const API_BASE = "/api";
 
-    // === Run moteur ===
-    async function runEngine() {
-      document.getElementById("engine-status").innerText = "⏳ Calcul...";
-      try {
-        const res = await fetch(`${API_BASE}/superforecast`);
-        const data = await res.json();
-        document.getElementById("engine-status").innerText = "✅ Moteur lancé : " + (data.analysis || "OK");
-      } catch (err) {
-        document.getElementById("engine-status").innerText = "❌ Erreur : " + err.message;
-      }
+    async function runForecast() {
+      document.getElementById("forecast-status").innerText = "⏳ Calcul...";
+      const res = await fetch(`${API_BASE}/superforecast`);
+      const data = await res.json();
+      document.getElementById("forecast-status").innerText = "✅ Terminé : " + (data.analysis || "Pas de données");
     }
 
-    // === Logs ===
     async function loadLogs() {
-      document.getElementById("logs").innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch(`${API_BASE}/logs`);
-        const data = await res.json();
-        document.getElementById("logs").innerText = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("logs").innerText = "❌ Erreur : " + err.message;
-      }
+      const res = await fetch(`${API_BASE}/logs`);
+      const data = await res.json();
+      document.getElementById("logs").innerText = JSON.stringify(data, null, 2);
     }
 
-    // === Alertes ===
     async function loadAlerts() {
-      document.getElementById("alerts").innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch(`${API_BASE}/alerts/Belgium`);
-        const data = await res.json();
-        if (data.alerts?.length) {
-          document.getElementById("alerts").innerText = data.alerts.map(a =>
-            `⚠️ ${a.type} – ${a.description} (Fiabilité: ${a.confidence}%)`
-          ).join("\n");
-        } else {
-          document.getElementById("alerts").innerText = "✅ Aucune alerte";
-        }
-      } catch (err) {
-        document.getElementById("alerts").innerText = "❌ Erreur : " + err.message;
-      }
+      const res = await fetch(`${API_BASE}/alerts/Belgium`);
+      const data = await res.json();
+      const published = data.alerts.filter(a => a.reliability >= 90);
+      const pending = data.alerts.filter(a => a.reliability >= 70 && a.reliability < 90);
+      document.getElementById("alerts-published").innerHTML = published.map(a => `✅ ${a.message} (${a.reliability}%)`).join("<br>");
+      document.getElementById("alerts-pending").innerHTML = pending.map(a => `⚠️ ${a.message} (${a.reliability}%)`).join("<br>");
     }
 
-    // === Prévisions BE / FR ===
-    async function loadForecasts() {
-      const be = await fetch(`${API_BASE}/forecast/Belgium`).then(r=>r.json());
-      document.getElementById("forecast-be").innerText = JSON.stringify(be, null, 2);
-      const fr = await fetch(`${API_BASE}/forecast/France`).then(r=>r.json());
-      document.getElementById("forecast-fr").innerText = JSON.stringify(fr, null, 2);
-    }
-
-    // === Checkup ===
     async function loadCheckup() {
-      document.getElementById("checkup").innerText = "⏳ Vérification...";
-      try {
-        const res = await fetch(`${API_BASE}/checkup`);
-        const data = await res.json();
-        document.getElementById("checkup").innerText = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("checkup").innerText = "❌ Erreur : " + err.message;
-      }
+      const res = await fetch(`${API_BASE}/checkup`);
+      const data = await res.json();
+      document.getElementById("checkup").innerText = JSON.stringify(data, null, 2);
     }
 
-    // === Utilisateurs ===
+    async function saveForecast(zone) {
+      const text = document.getElementById(zone === "Belgium" ? "forecast-be" : "forecast-fr").value;
+      await fetch(`${API_BASE}/bulletin/${zone}`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ text }) });
+      alert("✅ Prévision sauvegardée pour " + zone);
+    }
+
     async function loadUsers() {
-      try {
-        const res = await fetch(`${API_BASE}/users`);
-        const data = await res.json();
-        document.getElementById("user-stats").innerText = JSON.stringify(data, null, 2);
-      } catch {
-        document.getElementById("user-stats").innerText = "❌ Données utilisateurs non disponibles";
-      }
+      const res = await fetch(`${API_BASE}/users`);
+      const data = await res.json();
+      document.getElementById("user-stats").innerText = JSON.stringify(data, null, 2);
     }
 
-    // === Chat IA ===
     async function sendChat() {
       const msg = document.getElementById("ai-input").value;
-      document.getElementById("ai-response").innerText = "⏳ Envoi...";
-      try {
-        const res = await fetch(`${API_BASE}/chat`, {
-          method:"POST", headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({ message: msg })
-        });
-        const data = await res.json();
-        document.getElementById("ai-response").innerText = data.reply || JSON.stringify(data);
-      } catch (err) {
-        document.getElementById("ai-response").innerText = "❌ Erreur : " + err.message;
-      }
+      const res = await fetch(`${API_BASE}/chat`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ message: msg }) });
+      const data = await res.json();
+      document.getElementById("ai-response").innerText = data.reply || JSON.stringify(data);
     }
 
-    // === Radar ===
-    async function loadRadar() {
-      const map = L.map("radar-map").setView([50.5, 4.7], 5);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      try {
-        const res = await fetch(`${API_BASE}/radar/Europe`);
-        const data = await res.json();
-        if (data?.overlay) {
-          L.tileLayer(data.overlay, { opacity:0.6 }).addTo(map);
-        }
-      } catch {}
-    }
-
-    // === News ===
     async function loadNews() {
-      document.getElementById("news").innerText = "⏳ Chargement...";
-      try {
-        const res = await fetch(`${API_BASE}/news`);
-        const data = await res.json();
-        if (data?.articles) {
-          document.getElementById("news").innerText = data.articles.map(a =>
-            `📰 ${a.title} – ${a.source?.name || ""}`
-          ).join("\n\n");
-        }
-      } catch (err) {
-        document.getElementById("news").innerText = "❌ Erreur : " + err.message;
-      }
+      const res = await fetch(`${API_BASE}/news`);
+      const data = await res.json();
+      document.getElementById("news-feed").innerHTML = data.articles.map(n => `📰 <a href="${n.url}" target="_blank">${n.title}</a>`).join("<br>");
     }
 
-    // === Chargement initial ===
-    loadForecasts();
-    loadRadar();
-    loadUsers();
-    loadNews();
+    // Radar Leaflet simple
+    const map = L.map('radar-map').setView([50, 4], 4);
+    L.tileLayer('https://tile.openweathermap.org/map/precipitation/{z}/{x}/{y}.png?appid=YOUR_OPENWEATHER_KEY', {
+      attribution: '&copy; OpenWeather',
+      maxZoom: 10
+    }).addTo(map);
   </script>
 </body>
 </html>
