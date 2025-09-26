@@ -45,6 +45,8 @@ export default async function runSuperForecast(location) {
     let prompt = "";
 
     if (covered) {
+      console.log("🌍 SuperForecast → zone couverte:", location.country);
+
       // Données multi-modèles
       const [gfsData, ecmwfData, iconData] = await Promise.all([
         gfs(location),
@@ -77,6 +79,8 @@ Consignes:
 - Style: bulletin météo précis et concis en français.
 `;
     } else {
+      console.log("🌍 SuperForecast → zone NON couverte:", location.country);
+
       // Données Open Data
       const owData = await openweather(location.lat, location.lon);
 
