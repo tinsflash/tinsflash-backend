@@ -37,3 +37,6 @@ export async function fetchMeteomatics(parameters, lat, lon, model = "gfs") {
     return null;
   }
 }
+
+// ✅ Ajout de l’export par défaut
+export default fetchMeteomatics;
