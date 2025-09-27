@@ -1,99 +1,54 @@
 // services/alertDetector.js
-// Détection d’alertes TINSFLASH
-// 🔥 Zones couvertes = local & national
-// 🌍 Zones non couvertes = alertes continentales
-
-/**
- * Détection brute d’alertes météo sur base des données ajustées
- * @param {Object} data - { precipitation_adjusted, wind, temp, returnLevel }
- * @returns {Array} alertes brutes
- */
-export function detectAlerts(data) {
-  if (!data) return [];
-
-  const alerts = [];
-
-  // 🌧️ Alerte pluie
-  if (data.precipitation_adjusted != null && data.returnLevel) {
-    if (data.precipitation_adjusted > data.returnLevel) {
-      alerts.push({
-        type: "rain",
-        value: data.precipitation_adjusted,
-        threshold: data.returnLevel,
-        confidence: 85, // sera recalculée plus tard
-        message: `Précipitations extrêmes détectées (${data.precipitation_adjusted.toFixed(1)} mm/h)`
-      });
-    }
-  }
-
-  // 💨 Alerte vent
-  if (data.wind != null) {
-    if (data.wind > 90) { // km/h
-      alerts.push({
-        type: "wind",
-        value: data.wind,
-        threshold: 90,
-        confidence: 80,
-        message: `Rafales violentes > ${data.wind} km/h`
-      });
-    }
-  }
-
-  // 🌡️ Alerte température
-  if (data.temp != null) {
-    if (data.temp < -15) {
-      alerts.push({
-        type: "cold",
-        value: data.temp,
-        threshold: -15,
-        confidence: 75,
-        message: `Grand froid détecté (${data.temp} °C)`
-      });
-    }
-    if (data.temp > 40) {
-      alerts.push({
-        type: "heat",
-        value: data.temp,
-        threshold: 40,
-        confidence: 80,
-        message: `Canicule extrême (${data.temp} °C)`
-      });
-    }
-  }
-
-  return alerts;
+function pick(values) {
+  return values.find(v => typeof v === "number" && !Number.isNaN(v));
 }
 
-/**
- * Filtrage et classement des alertes selon la règle Patrick (fiabilité)
- * @param {Array} rawAlerts - sorties de detectAlerts
- * @param {Object} context - { country, capital, continent }
- * @returns {Object} alertes filtrées + statut publication
- */
-export function classifyAlerts(rawAlerts, context = {}) {
-  const processed = [];
+function extractLayers(point = {}) {
+  const s = point.sources || {};
+  const ow = point.openweather || (typeof point.forecast === "object" ? point.forecast : null);
 
-  for (const a of rawAlerts) {
-    let status = "memory"; // défaut = en mémoire
+  const wind = pick([s.gfs?.wind_kmh, s.ecmwf?.wind_kmh, s.icon?.wind_kmh, ow?.wind?.speed_kmh]);
+  const gust = pick([s.gfs?.gust_kmh, s.ecmwf?.gust_kmh, ow?.wind?.gust_kmh]);
+  const precip24 = pick([s.gfs?.precip_24h_mm, s.ecmwf?.precip_24h_mm, s.icon?.precip_24h_mm, ow?.precipitation]);
+  const snow24 = pick([s.gfs?.snow_24h_cm, s.ecmwf?.snow_24h_cm, s.icon?.snow_24h_cm, ow?.snow]);
+  const tmax = pick([s.gfs?.tmax_c, s.ecmwf?.tmax_c, s.icon?.tmax_c, ow?.temp?.max]);
+  const tmin = pick([s.gfs?.tmin_c, s.ecmwf?.tmin_c, s.icon?.tmin_c, ow?.temp?.min]);
+  const cape = pick([s.gfs?.cape_jkg, s.ecmwf?.cape_jkg, s.icon?.cape_jkg]);
+  const rh = pick([s.gfs?.rh_pct, s.ecmwf?.rh_pct, s.icon?.rh_pct, ow?.humidity]);
 
-    if (a.confidence < 70) {
-      status = "discard"; // en mémoire uniquement
-    } else if (a.confidence >= 70 && a.confidence < 90) {
-      status = "review"; // à valider manuellement
-    } else if (a.confidence >= 90) {
-      status = "publish"; // publication auto
-    }
+  return { wind, gust, precip24, snow24, tmax, tmin, cape, rh };
+}
 
-    processed.push({
-      ...a,
-      status,
-      country: context.country || null,
-      capital: context.capital || null,
-      continent: context.continent || null,
-      firstDetectedByUs: true, // on marque systématiquement premier
-      detectedAt: new Date().toISOString()
-    });
+function consensusScore(layers, sources) {
+  const values = [];
+  const s = sources || {};
+  [s.gfs?.wind_kmh, s.ecmwf?.wind_kmh, s.icon?.wind_kmh].forEach(v => { if (typeof v === "number") values.push(v); });
+  if (values.length < 2) return 0.5;
+  const avg = values.reduce((a,b)=>a+b,0)/values.length;
+  const spread = Math.max(...values) - Math.min(...values);
+  return Math.max(0, Math.min(1, 1 - (spread / Math.max(10, avg))));
+}
+
+export function detectAlerts(point, ctx = {}) {
+  const alerts = [];
+  const L = extractLayers(point);
+  const consensus = consensusScore(L, point.sources);
+
+  if ((L.wind||0) >= 90 || (L.gust||0) >= 90) {
+    alerts.push({ type:"wind", message:`Rafales ${Math.round(Math.max(L.wind||0,L.gust||0))} km/h`, confidence: Math.round(100*(0.6+consensus)), scope: ctx.scope, country: ctx.country });
+  }
+  if ((L.precip24||0) >= 40) {
+    alerts.push({ type:"rain", message:`Pluie ${Math.round(L.precip24)} mm/24h`, confidence: Math.round(100*(0.5+consensus)), scope: ctx.scope, country: ctx.country });
+  }
+  if ((L.snow24||0) >= 15) {
+    alerts.push({ type:"snow", message:`Neige ${Math.round(L.snow24)} cm/24h`, confidence: Math.round(100*(0.5+consensus)), scope: ctx.scope, country: ctx.country });
+  }
+  if ((L.tmax||0) >= 35) {
+    alerts.push({ type:"heat", message:`Canicule Tmax ${Math.round(L.tmax)}°C`, confidence: Math.round(100*(0.6+consensus)), scope: ctx.scope, country: ctx.country });
+  }
+  if ((L.tmin||0) <= -15) {
+    alerts.push({ type:"cold", message:`Froid Tmin ${Math.round(L.tmin)}°C`, confidence: Math.round(100*(0.6+consensus)), scope: ctx.scope, country: ctx.country });
   }
 
-  return processed;
+  return alerts.map(a => ({ ...a, createdAt: new Date().toISOString() }));
 }
