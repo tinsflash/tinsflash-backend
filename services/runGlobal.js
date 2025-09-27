@@ -3,10 +3,13 @@
 // ⚡ Analyse toutes les zones couvertes (Europe + UK + Ukraine + USA + Norvège)
 
 import forecastService from "./forecastService.js";
-import openweather from "./openweather.js";
 import { detectAlerts, classifyAlerts } from "./alertDetector.js";
 import { addLog } from "./adminLogs.js";
-import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
+import {
+  saveEngineState,
+  addEngineLog,
+  addEngineError
+} from "./engineState.js";
 
 const COVERED = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
@@ -21,23 +24,25 @@ export default async function runGlobal() {
   addLog("RUN GLOBAL démarré");
   addEngineLog("RUN GLOBAL démarré");
 
+  // 🔄 Réinitialisation état moteur pour ce cycle
   const zonesCovered = {};
   const allAlerts = [];
   const results = [];
+  const errors = [];
+  const logs = [];
 
   for (const country of COVERED) {
     try {
-      // 1️⃣ Prévision nationale via Centrale
+      // 1️⃣ Prévision nationale
       const national = await forecastService.getForecast(country);
 
-      // 2️⃣ Prévisions locales (chaque région/ville du pays)
-      let localPoints = [];
+      // 2️⃣ Prévisions locales + détection alertes
+      const localPoints = [];
       if (national?.forecasts) {
         for (const [region, fc] of Object.entries(national.forecasts)) {
-          // Génération des alertes locales
-          const rawAlerts = detectAlerts(fc);
+          const rawAlerts = detectAlerts(fc) || [];
           const enriched = classifyAlerts(rawAlerts, { country, capital: region });
-          allAlerts.push(...enriched);
+          if (enriched?.length) allAlerts.push(...enriched);
 
           localPoints.push({
             region,
@@ -49,16 +54,16 @@ export default async function runGlobal() {
 
       zonesCovered[country] = true;
       results.push({ country, national, local: localPoints });
-      addEngineLog(`✅ ${country} traité (${localPoints.length} points analysés)`);
+      logs.push(`✅ ${country} traité (${localPoints.length} points analysés)`);
 
     } catch (err) {
       addEngineError(`❌ ${country}: ${err.message}`);
       zonesCovered[country] = false;
+      errors.push(`${country}: ${err.message}`);
     }
   }
 
   // 3️⃣ Synthèse moteur
-  const prev = getEngineState();
   const newState = {
     runTime: startedAt,
     zonesCovered,
@@ -68,8 +73,8 @@ export default async function runGlobal() {
       trullemans: "ok", wetterzentrale: "ok", openweather: "ok"
     },
     alertsList: allAlerts,
-    errors: prev.errors || [],
-    logs: prev.logs || []
+    errors,
+    logs
   };
 
   saveEngineState(newState);
