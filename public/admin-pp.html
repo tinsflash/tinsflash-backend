@@ -2,84 +2,158 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Console Admin — TINSFLASH</title>
+  <title>TINSFLASH Console Admin</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <style>
-    body { background:#000; color:#eee; font-family:Arial; margin:0; }
-    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
-    section { padding:20px; border-bottom:1px solid #333; }
-    pre { background:#111; padding:10px; border:1px solid #333; overflow:auto; }
-    button { background:#0f0; color:#000; padding:8px 12px; border:none; cursor:pointer; }
-    button:hover { background:#9f9; }
-    a { color:#0f0; margin:10px; display:inline-block; }
+    body { background:#0d1117; color:#eee; }
+    .nav-link.active { background:#21262d; border-radius:6px; }
+    pre { background:#161b22; padding:10px; border-radius:6px; color:#0f0; max-height:250px; overflow:auto; }
+    iframe { width:100%; height:600px; border:none; }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo — Cockpit Admin</h1>
+<div class="container-fluid">
+  <h1 class="my-3">⚡ Centrale Nucléaire Météo — Console Admin</h1>
 
-  <!-- Lancement moteur -->
-  <section>
-    <h2>🚀 Démarrer le moteur global</h2>
-    <button onclick="runGlobal()">Démarrer TOUT (zones couvertes)</button>
-    <pre id="run-result">⏳ En attente…</pre>
-  </section>
+  <!-- Menu principal -->
+  <ul class="nav nav-tabs" id="adminMenu">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#dashboard">Tableau de bord</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#alerts">Alertes</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#simulate">Vue utilisateur</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#news">Actualités</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#radar">Radar</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#ai">IA</a></li>
+  </ul>
 
-  <!-- Logs -->
-  <section>
-    <h2>📜 Logs moteur</h2>
-    <button onclick="loadLogs()">Rafraîchir logs</button>
-    <pre id="logs">⏳ En attente…</pre>
-  </section>
+  <div class="tab-content p-3 bg-dark border rounded-bottom">
+    <!-- DASHBOARD -->
+    <div class="tab-pane fade show active" id="dashboard">
+      <button class="btn btn-danger my-2" onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+      <button class="btn btn-warning my-2" onclick="runContinental()">🌍 Lancer RUN CONTINENTAL</button>
 
-  <!-- Erreurs -->
-  <section>
-    <h2>❌ Erreurs moteur</h2>
-    <button onclick="loadErrors()">Rafraîchir erreurs</button>
-    <pre id="errors">⏳ En attente…</pre>
-  </section>
+      <h4>État moteur</h4>
+      <pre id="engineState">Chargement...</pre>
 
-  <!-- Diagnostic IA -->
-  <section>
-    <h2>🤖 Diagnostic IA</h2>
-    <button onclick="askAI()">Lancer diagnostic complet</button>
-    <pre id="ai-reply">⏳ En attente…</pre>
-  </section>
+      <h4>Logs récents</h4>
+      <pre id="logs">Chargement...</pre>
+    </div>
 
-  <!-- Liens vers sous-pages -->
-  <section>
-    <h2>📂 Sous-pages spécialisées</h2>
-    <a href="admin-alerts.html">🚨 Gestion des alertes</a>
-    <a href="admin-local.html">📍 Prévisions locales (vue utilisateur)</a>
-    <a href="admin-news.html">📰 Actualités météo & climat</a>
-    <a href="admin-radar.html">📡 Radar météo</a>
-  </section>
+    <!-- ALERTS -->
+    <div class="tab-pane fade" id="alerts">
+      <h4>Alertes Publiées</h4>
+      <div id="alerts-published"></div>
+      <h4>À Valider (70–90%)</h4>
+      <div id="alerts-validate"></div>
+      <h4>En Attente / Expert</h4>
+      <div id="alerts-other"></div>
+    </div>
 
-  <script>
-    async function runGlobal(){
-      document.getElementById("run-result").innerText = "⏳ Lancement…";
-      const res = await fetch("/api/run-global", { method:"POST" });
-      const data = await res.json();
-      document.getElementById("run-result").innerText = JSON.stringify(data,null,2);
-    }
-    async function loadLogs(){
-      const res = await fetch("/api/logs");
-      const data = await res.json();
-      document.getElementById("logs").innerText = JSON.stringify(data,null,2);
-    }
-    async function loadErrors(){
-      const res = await fetch("/api/engine-state");
-      const data = await res.json();
-      document.getElementById("errors").innerText = JSON.stringify(data.errors || [],null,2);
-    }
-    async function askAI(){
-      document.getElementById("ai-reply").innerText = "⏳ En cours…";
-      const res = await fetch("/api/chat", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ message:"Diagnostic complet moteur et prévisions" })
-      });
-      const data = await res.json();
-      document.getElementById("ai-reply").innerText = data.reply.reply || JSON.stringify(data,null,2);
-    }
-  </script>
+    <!-- VUE UTILISATEUR -->
+    <div class="tab-pane fade" id="simulate">
+      <h4>Simulation vue utilisateur</h4>
+      <form class="row g-2" onsubmit="simulateUser(event)">
+        <div class="col-md-6"><input id="city" class="form-control" placeholder="Ville"></div>
+        <div class="col-md-4">
+          <select id="country" class="form-select">
+            <option value="BE">Belgique</option>
+            <option value="FR">France</option>
+            <option value="US">USA</option>
+            <option value="BR">Brésil</option>
+            <option value="IN">Inde</option>
+            <option value="CN">Chine</option>
+          </select>
+        </div>
+        <div class="col-md-2"><button class="btn btn-primary">Voir</button></div>
+      </form>
+      <div id="simulate-result" class="mt-3"></div>
+    </div>
+
+    <!-- ACTUALITÉS -->
+    <div class="tab-pane fade" id="news">
+      <h4>Actualités météo & climat</h4>
+      <div id="news-list">Chargement...</div>
+    </div>
+
+    <!-- RADAR -->
+    <div class="tab-pane fade" id="radar">
+      <h4>Radar Météo (Windy)</h4>
+      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&zoom=5&level=surface&overlay=rain&product=ecmwf"></iframe>
+    </div>
+
+    <!-- IA -->
+    <div class="tab-pane fade" id="ai">
+      <h4>Discussion avec IA (moteur interne)</h4>
+      <textarea id="aiInput" class="form-control" rows="3"></textarea>
+      <button class="btn btn-success my-2" onclick="askAI()">Envoyer</button>
+      <pre id="aiReply"></pre>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let cache = { engine:null, logs:null, alerts:null, news:null };
+
+// Dashboard refresh
+async function refreshDashboard(){
+  const s = await fetch("/api/engine-state").then(r=>r.json());
+  document.getElementById("engineState").textContent = JSON.stringify(s.state,null,2);
+  cache.engine = s.state;
+
+  const l = await fetch("/api/logs").then(r=>r.json());
+  document.getElementById("logs").textContent = JSON.stringify(l.logs,null,2);
+  cache.logs = l.logs;
+}
+
+// Runs
+async function runGlobal(){ await fetch("/api/run-global",{method:"POST"}); refreshDashboard(); loadAlerts(); }
+async function runContinental(){ await fetch("/api/run-continental",{method:"POST"}); loadAlerts(); }
+
+// Alerts
+async function loadAlerts(){
+  const a = await fetch("/api/alerts").then(r=>r.json());
+  cache.alerts = a.alerts;
+  renderAlerts();
+}
+function renderAlerts(){
+  const p=document.getElementById("alerts-published");
+  const v=document.getElementById("alerts-validate");
+  const o=document.getElementById("alerts-other");
+  p.innerHTML=v.innerHTML=o.innerHTML="";
+  cache.alerts.published.forEach(x=>p.innerHTML+=`<div class="alert alert-danger">${x.country||x.continent}: ${x.message} (${x.confidence}%)</div>`);
+  cache.alerts.toValidate.forEach(x=>v.innerHTML+=`<div class="alert alert-warning">${x.country||x.continent}: ${x.message} (${x.confidence}%) <button class="btn btn-sm btn-success" onclick="updateAlert('${x.createdAt+x.type}','validate')">Valider</button></div>`);
+  [...cache.alerts.expert,...cache.alerts.pending].forEach(x=>o.innerHTML+=`<div class="alert alert-info">${x.country||x.continent}: ${x.message} (${x.confidence}%)</div>`);
+}
+async function updateAlert(id,action){
+  await fetch("/api/alerts/"+id+"/"+action,{method:"POST"});
+  loadAlerts();
+}
+
+// Simulate user
+async function simulateUser(e){
+  e.preventDefault();
+  const city=document.getElementById("city").value;
+  const country=document.getElementById("country").value;
+  const res=await fetch("/api/chat",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({message:`Météo à ${city}`,country})}).then(r=>r.json());
+  document.getElementById("simulate-result").innerHTML="<pre>"+JSON.stringify(res.response,null,2)+"</pre>";
+}
+
+// News
+async function loadNews(){
+  const n=await fetch("/api/news").then(r=>r.json());
+  cache.news=n;
+  document.getElementById("news-list").innerHTML=n.map(x=>`<div class="border p-2 my-1">${x.title}</div>`).join("");
+}
+
+// AI
+async function askAI(){
+  const msg=document.getElementById("aiInput").value;
+  const res=await fetch("/api/chat",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})}).then(r=>r.json());
+  document.getElementById("aiReply").textContent=JSON.stringify(res.response,null,2);
+}
+
+// Initial load
+refreshDashboard(); loadAlerts(); loadNews();
+</script>
 </body>
 </html>
