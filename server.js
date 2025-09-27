@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -12,7 +13,6 @@ import { addLog, getLogs } from "./services/adminLogs.js";
 import checkCoverage from "./services/checkCoverage.js";
 import { getWeatherIcon, generateCode } from "./services/codesService.js";
 import aiRouter from "./services/aiRouter.js";
-import verifyRouter from "./services/verifyRouter.js";   // ✅ nouveau
 
 // === Services météo ===
 import forecastService from "./services/forecastService.js";
@@ -23,7 +23,7 @@ import { getUserStats } from "./services/userService.js";
 
 // === AJOUTS: moteur global & journal ===
 import runGlobal from "./services/runGlobal.js";
-import { getEngineState } from "./services/engineState.js";
+import { getEngineState, saveEngineState } from "./services/engineState.js";
 
 dotenv.config();
 
@@ -76,7 +76,7 @@ app.post("/api/superforecast", async (req, res) => {
   }
 });
 
-// 🚀🚀 RUN GLOBAL (toutes zones couvertes)
+// 🚀🚀 RUN GLOBAL
 app.post("/api/run-global", async (req, res) => {
   try {
     const report = await runGlobal();
@@ -107,6 +107,26 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
+// 🚨 Action sur alertes
+app.post("/api/alerts/action", (req, res) => {
+  try {
+    const { index, action } = req.body;
+    const state = getEngineState();
+    const alerts = state.alertsList || [];
+
+    if (!alerts[index]) return res.status(404).json({ status: "Alerte introuvable" });
+
+    if (action === "validate") alerts[index].reliability = 95;
+    if (action === "expert") alerts[index].tag = "expert";
+    if (action === "wait") alerts[index].tag = "wait";
+
+    saveEngineState({ ...state, alertsList: alerts });
+    res.json({ status: `Action ${action} appliquée` });
+  } catch (err) {
+    res.status(500).json({ status: "Erreur", error: err.message });
+  }
+});
+
 // 📡 Radar météo
 app.get("/api/radar/:zone", async (req, res) => {
   try {
@@ -131,9 +151,6 @@ app.get("/api/bulletin/:zone", async (req, res) => {
 
 // 🤖 Chat IA
 app.use("/api/chat", aiRouter);
-
-// ✅ Vérification complète moteur
-app.use("/api/verify-all", verifyRouter);
 
 // 🗂️ Logs
 app.get("/api/logs", (req, res) => {
