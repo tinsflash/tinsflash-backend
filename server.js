@@ -24,7 +24,7 @@ if (process.env.MONGO_URI) {
     .catch((err) => console.error("❌ MongoDB error:", err));
 }
 
-// === Services (tous importés en bloc) ===
+// === Services ===
 import * as runGlobal from "./services/runGlobal.js";
 import * as runContinental from "./services/runContinental.js";
 import * as superForecast from "./services/superForecast.js";
@@ -36,10 +36,12 @@ import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
 
-// Helpers
+// === Helper pour éviter les crashs si fn n’existe pas ===
 const safeCall = async (fn, ...args) => (typeof fn === "function" ? await fn(...args) : null);
 
 // === Routes ===
+
+// Test backend
 app.get("/", (req, res) =>
   res.json({ success: true, message: "🌍 Centrale Nucléaire Météo Backend en ligne" })
 );
@@ -89,7 +91,7 @@ app.get("/api/forecast/:country", async (req, res) => {
 // Alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    res.json({ success: true, alerts: await safeCall(alertsService.getActiveAlerts) || [] });
+    res.json({ success: true, alerts: (await safeCall(alertsService.getActiveAlerts)) || [] });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -127,12 +129,11 @@ app.get("/api/podcast/:country", async (req, res) => {
   }
 });
 
-// Chat
+// Chat cockpit (IA GPT-5 reliée au moteur nucléaire météo)
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    const fn = chatService.askAI ?? chatService.default;
-    res.json({ success: true, reply: await safeCall(fn, message || "") });
+    res.json({ success: true, reply: await chatService.askAIChat(message) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
