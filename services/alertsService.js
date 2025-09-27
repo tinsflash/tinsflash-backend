@@ -1,31 +1,47 @@
-// services/alertsService.js
-// Expose les alertes via API
+// PATH: services/alertsService.js
+// Gestion des alertes météo (zones couvertes + alertes continentales)
 
-import express from "express";
-import { processAlerts } from "./alertsEngine.js";
-import { detectAlerts } from "./alertDetector.js"; // ✅ correction : named import
+import mongoose from "mongoose";
 
-const router = express.Router();
+let AlertModel;
+try {
+  AlertModel = mongoose.model("Alert");
+} catch {
+  const schema = new mongoose.Schema(
+    {
+      scope: { type: String, enum: ["covered", "global"], required: true },
+      country: String,       // pour covered
+      continent: String,     // pour global
+      title: String,
+      level: String,         // ex: jaune/orange/rouge
+      confidence: Number,    // 0–100
+      firstDetectedByUs: Boolean,
+      details: Object,
+      createdAt: { type: Date, default: Date.now },
+    },
+    { strict: false }
+  );
+  AlertModel = mongoose.model("Alert", schema);
+}
 
 /**
- * GET /api/alerts/:zone
- * Retourne la liste des alertes enrichies (avec fiabilité)
+ * Retourne les alertes actives
+ * - covered : par pays dans les zones couvertes
+ * - global : par continent pour les zones non couvertes
  */
-router.get("/:zone", async (req, res) => {
+export async function getActiveAlerts() {
   try {
-    const zone = req.params.zone;
+    const covered = await AlertModel.find({ scope: "covered" })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // ⚠️ detectAlerts attend normalement un "forecast"
-    // Pour l’instant on lui passe juste un objet minimal avec zone
-    const rawAlerts = detectAlerts({ zone });
+    const global = await AlertModel.find({ scope: "global" })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const enriched = await processAlerts(rawAlerts, { zone });
-
-    res.json({ zone, alerts: enriched });
-  } catch (err) {
-    console.error("❌ Erreur alertsService:", err);
-    res.status(500).json({ error: "Erreur moteur alertes" });
+    return { covered, global };
+  } catch (e) {
+    console.error("❌ getActiveAlerts:", e.message);
+    return { covered: [], global: [], error: e.message };
   }
-});
-
-export default router;
+}
