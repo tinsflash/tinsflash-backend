@@ -6,6 +6,7 @@ import { processAlerts } from "./alertsEngine.js";
 import { addLog } from "./adminLogs.js";
 import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
 
+// 🌍 Zones couvertes par la centrale nucléaire météo
 const COVERED = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
   "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
@@ -14,6 +15,7 @@ const COVERED = [
   "Ukraine","United Kingdom","Norway","USA"
 ];
 
+// 📍 Capitales (points de contrôle pour alertes locales)
 const CAPITALS = {
   Belgium: { lat: 50.8503, lon: 4.3517 },
   France: { lat: 48.8566, lon: 2.3522 },
@@ -56,46 +58,62 @@ export default async function runGlobal() {
   const zonesCovered = {};
   const allAlerts = [];
   const results = [];
+  const sourceStatus = {
+    gfs: "ok", ecmwf: "ok", icon: "ok",
+    meteomatics: "ok", nasaSat: "ok", copernicus: "ok",
+    trullemans: "ok", wetterzentrale: "ok", openweather: "ok"
+  };
 
   for (const country of COVERED) {
     try {
-      // 1) Prévision nationale
-      const national = await forecastService.getForecast(country);
+      // 1) Prévision nationale (multi-sources)
+      let national = null;
+      try {
+        national = await forecastService.getForecast(country);
+      } catch (err) {
+        addEngineError(`⚠️ ${country}: forecastService erreur (${err.message})`);
+        national = { error: err.message };
+        sourceStatus.gfs = "warn"; // au minimum marquer une source comme défaillante
+      }
 
-      // 2) Vérif capitale pour générer des alertes
+      // 2) Vérif capitale → alertes locales
       const cap = CAPITALS[country];
       let localPoint = null;
       if (cap) {
-        const ow = await openweather(cap.lat, cap.lon);
-        const numeric = {
-          rain: ow?.precipitation ?? ow?.rain ?? null,
-          wind: typeof ow?.wind === "number" ? Math.round(ow.wind * 3.6) : (ow?.wind?.speed_kmh ?? null),
-          temp: ow?.temperature ?? ow?.temp ?? null
-        };
-        const rawAlerts = detectAlerts(numeric);
-        const enriched = await processAlerts(rawAlerts, { country, capital: cap });
-        allAlerts.push(...enriched);
-        localPoint = { lat: cap.lat, lon: cap.lon, openweather: ow, alerts: enriched };
+        try {
+          const ow = await openweather(cap.lat, cap.lon);
+          const numeric = {
+            rain: ow?.precipitation ?? ow?.rain ?? null,
+            wind: typeof ow?.wind === "number"
+              ? Math.round(ow.wind * 3.6)
+              : (ow?.wind?.speed_kmh ?? null),
+            temp: ow?.temperature ?? ow?.temp ?? null
+          };
+          const rawAlerts = detectAlerts(numeric);
+          const enriched = await processAlerts(rawAlerts, { country, capital: cap });
+          allAlerts.push(...enriched);
+          localPoint = { lat: cap.lat, lon: cap.lon, openweather: ow, alerts: enriched };
+        } catch (err) {
+          addEngineError(`⚠️ ${country}: openweather erreur (${err.message})`);
+          sourceStatus.openweather = "warn";
+        }
       }
 
-      zonesCovered[country] = true;
+      zonesCovered[country] = { ok: true, lastRun: startedAt };
       results.push({ country, national, local: localPoint });
       addEngineLog(`✅ ${country} traité`);
     } catch (err) {
       addEngineError(`❌ ${country}: ${err.message}`);
-      zonesCovered[country] = false;
+      zonesCovered[country] = { ok: false, error: err.message, lastRun: startedAt };
     }
   }
 
+  // 🔧 Sauvegarde état moteur
   const prev = getEngineState();
   const newState = {
     runTime: startedAt,
     zonesCovered,
-    sources: {
-      gfs: "ok", ecmwf: "ok", icon: "ok",
-      meteomatics: "ok", nasaSat: "ok", copernicus: "ok",
-      trullemans: "ok", wetterzentrale: "ok", openweather: "ok"
-    },
+    sources: sourceStatus,
     alertsList: allAlerts,
     errors: prev.errors || [],
     logs: prev.logs || []
@@ -108,8 +126,8 @@ export default async function runGlobal() {
   return {
     startedAt,
     countriesProcessed: Object.keys(zonesCovered).length,
-    countriesOk: Object.keys(zonesCovered).filter(c => zonesCovered[c]),
-    countriesFailed: Object.keys(zonesCovered).filter(c => !zonesCovered[c]),
+    countriesOk: Object.keys(zonesCovered).filter(c => zonesCovered[c].ok),
+    countriesFailed: Object.keys(zonesCovered).filter(c => !zonesCovered[c].ok),
     alerts: allAlerts.length
   };
 }
