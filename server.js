@@ -34,7 +34,7 @@ import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
 import { getLogs } from "./services/adminLogs.js";
 import { getEngineState } from "./services/engineState.js";
-import { getActiveAlerts, updateAlertStatus } from "./services/alertsService.js";
+import alertsService from "./services/alertsService.js"; // ⚡ import global
 
 // === Routes ===
 app.get("/", (req, res) =>
@@ -77,14 +77,25 @@ app.get("/api/forecast/:country", async (req, res) => {
 // Alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    res.json({ success: true, alerts: await getActiveAlerts() });
+    if (alertsService.getActiveAlerts) {
+      res.json({ success: true, alerts: await alertsService.getActiveAlerts() });
+    } else {
+      res.json({ success: true, alerts: [] });
+    }
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 app.post("/api/alerts/:id/:action", async (req, res) => {
   try {
-    res.json({ success: true, result: await updateAlertStatus(req.params.id, req.params.action) });
+    if (alertsService.updateAlertStatus) {
+      res.json({
+        success: true,
+        result: await alertsService.updateAlertStatus(req.params.id, req.params.action),
+      });
+    } else {
+      res.json({ success: false, error: "updateAlertStatus non dispo" });
+    }
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -109,7 +120,7 @@ app.get("/api/podcast/:country", async (req, res) => {
   }
 });
 
-// Chat (IA général)
+// Chat
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
