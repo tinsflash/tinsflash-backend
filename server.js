@@ -34,7 +34,7 @@ import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
 import { getLogs } from "./services/adminLogs.js";
 import { getEngineState } from "./services/engineState.js";
-import alertsService from "./services/alertsService.js"; // ⚡ import global
+import * as alertsService from "./services/alertsService.js"; // ⚡ import all
 
 // === Routes ===
 app.get("/", (req, res) =>
