@@ -4,16 +4,16 @@ import { addLog } from "./adminLogs.js";
 
 /**
  * Génère un bulletin météo synthétique par pays couvert
- * après un RUN GLOBAL.
+ * en utilisant toutes les régions traitées.
  * 
- * @param {Array} results - résultats du runGlobal (prévisions nationales/locales)
+ * @param {Array} results - résultats du runGlobal (prévisions + alertes locales)
  * @returns {Array} bulletins
  */
 export async function generateAdminBulletins(results) {
   const bulletins = [];
 
   for (const entry of results) {
-    const { country, national, local } = entry;
+    const { country, national, locals } = entry;
 
     try {
       const prompt = `
@@ -21,17 +21,18 @@ Bulletin météo national demandé par l'Administrateur TINSFLASH.
 
 Pays: ${country}
 
-Prévisions nationales brutes:
+Prévisions nationales multi-régions:
 ${JSON.stringify(national)}
 
-Prévisions locales (capitale):
-${JSON.stringify(local)}
+Alertes locales (toutes régions, villes et villages):
+${JSON.stringify(locals)}
 
 Consignes:
-- Résume clairement pour ${country}.
+- Fournis un bulletin synthétique pour ${country}.
 - Horizon: aujourd'hui + 7 jours.
 - Mets en avant températures, précipitations, vent, phénomènes extrêmes.
-- Mentionne un indice de fiabilité global.
+- Intègre les alertes régionales (ex. orages, inondations, vents violents).
+- Donne un indice de fiabilité global.
 - Style = clair, professionnel, concis.
 `;
 
