@@ -7,7 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // === Services internes ===
-import alertsRouter from "./services/alertsService.js";
+import { getActiveAlerts } from "./services/alertsService.js";  // ✅ corrigé
 import generateBulletin from "./services/bulletinService.js";
 import { addLog, getLogs } from "./services/adminLogs.js";
 import checkCoverage from "./services/checkCoverage.js";
@@ -22,8 +22,8 @@ import { getNews } from "./services/newsService.js";
 import { getUserStats } from "./services/userService.js";
 
 // === AJOUTS: moteur global & journal ===
-import runGlobal from "./services/runGlobal.js";             // <— fourni plus bas si pas encore dans ton repo
-import { getEngineState } from "./services/engineState.js";  // <— fourni plus bas si pas encore dans ton repo
+import runGlobal from "./services/runGlobal.js";
+import { getEngineState } from "./services/engineState.js";
 
 dotenv.config();
 
@@ -88,7 +88,7 @@ app.post("/api/run-global", async (req, res) => {
   }
 });
 
-// 🧠 Journal moteur (pour admin + chat IA moteur)
+// 🧠 Journal moteur
 app.get("/api/engine-state", (req, res) => {
   try {
     res.json(getEngineState());
@@ -98,7 +98,14 @@ app.get("/api/engine-state", (req, res) => {
 });
 
 // 🔔 Alertes météo
-app.use("/api/alerts", alertsRouter);
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const data = await getActiveAlerts();   // ✅ corrigé
+    res.json({ success: true, ...data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // 📡 Radar météo
 app.get("/api/radar/:zone", async (req, res) => {
@@ -122,7 +129,7 @@ app.get("/api/bulletin/:zone", async (req, res) => {
   }
 });
 
-// 🤖 Chat IA (OpenAI ou Cohere via aiRouter)
+// 🤖 Chat IA
 app.use("/api/chat", aiRouter);
 
 // 🗂️ Logs
@@ -169,7 +176,7 @@ app.get("/api/codes/:type", (req, res) => {
   }
 });
 
-// 🔒 Alias pratique pour l'admin (sert le fichier statique)
+// 🔒 Alias admin
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
 });
