@@ -1,6 +1,4 @@
 // services/forecastService.js
-// ⚡ Centrale nucléaire météo – Service de prévisions
-
 import runSuperForecast from "./superForecast.js";
 import applyClimateFactors from "./climateFactors.js";
 import adjustWithLocalFactors from "./localFactors.js";
@@ -8,9 +6,9 @@ import openweather from "./openweather.js";
 import { REGIONS_COORDS } from "./regionsCoords.js";
 
 /**
- * Bulletin national (zones couvertes par la centrale nucléaire météo)
+ * Prévisions nationales (zones couvertes par la Centrale)
  */
-async function getNationalForecast(country) {
+async function getForecast(country) {
   try {
     const regions = REGIONS_COORDS[country] || {};
     const forecasts = {};
@@ -25,14 +23,14 @@ async function getNationalForecast(country) {
 
     return { country, forecasts, source: "Centrale Nucléaire Météo" };
   } catch (err) {
-    console.error(`❌ getNationalForecast error (${country}):`, err.message);
+    console.error("❌ getForecast error:", err.message);
     return { country, error: err.message };
   }
 }
 
 /**
- * Prévision locale
- * - Zones couvertes → moteur atomique
+ * Prévisions locales
+ * - Zones couvertes → moteur nucléaire météo
  * - Zones non couvertes → OpenWeather fallback
  */
 async function getLocalForecast(lat, lon, country) {
@@ -44,24 +42,13 @@ async function getLocalForecast(lat, lon, country) {
       return sf;
     }
 
-    // fallback OpenWeather pour zones non couvertes
+    // fallback pour zones non couvertes
     const ow = await openweather(lat, lon);
     return { lat, lon, country, forecast: ow, source: "OpenWeather (fallback)" };
   } catch (err) {
-    console.error(`❌ getLocalForecast error (${country}):`, err.message);
+    console.error("❌ getLocalForecast error:", err.message);
     return { lat, lon, country, error: err.message };
   }
 }
 
-/**
- * Alias pour compatibilité avec runGlobal.js
- * → Utilise la prévision nationale
- */
-async function getForecast(country) {
-  if (!country) {
-    return { error: "❌ Aucun pays spécifié pour getForecast()" };
-  }
-  return await getNationalForecast(country);
-}
-
-export default { getNationalForecast, getLocalForecast, getForecast };
+export default { getForecast, getLocalForecast };
