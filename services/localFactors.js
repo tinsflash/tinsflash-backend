@@ -1,6 +1,6 @@
 // services/localFactors.js
 // Ajustements locaux pour le moteur TINSFLASH
-// Inclut température, relief, saison, niveaux de retour (Poschlod et al.)
+// Inclut : température, relief, saison, return levels, cohérence spatiale
 
 import axios from "axios";
 
@@ -8,16 +8,13 @@ import axios from "axios";
 // 📌 Tables de référence
 // ==========================
 
-// Facteurs saisonniers (coefficients multiplicateurs de seuils de pluie)
 const SEASON_FACTORS = {
-  winter: 0.9,  // hiver → seuil plus bas (pluie/neige dangereuse)
+  winter: 0.9,
   spring: 1.0,
-  summer: 1.1,  // été → convection forte
-  autumn: 0.95 // automne → sols saturés
+  summer: 1.1,
+  autumn: 0.95
 };
 
-// Return levels (extrait simplifié de Poschlod et al. 2020)
-// Valeurs mm/h pour événement "10 ans" → à affiner avec vrai dataset
 const RETURN_LEVELS = {
   "Belgium": 35,
   "France": 40,
@@ -26,6 +23,9 @@ const RETURN_LEVELS = {
   "Italy": 50,
   "Alps": 60
 };
+
+// Mémoire circulaire pour cohérence spatiale
+let lastPoints = []; // { lat, lon, adjustedPrecip }
 
 // ==========================
 // 📌 Fonctions auxiliaires
@@ -39,28 +39,60 @@ function getSeasonFactor(date = new Date()) {
   return SEASON_FACTORS.autumn;
 }
 
-// Ajustement Clausius-Clapeyron / Drobinski
 function tempScaling(tempC) {
   const base = 15;
   if (tempC == null) return 1;
-  if (tempC < base) {
-    return 1 + 0.07 * (tempC - base);  // ~7% par °C en dessous
-  } else {
-    return 1 + 0.03 * (tempC - base);  // hook effect → croissance plus lente
-  }
+  if (tempC < base) return 1 + 0.07 * (tempC - base);
+  return 1 + 0.03 * (tempC - base); // effet hook Drobinski
 }
 
-// Relief : ajuste les seuils pluie selon altitude
 function reliefScaling(altitude) {
   if (altitude == null) return 1;
-  if (altitude > 1500) return 1.2;   // haute montagne
-  if (altitude > 800) return 1.1;    // moyenne montagne
-  return 1.0;                        // plaine
+  if (altitude > 1500) return 1.2;
+  if (altitude > 800) return 1.1;
+  return 1.0;
 }
 
-// Détermination des niveaux de retour extrêmes
 function getReturnLevel(country) {
-  return RETURN_LEVELS[country] || 40; // défaut 40 mm/h
+  return RETURN_LEVELS[country] || 40;
+}
+
+// Distance géographique (approx haversine km)
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1 * Math.PI/180) *
+    Math.cos(lat2 * Math.PI/180) *
+    Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Lissage spatial sur les derniers points
+function spatialSmoothing(lat, lon, currentValue) {
+  if (!lastPoints.length) return currentValue;
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const p of lastPoints) {
+    const d = haversine(lat, lon, p.lat, p.lon);
+    if (d < 30) { // rayon 30 km
+      const w = 1 / (1 + d); // pondération inverse distance
+      weightedSum += p.adjustedPrecip * w;
+      totalWeight += w;
+    }
+  }
+
+  if (totalWeight > 0) {
+    const neighborAvg = weightedSum / totalWeight;
+    // Moyenne avec le voisinage (50% valeur locale, 50% voisins)
+    return (currentValue * 0.5) + (neighborAvg * 0.5);
+  }
+
+  return currentValue;
 }
 
 // ==========================
@@ -71,7 +103,6 @@ async function adjustWithLocalFactors(forecast, country = "GENERIC", lat = null,
   if (!forecast) return forecast;
 
   try {
-    // Obtenir altitude via API open-elevation si coordonnées disponibles
     let altitude = null;
     if (lat && lon) {
       try {
@@ -82,21 +113,27 @@ async function adjustWithLocalFactors(forecast, country = "GENERIC", lat = null,
       }
     }
 
-    // Température de référence (si dispo dans forecast)
     const temp = forecast.temperature ?? forecast.temp ?? null;
 
-    // Facteurs
     const coeffSeason = getSeasonFactor();
     const coeffTemp = tempScaling(temp);
     const coeffRelief = reliefScaling(altitude);
     const returnLevel = getReturnLevel(country);
 
-    // Application aux précipitations si présentes
     let adjustedForecast = { ...forecast };
+
     if (adjustedForecast.precipitation || adjustedForecast.rain) {
       const raw = adjustedForecast.precipitation ?? adjustedForecast.rain;
-      const adjusted =
-        raw * coeffSeason * coeffTemp * coeffRelief;
+      let adjusted = raw * coeffSeason * coeffTemp * coeffRelief;
+
+      // ✅ Lissage spatial
+      if (lat && lon) {
+        adjusted = spatialSmoothing(lat, lon, adjusted);
+
+        // stocker ce point pour usage futur
+        lastPoints.unshift({ lat, lon, adjustedPrecip: adjusted });
+        if (lastPoints.length > 100) lastPoints.pop(); // garder 100 derniers
+      }
 
       adjustedForecast.precipitation_adjusted = adjusted;
       adjustedForecast.returnLevel = returnLevel;
