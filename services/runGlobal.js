@@ -1,12 +1,12 @@
 // services/runGlobal.js
+// RUN GLOBAL — Centrale Nucléaire Météo
+// ⚡ Analyse toutes les zones couvertes (Europe + UK + Ukraine + USA + Norvège)
+
 import forecastService from "./forecastService.js";
 import openweather from "./openweather.js";
-import { detectAlerts } from "./alertDetector.js";
-import { processAlerts } from "./alertsEngine.js";
+import { detectAlerts, classifyAlerts } from "./alertDetector.js";
 import { addLog } from "./adminLogs.js";
 import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
-import { generateAdminBulletins } from "./adminBulletins.js";
-import { REGIONS_COORDS } from "./regionsCoords.js";
 
 const COVERED = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
@@ -27,41 +27,29 @@ export default async function runGlobal() {
 
   for (const country of COVERED) {
     try {
-      // 1) Prévisions multi-régions
-      const national = await forecastService.getNationalForecast(country);
+      // 1️⃣ Prévision nationale via Centrale
+      const national = await forecastService.getForecast(country);
 
-      // 2) Génération d’alertes pour TOUTES les régions couvertes
-      const regions = REGIONS_COORDS[country] || {};
-      const localPoints = [];
-
-      for (const [region, coords] of Object.entries(regions)) {
-        try {
-          const ow = await openweather(coords.lat, coords.lon);
-          const numeric = {
-            rain: ow?.precipitation ?? ow?.rain ?? null,
-            wind: typeof ow?.wind === "number" ? Math.round(ow.wind * 3.6) : (ow?.wind?.speed_kmh ?? null),
-            temp: ow?.temperature ?? ow?.temp ?? null
-          };
-
-          const rawAlerts = detectAlerts(numeric);
-          const enriched = await processAlerts(rawAlerts, { country, region, coords });
+      // 2️⃣ Prévisions locales (chaque région/ville du pays)
+      let localPoints = [];
+      if (national?.forecasts) {
+        for (const [region, fc] of Object.entries(national.forecasts)) {
+          // Génération des alertes locales
+          const rawAlerts = detectAlerts(fc);
+          const enriched = classifyAlerts(rawAlerts, { country, capital: region });
           allAlerts.push(...enriched);
 
           localPoints.push({
-            name: region,
-            lat: coords.lat,
-            lon: coords.lon,
-            openweather: ow,
+            region,
+            forecast: fc,
             alerts: enriched
           });
-        } catch (err) {
-          addEngineError(`❌ ${country} - ${region}: ${err.message}`);
         }
       }
 
       zonesCovered[country] = true;
-      results.push({ country, national, locals: localPoints });
-      addEngineLog(`✅ ${country} traité (${Object.keys(regions).length} régions)`);
+      results.push({ country, national, local: localPoints });
+      addEngineLog(`✅ ${country} traité (${localPoints.length} points analysés)`);
 
     } catch (err) {
       addEngineError(`❌ ${country}: ${err.message}`);
@@ -69,9 +57,7 @@ export default async function runGlobal() {
     }
   }
 
-  // 📝 Génération des bulletins IA pour toutes les zones couvertes
-  const bulletins = await generateAdminBulletins(results);
-
+  // 3️⃣ Synthèse moteur
   const prev = getEngineState();
   const newState = {
     runTime: startedAt,
@@ -83,8 +69,7 @@ export default async function runGlobal() {
     },
     alertsList: allAlerts,
     errors: prev.errors || [],
-    logs: prev.logs || [],
-    bulletins
+    logs: prev.logs || []
   };
 
   saveEngineState(newState);
@@ -96,7 +81,6 @@ export default async function runGlobal() {
     countriesProcessed: Object.keys(zonesCovered).length,
     countriesOk: Object.keys(zonesCovered).filter(c => zonesCovered[c]),
     countriesFailed: Object.keys(zonesCovered).filter(c => !zonesCovered[c]),
-    alerts: allAlerts.length,
-    bulletins
+    alerts: allAlerts.length
   };
 }
