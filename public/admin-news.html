@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin — Actualités météo</title>
+  <style>
+    body { background:#000; color:#eee; font-family:Arial; margin:0; }
+    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
+    section { padding:20px; }
+    a { color:#0f0; margin:10px; display:inline-block; }
+    .news { margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px; }
+  </style>
+</head>
+<body>
+  <h1>📰 Actualités météo & climat</h1>
+  <a href="admin-pp.html">⬅️ Retour Cockpit</a>
+
+  <section id="news-list">Chargement...</section>
+
+  <script>
+    async function loadNews(){
+      const res = await fetch("/api/news");
+      const news = await res.json();
+      let html="";
+      news.forEach(n=>{
+        html += `<div class="news">
+          <b>${n.title}</b><br>
+          ${n.summary||""}<br>
+          <a href="${n.link}" target="_blank">Lire plus</a>
+        </div>`;
+      });
+      document.getElementById("news-list").innerHTML = html;
+    }
+    loadNews();
+  </script>
+</body>
+</html>
