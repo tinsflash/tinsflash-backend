@@ -1,60 +1,56 @@
-import fs from "fs";
-import path from "path";
+// services/engineState.js
+import { getLogs } from "./adminLogs.js";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const STATE_PATH = path.join(DATA_DIR, "engine-state.json");
-
-let state = {
+let engineState = {
+  ia: false,
+  radar: false,
+  forecasts: false,
+  alerts: false,
   runTime: null,
   zonesCovered: {},
   sources: {},
-  alerts: [],
+  alertsList: [],
   errors: [],
-  logs: [],
+  logs: []
 };
 
-function ensureDataFile() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(STATE_PATH)) fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
-}
-
-export function loadEngineState() {
-  try {
-    ensureDataFile();
-    const raw = fs.readFileSync(STATE_PATH, "utf-8");
-    state = JSON.parse(raw);
-  } catch {
-    ensureDataFile();
-  }
-  return state;
-}
-
-export function saveEngineState(newState) {
-  state = newState;
-  ensureDataFile();
-  fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
-  return state;
-}
-
-export function patchEngineState(patch) {
-  const next = { ...loadEngineState(), ...patch };
-  return saveEngineState(next);
-}
-
+/**
+ * Ajoute un log moteur
+ */
 export function addEngineLog(message) {
-  const s = loadEngineState();
-  s.logs.push({ message, timestamp: new Date().toISOString() });
-  if (s.logs.length > 500) s.logs.shift();
-  saveEngineState(s);
+  engineState.logs.unshift({
+    timestamp: new Date().toISOString(),
+    type: "log",
+    message
+  });
+  if (engineState.logs.length > 200) engineState.logs = engineState.logs.slice(0, 200);
 }
 
-export function addEngineError(err) {
-  const s = loadEngineState();
-  s.errors.push({ error: String(err), timestamp: new Date().toISOString() });
-  if (s.errors.length > 200) s.errors.shift();
-  saveEngineState(s);
+/**
+ * Ajoute une erreur moteur
+ */
+export function addEngineError(message) {
+  engineState.errors.unshift({
+    timestamp: new Date().toISOString(),
+    type: "error",
+    message
+  });
+  if (engineState.errors.length > 200) engineState.errors = engineState.errors.slice(0, 200);
 }
 
+/**
+ * Met à jour l’état moteur complet
+ */
+export function saveEngineState(newState) {
+  engineState = { ...engineState, ...newState };
+}
+
+/**
+ * Récupère état moteur (avec derniers logs admin)
+ */
 export function getEngineState() {
-  return loadEngineState();
+  return {
+    ...engineState,
+    recentLogs: getLogs().slice(0, 10)
+  };
 }
