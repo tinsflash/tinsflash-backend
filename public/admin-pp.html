@@ -1,131 +1,175 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Centrale Nucléaire Météo — Console Admin</title>
+  <meta charset="UTF-8" />
+  <title>Console Admin TINSFLASH</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    /* Minimal neon style, responsive */
-    :root {
-      --bg: #050505;
-      --panel: #0b0b0b;
-      --neon: #00ff2a;
-      --accent: #00f0ff;
-      --muted: #2b2b2b;
-      font-family: "Courier New", monospace;
-    }
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--neon);}
-    .wrap{max-width:1100px;margin:18px auto;padding:12px;}
-    header{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,#041,#003);box-shadow:0 4px 12px rgba(0,0,0,.6);}
-    header h1{margin:0;color:var(--accent);font-size:20px}
-    .panel{margin-top:16px;padding:14px;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid #083;}
-    .btn{background:var(--neon);color:#001;padding:8px 12px;border-radius:6px;border:none;cursor:pointer;font-weight:bold}
-    pre{background:#020202;color:var(--neon);padding:12px;border-radius:6px;overflow:auto;max-height:320px}
-    nav.tabs{display:flex;gap:8px;margin-top:10px}
-    nav.tabs a{color:var(--neon);padding:8px;border-radius:6px;text-decoration:none;background:rgba(0,0,0,0.2)}
-    .hidden{display:none}
-    table{width:100%;border-collapse:collapse;color:var(--neon)}
-    th,td{padding:8px;border-bottom:1px solid #0a0a0a;text-align:left}
-    .small{font-size:13px;color:#9f9}
-    select,input{padding:8px;border-radius:6px;border:1px solid #0a0a0a;background:#020202;color:var(--neon)}
+    body { font-family: Arial, sans-serif; background:#0d1117; color:#eee; margin:0; }
+    header { background:#161b22; padding:10px; text-align:center; }
+    h1 { margin:0; font-size:22px; color:#58a6ff; }
+    button { background:#238636; color:white; border:none; padding:8px 16px; margin:5px; cursor:pointer; border-radius:6px; }
+    button:hover { background:#2ea043; }
+    .container { padding:15px; }
+    .section { margin-bottom:20px; padding:15px; background:#161b22; border-radius:8px; }
+    .section h2 { margin-top:0; font-size:18px; color:#ffa657; }
+    pre { background:#0d1117; padding:10px; border-radius:6px; overflow:auto; }
+    nav { display:flex; justify-content:center; background:#21262d; }
+    nav button { background:none; border:none; color:#ccc; padding:10px 15px; cursor:pointer; font-size:15px; }
+    nav button.active { color:#58a6ff; border-bottom:2px solid #58a6ff; }
+    .tab { display:none; padding:15px; }
+    .tab.active { display:block; }
+    iframe { width:100%; height:600px; border:none; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div style="font-size:28px">⚡</div>
-      <h1>Centrale Nucléaire Météo — Console Admin</h1>
-    </header>
+  <header>
+    <h1>⚡ Console Admin — Centrale Nucléaire Météo</h1>
+    <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+    <button onclick="runContinental()">🌍 Lancer RUN CONTINENTAL</button>
+  </header>
 
-    <!-- MAIN ACTIONS -->
-    <div class="panel" id="mainRun">
-      <h2>🚀 Démarrer le moteur</h2>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn" id="runGlobalBtn">Démarrer TOUT (run-global)</button>
-        <button class="btn" id="runContinentalBtn">Lancer continental (run-continental)</button>
-        <button class="btn" id="verifyAllBtn">✅ Vérifier tout (IA)</button>
-      </div>
-      <p class="small">Les runs effectuent l'extraction des modèles et génèrent prévisions + alertes.</p>
-      <div style="margin-top:12px">
-        <strong>Dernier rapport:</strong>
-        <pre id="runReport">Aucun run lancé.</pre>
-      </div>
+  <div class="container">
+    <div class="section">
+      <h2>📝 Logs moteur</h2>
+      <button onclick="loadLogs()">🔄 Rafraîchir</button>
+      <pre id="logs">Chargement...</pre>
     </div>
 
-    <!-- LOGS -->
-    <div class="panel" id="logsPanel">
-      <h2>📜 Logs moteur</h2>
-      <div style="display:flex;gap:8px">
-        <button class="btn" id="refreshLogs">Actualiser</button>
-        <button class="btn" id="clearLogs" style="background:#ff7a7a">Effacer (local view)</button>
-      </div>
-      <pre id="logsArea">Chargement des logs...</pre>
+    <div class="section">
+      <h2>❌ Erreurs</h2>
+      <pre id="errors">Aucune</pre>
     </div>
 
-    <!-- ENGINE STATE -->
-    <div class="panel" id="statePanel">
-      <h2>🔧 État du moteur</h2>
-      <button class="btn" id="checkState">Vérifier état</button>
-      <pre id="stateArea">Aucun état chargé</pre>
+    <div class="section">
+      <h2>🧠 Diagnostic IA</h2>
+      <button onclick="checkIA()">Vérifier par IA</button>
+      <pre id="ia-diagnostic">En attente...</pre>
     </div>
 
-    <!-- CHAT IA -->
-    <div class="panel" id="chatPanel">
-      <h2>🤖 Chat IA — moteur</h2>
-      <textarea id="chatInput" rows="3" style="width:100%;background:#020202;color:var(--neon)"></textarea>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn" id="sendChat">Envoyer</button>
-        <button class="btn" id="quickDiag">Demande diagnostic moteur</button>
-      </div>
-      <pre id="chatReply">Réponses IA…</pre>
+    <div class="section">
+      <h2>⚙️ État moteur</h2>
+      <button onclick="loadEngineState()">🔄 Rafraîchir</button>
+      <pre id="engine-state">Chargement...</pre>
     </div>
+  </div>
 
-    <!-- TABS / SUB-PAGES -->
-    <nav class="tabs">
-      <a href="#" data-tab="alerts">🔴 Alertes</a>
-      <a href="#" data-tab="preview">📋 Préview index (simulate user)</a>
-      <a href="#" data-tab="news">📰 Actualités</a>
-      <a href="#" data-tab="radar">🌐 Radar</a>
-      <a href="#" data-tab="diagnostic">🧭 Diagnostic moteur</a>
-    </nav>
+  <nav>
+    <button onclick="openTab('alerts')" id="tab-alerts">🔔 Alertes</button>
+    <button onclick="openTab('radar')" id="tab-radar">📡 Radar</button>
+    <button onclick="openTab('preview')" id="tab-preview">🌍 Preview Index</button>
+    <button onclick="openTab('news')" id="tab-news">📰 Actualités</button>
+  </nav>
 
-    <!-- Alerts Tab -->
-    <div class="panel hidden" id="tab-alerts">
-      <h2>🚨 Gestion des alertes</h2>
-      <div>
-        <h3>Publiées (&gt;90%)</h3>
-        <table id="tblPublished"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
-        <h3>À valider (70–90%)</h3>
-        <table id="tblToValidate"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
-        <h3>Envoyées expert</h3>
-        <table id="tblExpert"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
-        <h3>En attente</h3>
-        <table id="tblWaiting"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
-        <h3>Ignorées (&lt;70%)</h3>
-        <table id="tblIgnored"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
+  <div class="tab" id="alerts">
+    <h2>🔔 Alertes actives</h2>
+    <button onclick="loadAlerts()">🔄 Rafraîchir</button>
+    <pre id="alerts-content">Chargement...</pre>
+  </div>
 
-    <!-- Preview index (simulate user) -->
-    <div class="panel hidden" id="tab-preview">
-      <h2>📋 Préview page index (simulate user view)</h2>
-      <div style="display:flex;gap:8px">
-        <input id="previewCity" placeholder="Ville (ex: Bruxelles)" />
-        <select id="previewCountry">
-          <option value="">Choisir pays</option>
-          <option value="BE">Belgium</option>
-          <option value="FR">France</option>
-          <option value="DE">Germany</option>
-          <option value="US">USA</option>
-          <!-- add as needed -->
-        </select>
-        <button class="btn" id="previewBtn">Voir preview</button>
-      </div>
-      <div style="margin-top:12px">
-        <pre id="previewArea">Aperçu ici</pre>
-      </div>
-    </div>
+  <div class="tab" id="radar">
+    <h2>📡 Radar météo global</h2>
+    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&zoom=4&level=surface&overlay=rain&menu=&message=true&calendar=12&pressure=true&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
+  </div>
 
-    <!-- News -->
-    <div class="panel hidden" id="tab-news">
-      <h2>📰 Actual
+  <div class="tab" id="preview">
+    <h2>🌍 Preview Index utilisateur</h2>
+    <label>Ville: <input type="text" id="preview-city" placeholder="Bruxelles" /></label>
+    <label>Pays:
+      <select id="preview-country">
+        <option value="be">Belgique</option>
+        <option value="fr">France</option>
+        <option value="de">Allemagne</option>
+        <option value="us">USA</option>
+        <option value="uk">Royaume-Uni</option>
+      </select>
+    </label>
+    <button onclick="previewIndex()">Voir la preview</button>
+    <iframe id="preview-frame"></iframe>
+  </div>
+
+  <div class="tab" id="news">
+    <h2>📰 Actualités météo et climat</h2>
+    <button onclick="loadNews()">🔄 Rafraîchir</button>
+    <pre id="news-content">Chargement...</pre>
+  </div>
+
+  <script>
+    // Navigation avec conservation onglet
+    function openTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+      localStorage.setItem('activeTab', tabId);
+    }
+    const savedTab = localStorage.getItem('activeTab') || 'alerts';
+    openTab(savedTab);
+
+    // API calls
+    async function runGlobal() {
+      document.getElementById("logs").textContent = "RUN GLOBAL en cours...";
+      const res = await fetch("/api/run-global", { method: "POST" });
+      const data = await res.json();
+      loadLogs();
+      loadEngineState();
+      alert("RUN GLOBAL terminé");
+    }
+
+    async function runContinental() {
+      const res = await fetch("/api/run-continental", { method: "POST" });
+      const data = await res.json();
+      loadLogs();
+      loadEngineState();
+      alert("RUN CONTINENTAL terminé");
+    }
+
+    async function loadLogs() {
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      document.getElementById("logs").textContent = JSON.stringify(data.logs, null, 2);
+    }
+
+    async function loadEngineState() {
+      const res = await fetch("/api/engine-state");
+      const data = await res.json();
+      document.getElementById("engine-state").textContent = JSON.stringify(data.state, null, 2);
+      document.getElementById("errors").textContent = JSON.stringify(data.state.errors, null, 2);
+    }
+
+    async function checkIA() {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "diagnostic moteur" })
+      });
+      const data = await res.json();
+      document.getElementById("ia-diagnostic").textContent = JSON.stringify(data.response, null, 2);
+    }
+
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      document.getElementById("alerts-content").textContent = JSON.stringify(data.alerts, null, 2);
+    }
+
+    async function previewIndex() {
+      const city = document.getElementById("preview-city").value;
+      const country = document.getElementById("preview-country").value;
+      document.getElementById("preview-frame").src = `/index.html?city=${city}&country=${country}`;
+    }
+
+    async function loadNews() {
+      const res = await fetch("/api/news");
+      const data = await res.json();
+      document.getElementById("news-content").textContent = JSON.stringify(data, null, 2);
+    }
+
+    // Chargement initial
+    loadLogs();
+    loadEngineState();
+    loadAlerts();
+    loadNews();
+  </script>
+</body>
+</html>
