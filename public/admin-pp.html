@@ -1,104 +1,174 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>⚡ Centrale Nucléaire Météo — Console Admin</title>
   <style>
     body {
-      background: #000;
-      color: #0f0;
+      background: black;
+      color: lime;
       font-family: monospace;
-      padding: 20px;
+      padding: 10px;
     }
-    h1 {
-      color: #0ff;
+    h1, h2 {
+      color: cyan;
     }
-    .section {
-      border: 1px solid #0f0;
-      padding: 15px;
-      margin-bottom: 20px;
+    section {
+      border: 1px solid lime;
+      margin: 15px 0;
+      padding: 10px;
       border-radius: 8px;
-      background: #111;
     }
     button {
-      background: #0f0;
-      color: #000;
+      background: lime;
+      color: black;
       font-weight: bold;
-      border: none;
       padding: 6px 12px;
       margin: 5px 0;
-      cursor: pointer;
       border-radius: 4px;
+      cursor: pointer;
     }
     pre {
-      background: #000;
-      color: #0f0;
+      background: black;
+      color: lime;
       padding: 10px;
-      overflow-x: auto;
-      border-radius: 5px;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow: auto;
     }
   </style>
-  <script>
-    async function callApi(method, endpoint, body = null) {
-      try {
-        const res = await fetch(endpoint, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: body ? JSON.stringify(body) : null
-        });
-        const data = await res.json();
-        document.getElementById(endpoint).textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById(endpoint).textContent = "❌ Erreur: " + err.message;
-      }
-    }
-  </script>
 </head>
 <body>
   <h1>⚡ Centrale Nucléaire Météo — Console Admin</h1>
 
-  <!-- RUN GLOBAL corrigé -->
-  <div class="section">
+  <!-- ============================= -->
+  <!-- 🚀 Démarrage Global -->
+  <!-- ============================= -->
+  <section>
     <h2>🚀 Démarrer TOUT (global)</h2>
-    <p><b>POST /api/run-global</b></p>
-    <button onclick="callApi('POST','/api/run-global')">Démarrer TOUT</button>
-    <pre id="/api/run-global"></pre>
-  </div>
+    <p>POST <code>/api/run-global</code></p>
+    <button onclick="runGlobal()">Démarrer TOUT</button>
+    <pre id="runGlobalOutput"></pre>
+  </section>
 
-  <div class="section">
-    <h2>🛰️ Logs moteur</h2>
-    <p><b>GET /api/logs</b></p>
-    <button onclick="callApi('GET','/api/logs')">Actualiser</button>
-    <pre id="/api/logs"></pre>
-  </div>
+  <!-- ============================= -->
+  <!-- 📜 Logs moteur -->
+  <!-- ============================= -->
+  <section>
+    <h2>📜 Logs moteur</h2>
+    <p>GET <code>/api/logs</code></p>
+    <button onclick="getLogs()">Activer</button>
+    <pre id="logsOutput"></pre>
+  </section>
 
-  <div class="section">
-    <h2>🛠️ État du moteur</h2>
-    <p><b>GET /api/checkup</b></p>
-    <button onclick="callApi('GET','/api/checkup')">Vérifier</button>
-    <pre id="/api/checkup"></pre>
-  </div>
+  <!-- ============================= -->
+  <!-- 🔧 État du moteur -->
+  <!-- ============================= -->
+  <section>
+    <h2>🔧 État du moteur</h2>
+    <p>GET <code>/api/checkup</code></p>
+    <button onclick="getCheckup()">Vérifier</button>
+    <pre id="checkupOutput"></pre>
+  </section>
 
-  <div class="section">
+  <!-- ============================= -->
+  <!-- ⚠️ Alertes météo -->
+  <!-- ============================= -->
+  <section>
     <h2>⚠️ Alertes météo</h2>
-    <p><b>GET /api/alerts</b></p>
-    <button onclick="callApi('GET','/api/alerts')">Charger</button>
-    <pre id="/api/alerts"></pre>
-  </div>
+    <p>GET <code>/api/alerts</code></p>
+    <button onclick="getAlerts()">Charger</button>
+    <pre id="alertsOutput"></pre>
+  </section>
 
-  <div class="section">
+  <!-- ============================= -->
+  <!-- 🌍 Radar météo global -->
+  <!-- ============================= -->
+  <section>
     <h2>🌍 Radar météo global</h2>
-    <p><b>GET /api/radar/global</b></p>
-    <button onclick="callApi('GET','/api/radar/global')">Afficher</button>
-    <pre id="/api/radar/global"></pre>
-  </div>
+    <p>GET <code>/api/radar/global</code></p>
+    <button onclick="getRadar()">Afficher</button>
+    <pre id="radarOutput"></pre>
+  </section>
 
-  <div class="section">
+  <!-- ============================= -->
+  <!-- 🤖 Chat IA — Moteur météo -->
+  <!-- ============================= -->
+  <section>
     <h2>🤖 Chat IA — Moteur météo nucléaire</h2>
-    <p><b>POST /api/chat</b></p>
-    <textarea id="chatInput" rows="3" cols="60" placeholder="Posez une question au moteur..."></textarea><br>
-    <button onclick="callApi('POST','/api/chat',{message: document.getElementById('chatInput').value})">Envoyer</button>
-    <pre id="/api/chat"></pre>
-  </div>
+    <p>POST <code>/api/chat</code></p>
+    <textarea id="chatMessage" rows="2" style="width:100%;"></textarea><br/>
+    <button onclick="sendChat()">Envoyer</button>
+    <pre id="chatOutput"></pre>
+  </section>
+
+  <!-- ============================= -->
+  <!-- ✅ Vérification complète moteur -->
+  <!-- ============================= -->
+  <section>
+    <h2>✅ Vérification complète moteur</h2>
+    <p>GET <code>/api/verify-all</code></p>
+    <button onclick="verifyAll()">Vérifier tout</button>
+    <pre id="verifyOutput"></pre>
+  </section>
+
+  <script>
+    async function runGlobal() {
+      const res = await fetch("/api/run-global", { method: "POST" });
+      const data = await res.json();
+      document.getElementById("runGlobalOutput").textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function getLogs() {
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      document.getElementById("logsOutput").textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function getCheckup() {
+      const res = await fetch("/api/checkup");
+      const data = await res.json();
+      document.getElementById("checkupOutput").textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function getAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      document.getElementById("alertsOutput").textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function getRadar() {
+      const res = await fetch("/api/radar/global");
+      const data = await res.json();
+      document.getElementById("radarOutput").textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function sendChat() {
+      const msg = document.getElementById("chatMessage").value;
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, country: "BE" })
+      });
+      const data = await res.json();
+      document.getElementById("chatOutput").textContent =
+        typeof data.reply === "string" ? data.reply : JSON.stringify(data.reply, null, 2);
+    }
+
+    async function verifyAll() {
+      try {
+        const res = await fetch("/api/verify-all");
+        const data = await res.json();
+        document.getElementById("verifyOutput").textContent =
+          typeof data.reply === "string"
+            ? data.reply
+            : JSON.stringify(data.reply, null, 2);
+      } catch (err) {
+        document.getElementById("verifyOutput").textContent =
+          "❌ Erreur vérification moteur : " + err.message;
+      }
+    }
+  </script>
 </body>
 </html>
