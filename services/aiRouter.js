@@ -12,7 +12,7 @@ router.post("/", async (req, res) => {
   try {
     const { message, country } = req.body;
 
-    // 🔍 Diagnostic du moteur
+    // 🔍 Mode diagnostic moteur
     if (/moteur|erreur|état|diagnostic/i.test(message)) {
       const state = getEngineState();
       const logs = getLogs().slice(0, 10);
@@ -20,20 +20,20 @@ router.post("/", async (req, res) => {
       const prompt = `
 Diagnostic demandé sur le moteur météo TINSFLASH.
 
-État:
-- runTime: ${state.runTime}
-- zones ok: ${Object.keys(state.zonesCovered || {}).filter(z => state.zonesCovered[z])}
-- zones ko: ${Object.keys(state.zonesCovered || {}).filter(z => !state.zonesCovered[z])}
-- erreurs: ${JSON.stringify(state.errors)}
-- derniers logs: ${logs.map(l => l.message).join(" | ")}
+État actuel :
+- runTime : ${state.runTime}
+- Zones OK : ${Object.keys(state.zonesCovered || {}).filter(z => state.zonesCovered[z])}
+- Zones KO : ${Object.keys(state.zonesCovered || {}).filter(z => !state.zonesCovered[z])}
+- Erreurs : ${JSON.stringify(state.errors)}
+- Derniers logs : ${logs.map(l => l.message).join(" | ")}
 
-Réponds en français, clair et pro, uniquement avec ces données.
+Réponds en français, clair, professionnel et uniquement avec ces données.
 `;
       const reply = await askAI(prompt);
       return res.json({ reply, location: null });
     }
 
-    // 🌍 Prévisions locales si ville détectée
+    // 🌍 Si on détecte une ville
     const cityMatch = message.match(/(?:à|au|en)\s+([A-Za-zÀ-ÿ\s-]+)/i);
     const city = cityMatch ? cityMatch[1].trim() : null;
 
@@ -41,6 +41,7 @@ Réponds en français, clair et pro, uniquement avec ces données.
     let locationInfo = null;
 
     if (city && country) {
+      // Géocodage de la ville
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=${country.toLowerCase()}&q=${encodeURIComponent(city)}`;
       const resGeo = await fetch(url, { headers: { "User-Agent": "Tinsflash-Meteo" } });
       const data = await resGeo.json();
@@ -55,13 +56,37 @@ Réponds en français, clair et pro, uniquement avec ces données.
       }
     }
 
-    const prompt = `
-Tu es l'assistant météo TINSFLASH.
-Question: "${message}"
+    // 🛰️ Si pas de ville/pays → fallback moteur
+    if (!city || !country) {
+      const state = getEngineState();
+      const logs = getLogs().slice(0, 5);
 
-Ville: ${city || "❌ non détectée"}
-Pays: ${country || "❌ non spécifié"}
-Prévisions centrales: ${forecastData ? JSON.stringify(forecastData) : "❌ Aucune donnée"}
+      const prompt = `
+Résumé demandé dans la console admin TINSFLASH.
+
+Dernier run du moteur nucléaire météo :
+- Date : ${state.runTime}
+- Zones couvertes OK : ${Object.keys(state.zonesCovered || {}).filter(z => state.zonesCovered[z])}
+- Zones KO : ${Object.keys(state.zonesCovered || {}).filter(z => !state.zonesCovered[z])}
+- Alertes détectées : ${state.alertsList?.length || 0}
+- Logs récents : ${logs.map(l => l.message).join(" | ")}
+
+Question posée : "${message}"
+
+Réponds uniquement avec ces données en bulletin météo clair et professionnel.
+`;
+      const reply = await askAI(prompt);
+      return res.json({ reply, location: null });
+    }
+
+    // 🔮 Si ville + pays détectés → prévisions locales
+    const prompt = `
+Tu es l'assistant météo TINSFLASH (console admin).
+Question : "${message}"
+
+Ville : ${city || "❌ non détectée"}
+Pays : ${country || "❌ non spécifié"}
+Prévisions centrales : ${forecastData ? JSON.stringify(forecastData) : "❌ Aucune donnée"}
 `;
 
     const reply = await askAI(prompt);
