@@ -11,29 +11,39 @@ const cohere = new CohereClient({
 });
 
 // ================================
-// 🔮 Fonction principale de génération de réponse
+// 🔮 Fonction principale IA
 // ================================
-export async function generateAIResponse(prompt) {
+export async function generateAIResponse(prompt, context = "forecast") {
+  let systemPrompt;
+
+  if (context === "forecast") {
+    systemPrompt =
+      "Tu es le moteur IA météo nucléaire TINSFLASH. " +
+      "Tu donnes uniquement des prévisions météo locales, nationales et globales, " +
+      "issues des modèles croisés (GFS, ECMWF, ICON, etc.), du relief, satellites, facteurs environnementaux. " +
+      "Sois ultra précis, concis, fiable et factuel. Ne parle pas du moteur interne.";
+  } else if (context === "admin") {
+    systemPrompt =
+      "Tu es l’assistant IA de la centrale nucléaire météo TINSFLASH. " +
+      "Tu expliques uniquement l’état du moteur, les logs, les erreurs, la couverture, la fiabilité des alertes. " +
+      "Ne parle jamais de ville ou de localisation météo sauf si on te le demande explicitement. " +
+      "Agis comme un technicien du réacteur nucléaire météo.";
+  } else {
+    systemPrompt =
+      "Tu es le moteur IA météo nucléaire TINSFLASH. Reste précis et factuel.";
+  }
+
   let lastErr = null;
 
-  // 🔀 Liste des modèles testés par ordre de priorité
-  const candidates = [
-    "gpt-5",        // modèle principal
-    "gpt-5-turbo",  // alias possible
-    "gpt-4o",       // fallback
-    "gpt-4o-mini"   // dernier recours OpenAI
-  ];
+  // 🔀 Liste des modèles OpenAI par ordre de priorité
+  const candidates = ["gpt-5", "gpt-5-turbo", "gpt-4o", "gpt-4o-mini"];
 
   for (const model of candidates) {
     try {
       const response = await openai.chat.completions.create({
         model,
         messages: [
-          {
-            role: "system",
-            content:
-              "Tu es le moteur IA météo nucléaire TINSFLASH, spécialisé en prévisions et alertes météorologiques ultra précises."
-          },
+          { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
       });
@@ -76,5 +86,5 @@ export async function generateAIResponse(prompt) {
   };
 }
 
-// 🔁 Alias rétro-compatible pour l’ancien code
+// 🔁 Alias rétro-compatible
 export const askAI = generateAIResponse;
