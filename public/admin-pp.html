@@ -1,151 +1,247 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <meta charset="UTF-8">
+  <title>🌌 TINSFLASH - Console Admin NASA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* ======== Style NASA ======== */
     body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background: #0a192f; color: #e0e0e0;
+      margin: 0;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background-color: #0b0f1a;
+      color: #e0e0e0;
+      display: flex;
     }
-    header {
-      background: #112240;
-      padding: 15px; text-align: center;
-      font-size: 20px; font-weight: bold;
-      color: #64ffda;
-    }
-    .container {
+    a { color: #00c9ff; text-decoration: none; }
+    h1, h2, h3 { color: #00eaff; margin: 0.5em 0; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 230px;
+      background: #111726;
+      height: 100vh;
       padding: 20px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.8);
+      position: fixed;
+      top: 0; left: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar h1 {
+      font-size: 1.2em;
+      text-align: center;
+      margin-bottom: 1em;
+      color: #00eaff;
+    }
+    .sidebar a {
+      padding: 12px;
+      margin: 6px 0;
+      border-radius: 6px;
+      display: block;
+      background: #1a2235;
+      transition: background 0.3s;
+    }
+    .sidebar a:hover { background: #00c9ff33; }
+
+    /* Content */
+    .content {
+      margin-left: 250px;
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      height: 100vh;
+    }
+
+    /* Panels */
+    .panel {
+      background: #161d2e;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #00c9ff55;
+    }
+    .panel h2 { border-bottom: 1px solid #00eaff33; padding-bottom: 5px; }
+
+    /* Logs */
+    .logs {
+      background: #0f141f;
+      padding: 10px;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    /* Check-up */
+    .checkup-list {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 6px;
     }
-    .card {
-      background: #112240;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    .checkup-item {
+      padding: 6px;
+      border-radius: 4px;
+      background: #1a2235;
     }
-    .card h2 {
-      font-size: 18px;
-      margin-top: 0;
-      color: #64ffda;
-    }
-    button {
-      background: #64ffda; border: none;
-      padding: 8px 15px; margin: 5px;
-      cursor: pointer; border-radius: 4px;
-      font-weight: bold;
-    }
-    button:hover { background: #52e0c4; }
-    pre {
-      background: #0b253a;
-      padding: 10px; border-radius: 5px;
-      max-height: 300px; overflow-y: scroll;
-      white-space: pre-wrap; word-wrap: break-word;
-    }
+    .ok { color: #00ff9d; font-weight: bold; }
+    .fail { color: #ff5555; font-weight: bold; }
+
+    /* Tables */
     table {
-      width: 100%; border-collapse: collapse;
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
     }
     th, td {
-      padding: 6px 8px;
-      border-bottom: 1px solid #334;
+      border: 1px solid #00c9ff33;
+      padding: 8px;
       text-align: left;
     }
-    .ok { color: #4caf50; font-weight: bold; }
-    .no { color: #f44336; font-weight: bold; }
+    th { background: #1a2235; }
+
+    /* Inputs */
+    input, select, textarea, button {
+      padding: 8px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 6px;
+      background: #1a2235;
+      color: #e0e0e0;
+      width: 100%;
+    }
+    button {
+      background: #00c9ff;
+      color: #0b0f1a;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #00eaff; }
   </style>
+  <script>
+    function showSection(id) {
+      document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+      document.getElementById(id).style.display = "block";
+    }
+    window.onload = () => showSection("console");
+  </script>
 </head>
 <body>
-  <header>⚡ Centrale Nucléaire Météo – Console Admin</header>
+  <div class="sidebar">
+    <h1>⚡ TINSFLASH</h1>
+    <a href="#" onclick="showSection('console')">Console</a>
+    <a href="#" onclick="showSection('alerts')">Alertes</a>
+    <a href="#" onclick="showSection('user')">Vue Utilisateur</a>
+    <a href="#" onclick="showSection('chat')">Chat IA</a>
+    <a href="#" onclick="showSection('radar')">Outils & Radar</a>
+  </div>
 
-  <div class="container">
-    <!-- RUN -->
-    <div class="card">
-      <h2>🚀 Lancer un run</h2>
-      <button onclick="runGlobal()">Run Global</button>
-      <button onclick="runContinental()">Run Continental</button>
-      <p id="runStatus"></p>
+  <div class="content">
+    <!-- Console -->
+    <div id="console" class="section">
+      <div class="panel">
+        <h2>Lancer un run</h2>
+        <button onclick="fetch('/api/run-global',{method:'POST'})">🚀 Run Global</button>
+        <button onclick="fetch('/api/run-continental',{method:'POST'})">🌍 Run Continental</button>
+      </div>
+      <div class="panel">
+        <h2>Logs moteur</h2>
+        <div class="logs" id="logs">Chargement...</div>
+      </div>
+      <div class="panel">
+        <h2>Check-up Moteur</h2>
+        <div class="checkup-list" id="checkup">
+          <!-- Les 13 points apparaîtront ici -->
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Résumé moteur</h2>
+        <p>Moteur opérationnel : <span id="engine-status" class="ok">OK</span></p>
+        <p>Détails utilisateurs par zone : <span id="users">Chargement...</span></p>
+      </div>
     </div>
 
-    <!-- Etat moteur -->
-    <div class="card">
-      <h2>⚙️ État du moteur</h2>
-      <p id="engineState">Chargement...</p>
+    <!-- Alertes -->
+    <div id="alerts" class="section" style="display:none">
+      <div class="panel">
+        <h2>Alertes auto-validées (>90%)</h2>
+        <table><thead><tr><th>Pays</th><th>Type</th><th>Indice</th></tr></thead><tbody id="alerts-validated"></tbody></table>
+      </div>
+      <div class="panel">
+        <h2>Alertes à examiner (70–90%)</h2>
+        <table><thead><tr><th>Pays</th><th>Type</th><th>Indice</th><th>Action</th></tr></thead><tbody id="alerts-pending"></tbody></table>
+      </div>
+      <div class="panel">
+        <h2>Comparaison avec autres sources</h2>
+        <h3>A. Premiers détecteurs</h3>
+        <div id="alerts-first"></div>
+        <h3>B. Déjà vues ailleurs</h3>
+        <div id="alerts-others"></div>
+      </div>
     </div>
 
-    <!-- Logs -->
-    <div class="card" style="grid-column: span 2;">
-      <h2>📜 Logs moteur</h2>
-      <pre id="logs">Chargement...</pre>
+    <!-- Vue utilisateur -->
+    <div id="user" class="section" style="display:none">
+      <div class="panel">
+        <h2>Vue utilisateur</h2>
+        <label>Ville :</label>
+        <input type="text" id="city">
+        <label>Pays :</label>
+        <select id="country">
+          <option value="Belgium">Belgium</option>
+          <option value="France">France</option>
+          <option value="USA">USA</option>
+          <option value="United Kingdom">United Kingdom</option>
+        </select>
+        <button>Voir la page utilisateur</button>
+      </div>
+      <div class="panel" id="user-preview">
+        <h2>Prévisualisation</h2>
+        <iframe src="/index.html" width="100%" height="400"></iframe>
+      </div>
     </div>
 
-    <!-- Check-up -->
-    <div class="card" style="grid-column: span 2;">
-      <h2>✅ Check-up complet</h2>
-      <table id="checkupTable">
-        <tr><th>Point</th><th>Statut</th></tr>
-        <tr><td>1. Modèles OK</td><td id="check-models-ok"></td></tr>
-        <tr><td>2. Modèles non OK</td><td id="check-models-nok"></td></tr>
-        <tr><td>3. Sources OK</td><td id="check-sources-ok"></td></tr>
-        <tr><td>4. Sources non OK</td><td id="check-sources-nok"></td></tr>
-        <tr><td>5. Analyse IA prévisions</td><td id="check-ia-forecast"></td></tr>
-        <tr><td>6. Analyse IA alertes</td><td id="check-ia-alerts"></td></tr>
-        <tr><td>7. Prévisions locales zones couvertes</td><td id="check-local"></td></tr>
-        <tr><td>8. Prévisions nationales zones couvertes</td><td id="check-national"></td></tr>
-        <tr><td>9. Alertes locales zones couvertes</td><td id="check-alerts-local"></td></tr>
-        <tr><td>10. Alertes nationales zones couvertes</td><td id="check-alerts-national"></td></tr>
-        <tr><td>11. Alertes continentales zones non couvertes</td><td id="check-alerts-continental"></td></tr>
-        <tr><td>12. Assemblage alertes mondiales</td><td id="check-alerts-world"></td></tr>
-        <tr><td>13. Open Data zones non couvertes</td><td id="check-open"></td></tr>
-      </table>
+    <!-- Chat IA -->
+    <div id="chat" class="section" style="display:none">
+      <div class="panel">
+        <h2>Chat IA Console</h2>
+        <textarea id="msgConsole"></textarea>
+        <button onclick="askAI('console')">Envoyer</button>
+        <div id="replyConsole"></div>
+      </div>
+      <div class="panel">
+        <h2>Chat IA Moteur</h2>
+        <textarea id="msgEngine"></textarea>
+        <button onclick="askAI('engine')">Envoyer</button>
+        <div id="replyEngine"></div>
+      </div>
+    </div>
+
+    <!-- Radar -->
+    <div id="radar" class="section" style="display:none">
+      <div class="panel">
+        <h2>Radar Global</h2>
+        <iframe src="/api/radar/global" width="100%" height="400"></iframe>
+      </div>
+      <div class="panel">
+        <h2>Outils techniques</h2>
+        <p>Benchmark modèles, freshness sources (à brancher).</p>
+      </div>
     </div>
   </div>
 
   <script>
-    async function runGlobal(){
-      document.getElementById("runStatus").innerText="⏳ Run Global en cours...";
-      const res=await fetch("/api/run-global",{method:"POST"});
-      const data=await res.json();
-      document.getElementById("runStatus").innerText="✅ Run Global terminé";
-      updateCheckup(data.result);
+    // IA Chat
+    async function askAI(type){
+      const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
+      const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message:msg})
+      });
+      const data = await res.json();
+      document.getElementById("reply"+(type==="console"?"Console":"Engine")).innerText = data.reply||"Erreur IA";
     }
-    async function runContinental(){
-      document.getElementById("runStatus").innerText="⏳ Run Continental en cours...";
-      const res=await fetch("/api/run-continental",{method:"POST"});
-      const data=await res.json();
-      document.getElementById("runStatus").innerText="✅ Run Continental terminé";
-      updateCheckup(data.result);
-    }
-    async function loadLogs(){
-      const res=await fetch("/api/logs");
-      const data=await res.json();
-      document.getElementById("logs").innerText=JSON.stringify(data,null,2);
-    }
-    async function loadEngineState(){
-      const res=await fetch("/api/engine-state");
-      const data=await res.json();
-      document.getElementById("engineState").innerText=JSON.stringify(data,null,2);
-    }
-    function updateCheckup(result){
-      // Exemple simple : si result contient des clés on coche OK
-      const set=(id,ok)=>{document.getElementById(id).innerHTML=ok?"<span class='ok'>OK</span>":"<span class='no'>NO</span>";};
-      set("check-models-ok",result?.modelsOk);
-      set("check-models-nok",!result?.modelsOk);
-      set("check-sources-ok",result?.sourcesOk);
-      set("check-sources-nok",!result?.sourcesOk);
-      set("check-ia-forecast",result?.iaForecastOk);
-      set("check-ia-alerts",result?.iaAlertsOk);
-      set("check-local",result?.localForecastsOk);
-      set("check-national",result?.nationalForecastsOk);
-      set("check-alerts-local",result?.localAlertsOk);
-      set("check-alerts-national",result?.nationalAlertsOk);
-      set("check-alerts-continental",result?.continentalAlertsOk);
-      set("check-alerts-world",result?.worldAlertsOk);
-      set("check-open",result?.openDataOk);
-    }
-    loadLogs(); loadEngineState();
   </script>
 </body>
 </html>
