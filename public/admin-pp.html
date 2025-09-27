@@ -2,160 +2,150 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>TINSFLASH – Console Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#111; color:#eee; }
-    header { background:#222; padding:10px; text-align:center; }
-    nav { background:#333; padding:10px; display:flex; gap:15px; justify-content:center; }
-    nav a { color:#eee; text-decoration:none; padding:5px 10px; border-radius:5px; }
-    nav a:hover { background:#555; }
-    section { padding:20px; display:none; }
-    section.active { display:block; }
-    h2,h3 { color:#0ff; }
-    button { padding:6px 12px; margin:5px 0; }
-    pre { background:#222; padding:10px; white-space:pre-wrap; max-height:250px; overflow-y:auto; }
-    table { width:100%; border-collapse:collapse; margin:10px 0; }
-    th, td { border:1px solid #555; padding:6px; text-align:left; }
-    iframe { width:100%; height:600px; border:none; background:#fff; }
-    textarea { width:100%; height:120px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #0a192f; color: #e0e0e0;
+    }
+    header {
+      background: #112240;
+      padding: 15px; text-align: center;
+      font-size: 20px; font-weight: bold;
+      color: #64ffda;
+    }
+    .container {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .card {
+      background: #112240;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .card h2 {
+      font-size: 18px;
+      margin-top: 0;
+      color: #64ffda;
+    }
+    button {
+      background: #64ffda; border: none;
+      padding: 8px 15px; margin: 5px;
+      cursor: pointer; border-radius: 4px;
+      font-weight: bold;
+    }
+    button:hover { background: #52e0c4; }
+    pre {
+      background: #0b253a;
+      padding: 10px; border-radius: 5px;
+      max-height: 300px; overflow-y: scroll;
+      white-space: pre-wrap; word-wrap: break-word;
+    }
+    table {
+      width: 100%; border-collapse: collapse;
+    }
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #334;
+      text-align: left;
+    }
+    .ok { color: #4caf50; font-weight: bold; }
+    .no { color: #f44336; font-weight: bold; }
   </style>
 </head>
 <body>
-<header>
-  <h1>🌍 Centrale Nucléaire Météo – Console Admin</h1>
-</header>
+  <header>⚡ Centrale Nucléaire Météo – Console Admin</header>
 
-<nav>
-  <a href="#" onclick="showTab('dashboard')">Dashboard</a>
-  <a href="#" onclick="showTab('alertes')">Alertes</a>
-  <a href="#" onclick="showTab('vueuser')">Vue Utilisateur</a>
-  <a href="#" onclick="showTab('chat')">Chat IA</a>
-  <a href="#" onclick="showTab('radar')">Radar</a>
-</nav>
+  <div class="container">
+    <!-- RUN -->
+    <div class="card">
+      <h2>🚀 Lancer un run</h2>
+      <button onclick="runGlobal()">Run Global</button>
+      <button onclick="runContinental()">Run Continental</button>
+      <p id="runStatus"></p>
+    </div>
 
-<!-- === Dashboard === -->
-<section id="dashboard" class="active">
-  <h2>⚡ Dashboard</h2>
-  <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
-  <h3>Résultat du run</h3>
-  <pre id="checkup-result">En attente...</pre>
+    <!-- Etat moteur -->
+    <div class="card">
+      <h2>⚙️ État du moteur</h2>
+      <p id="engineState">Chargement...</p>
+    </div>
 
-  <h3>📡 Sources météo</h3>
-  <table id="sources-table">
-    <thead>
-      <tr><th>Modèle</th><th>Cycle</th><th>Horodatage</th><th>Statut</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+    <!-- Logs -->
+    <div class="card" style="grid-column: span 2;">
+      <h2>📜 Logs moteur</h2>
+      <pre id="logs">Chargement...</pre>
+    </div>
 
-  <h3>📝 Logs récents</h3>
-  <pre id="logs">En attente...</pre>
+    <!-- Check-up -->
+    <div class="card" style="grid-column: span 2;">
+      <h2>✅ Check-up complet</h2>
+      <table id="checkupTable">
+        <tr><th>Point</th><th>Statut</th></tr>
+        <tr><td>1. Modèles OK</td><td id="check-models-ok"></td></tr>
+        <tr><td>2. Modèles non OK</td><td id="check-models-nok"></td></tr>
+        <tr><td>3. Sources OK</td><td id="check-sources-ok"></td></tr>
+        <tr><td>4. Sources non OK</td><td id="check-sources-nok"></td></tr>
+        <tr><td>5. Analyse IA prévisions</td><td id="check-ia-forecast"></td></tr>
+        <tr><td>6. Analyse IA alertes</td><td id="check-ia-alerts"></td></tr>
+        <tr><td>7. Prévisions locales zones couvertes</td><td id="check-local"></td></tr>
+        <tr><td>8. Prévisions nationales zones couvertes</td><td id="check-national"></td></tr>
+        <tr><td>9. Alertes locales zones couvertes</td><td id="check-alerts-local"></td></tr>
+        <tr><td>10. Alertes nationales zones couvertes</td><td id="check-alerts-national"></td></tr>
+        <tr><td>11. Alertes continentales zones non couvertes</td><td id="check-alerts-continental"></td></tr>
+        <tr><td>12. Assemblage alertes mondiales</td><td id="check-alerts-world"></td></tr>
+        <tr><td>13. Open Data zones non couvertes</td><td id="check-open"></td></tr>
+      </table>
+    </div>
+  </div>
 
-  <h3>❌ Erreurs</h3>
-  <pre id="errors">En attente...</pre>
-</section>
-
-<!-- === Alertes === -->
-<section id="alertes">
-  <h2>🚨 Alertes</h2>
-  <h3>✅ Auto-validées (>90%)</h3>
-  <table id="alerts-auto"><thead><tr><th>Pays/Zone</th><th>Détail</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
-  
-  <h3>🟠 À examiner (70–90%)</h3>
-  <table id="alerts-review"><thead><tr><th>Pays/Zone</th><th>Détail</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
-</section>
-
-<!-- === Vue Utilisateur === -->
-<section id="vueuser">
-  <h2>👤 Vue Utilisateur</h2>
-  <label>Ville: <input type="text" id="city" /></label>
-  <label>Pays:
-    <select id="country">
-      <option value="be">Belgique</option>
-      <option value="fr">France</option>
-      <option value="us">USA</option>
-      <option value="gb">UK</option>
-      <option value="de">Allemagne</option>
-    </select>
-  </label>
-  <button onclick="loadUserView()">Voir la vue</button>
-  <iframe id="user-view" src=""></iframe>
-</section>
-
-<!-- === Chat IA === -->
-<section id="chat">
-  <h2>🤖 Chat IA (moteur & prévisions)</h2>
-  <textarea id="chat-input" placeholder="Posez une question..."></textarea><br>
-  <button onclick="askAI()">Envoyer</button>
-  <pre id="chat-output">En attente...</pre>
-</section>
-
-<!-- === Radar === -->
-<section id="radar">
-  <h2>🌐 Radar Global</h2>
-  <iframe src="/api/radar/global"></iframe>
-</section>
-
-<script>
-function showTab(id) {
-  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-
-// === RUN GLOBAL ===
-async function runGlobal() {
-  const res = await fetch("/api/run-global", { method: "POST" });
-  const data = await res.json();
-  if (!data.success) {
-    document.getElementById("checkup-result").textContent = "❌ " + data.error;
-    return;
-  }
-  const result = data.result;
-  document.getElementById("checkup-result").textContent = JSON.stringify(result, null, 2);
-
-  // Sources
-  const tbody = document.querySelector("#sources-table tbody");
-  tbody.innerHTML = "";
-  if (result.sources && result.sources.length) {
-    result.sources.forEach(src => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${src.name}</td><td>${src.cycleId||"-"}</td><td>${src.timestamp||"-"}</td><td>${src.status==="ok"?"✅ OK":"❌ KO"}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
-
-  loadLogs();
-}
-
-// === Logs & Erreurs ===
-async function loadLogs() {
-  const res = await fetch("/api/logs");
-  const logs = await res.json();
-  document.getElementById("logs").textContent = JSON.stringify(logs, null, 2);
-  const stateRes = await fetch("/api/engine-state");
-  const state = await stateRes.json();
-  document.getElementById("errors").textContent = JSON.stringify(state.errors || [], null, 2);
-}
-
-// === Vue Utilisateur ===
-function loadUserView() {
-  const city = document.getElementById("city").value;
-  const country = document.getElementById("country").value;
-  document.getElementById("user-view").src = `/index.html?city=${encodeURIComponent(city)}&country=${country}`;
-}
-
-// === Chat IA ===
-async function askAI() {
-  const input = document.getElementById("chat-input").value;
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ message: input })
-  });
-  const data = await res.json();
-  document.getElementById("chat-output").textContent = data.reply || JSON.stringify(data, null, 2);
-}
-</script>
+  <script>
+    async function runGlobal(){
+      document.getElementById("runStatus").innerText="⏳ Run Global en cours...";
+      const res=await fetch("/api/run-global",{method:"POST"});
+      const data=await res.json();
+      document.getElementById("runStatus").innerText="✅ Run Global terminé";
+      updateCheckup(data.result);
+    }
+    async function runContinental(){
+      document.getElementById("runStatus").innerText="⏳ Run Continental en cours...";
+      const res=await fetch("/api/run-continental",{method:"POST"});
+      const data=await res.json();
+      document.getElementById("runStatus").innerText="✅ Run Continental terminé";
+      updateCheckup(data.result);
+    }
+    async function loadLogs(){
+      const res=await fetch("/api/logs");
+      const data=await res.json();
+      document.getElementById("logs").innerText=JSON.stringify(data,null,2);
+    }
+    async function loadEngineState(){
+      const res=await fetch("/api/engine-state");
+      const data=await res.json();
+      document.getElementById("engineState").innerText=JSON.stringify(data,null,2);
+    }
+    function updateCheckup(result){
+      // Exemple simple : si result contient des clés on coche OK
+      const set=(id,ok)=>{document.getElementById(id).innerHTML=ok?"<span class='ok'>OK</span>":"<span class='no'>NO</span>";};
+      set("check-models-ok",result?.modelsOk);
+      set("check-models-nok",!result?.modelsOk);
+      set("check-sources-ok",result?.sourcesOk);
+      set("check-sources-nok",!result?.sourcesOk);
+      set("check-ia-forecast",result?.iaForecastOk);
+      set("check-ia-alerts",result?.iaAlertsOk);
+      set("check-local",result?.localForecastsOk);
+      set("check-national",result?.nationalForecastsOk);
+      set("check-alerts-local",result?.localAlertsOk);
+      set("check-alerts-national",result?.nationalAlertsOk);
+      set("check-alerts-continental",result?.continentalAlertsOk);
+      set("check-alerts-world",result?.worldAlertsOk);
+      set("check-open",result?.openDataOk);
+    }
+    loadLogs(); loadEngineState();
+  </script>
 </body>
 </html>
