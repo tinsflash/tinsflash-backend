@@ -1,9 +1,15 @@
+// services/runGlobal.js
 import forecastService from "./forecastService.js";
 import openweather from "./openweather.js";
 import { detectAlerts } from "./alertDetector.js";
 import { processAlerts } from "./alertsEngine.js";
 import { addLog } from "./adminLogs.js";
-import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
+import {
+  getEngineState,
+  saveEngineState,
+  addEngineLog,
+  addEngineError
+} from "./engineState.js";
 
 const COVERED = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
@@ -58,23 +64,34 @@ export default async function runGlobal() {
 
   for (const country of COVERED) {
     try {
-      // 1) Prévision NATIONALE (moteur multi-sources)
+      // 1️⃣ Prévision NATIONALE (multi-sources via forecastService)
       const national = await forecastService.getForecast(country);
 
-      // 2) Point local minimal (capitale) pour générer des alertes numériques réelles
+      // 2️⃣ Point local minimal (capitale) → OpenWeather
       const cap = CAPITALS[country];
       let localPoint = null;
+
       if (cap) {
-        const ow = await openweather(cap.lat, cap.lon);
-        const numeric = {
-          rain: ow?.precipitation ?? ow?.rain ?? null,
-          wind: typeof ow?.wind === "number" ? Math.round(ow.wind * 3.6) : (ow?.wind?.speed_kmh ?? null),
-          temp: ow?.temperature ?? ow?.temp ?? null
-        };
-        const rawAlerts = detectAlerts(numeric);
-        const enriched = await processAlerts(rawAlerts, { country, capital: cap });
-        allAlerts.push(...enriched);
-        localPoint = { lat: cap.lat, lon: cap.lon, openweather: ow, alerts: enriched };
+        try {
+          const ow = await openweather(cap.lat, cap.lon);
+
+          const numeric = {
+            rain: ow?.precipitation ?? ow?.rain ?? null,
+            wind: typeof ow?.wind === "number"
+              ? Math.round(ow.wind * 3.6)
+              : (ow?.wind?.speed_kmh ?? null),
+            temp: ow?.temperature ?? ow?.temp ?? null
+          };
+
+          // Détection + enrichissement alertes
+          const rawAlerts = detectAlerts(numeric);
+          const enriched = await processAlerts(rawAlerts, { country, capital: cap });
+
+          allAlerts.push(...enriched);
+          localPoint = { lat: cap.lat, lon: cap.lon, openweather: ow, alerts: enriched };
+        } catch (owErr) {
+          addEngineError(`⚠️ OpenWeather KO pour ${country}: ${owErr.message}`);
+        }
       }
 
       zonesCovered[country] = true;
@@ -87,6 +104,7 @@ export default async function runGlobal() {
     }
   }
 
+  // 🔄 Mise à jour état moteur
   const prev = getEngineState();
   const newState = {
     runTime: startedAt,
@@ -102,8 +120,15 @@ export default async function runGlobal() {
   };
 
   saveEngineState(newState);
+
   addLog("RUN GLOBAL terminé");
   addEngineLog("RUN GLOBAL terminé");
 
-  return { startedAt, countriesProcessed: Object.keys(zonesCovered).length, alerts: allAlerts.length };
+  return {
+    startedAt,
+    countriesProcessed: Object.keys(zonesCovered).length,
+    countriesOk: Object.keys(zonesCovered).filter(c => zonesCovered[c]),
+    countriesFailed: Object.keys(zonesCovered).filter(c => !zonesCovered[c]),
+    alerts: allAlerts.length
+  };
 }
