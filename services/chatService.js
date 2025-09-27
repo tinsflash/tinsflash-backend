@@ -1,24 +1,39 @@
 // services/chatService.js
-// Service pour dialoguer avec l'IA (ChatGPT5 réservé console/moteur)
+import { getEngineState } from "./engineState.js";
+import forecastService from "./forecastService.js";
+import { askAI } from "./aiService.js";
 
-async function askAI(message) {
+// Chat général
+export async function askAIChat(message) {
+  return await askAI(message);
+}
+
+// Chat moteur
+export async function askAIEngine(message) {
   try {
-    // Ici on simulera la réponse IA avec un objet structuré
-    // (tu pourras brancher ton connecteur GPT-5 ensuite)
-    return {
-      result: "Diagnostic effectué",
-      input: message,
-      checks: {
-        moteur: "OK",
-        ia: "OK",
-        server: "OK",
-        previsions: "OK"
-      },
-      timestamp: new Date().toISOString()
-    };
-  } catch (err) {
+    const state = getEngineState();
+    const prompt = `
+Tu es ChatGPT5 intégré à TINSFLASH.
+Analyse et explique les résultats moteur ci-dessous.
+
+Run : ${state.runTime}
+Zones OK : ${Object.keys(state.zonesCovered||{}).filter(z=>state.zonesCovered[z]).join(", ")}
+Zones KO : ${Object.keys(state.zonesCovered||{}).filter(z=>!state.zonesCovered[z]).join(", ")}
+Sources : ${JSON.stringify(state.sources||{},null,2)}
+Alertes : ${JSON.stringify(state.alertsList||[],null,2)}
+Logs : ${(state.logs||[]).map(l=>l.message).join(" | ")}
+Erreurs : ${JSON.stringify(state.errors||[],null,2)}
+
+Question admin :
+"${message}"
+
+Règles : <70% ignorées, 70–90% en attente, >90% publiées auto.
+Réponds clair et structuré en français.
+`;
+    return await askAI(prompt);
+  } catch(err) {
     return { error: err.message };
   }
 }
 
-export default { askAI };
+export default { askAIChat, askAIEngine };
