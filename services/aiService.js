@@ -1,90 +1,58 @@
 // services/aiService.js
 import OpenAI from "openai";
-import { CohereClient } from "cohere-ai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY,
-});
+/**
+ * IA cockpit reliée au moteur météo nucléaire
+ * Jamais de ville / prévision publique
+ * Toujours connecté aux étapes moteur
+ */
+export async function askAI(message, options = {}) {
+  try {
+    const context = options.context || "cockpit";
 
-// ================================
-// 🔮 Fonction principale IA
-// ================================
-export async function generateAIResponse(prompt, context = "forecast") {
-  let systemPrompt;
-
-  if (context === "forecast") {
-    systemPrompt =
-      "Tu es le moteur IA météo nucléaire TINSFLASH. " +
-      "Tu donnes uniquement des prévisions météo locales, nationales et globales, " +
-      "issues des modèles croisés (GFS, ECMWF, ICON, etc.), du relief, satellites, facteurs environnementaux. " +
-      "Sois ultra précis, concis, fiable et factuel. Ne parle pas du moteur interne.";
-  } else if (context === "admin") {
-    systemPrompt =
-      "Tu es l’assistant IA de la centrale nucléaire météo TINSFLASH. " +
-      "Tu expliques uniquement l’état du moteur, les logs, les erreurs, la couverture, la fiabilité des alertes. " +
-      "Ne parle jamais de ville ou de localisation météo sauf si on te le demande explicitement. " +
-      "Agis comme un technicien du réacteur nucléaire météo.";
-  } else {
-    systemPrompt =
-      "Tu es le moteur IA météo nucléaire TINSFLASH. Reste précis et factuel.";
-  }
-
-  let lastErr = null;
-
-  // 🔀 Liste des modèles OpenAI par ordre de priorité
-  const candidates = ["gpt-5", "gpt-5-turbo", "gpt-4o", "gpt-4o-mini"];
-
-  for (const model of candidates) {
-    try {
-      const response = await openai.chat.completions.create({
-        model,
+    if (context === "cockpit") {
+      // IA spéciale Admin
+      const completion = await openai.chat.completions.create({
+        model: "gpt-5", // ⚡ Toujours ChatGPT-5
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
+          {
+            role: "system",
+            content: `
+              Tu es l'IA cockpit de la Centrale Nucléaire Météo TINSFLASH.
+              Règles strictes :
+              - Tu ne parles que du moteur météo (logs, erreurs, checkup, alertes, fiabilité).
+              - Jamais de météo publique par ville, sauf comparaison si demandé.
+              - Toujours en 100 % réel, connecté au moteur nucléaire météo.
+              - Si une info est manquante, tu renvoies "donnée indisponible" plutôt qu'inventer.
+              - Objectif : précision maximale, alerte avant tout le monde, frissons NASA.
+            `,
+          },
+          { role: "user", content: message },
         ],
       });
 
       return {
         success: true,
-        reply: response.choices[0].message.content,
+        reply: completion.choices[0].message.content,
         provider: "openai",
-        model,
+        model: "gpt-5",
       };
-    } catch (e) {
-      console.error(`❌ Erreur modèle ${model}:`, e.response?.data || e.message || e);
-      lastErr = e;
     }
-  }
 
-  // 🌐 Fallback Cohere si OpenAI échoue totalement
-  try {
-    const cohereResp = await cohere.chat({
-      model: "command-r-plus",
-      message: prompt,
-    });
-
+    // Sécurité : si jamais utilisé ailleurs
     return {
-      success: true,
-      reply: cohereResp.text,
-      provider: "cohere",
-      model: "command-r-plus",
+      success: false,
+      reply: "Accès refusé (réservé à la console cockpit).",
     };
-  } catch (e) {
-    console.error("❌ Erreur Cohere:", e.message || e);
-    lastErr = e;
+  } catch (err) {
+    console.error("❌ Erreur IA cockpit:", err);
+    return {
+      success: false,
+      error: err.message,
+    };
   }
-
-  // ❌ Rien n’a marché
-  return {
-    success: false,
-    reply: "⚠️ IA indisponible pour le moment.",
-    error: lastErr?.message || "Erreur inconnue",
-  };
 }
-
-// 🔁 Alias rétro-compatible
-export const askAI = generateAIResponse;
