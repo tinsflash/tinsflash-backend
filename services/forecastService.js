@@ -1,4 +1,6 @@
 // services/forecastService.js
+// ⚡ Centrale nucléaire météo – Service de prévisions
+
 import runSuperForecast from "./superForecast.js";
 import applyClimateFactors from "./climateFactors.js";
 import adjustWithLocalFactors from "./localFactors.js";
@@ -23,14 +25,15 @@ async function getNationalForecast(country) {
 
     return { country, forecasts, source: "Centrale Nucléaire Météo" };
   } catch (err) {
-    console.error("❌ getNationalForecast error:", err.message);
+    console.error(`❌ getNationalForecast error (${country}):`, err.message);
     return { country, error: err.message };
   }
 }
 
 /**
  * Prévision locale
- * Zones couvertes → moteur atomique ; zones non couvertes → OpenWeather
+ * - Zones couvertes → moteur atomique
+ * - Zones non couvertes → OpenWeather fallback
  */
 async function getLocalForecast(lat, lon, country) {
   try {
@@ -45,9 +48,20 @@ async function getLocalForecast(lat, lon, country) {
     const ow = await openweather(lat, lon);
     return { lat, lon, country, forecast: ow, source: "OpenWeather (fallback)" };
   } catch (err) {
-    console.error("❌ getLocalForecast error:", err.message);
+    console.error(`❌ getLocalForecast error (${country}):`, err.message);
     return { lat, lon, country, error: err.message };
   }
 }
 
-export default { getNationalForecast, getLocalForecast };
+/**
+ * Alias pour compatibilité avec runGlobal.js
+ * → Utilise la prévision nationale
+ */
+async function getForecast(country) {
+  if (!country) {
+    return { error: "❌ Aucun pays spécifié pour getForecast()" };
+  }
+  return await getNationalForecast(country);
+}
+
+export default { getNationalForecast, getLocalForecast, getForecast };
