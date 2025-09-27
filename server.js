@@ -12,13 +12,12 @@ import runContinental from "./services/runContinental.js";
 import radarService from "./services/radarService.js";
 import podcastService from "./services/podcastService.js";
 import chatService from "./services/chatService.js";
-import { getLogs, addLog } from "./services/adminLogs.js";
-import { getEngineState, saveEngineState, addEngineLog } from "./services/engineState.js";
+import { getLogs } from "./services/adminLogs.js";
+import { getEngineState } from "./services/engineState.js";
 import { getActiveAlerts, updateAlertStatus } from "./services/alertsService.js";
 
-// === DB Models ===
+// === DB Models (⚠️ SEUL Forecast est utile maintenant) ===
 import Forecast from "./models/Forecast.js";
-import Alert from "./models/Alerts.js";
 
 dotenv.config();
 
