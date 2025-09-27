@@ -1,45 +1,64 @@
 // services/engineState.js
 
 let engineState = {
-  ia: false,
-  radar: false,
-  forecasts: false,
-  alerts: false,
   runTime: null,
-  zonesCovered: {},
-  zonesContinental: {},
-  sources: {},
-  alertsList: [],
-  errors: [],
-  logs: []
+  zonesCovered: {},   // { BE:true, FR:true, ... }
+  sources: {},        // modèles météo utilisés
+  logs: [],           // [{timestamp, message}]
+  errors: [],         // [{timestamp, error}]
+  alertsList: []      // [{id, country, type, reliability, firstDetected}]
 };
 
+// === Fonctions principales ===
 export function getEngineState() {
   return engineState;
 }
 
 export function saveEngineState(newState) {
   engineState = { ...engineState, ...newState };
+  return engineState;
 }
 
-export function addEngineLog(message, type = "log") {
+// === Logs ===
+export function addEngineLog(message) {
   engineState.logs.push({
     timestamp: new Date().toISOString(),
-    type,
     message
   });
 }
 
-// === Helpers pour mettre les flags à jour ===
-export function markIA(ok = true) {
-  engineState.ia = ok;
+// === Erreurs ===
+export function addEngineError(error) {
+  engineState.errors.push({
+    timestamp: new Date().toISOString(),
+    error: error instanceof Error ? error.message : String(error)
+  });
 }
-export function markForecasts(ok = true) {
-  engineState.forecasts = ok;
+
+// === Alertes ===
+export function setAlerts(alerts) {
+  engineState.alertsList = alerts;
+  return engineState.alertsList;
 }
-export function markAlerts(ok = true) {
-  engineState.alerts = ok;
+
+// === Reset (si besoin) ===
+export function resetEngineState() {
+  engineState = {
+    runTime: null,
+    zonesCovered: {},
+    sources: {},
+    logs: [],
+    errors: [],
+    alertsList: []
+  };
 }
-export function markRadar(ok = true) {
-  engineState.radar = ok;
-}
+
+// === Export par défaut (robuste pour server.js) ===
+export default {
+  getEngineState,
+  saveEngineState,
+  addEngineLog,
+  addEngineError,
+  setAlerts,
+  resetEngineState
+};
