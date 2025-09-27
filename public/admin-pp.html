@@ -1,159 +1,131 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>TINSFLASH Console Admin</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Centrale Nucléaire Météo — Console Admin</title>
   <style>
-    body { background:#0d1117; color:#eee; }
-    .nav-link.active { background:#21262d; border-radius:6px; }
-    pre { background:#161b22; padding:10px; border-radius:6px; color:#0f0; max-height:250px; overflow:auto; }
-    iframe { width:100%; height:600px; border:none; }
+    /* Minimal neon style, responsive */
+    :root {
+      --bg: #050505;
+      --panel: #0b0b0b;
+      --neon: #00ff2a;
+      --accent: #00f0ff;
+      --muted: #2b2b2b;
+      font-family: "Courier New", monospace;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--neon);}
+    .wrap{max-width:1100px;margin:18px auto;padding:12px;}
+    header{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,#041,#003);box-shadow:0 4px 12px rgba(0,0,0,.6);}
+    header h1{margin:0;color:var(--accent);font-size:20px}
+    .panel{margin-top:16px;padding:14px;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid #083;}
+    .btn{background:var(--neon);color:#001;padding:8px 12px;border-radius:6px;border:none;cursor:pointer;font-weight:bold}
+    pre{background:#020202;color:var(--neon);padding:12px;border-radius:6px;overflow:auto;max-height:320px}
+    nav.tabs{display:flex;gap:8px;margin-top:10px}
+    nav.tabs a{color:var(--neon);padding:8px;border-radius:6px;text-decoration:none;background:rgba(0,0,0,0.2)}
+    .hidden{display:none}
+    table{width:100%;border-collapse:collapse;color:var(--neon)}
+    th,td{padding:8px;border-bottom:1px solid #0a0a0a;text-align:left}
+    .small{font-size:13px;color:#9f9}
+    select,input{padding:8px;border-radius:6px;border:1px solid #0a0a0a;background:#020202;color:var(--neon)}
   </style>
 </head>
 <body>
-<div class="container-fluid">
-  <h1 class="my-3">⚡ Centrale Nucléaire Météo — Console Admin</h1>
+  <div class="wrap">
+    <header>
+      <div style="font-size:28px">⚡</div>
+      <h1>Centrale Nucléaire Météo — Console Admin</h1>
+    </header>
 
-  <!-- Menu principal -->
-  <ul class="nav nav-tabs" id="adminMenu">
-    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#dashboard">Tableau de bord</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#alerts">Alertes</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#simulate">Vue utilisateur</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#news">Actualités</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#radar">Radar</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#ai">IA</a></li>
-  </ul>
-
-  <div class="tab-content p-3 bg-dark border rounded-bottom">
-    <!-- DASHBOARD -->
-    <div class="tab-pane fade show active" id="dashboard">
-      <button class="btn btn-danger my-2" onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
-      <button class="btn btn-warning my-2" onclick="runContinental()">🌍 Lancer RUN CONTINENTAL</button>
-
-      <h4>État moteur</h4>
-      <pre id="engineState">Chargement...</pre>
-
-      <h4>Logs récents</h4>
-      <pre id="logs">Chargement...</pre>
+    <!-- MAIN ACTIONS -->
+    <div class="panel" id="mainRun">
+      <h2>🚀 Démarrer le moteur</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" id="runGlobalBtn">Démarrer TOUT (run-global)</button>
+        <button class="btn" id="runContinentalBtn">Lancer continental (run-continental)</button>
+        <button class="btn" id="verifyAllBtn">✅ Vérifier tout (IA)</button>
+      </div>
+      <p class="small">Les runs effectuent l'extraction des modèles et génèrent prévisions + alertes.</p>
+      <div style="margin-top:12px">
+        <strong>Dernier rapport:</strong>
+        <pre id="runReport">Aucun run lancé.</pre>
+      </div>
     </div>
 
-    <!-- ALERTS -->
-    <div class="tab-pane fade" id="alerts">
-      <h4>Alertes Publiées</h4>
-      <div id="alerts-published"></div>
-      <h4>À Valider (70–90%)</h4>
-      <div id="alerts-validate"></div>
-      <h4>En Attente / Expert</h4>
-      <div id="alerts-other"></div>
+    <!-- LOGS -->
+    <div class="panel" id="logsPanel">
+      <h2>📜 Logs moteur</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="refreshLogs">Actualiser</button>
+        <button class="btn" id="clearLogs" style="background:#ff7a7a">Effacer (local view)</button>
+      </div>
+      <pre id="logsArea">Chargement des logs...</pre>
     </div>
 
-    <!-- VUE UTILISATEUR -->
-    <div class="tab-pane fade" id="simulate">
-      <h4>Simulation vue utilisateur</h4>
-      <form class="row g-2" onsubmit="simulateUser(event)">
-        <div class="col-md-6"><input id="city" class="form-control" placeholder="Ville"></div>
-        <div class="col-md-4">
-          <select id="country" class="form-select">
-            <option value="BE">Belgique</option>
-            <option value="FR">France</option>
-            <option value="US">USA</option>
-            <option value="BR">Brésil</option>
-            <option value="IN">Inde</option>
-            <option value="CN">Chine</option>
-          </select>
-        </div>
-        <div class="col-md-2"><button class="btn btn-primary">Voir</button></div>
-      </form>
-      <div id="simulate-result" class="mt-3"></div>
+    <!-- ENGINE STATE -->
+    <div class="panel" id="statePanel">
+      <h2>🔧 État du moteur</h2>
+      <button class="btn" id="checkState">Vérifier état</button>
+      <pre id="stateArea">Aucun état chargé</pre>
     </div>
 
-    <!-- ACTUALITÉS -->
-    <div class="tab-pane fade" id="news">
-      <h4>Actualités météo & climat</h4>
-      <div id="news-list">Chargement...</div>
+    <!-- CHAT IA -->
+    <div class="panel" id="chatPanel">
+      <h2>🤖 Chat IA — moteur</h2>
+      <textarea id="chatInput" rows="3" style="width:100%;background:#020202;color:var(--neon)"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="sendChat">Envoyer</button>
+        <button class="btn" id="quickDiag">Demande diagnostic moteur</button>
+      </div>
+      <pre id="chatReply">Réponses IA…</pre>
     </div>
 
-    <!-- RADAR -->
-    <div class="tab-pane fade" id="radar">
-      <h4>Radar Météo (Windy)</h4>
-      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&zoom=5&level=surface&overlay=rain&product=ecmwf"></iframe>
+    <!-- TABS / SUB-PAGES -->
+    <nav class="tabs">
+      <a href="#" data-tab="alerts">🔴 Alertes</a>
+      <a href="#" data-tab="preview">📋 Préview index (simulate user)</a>
+      <a href="#" data-tab="news">📰 Actualités</a>
+      <a href="#" data-tab="radar">🌐 Radar</a>
+      <a href="#" data-tab="diagnostic">🧭 Diagnostic moteur</a>
+    </nav>
+
+    <!-- Alerts Tab -->
+    <div class="panel hidden" id="tab-alerts">
+      <h2>🚨 Gestion des alertes</h2>
+      <div>
+        <h3>Publiées (&gt;90%)</h3>
+        <table id="tblPublished"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
+        <h3>À valider (70–90%)</h3>
+        <table id="tblToValidate"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
+        <h3>Envoyées expert</h3>
+        <table id="tblExpert"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
+        <h3>En attente</h3>
+        <table id="tblWaiting"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
+        <h3>Ignorées (&lt;70%)</h3>
+        <table id="tblIgnored"><thead><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
+      </div>
     </div>
 
-    <!-- IA -->
-    <div class="tab-pane fade" id="ai">
-      <h4>Discussion avec IA (moteur interne)</h4>
-      <textarea id="aiInput" class="form-control" rows="3"></textarea>
-      <button class="btn btn-success my-2" onclick="askAI()">Envoyer</button>
-      <pre id="aiReply"></pre>
+    <!-- Preview index (simulate user) -->
+    <div class="panel hidden" id="tab-preview">
+      <h2>📋 Préview page index (simulate user view)</h2>
+      <div style="display:flex;gap:8px">
+        <input id="previewCity" placeholder="Ville (ex: Bruxelles)" />
+        <select id="previewCountry">
+          <option value="">Choisir pays</option>
+          <option value="BE">Belgium</option>
+          <option value="FR">France</option>
+          <option value="DE">Germany</option>
+          <option value="US">USA</option>
+          <!-- add as needed -->
+        </select>
+        <button class="btn" id="previewBtn">Voir preview</button>
+      </div>
+      <div style="margin-top:12px">
+        <pre id="previewArea">Aperçu ici</pre>
+      </div>
     </div>
-  </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-let cache = { engine:null, logs:null, alerts:null, news:null };
-
-// Dashboard refresh
-async function refreshDashboard(){
-  const s = await fetch("/api/engine-state").then(r=>r.json());
-  document.getElementById("engineState").textContent = JSON.stringify(s.state,null,2);
-  cache.engine = s.state;
-
-  const l = await fetch("/api/logs").then(r=>r.json());
-  document.getElementById("logs").textContent = JSON.stringify(l.logs,null,2);
-  cache.logs = l.logs;
-}
-
-// Runs
-async function runGlobal(){ await fetch("/api/run-global",{method:"POST"}); refreshDashboard(); loadAlerts(); }
-async function runContinental(){ await fetch("/api/run-continental",{method:"POST"}); loadAlerts(); }
-
-// Alerts
-async function loadAlerts(){
-  const a = await fetch("/api/alerts").then(r=>r.json());
-  cache.alerts = a.alerts;
-  renderAlerts();
-}
-function renderAlerts(){
-  const p=document.getElementById("alerts-published");
-  const v=document.getElementById("alerts-validate");
-  const o=document.getElementById("alerts-other");
-  p.innerHTML=v.innerHTML=o.innerHTML="";
-  cache.alerts.published.forEach(x=>p.innerHTML+=`<div class="alert alert-danger">${x.country||x.continent}: ${x.message} (${x.confidence}%)</div>`);
-  cache.alerts.toValidate.forEach(x=>v.innerHTML+=`<div class="alert alert-warning">${x.country||x.continent}: ${x.message} (${x.confidence}%) <button class="btn btn-sm btn-success" onclick="updateAlert('${x.createdAt+x.type}','validate')">Valider</button></div>`);
-  [...cache.alerts.expert,...cache.alerts.pending].forEach(x=>o.innerHTML+=`<div class="alert alert-info">${x.country||x.continent}: ${x.message} (${x.confidence}%)</div>`);
-}
-async function updateAlert(id,action){
-  await fetch("/api/alerts/"+id+"/"+action,{method:"POST"});
-  loadAlerts();
-}
-
-// Simulate user
-async function simulateUser(e){
-  e.preventDefault();
-  const city=document.getElementById("city").value;
-  const country=document.getElementById("country").value;
-  const res=await fetch("/api/chat",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({message:`Météo à ${city}`,country})}).then(r=>r.json());
-  document.getElementById("simulate-result").innerHTML="<pre>"+JSON.stringify(res.response,null,2)+"</pre>";
-}
-
-// News
-async function loadNews(){
-  const n=await fetch("/api/news").then(r=>r.json());
-  cache.news=n;
-  document.getElementById("news-list").innerHTML=n.map(x=>`<div class="border p-2 my-1">${x.title}</div>`).join("");
-}
-
-// AI
-async function askAI(){
-  const msg=document.getElementById("aiInput").value;
-  const res=await fetch("/api/chat",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})}).then(r=>r.json());
-  document.getElementById("aiReply").textContent=JSON.stringify(res.response,null,2);
-}
-
-// Initial load
-refreshDashboard(); loadAlerts(); loadNews();
-</script>
-</body>
-</html>
+    <!-- News -->
+    <div class="panel hidden" id="tab-news">
+      <h2>📰 Actual
