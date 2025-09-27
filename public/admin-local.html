@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin — Prévisions locales</title>
+  <style>
+    body { background:#000; color:#eee; font-family:Arial; margin:0; }
+    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
+    section { padding:20px; }
+    input, select, button { margin:5px; padding:6px; background:#222; color:#eee; border:1px solid #555; }
+    iframe { width:100%; height:600px; border:1px solid #333; margin-top:10px; }
+    a { color:#0f0; margin:10px; display:inline-block; }
+  </style>
+</head>
+<body>
+  <h1>📍 Prévisions locales (vue utilisateur)</h1>
+  <a href="admin-pp.html">⬅️ Retour Cockpit</a>
+
+  <section>
+    <input type="text" id="city" placeholder="Ville">
+    <select id="country">
+      <option value="FR">France</option>
+      <option value="BE">Belgique</option>
+      <option value="DE">Allemagne</option>
+      <option value="US">USA</option>
+      <option value="GB">UK</option>
+      <option value="ES">Espagne</option>
+      <option value="IT">Italie</option>
+    </select>
+    <button onclick="loadForecast()">Voir comme utilisateur</button>
+    <iframe id="forecast-frame"></iframe>
+  </section>
+
+  <script>
+    function loadForecast(){
+      const city = document.getElementById("city").value;
+      const country = document.getElementById("country").value;
+      if(city && country){
+        document.getElementById("forecast-frame").src = `/index.html?city=${encodeURIComponent(city)}&country=${country}`;
+      }
+    }
+  </script>
+</body>
+</html>
