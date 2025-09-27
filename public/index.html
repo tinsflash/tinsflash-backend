@@ -2,197 +2,146 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – La météo ultime</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268" crossorigin="anonymous"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css">
+  <title>TINSFLASH — La météo nucléaire</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8204947691352732"
+     crossorigin="anonymous"></script>
+
   <style>
-    body { margin:0; font-family:"Segoe UI", sans-serif; background:#f4f9ff; color:#222; }
-    header { text-align:center; padding:20px; background:#0077cc; color:#fff; }
-    h1 { margin:0; font-size:1.8rem; }
-    .container { max-width:1200px; margin:auto; padding:20px; display:grid; gap:20px; }
-    .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
-    h2 { margin-top:0; color:#0077cc; }
-    .forecast-grid { display:flex; gap:15px; flex-wrap:wrap; }
-    .forecast-item { flex:1 1 120px; background:#eef6ff; border-radius:10px; padding:10px; text-align:center; }
-    #radar-map { height:400px; border-radius:10px; }
-    .alert { background:#ffe5e5; border-left:5px solid #cc0000; padding:10px; margin:5px 0; border-radius:8px; }
-    .video-container { position:relative; max-width:100%; margin-bottom:20px; }
-    video { width:100%; border-radius:12px; }
-    .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    body { background:#0d1117; color:#eee; }
+    .navbar { background:#161b22; }
+    .ads { margin:20px 0; text-align:center; }
+    .card { background:#161b22; color:#eee; border:1px solid #30363d; }
+    iframe { width:100%; height:500px; border:none; }
+    #introVideo { width:100%; max-height:400px; object-fit:cover; }
+    #videoControls { position:absolute; top:20px; right:20px; z-index:10; }
   </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🌤️ TINSFLASH – Vos prévisions météo</h1>
-  </header>
-  <main class="container">
+<nav class="navbar navbar-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">⚡ TINSFLASH</a>
+  </div>
+</nav>
 
-    <!-- Vidéo intro -->
-    <div class="video-container">
-      <video id="introVideo" autoplay muted loop>
-        <source src="intro.mp4" type="video/mp4">
-      </video>
-      <button class="video-btn" onclick="toggleVideo()">⏯️ Pause</button>
+<!-- Intro vidéo -->
+<div class="position-relative">
+  <video id="introVideo" autoplay muted loop playsinline>
+    <source src="intro.mp4" type="video/mp4">
+    Votre navigateur ne supporte pas la vidéo HTML5.
+  </video>
+  <button id="videoControls" class="btn btn-sm btn-warning">🔇 Son</button>
+</div>
+
+<!-- PUB top -->
+<div class="ads">
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-8204947691352732"
+       data-ad-slot="8028664604"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+
+<div class="container my-4">
+
+  <!-- Bloc prévisions -->
+  <h2>Prévisions locales</h2>
+  <form class="row g-2 mb-3" onsubmit="loadForecast(event)">
+    <div class="col-md-6">
+      <input id="city" class="form-control" placeholder="Votre ville">
     </div>
-
-    <!-- Prévisions locales -->
-    <div class="card">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-content">⏳ Chargement...</div>
+    <div class="col-md-4">
+      <select id="country" class="form-select">
+        <option value="BE">Belgique</option>
+        <option value="FR">France</option>
+        <option value="US">USA</option>
+        <option value="GB">Royaume-Uni</option>
+        <option value="DE">Allemagne</option>
+      </select>
     </div>
-
-    <!-- Prévisions nationales -->
-    <div class="card">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-content">⏳ Chargement...</div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100">Voir</button>
     </div>
+  </form>
 
-    <!-- 7 jours -->
-    <div class="card">
-      <h2>📅 Prévisions 7 jours</h2>
-      <div id="days-container" class="forecast-grid">⏳ Chargement...</div>
-    </div>
+  <div id="forecast-result" class="card p-3">Entrez une ville et un pays.</div>
 
-    <!-- Bulletin texte -->
-    <div class="card">
-      <h2>📰 Bulletin météo</h2>
-      <div id="forecast-text">⏳ Génération...</div>
-    </div>
+  <!-- Bloc alertes -->
+  <h2 class="mt-4">Alertes météo</h2>
+  <div id="alerts" class="row"></div>
 
-    <!-- Radar -->
-    <div class="card">
-      <h2>🛰️ Radar en direct</h2>
-      <div id="radar-map">⏳ Radar...</div>
-    </div>
+  <!-- PUB milieu -->
+  <div class="ads my-4">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-8204947691352732"
+         data-ad-slot="9437146866"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
 
-    <!-- Alertes -->
-    <div class="card">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-content">⏳ Chargement...</div>
-    </div>
+  <!-- Radar -->
+  <h2 class="mt-4">Radar météo</h2>
+  <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=5&level=surface&overlay=rain&product=ecmwf"></iframe>
 
-    <!-- Podcast -->
-    <div class="card">
-      <h2>🎙️ Podcast météo</h2>
-      <div id="podcast-container">⏳ Génération...</div>
-    </div>
+  <!-- PUB bas -->
+  <div class="ads mt-4">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-8204947691352732"
+         data-ad-slot="9109843802"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
+</div>
 
-  </main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// 🎥 Contrôle vidéo intro
+const video=document.getElementById("introVideo");
+const btn=document.getElementById("videoControls");
+btn.addEventListener("click",()=>{
+  if(video.muted){
+    video.muted=false;
+    btn.textContent="🔊 Son";
+  } else {
+    video.muted=true;
+    btn.textContent="🔇 Son";
+  }
+});
 
-  <script>
-    const API_BASE = "https://tinsflash-backend.onrender.com/api";
+// Prévisions
+async function loadForecast(e){
+  e.preventDefault();
+  const city=document.getElementById("city").value;
+  const country=document.getElementById("country").value;
+  const res=await fetch("/api/chat",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({message:`Météo à ${city}`,country})}).then(r=>r.json());
+  document.getElementById("forecast-result").innerHTML="<pre>"+JSON.stringify(res.reply,null,2)+"</pre>";
+}
 
-    // === Vidéo bouton ON/OFF ===
-    function toggleVideo() {
-      const video = document.getElementById("introVideo");
-      const btn = document.querySelector(".video-btn");
-      if (video.paused) { video.play(); btn.innerText="⏯️ Pause"; }
-      else { video.pause(); btn.innerText="▶️ Lecture"; }
-    }
-
-    // === Géolocalisation ===
-    function loadLocalForecast() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const { latitude, longitude } = pos.coords;
-          const res = await fetch(`${API_BASE}/localforecast/${latitude}/${longitude}`);
-          const data = await res.json();
-          document.getElementById("local-content").innerHTML = formatForecast(data);
-        }, () => {
-          document.getElementById("local-content").innerText = "❌ Impossible de récupérer votre localisation";
-        });
-      }
-    }
-
-    // === Prévisions nationales ===
-    async function loadNationalForecast() {
-      const res = await fetch(`${API_BASE}/forecast/Belgium`);
-      const data = await res.json();
-      document.getElementById("national-content").innerHTML = formatForecast(data);
-    }
-
-    // === 7 jours ===
-    async function load7Days() {
-      const res = await fetch(`${API_BASE}/forecast/Belgium`);
-      const data = await res.json();
-      if (data?.daily) {
-        document.getElementById("days-container").innerHTML = data.daily.map(day => `
-          <div class="forecast-item">
-            <div><i class="wi wi-day-sunny"></i></div>
-            <strong>${day.date}</strong><br/>
-            🌡️ ${day.temp.min}°C / ${day.temp.max}°C<br/>
-            🌧️ ${day.rain}% – 💨 ${day.wind} km/h
-          </div>
-        `).join("");
-      }
-    }
-
-    // === Bulletin texte ===
-    async function loadBulletin() {
-      const res = await fetch(`${API_BASE}/bulletin/Belgium`);
-      const data = await res.json();
-      document.getElementById("forecast-text").innerText = data.text || JSON.stringify(data);
-    }
-
-    // === Radar ===
-    async function loadRadar() {
-      const res = await fetch(`${API_BASE}/radar/Belgium`);
-      const data = await res.json();
-      const map = L.map("radar-map").setView([50.5, 4.7], 6);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      if (data?.overlay) {
-        L.tileLayer(data.overlay, { opacity:0.6 }).addTo(map);
-      }
-    }
-
-    // === Alertes ===
-    async function loadAlerts() {
-      const res = await fetch(`${API_BASE}/alerts/Belgium`);
-      const data = await res.json();
-      if (data.alerts?.length) {
-        document.getElementById("alerts-content").innerHTML = data.alerts.map(a => `
-          <div class="alert">⚠️ ${a.type} – ${a.description} (Fiabilité: ${a.confidence}%)</div>
-        `).join("");
-      } else {
-        document.getElementById("alerts-content").innerText = "✅ Aucune alerte";
-      }
-    }
-
-    // === Podcast ===
-    async function loadPodcast() {
-      try {
-        const res = await fetch(`${API_BASE}/podcast/Belgium`);
-        const data = await res.json();
-        if (data.url) {
-          document.getElementById("podcast-container").innerHTML = `<audio controls src="${data.url}"></audio>`;
-        }
-      } catch {
-        document.getElementById("podcast-container").innerText = "❌ Podcast non disponible";
-      }
-    }
-
-    // === Helper affichage prévisions ===
-    function formatForecast(f) {
-      if (!f) return "❌ Pas de données";
-      return `
-        <div><i class="wi wi-day-sunny"></i> ${f.description || "Prévisions météo"}</div>
-        🌡️ Min: ${f.temp?.min || "?"}°C / Max: ${f.temp?.max || "?"}°C<br/>
-        🌧️ Pluie: ${f.rain || "?"}% – 💨 Vent: ${f.wind || "?"} km/h<br/>
-        📊 Fiabilité: ${f.confidence || "?"}%
-      `;
-    }
-
-    // === Chargement initial ===
-    loadLocalForecast();
-    loadNationalForecast();
-    load7Days();
-    loadBulletin();
-    loadRadar();
-    loadAlerts();
-    loadPodcast();
-  </script>
+// Alertes
+async function loadAlerts(){
+  const a=await fetch("/api/alerts").then(r=>r.json());
+  const box=document.getElementById("alerts");
+  box.innerHTML="";
+  if(a.covered && a.covered.length){
+    a.covered.forEach(x=>{
+      box.innerHTML+=`<div class="col-md-4"><div class="card p-2 mb-2"><b>${x.country||x.continent}</b><br>${x.message||x.details||"Alerte"}<br><span class="badge bg-danger">${x.confidence||"?"}%</span></div></div>`;
+    });
+  } else {
+    box.innerHTML="<p>Aucune alerte active.</p>";
+  }
+}
+loadAlerts();
+</script>
 </body>
 </html>
