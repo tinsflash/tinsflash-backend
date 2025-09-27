@@ -1,174 +1,220 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>⚡ Centrale Nucléaire Météo — Console Admin</title>
+  <meta charset="UTF-8">
+  <title>Console TINSFLASH</title>
   <style>
-    body {
-      background: black;
-      color: lime;
-      font-family: monospace;
-      padding: 10px;
-    }
-    h1, h2 {
-      color: cyan;
-    }
-    section {
-      border: 1px solid lime;
-      margin: 15px 0;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    button {
-      background: lime;
-      color: black;
-      font-weight: bold;
-      padding: 6px 12px;
-      margin: 5px 0;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    pre {
-      background: black;
-      color: lime;
-      padding: 10px;
-      border-radius: 8px;
-      max-height: 300px;
-      overflow: auto;
-    }
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
+    h1 { padding:10px; background:#222; }
+    h2 { margin-top:20px; }
+    .tabs { display:flex; background:#222; }
+    .tab { padding:10px 20px; cursor:pointer; }
+    .tab.active { background:#444; }
+    .content { display:none; padding:20px; }
+    .content.active { display:block; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th, td { border:1px solid #444; padding:6px; text-align:left; }
+    th { background:#333; }
+    iframe { width:100%; height:600px; border:none; margin-top:10px; }
+    button { margin:5px; padding:8px 12px; cursor:pointer; }
+    select, input { margin:5px; padding:6px; }
+    #diag-result { background:#222; padding:10px; margin-top:10px; border:1px solid #555; white-space:pre-wrap; }
   </style>
 </head>
 <body>
   <h1>⚡ Centrale Nucléaire Météo — Console Admin</h1>
 
-  <!-- ============================= -->
-  <!-- 🚀 Démarrage Global -->
-  <!-- ============================= -->
-  <section>
-    <h2>🚀 Démarrer TOUT (global)</h2>
-    <p>POST <code>/api/run-global</code></p>
-    <button onclick="runGlobal()">Démarrer TOUT</button>
-    <pre id="runGlobalOutput"></pre>
-  </section>
+  <div class="tabs">
+    <div class="tab active" data-tab="alerts">🚨 Alertes</div>
+    <div class="tab" data-tab="local">📍 Prévisions locales (copie index)</div>
+    <div class="tab" data-tab="news">📰 Actualités</div>
+    <div class="tab" data-tab="radar">📡 Radar</div>
+    <div class="tab" data-tab="diag">🔍 Diagnostic moteur</div>
+  </div>
 
-  <!-- ============================= -->
-  <!-- 📜 Logs moteur -->
-  <!-- ============================= -->
-  <section>
-    <h2>📜 Logs moteur</h2>
-    <p>GET <code>/api/logs</code></p>
-    <button onclick="getLogs()">Activer</button>
-    <pre id="logsOutput"></pre>
-  </section>
+  <!-- Onglet Alertes -->
+  <div id="alerts" class="content active">
+    <h2>Publiées (>90%)</h2>
+    <table id="alerts-90"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
 
-  <!-- ============================= -->
-  <!-- 🔧 État du moteur -->
-  <!-- ============================= -->
-  <section>
-    <h2>🔧 État du moteur</h2>
-    <p>GET <code>/api/checkup</code></p>
-    <button onclick="getCheckup()">Vérifier</button>
-    <pre id="checkupOutput"></pre>
-  </section>
+    <h2>À valider (70-90%)</h2>
+    <table id="alerts-70"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th><th>Actions</th></tr></table>
 
-  <!-- ============================= -->
-  <!-- ⚠️ Alertes météo -->
-  <!-- ============================= -->
-  <section>
-    <h2>⚠️ Alertes météo</h2>
-    <p>GET <code>/api/alerts</code></p>
-    <button onclick="getAlerts()">Charger</button>
-    <pre id="alertsOutput"></pre>
-  </section>
+    <h2>Envoyées expert</h2>
+    <table id="alerts-expert"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
 
-  <!-- ============================= -->
-  <!-- 🌍 Radar météo global -->
-  <!-- ============================= -->
-  <section>
-    <h2>🌍 Radar météo global</h2>
-    <p>GET <code>/api/radar/global</code></p>
-    <button onclick="getRadar()">Afficher</button>
-    <pre id="radarOutput"></pre>
-  </section>
+    <h2>En attente</h2>
+    <table id="alerts-wait"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
 
-  <!-- ============================= -->
-  <!-- 🤖 Chat IA — Moteur météo -->
-  <!-- ============================= -->
-  <section>
-    <h2>🤖 Chat IA — Moteur météo nucléaire</h2>
-    <p>POST <code>/api/chat</code></p>
-    <textarea id="chatMessage" rows="2" style="width:100%;"></textarea><br/>
-    <button onclick="sendChat()">Envoyer</button>
-    <pre id="chatOutput"></pre>
-  </section>
+    <h2>Ignorées (<70%)</h2>
+    <table id="alerts-low"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
+  </div>
 
-  <!-- ============================= -->
-  <!-- ✅ Vérification complète moteur -->
-  <!-- ============================= -->
-  <section>
-    <h2>✅ Vérification complète moteur</h2>
-    <p>GET <code>/api/verify-all</code></p>
-    <button onclick="verifyAll()">Vérifier tout</button>
-    <pre id="verifyOutput"></pre>
-  </section>
+  <!-- Onglet Prévisions locales -->
+  <div id="local" class="content">
+    <h2>Prévision locale (copie exacte de la page index utilisateur)</h2>
+    <input type="text" id="city" placeholder="Ville">
+    <select id="country">
+      <option value="FR">France</option>
+      <option value="BE">Belgique</option>
+      <option value="DE">Allemagne</option>
+      <option value="US">USA</option>
+      <option value="GB">UK</option>
+      <option value="ES">Espagne</option>
+      <option value="IT">Italie</option>
+    </select>
+    <button onclick="loadForecast()">Voir comme utilisateur</button>
+    <iframe id="forecast-frame"></iframe>
+  </div>
+
+  <!-- Onglet Actualités -->
+  <div id="news" class="content">
+    <h2>Actualités météo & climat</h2>
+    <div id="news-list"></div>
+  </div>
+
+  <!-- Onglet Radar -->
+  <div id="radar" class="content">
+    <h2>Radar météo global (interne)</h2>
+    <iframe id="radar-frame" src="/api/radar/europe"></iframe>
+
+    <h2>Radar interactif (Windy-like)</h2>
+    <label>Type de carte : </label>
+    <select id="overlay-select" onchange="updateWindyOverlay()">
+      <option value="rain">🌧️ Pluie</option>
+      <option value="snow">❄️ Neige</option>
+      <option value="wind">💨 Vent</option>
+      <option value="temp">🌡️ Température</option>
+      <option value="pressure">🔵 Pression</option>
+    </select>
+    <iframe 
+      id="windy-frame"
+      src="https://embed.windy.com/embed2.html?lat=50&lon=5&zoom=4&level=surface&overlay=rain&product=ecmwf"
+      width="100%" 
+      height="600" 
+      frameborder="0">
+    </iframe>
+  </div>
+
+  <!-- Onglet Diagnostic -->
+  <div id="diag" class="content">
+    <h2>Diagnostic moteur météo</h2>
+    <button onclick="runDiagnostic()">Lancer diagnostic complet</button>
+    <div id="diag-result">⚙️ En attente de diagnostic...</div>
+  </div>
 
   <script>
-    async function runGlobal() {
-      const res = await fetch("/api/run-global", { method: "POST" });
-      const data = await res.json();
-      document.getElementById("runGlobalOutput").textContent = JSON.stringify(data, null, 2);
-    }
+    // Tabs
+    document.querySelectorAll(".tab").forEach(tab=>{
+      tab.addEventListener("click", ()=>{
+        document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+        document.querySelectorAll(".content").forEach(c=>c.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.tab).classList.add("active");
+      });
+    });
 
-    async function getLogs() {
-      const res = await fetch("/api/logs");
-      const data = await res.json();
-      document.getElementById("logsOutput").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function getCheckup() {
-      const res = await fetch("/api/checkup");
-      const data = await res.json();
-      document.getElementById("checkupOutput").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function getAlerts() {
+    // Charger alertes
+    async function loadAlerts() {
       const res = await fetch("/api/alerts");
       const data = await res.json();
-      document.getElementById("alertsOutput").textContent = JSON.stringify(data, null, 2);
-    }
+      const alerts = data.covered || [];
 
-    async function getRadar() {
-      const res = await fetch("/api/radar/global");
-      const data = await res.json();
-      document.getElementById("radarOutput").textContent = JSON.stringify(data, null, 2);
-    }
+      alerts.forEach((a, idx)=>{
+        let row = `<tr>
+          <td>${a.country||"-"}</td>
+          <td>${a.type||"-"}</td>
+          <td>${a.message||"-"}</td>
+          <td>${a.reliability||"?"}%</td>`;
 
-    async function sendChat() {
-      const msg = document.getElementById("chatMessage").value;
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, country: "BE" })
+        if(a.reliability>=90){
+          row += "</tr>";
+          document.getElementById("alerts-90").innerHTML+=row;
+        } 
+        else if(a.reliability>=70 && !a.tag){
+          row += `<td>
+            <button onclick="handleAlertAction(${idx}, 'validate')">✅ Valider</button>
+            <button onclick="handleAlertAction(${idx}, 'expert')">📤 Expert</button>
+            <button onclick="handleAlertAction(${idx}, 'wait')">⏳ Attente</button>
+          </td></tr>`;
+          document.getElementById("alerts-70").innerHTML+=row;
+        }
+        else if(a.tag==="expert"){
+          row += "</tr>";
+          document.getElementById("alerts-expert").innerHTML+=row;
+        }
+        else if(a.tag==="wait"){
+          row += "</tr>";
+          document.getElementById("alerts-wait").innerHTML+=row;
+        }
+        else {
+          row += "</tr>";
+          document.getElementById("alerts-low").innerHTML+=row;
+        }
       });
-      const data = await res.json();
-      document.getElementById("chatOutput").textContent =
-        typeof data.reply === "string" ? data.reply : JSON.stringify(data.reply, null, 2);
     }
 
-    async function verifyAll() {
-      try {
-        const res = await fetch("/api/verify-all");
-        const data = await res.json();
-        document.getElementById("verifyOutput").textContent =
-          typeof data.reply === "string"
-            ? data.reply
-            : JSON.stringify(data.reply, null, 2);
-      } catch (err) {
-        document.getElementById("verifyOutput").textContent =
-          "❌ Erreur vérification moteur : " + err.message;
+    // Actions sur alertes
+    async function handleAlertAction(index, action){
+      const res = await fetch("/api/alerts/action", {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ index, action })
+      });
+      const result = await res.json();
+      alert("Action: " + result.status);
+      location.reload();
+    }
+
+    // Prévisions locales = copie index
+    function loadForecast(){
+      const city = document.getElementById("city").value;
+      const country = document.getElementById("country").value;
+      if(city && country){
+        document.getElementById("forecast-frame").src = `/index.html?city=${encodeURIComponent(city)}&country=${country}`;
       }
     }
+
+    // Actualités
+    async function loadNews() {
+      const res = await fetch("/api/news");
+      const news = await res.json();
+      let html="";
+      news.forEach(n=>{
+        html += `<p><b>${n.title}</b><br>${n.summary||""}<br><a href="${n.link}" target="_blank">Lire plus</a></p>`;
+      });
+      document.getElementById("news-list").innerHTML=html;
+    }
+
+    // Radar interactif Windy
+    function updateWindyOverlay(){
+      const overlay = document.getElementById("overlay-select").value;
+      const windy = document.getElementById("windy-frame");
+      windy.src = `https://embed.windy.com/embed2.html?lat=50&lon=5&zoom=4&level=surface&overlay=${overlay}&product=ecmwf`;
+    }
+
+    // Diagnostic IA
+    async function runDiagnostic(){
+      document.getElementById("diag-result").innerText = "⏳ Diagnostic en cours...";
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ 
+            message: "Vérifie que le moteur a bien analysé toutes les données (modèles, satellites, climat, relief), généré les prévisions zones couvertes et non couvertes, et produit toutes les alertes comme prévu.",
+            country: "" 
+          })
+        });
+        const data = await res.json();
+        document.getElementById("diag-result").innerText = data.reply.reply || JSON.stringify(data);
+      } catch (err) {
+        document.getElementById("diag-result").innerText = "❌ Erreur diagnostic: " + err.message;
+      }
+    }
+
+    // Initial load
+    loadAlerts();
+    loadNews();
   </script>
 </body>
 </html>
