@@ -5,171 +5,162 @@
   <title>Console Admin TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial, sans-serif; background:#0d1117; color:#eee; margin:0; }
-    header { background:#161b22; padding:10px; text-align:center; }
-    h1 { margin:0; font-size:22px; color:#58a6ff; }
-    button { background:#238636; color:white; border:none; padding:8px 16px; margin:5px; cursor:pointer; border-radius:6px; }
-    button:hover { background:#2ea043; }
-    .container { padding:15px; }
-    .section { margin-bottom:20px; padding:15px; background:#161b22; border-radius:8px; }
-    .section h2 { margin-top:0; font-size:18px; color:#ffa657; }
-    pre { background:#0d1117; padding:10px; border-radius:6px; overflow:auto; }
-    nav { display:flex; justify-content:center; background:#21262d; }
-    nav button { background:none; border:none; color:#ccc; padding:10px 15px; cursor:pointer; font-size:15px; }
-    nav button.active { color:#58a6ff; border-bottom:2px solid #58a6ff; }
-    .tab { display:none; padding:15px; }
-    .tab.active { display:block; }
+    body { margin:0; font-family:Arial, sans-serif; background:#0d1117; color:#eee; }
+    header { background:#161b22; padding:15px; text-align:center; }
+    header h1 { margin:0; color:#58a6ff; font-size:22px; }
+    .layout { display:flex; }
+    nav { width:200px; background:#21262d; height:100vh; display:flex; flex-direction:column; }
+    nav button { background:none; border:none; color:#ccc; padding:12px; text-align:left; cursor:pointer; }
+    nav button.active { background:#30363d; color:#58a6ff; }
+    .content { flex:1; padding:20px; }
+    section { display:none; }
+    section.active { display:block; }
+    button.action { background:#238636; color:#fff; border:none; padding:8px 14px; margin:5px 0; cursor:pointer; border-radius:6px; }
+    button.action:hover { background:#2ea043; }
+    pre { background:#161b22; padding:10px; border-radius:6px; overflow:auto; }
     iframe { width:100%; height:600px; border:none; }
   </style>
 </head>
 <body>
   <header>
-    <h1>⚡ Console Admin — Centrale Nucléaire Météo</h1>
-    <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
-    <button onclick="runContinental()">🌍 Lancer RUN CONTINENTAL</button>
+    <h1>⚡ Centrale Nucléaire Météo — Console Admin</h1>
   </header>
-
-  <div class="container">
-    <div class="section">
-      <h2>📝 Logs moteur</h2>
-      <button onclick="loadLogs()">🔄 Rafraîchir</button>
-      <pre id="logs">Chargement...</pre>
+  <div class="layout">
+    <nav>
+      <button onclick="openTab('run')" id="btn-run">🚀 Lancer Moteur</button>
+      <button onclick="openTab('logs')" id="btn-logs">📝 Logs</button>
+      <button onclick="openTab('errors')" id="btn-errors">❌ Erreurs</button>
+      <button onclick="openTab('diagnostic')" id="btn-diagnostic">🧠 Diagnostic IA</button>
+      <button onclick="openTab('engine')" id="btn-engine">⚙️ État Moteur</button>
+      <button onclick="openTab('alerts')" id="btn-alerts">🔔 Alertes</button>
+      <button onclick="openTab('radar')" id="btn-radar">📡 Radar</button>
+      <button onclick="openTab('preview')" id="btn-preview">🌍 Preview Index</button>
+      <button onclick="openTab('news')" id="btn-news">📰 Actualités</button>
+    </nav>
+    <div class="content">
+      <!-- RUN -->
+      <section id="run">
+        <h2>🚀 Lancer le moteur</h2>
+        <button class="action" onclick="runGlobal()">RUN GLOBAL</button>
+        <button class="action" onclick="runContinental()">RUN CONTINENTAL</button>
+        <pre id="run-output">En attente...</pre>
+      </section>
+      <!-- LOGS -->
+      <section id="logs">
+        <h2>📝 Logs moteur</h2>
+        <button class="action" onclick="loadLogs()">🔄 Rafraîchir</button>
+        <pre id="logs-output">Chargement...</pre>
+      </section>
+      <!-- ERREURS -->
+      <section id="errors">
+        <h2>❌ Erreurs moteur</h2>
+        <pre id="errors-output">Aucune</pre>
+      </section>
+      <!-- DIAGNOSTIC IA -->
+      <section id="diagnostic">
+        <h2>🧠 Diagnostic IA</h2>
+        <button class="action" onclick="checkIA()">Lancer diagnostic</button>
+        <pre id="ia-output">En attente...</pre>
+      </section>
+      <!-- ENGINE -->
+      <section id="engine">
+        <h2>⚙️ État moteur</h2>
+        <button class="action" onclick="loadEngineState()">🔄 Rafraîchir</button>
+        <pre id="engine-output">Chargement...</pre>
+      </section>
+      <!-- ALERTES -->
+      <section id="alerts">
+        <h2>🔔 Alertes actives</h2>
+        <button class="action" onclick="loadAlerts()">🔄 Rafraîchir</button>
+        <pre id="alerts-output">Chargement...</pre>
+      </section>
+      <!-- RADAR -->
+      <section id="radar">
+        <h2>📡 Radar global</h2>
+        <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=4&detailLat=50&detailLon=4&overlay=rain&level=surface"></iframe>
+      </section>
+      <!-- PREVIEW INDEX -->
+      <section id="preview">
+        <h2>🌍 Preview Index utilisateur</h2>
+        <label>Ville: <input type="text" id="preview-city" placeholder="Bruxelles" /></label>
+        <label>Pays:
+          <select id="preview-country">
+            <option value="be">Belgique</option>
+            <option value="fr">France</option>
+            <option value="de">Allemagne</option>
+            <option value="us">USA</option>
+            <option value="uk">Royaume-Uni</option>
+          </select>
+        </label>
+        <button class="action" onclick="previewIndex()">Voir</button>
+        <iframe id="preview-frame"></iframe>
+      </section>
+      <!-- NEWS -->
+      <section id="news">
+        <h2>📰 Actualités météo/climat</h2>
+        <button class="action" onclick="loadNews()">🔄 Rafraîchir</button>
+        <pre id="news-output">Chargement...</pre>
+      </section>
     </div>
-
-    <div class="section">
-      <h2>❌ Erreurs</h2>
-      <pre id="errors">Aucune</pre>
-    </div>
-
-    <div class="section">
-      <h2>🧠 Diagnostic IA</h2>
-      <button onclick="checkIA()">Vérifier par IA</button>
-      <pre id="ia-diagnostic">En attente...</pre>
-    </div>
-
-    <div class="section">
-      <h2>⚙️ État moteur</h2>
-      <button onclick="loadEngineState()">🔄 Rafraîchir</button>
-      <pre id="engine-state">Chargement...</pre>
-    </div>
-  </div>
-
-  <nav>
-    <button onclick="openTab('alerts')" id="tab-alerts">🔔 Alertes</button>
-    <button onclick="openTab('radar')" id="tab-radar">📡 Radar</button>
-    <button onclick="openTab('preview')" id="tab-preview">🌍 Preview Index</button>
-    <button onclick="openTab('news')" id="tab-news">📰 Actualités</button>
-  </nav>
-
-  <div class="tab" id="alerts">
-    <h2>🔔 Alertes actives</h2>
-    <button onclick="loadAlerts()">🔄 Rafraîchir</button>
-    <pre id="alerts-content">Chargement...</pre>
-  </div>
-
-  <div class="tab" id="radar">
-    <h2>📡 Radar météo global</h2>
-    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&zoom=4&level=surface&overlay=rain&menu=&message=true&calendar=12&pressure=true&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
-  </div>
-
-  <div class="tab" id="preview">
-    <h2>🌍 Preview Index utilisateur</h2>
-    <label>Ville: <input type="text" id="preview-city" placeholder="Bruxelles" /></label>
-    <label>Pays:
-      <select id="preview-country">
-        <option value="be">Belgique</option>
-        <option value="fr">France</option>
-        <option value="de">Allemagne</option>
-        <option value="us">USA</option>
-        <option value="uk">Royaume-Uni</option>
-      </select>
-    </label>
-    <button onclick="previewIndex()">Voir la preview</button>
-    <iframe id="preview-frame"></iframe>
-  </div>
-
-  <div class="tab" id="news">
-    <h2>📰 Actualités météo et climat</h2>
-    <button onclick="loadNews()">🔄 Rafraîchir</button>
-    <pre id="news-content">Chargement...</pre>
   </div>
 
   <script>
-    // Navigation avec conservation onglet
-    function openTab(tabId) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      document.getElementById('tab-' + tabId).classList.add('active');
-      localStorage.setItem('activeTab', tabId);
+    // --- Navigation avec mémoire ---
+    function openTab(tab) {
+      document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+      document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+      document.getElementById(tab).classList.add("active");
+      document.getElementById("btn-" + tab).classList.add("active");
+      localStorage.setItem("activeTabAdmin", tab);
     }
-    const savedTab = localStorage.getItem('activeTab') || 'alerts';
-    openTab(savedTab);
+    openTab(localStorage.getItem("activeTabAdmin") || "run");
 
-    // API calls
+    // --- API calls ---
     async function runGlobal() {
-      document.getElementById("logs").textContent = "RUN GLOBAL en cours...";
+      document.getElementById("run-output").textContent = "RUN GLOBAL en cours...";
       const res = await fetch("/api/run-global", { method: "POST" });
-      const data = await res.json();
-      loadLogs();
-      loadEngineState();
-      alert("RUN GLOBAL terminé");
+      document.getElementById("run-output").textContent = JSON.stringify(await res.json(), null, 2);
+      loadLogs(); loadEngineState();
     }
-
     async function runContinental() {
+      document.getElementById("run-output").textContent = "RUN CONTINENTAL en cours...";
       const res = await fetch("/api/run-continental", { method: "POST" });
-      const data = await res.json();
-      loadLogs();
-      loadEngineState();
-      alert("RUN CONTINENTAL terminé");
+      document.getElementById("run-output").textContent = JSON.stringify(await res.json(), null, 2);
+      loadLogs(); loadEngineState();
     }
-
     async function loadLogs() {
       const res = await fetch("/api/logs");
-      const data = await res.json();
-      document.getElementById("logs").textContent = JSON.stringify(data.logs, null, 2);
+      document.getElementById("logs-output").textContent = JSON.stringify(await res.json(), null, 2);
     }
-
     async function loadEngineState() {
       const res = await fetch("/api/engine-state");
       const data = await res.json();
-      document.getElementById("engine-state").textContent = JSON.stringify(data.state, null, 2);
-      document.getElementById("errors").textContent = JSON.stringify(data.state.errors, null, 2);
+      document.getElementById("engine-output").textContent = JSON.stringify(data, null, 2);
+      document.getElementById("errors-output").textContent = JSON.stringify(data.state?.errors || [], null, 2);
     }
-
     async function checkIA() {
       const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "diagnostic moteur" })
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ message:"diagnostic moteur" })
       });
-      const data = await res.json();
-      document.getElementById("ia-diagnostic").textContent = JSON.stringify(data.response, null, 2);
+      document.getElementById("ia-output").textContent = JSON.stringify(await res.json(), null, 2);
     }
-
     async function loadAlerts() {
       const res = await fetch("/api/alerts");
-      const data = await res.json();
-      document.getElementById("alerts-content").textContent = JSON.stringify(data.alerts, null, 2);
+      document.getElementById("alerts-output").textContent = JSON.stringify(await res.json(), null, 2);
     }
-
     async function previewIndex() {
-      const city = document.getElementById("preview-city").value;
-      const country = document.getElementById("preview-country").value;
-      document.getElementById("preview-frame").src = `/index.html?city=${city}&country=${country}`;
+      const c = document.getElementById("preview-city").value;
+      const p = document.getElementById("preview-country").value;
+      document.getElementById("preview-frame").src = `/index.html?city=${c}&country=${p}`;
     }
-
     async function loadNews() {
       const res = await fetch("/api/news");
-      const data = await res.json();
-      document.getElementById("news-content").textContent = JSON.stringify(data, null, 2);
+      document.getElementById("news-output").textContent = JSON.stringify(await res.json(), null, 2);
     }
 
-    // Chargement initial
-    loadLogs();
-    loadEngineState();
-    loadAlerts();
-    loadNews();
+    // --- Initial load ---
+    loadLogs(); loadEngineState(); loadAlerts(); loadNews();
   </script>
 </body>
 </html>
