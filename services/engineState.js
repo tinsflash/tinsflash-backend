@@ -1,64 +1,43 @@
 // services/engineState.js
-
 let engineState = {
   runTime: null,
-  zonesCovered: {},   // { BE:true, FR:true, ... }
-  sources: {},        // modèles météo utilisés
-  logs: [],           // [{timestamp, message}]
-  errors: [],         // [{timestamp, error}]
-  alertsList: []      // [{id, country, type, reliability, firstDetected}]
+  models: { ok: [], ko: [] },
+  sources: { ok: [], ko: [] },
+  forecasts: { local: false, national: false, openData: false },
+  alerts: { local: false, national: false, continental: false, world: false },
+  ia: { forecasts: false, alerts: false },
+  users: {},
+  logs: [],
 };
 
-// === Fonctions principales ===
-export function getEngineState() {
-  return engineState;
-}
-
-export function saveEngineState(newState) {
-  engineState = { ...engineState, ...newState };
-  return engineState;
-}
-
-// === Logs ===
-export function addEngineLog(message) {
+// --- Helpers ---
+function addLog(message, level = "info") {
   engineState.logs.push({
     timestamp: new Date().toISOString(),
-    message
+    level,
+    message,
   });
+  if (engineState.logs.length > 200) engineState.logs.shift();
 }
 
-// === Erreurs ===
-export function addEngineError(error) {
-  engineState.errors.push({
-    timestamp: new Date().toISOString(),
-    error: error instanceof Error ? error.message : String(error)
-  });
+function saveEngineState(partial) {
+  engineState = { ...engineState, ...partial };
+  return engineState;
 }
 
-// === Alertes ===
-export function setAlerts(alerts) {
-  engineState.alertsList = alerts;
-  return engineState.alertsList;
+function getEngineState() {
+  return engineState;
 }
 
-// === Reset (si besoin) ===
-export function resetEngineState() {
-  engineState = {
-    runTime: null,
-    zonesCovered: {},
-    sources: {},
-    logs: [],
-    errors: [],
-    alertsList: []
-  };
+// --- Pour reset avant un nouveau run ---
+function resetEngineState() {
+  engineState.runTime = new Date().toISOString();
+  engineState.models = { ok: [], ko: [] };
+  engineState.sources = { ok: [], ko: [] };
+  engineState.forecasts = { local: false, national: false, openData: false };
+  engineState.alerts = { local: false, national: false, continental: false, world: false };
+  engineState.ia = { forecasts: false, alerts: false };
+  addLog("Nouvelle exécution initialisée", "system");
 }
 
-// === Export par défaut (robuste pour server.js) ===
-export default {
-  getEngineState,
-  saveEngineState,
-  addEngineLog,
-  addEngineError,
-  setAlerts,
-  resetEngineState
-};
+export { getEngineState, saveEngineState, addLog, resetEngineState };
