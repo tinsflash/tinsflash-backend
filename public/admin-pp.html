@@ -1,591 +1,247 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TINSFLASH • Console Admin</title>
+  <meta charset="UTF-8">
+  <title>TINSFLASH – Console Administrateur</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    :root{
-      --bg:#0b0f14; --panel:#111827; --muted:#1f2937; --text:#e5e7eb; --sub:#9ca3af; --ok:#10b981; --ko:#ef4444; --unk:#f59e0b; --line:#2b3442; --accent:#38bdf8;
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans',sans-serif;background:var(--bg);color:var(--text)}
-    header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#0b0f14,rgba(11,15,20,.85));border-bottom:1px solid var(--line)}
-    .wrap{max-width:1100px;margin:0 auto;padding:16px}
-    .brand{display:flex;align-items:center;gap:12px}
-    .brand h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.5px}
-    .tag{font-size:12px;color:#9ca3af;background:#0f172a;padding:2px 8px;border-radius:999px;border:1px solid #1f2937}
-    nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    nav a{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--text);background:var(--muted);border:1px solid var(--line);font-size:14px}
-    nav a.active{outline:2px solid var(--accent);background:#0f172a}
-    main{padding:16px}
-    .grid{display:grid;gap:12px}
-    @media(min-width:900px){.grid.cols-2{grid-template-columns:1fr 1fr}.grid.cols-3{grid-template-columns:repeat(3,1fr)}}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
-    .card h3{margin:0 0 10px 0;font-size:16px}
-    .buttons{display:flex;gap:8px;flex-wrap:wrap}
-    button,.btn{cursor:pointer;background:#0ea5e9;border:1px solid #1f2937;color:white;padding:10px 12px;border-radius:10px;font-weight:600}
-    button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
-    .small{font-size:12px;color:var(--sub)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace}
-    .log{display:flex;gap:8px;align-items:flex-start;padding:8px;border-bottom:1px dashed var(--line)}
-    .log .t{min-width:160px;color:var(--sub);font-size:12px}
-    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#0f172a;font-size:12px}
-    .ok{color:#10b981;border-color:#065f46;background:rgba(16,185,129,.08)}
-    .ko{color:#ef4444;border-color:#7f1d1d;background:rgba(239,68,68,.08)}
-    .unk{color:#f59e0b;border-color:#78350f;background:rgba(245,158,11,.08)}
-    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .field{display:flex;flex-direction:column;gap:6px}
-    input,select,textarea{background:#0f172a;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px}
-    textarea{min-height:120px;resize:vertical}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;font-size:14px}
-    .muted{color:var(--sub)}
-    iframe{width:100%;min-height:65vh;border:1px solid var(--line);border-radius:12px;background:#0b0f14}
-    .hidden{display:none}
-    .hl{color:#93c5fd}
+    header {
+      background: #111;
+      padding: 10px 20px;
+      font-size: 18px;
+      font-weight: bold;
+      border-bottom: 2px solid #222;
+    }
+    nav {
+      display: flex;
+      gap: 10px;
+      background: #1a1a1a;
+      padding: 8px;
+    }
+    nav button {
+      background: #222;
+      color: #eee;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    nav button:hover {
+      background: #333;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      padding: 15px;
+    }
+    .card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.5);
+    }
+    .scroll-box {
+      max-height: 250px;
+      overflow-y: auto;
+      background: #111;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .checkup-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .check-item {
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .ok { background: #133d13; border-left: 5px solid #4CAF50; }
+    .ko { background: #3d1313; border-left: 5px solid #F44336; }
+    .warn { background: #3d3213; border-left: 5px solid #FF9800; }
+    .unknown { background: #262626; border-left: 5px solid #888; }
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .btn {
+      margin: 3px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary { background: #1976d2; color: #fff; }
+    .btn-secondary { background: #388e3c; color: #fff; }
+    .btn-danger { background: #d32f2f; color: #fff; }
+    .copy-btn {
+      background: #444;
+      color: #fff;
+      border: none;
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      float: right;
+    }
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="brand">
-      <h1>⚡ TINSFLASH • Console Administrateur</h1>
-      <span class="tag">Centrale Nucléaire Météo</span>
-      <span id="lastSync" class="small"></span>
-    </div>
-    <nav id="tabs">
-      <a data-page="dashboard" class="active">Dashboard</a>
-      <a data-page="alerts">Alertes</a>
-      <a data-page="user-view">Vue utilisateur</a>
-      <a data-page="chat">Chat IA (moteur)</a>
-      <a data-page="tools">Outils & Radar</a>
-      <a data-page="news">Actualités</a>
-    </nav>
-  </div>
-</header>
+  <header>⚡ TINSFLASH – Console Administrateur</header>
 
-<main class="wrap">
-  <!-- DASHBOARD -->
-  <section id="page-dashboard">
-    <div class="grid cols-2">
+  <nav>
+    <button onclick="showTab('dashboard')">Dashboard</button>
+    <button onclick="showTab('alertes')">Alertes</button>
+    <button onclick="showTab('vueuser')">Vue utilisateur</button>
+    <button onclick="showTab('chat')">Chat IA (moteur)</button>
+    <button onclick="showTab('radar')">Outils & Radar</button>
+    <button onclick="showTab('news')">Actualités</button>
+  </nav>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="tab">
+    <div class="container">
       <div class="card">
-        <h3>🚀 Lancer le moteur</h3>
-        <div class="buttons">
-          <button id="btnRunGlobal">RUN GLOBAL (zones couvertes)</button>
-          <button id="btnRunContinental" class="ghost">RUN CONTINENTAL (non couvertes)</button>
-          <button id="btnVerify" class="ghost">Vérifier (IA)</button>
-          <button id="btnRefresh" class="ghost">Actualiser état</button>
-        </div>
-        <p class="small">Règle d’or : 100 % réel, jamais de mock. Les runs n’écrasent rien tant que la publication auto n’est pas déclenchée.</p>
-        <div id="runResult" class="small mono muted"></div>
+        <div class="section-title">🚀 Lancer le moteur</div>
+        <button class="btn btn-primary" onclick="runGlobal()">RUN GLOBAL (zones couvertes)</button>
+        <button class="btn btn-secondary" onclick="runContinental()">RUN CONTINENTAL (non couvertes)</button>
+        <button class="btn btn-danger" onclick="checkIA()">Vérifier (IA)</button>
+        <div class="scroll-box" id="runResult">Résultat du run affiché ici…</div>
       </div>
 
       <div class="card">
-        <h3>🧠 Checkup moteur – 13 points</h3>
-        <div id="checkup" class="grid"></div>
-        <div class="small muted" id="engineMeta"></div>
-      </div>
-    </div>
-
-    <div class="grid cols-2" style="margin-top:12px">
-      <div class="card">
-        <h3>📜 Logs (moteur & admin)</h3>
-        <div class="row">
-          <button id="btnLoadLogs" class="ghost">Charger logs</button>
-          <span class="small muted">Derniers 200 éléments • couleur = sévérité</span>
+        <div class="section-title">🧠 Checkup 13 points</div>
+        <div id="checkup" class="checkup-list">
+          <!-- Dynamique -->
         </div>
-        <div id="logs" style="margin-top:10px"></div>
       </div>
 
       <div class="card">
-        <h3>🧩 État & Utilisateurs</h3>
-        <div class="row">
-          <span id="engineStatus" class="chip unk">Moteur: inconnu</span>
-          <span id="iaStatus" class="chip unk">IA: inconnu</span>
-          <span id="radarStatus" class="chip unk">Radar: inconnu</span>
-          <span id="forecastsStatus" class="chip unk">Prévisions: inconnu</span>
-          <span id="alertsStatus" class="chip unk">Alertes: inconnu</span>
-        </div>
-        <div id="usersBox" style="margin-top:12px">
-          <h4 style="margin:6px 0 8px 0;font-size:14px">👥 Utilisateurs par zone</h4>
-          <div class="small muted">Si l’API /api/users n’est pas disponible dans ce déploiement, le bloc reste vide.</div>
-          <div id="users"></div>
-        </div>
+        <div class="section-title">📜 Logs (moteur & admin)</div>
+        <button class="copy-btn" onclick="copyLogs()">Copier tout</button>
+        <div class="scroll-box" id="logsBox">Aucun log.</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">🧩 État & Utilisateurs</div>
+        <div id="etatBox">Moteur: actif<br>IA: inconnue<br>Radar: inactif<br>Alertes: inconnu</div>
+        <div id="usersBox" class="scroll-box">Pas de données utilisateurs…</div>
       </div>
     </div>
   </section>
 
-  <!-- ALERTS -->
-  <section id="page-alerts" class="hidden">
+  <!-- Alertes -->
+  <section id="alertes" class="tab" style="display:none;">
     <div class="card">
-      <h3>⚠️ Gestion des alertes (automatiques & à valider)</h3>
-      <div class="buttons">
-        <button id="btnLoadAlerts" class="ghost">Actualiser les alertes</button>
-      </div>
-      <div class="grid cols-3" style="margin-top:10px">
-        <div>
-          <h4>> 90 % — publiées automatiquement</h4>
-          <div id="alertsAuto"></div>
-        </div>
-        <div>
-          <h4>70–90 % — à valider / expert / attente</h4>
-          <div id="alertsReview"></div>
-        </div>
-        <div>
-          <h4>< 70 % — ignorées / mémoire</h4>
-          <div id="alertsLow"></div>
-        </div>
-      </div>
-
-      <div style="margin-top:14px">
-        <h4>🔭 Comparaison avec autres sources</h4>
-        <div class="grid cols-2">
-          <div class="card">
-            <h3 class="small">A / Nous sommes les <span class="hl">SEULS</span> (premiers)</h3>
-            <div id="cmpFirst"></div>
-          </div>
-          <div class="card">
-            <h3 class="small">B / Aussi vus ailleurs (sources)</h3>
-            <div id="cmpOthers"></div>
-          </div>
-        </div>
-      </div>
+      <div class="section-title">⚠️ Gestion des alertes (automatiques & à valider)</div>
+      <div class="scroll-box" id="alertsBox">Chargement alertes…</div>
     </div>
   </section>
 
-  <!-- USER VIEW -->
-  <section id="page-user-view" class="hidden">
+  <!-- Vue utilisateur -->
+  <section id="vueuser" class="tab" style="display:none;">
     <div class="card">
-      <h3>🌍 Vue utilisateur (index réel)</h3>
-      <div class="grid cols-3">
-        <div class="field">
-          <label>Pays</label>
-          <select id="uvCountry">
-            <option value="">—</option>
-            <option>Belgium</option><option>France</option><option>Germany</option><option>Netherlands</option>
-            <option>Spain</option><option>Italy</option><option>Portugal</option><option>Poland</option>
-            <option>Austria</option><option>Sweden</option><option>Finland</option><option>Denmark</option>
-            <option>Norway</option><option>United Kingdom</option><option>Ukraine</option><option>USA</option>
-            <option>Romania</option><option>Czechia</option><option>Slovakia</option><option>Slovenia</option>
-            <option>Bulgaria</option><option>Greece</option><option>Ireland</option><option>Hungary</option>
-            <option>Luxembourg</option><option>Malta</option><option>Cyprus</option><option>Estonia</option>
-            <option>Latvia</option><option>Lithuania</option><option>Croatia</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Ville</label>
-          <input id="uvCity" placeholder="ex: Bruxelles" />
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <div class="row">
-            <button id="btnUserView">Charger</button>
-            <button id="btnUserViewClear" class="ghost">Effacer</button>
-          </div>
-        </div>
-      </div>
-      <div class="small muted" style="margin-top:8px">
-        Astuce: si l’index supporte <span class="mono">?lat=&amp;lon=&amp;country=</span>, on force la géoloc. Sinon, l’index utilisera sa logique interne.
-      </div>
-      <div id="userViewSummary" class="card" style="margin-top:10px"></div>
-      <iframe id="userViewFrame" src="index.html" loading="lazy"></iframe>
+      <div class="section-title">👤 Vue Utilisateur</div>
+      <div class="scroll-box" id="userView">Prévisualisation page index utilisateur…</div>
     </div>
   </section>
 
-  <!-- CHAT -->
-  <section id="page-chat" class="hidden">
+  <!-- Chat IA -->
+  <section id="chat" class="tab" style="display:none;">
     <div class="card">
-      <h3>💬 Chat IA (moteur & prévisions)</h3>
-      <div class="grid cols-2">
-        <div class="field">
-          <label>Message à GPT-5 (centrale)</label>
-          <textarea id="chatMsg" placeholder="Ex: Diagnostic complet du dernier run + sources utilisées + prévisions France/Belgique + alertes générées..."></textarea>
-          <div class="row">
-            <button id="btnAsk">Envoyer</button>
-            <button id="btnAskAudit" class="ghost">Audit moteur (auto)</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Réponse</label>
-          <textarea id="chatReply" readonly></textarea>
-        </div>
-      </div>
+      <div class="section-title">💬 Chat IA (moteur)</div>
+      <div class="scroll-box" id="chatHistory">Historique vide…</div>
+      <input type="text" id="chatInput" placeholder="Posez une question…" style="width:80%;">
+      <button class="btn btn-primary" onclick="askIA()">Envoyer</button>
     </div>
   </section>
 
-  <!-- TOOLS -->
-  <section id="page-tools" class="hidden">
-    <div class="grid cols-2">
-      <div class="card">
-        <h3>🛠 Outils admin</h3>
-        <div class="buttons">
-          <button id="btnQuickHealth" class="ghost">Health check rapide</button>
-          <button id="btnReloadState" class="ghost">Recharger état</button>
-        </div>
-        <pre id="toolsOut" class="mono small muted" style="white-space:pre-wrap"></pre>
-      </div>
-
-      <div class="card">
-        <h3>🌧 Radar global</h3>
-        <div class="row">
-          <button id="btnLoadRadar" class="ghost">Charger radar</button>
-          <span class="small muted">Source: /api/radar/global (fallback Windy si indisponible)</span>
-        </div>
-        <div id="radarBox" style="margin-top:10px">
-          <iframe id="windy" class="hidden" src="https://embed.windy.com/embed2.html?lat=20&lon=0&detail=true&pressure=true&type=radar&zoom=3" loading="lazy"></iframe>
-          <div id="leafletBox" class="hidden" style="height:65vh;border:1px solid var(--line);border-radius:12px"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- NEWS -->
-  <section id="page-news" class="hidden">
+  <!-- Radar -->
+  <section id="radar" class="tab" style="display:none;">
     <div class="card">
-      <h3>📰 Actualités météo & climat</h3>
-      <div class="row">
-        <button id="btnLoadNews" class="ghost">Charger actualités</button>
-        <span class="small muted">/api/news (si dispo dans ce build)</span>
-      </div>
-      <div id="newsList" style="margin-top:10px"></div>
+      <div class="section-title">🌍 Outils & Radar</div>
+      <div id="radarBox">Radar global interactif ici…</div>
     </div>
   </section>
-</main>
 
-<!-- Leaflet (radar fallback si /api/radar/global renvoie des tuiles) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <!-- Actualités -->
+  <section id="news" class="tab" style="display:none;">
+    <div class="card">
+      <div class="section-title">📰 Actualités météo & climat</div>
+      <div class="scroll-box" id="newsBox">Chargement actualités…</div>
+    </div>
+  </section>
 
-<script>
-/* ==== Helpers ==== */
-const $ = sel => document.querySelector(sel);
-const $$ = sel => [...document.querySelectorAll(sel)];
-const store = {
-  set(k,v){ localStorage.setItem(k, JSON.stringify(v)); },
-  get(k,d=null){ try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch{return d} },
-  del(k){ localStorage.removeItem(k) }
-};
-function fmtTS(ts){ try{ return new Date(ts).toLocaleString() } catch{ return ts } }
-function htmlEscape(s){ return (s??"").toString().replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])) }
-async function jsonOrError(res){
-  const txt = await res.text();
-  try{ return JSON.parse(txt) }catch(e){
-    throw new Error(`Réponse non JSON (${res.status}) → ${txt.slice(0,200)}…`);
-  }
-}
-function chip(status){
-  if(status===true) return '<span class="chip ok">OK</span>';
-  if(status===false) return '<span class="chip ko">KO</span>';
-  return '<span class="chip unk">inconnu</span>';
-}
-
-/* ==== Navigation (sections = pages internes, mémoire via hash & localStorage) ==== */
-const pages = ["dashboard","alerts","user-view","chat","tools","news"];
-function show(page){
-  pages.forEach(p=>{
-    const sec = document.getElementById("page-"+p);
-    const tab = [...document.querySelectorAll('nav a')].find(a=>a.dataset.page===p);
-    if(p===page){ sec.classList.remove("hidden"); tab.classList.add("active"); }
-    else{ sec.classList.add("hidden"); tab.classList.remove("active"); }
-  });
-  location.hash = "#"+page;
-  store.set("admin.currentPage", page);
-}
-window.addEventListener("hashchange", ()=> {
-  const p = location.hash.replace("#","");
-  if(pages.includes(p)) show(p);
-});
-document.getElementById("tabs").addEventListener("click", (e)=>{
-  const a = e.target.closest("a[data-page]");
-  if(a){ e.preventDefault(); show(a.dataset.page); }
-});
-show(store.get("admin.currentPage","dashboard"));
-
-/* ==== Dashboard: RUNs, état moteur, logs, checkup ==== */
-async function loadEngineState(){
-  const res = await fetch("/api/engine-state");
-  const data = await jsonOrError(res);
-  // endpoints variés: soit {success:true,state:{...}} soit l'objet brut
-  const state = data.state || data;
-  store.set("engine.state", state);
-  $("#lastSync").textContent = "Dernier état: "+(state.runTime ? fmtTS(state.runTime) : "—");
-  renderEngineBadges(state);
-  renderCheckup(state);
-}
-function renderEngineBadges(state){
-  const set = (el, val) => el.outerHTML = el.outerHTML.replace(/class="([^"]*)"/, (m,cls)=> `class="${cls.replace(/\s(ok|ko|unk)\b/g,'')} ${val}"`);
-  $("#engineStatus").textContent = "Moteur: "+(state.runTime? "actif":"inconnu");
-  set($("#engineStatus"), state.runTime? "ok":"unk");
-  $("#iaStatus").textContent = "IA: "+(state.ia===true? "ok": state.ia===false? "ko":"inconnue");
-  set($("#iaStatus"), state.ia===true? "ok": state.ia===false? "ko":"unk");
-  $("#radarStatus").textContent = "Radar: "+(state.radar===true? "ok": state.radar===false? "ko":"inconnu");
-  set($("#radarStatus"), state.radar===true? "ok": state.radar===false? "ko":"unk");
-  $("#forecastsStatus").textContent = "Prévisions: "+(state.forecasts===true? "ok": state.forecasts===false? "ko":"inconnu");
-  set($("#forecastsStatus"), state.forecasts===true? "ok": state.forecasts===false? "ko":"unk");
-  $("#alertsStatus").textContent = "Alertes: "+(state.alerts===true? "ok": state.alerts===false? "ko":"inconnu");
-  set($("#alertsStatus"), state.alerts===true? "ok": state.alerts===false? "ko":"unk");
-  $("#engineMeta").textContent = "Zones couvertes: "+Object.keys(state.zonesCovered||{}).length+" • Alertes enregistrées: "+(state.alertsList?.length||0);
-}
-function boolFrom(obj, path){
-  try{
-    const val = path.split(".").reduce((a,k)=>a?.[k], obj);
-    if(val===undefined || val===null) return null;
-    if(typeof val==="string") return val.toLowerCase()==="ok" ? true : val.toLowerCase()==="ko" ? false : null;
-    if(typeof val==="boolean") return val;
-    if(typeof val==="number") return val>0;
-    if(typeof val==="object") return Object.keys(val).length>0;
-    return null;
-  }catch{return null}
-}
-function renderCheckup(state){
-  // Heuristiques robustes avec rétro-compat : on déduit OK/KO selon présence/valeurs
-  const sources = state.sources||{};
-  const zones = state.zonesCovered||{};
-  const alertsList = state.alertsList||[];
-  const hasModelsOK = ["gfs","ecmwf","icon","meteomatics","nasaSat","copernicus"].some(k => (sources?.[k]||"").toString().toLowerCase()==="ok");
-  const someModelKO = ["gfs","ecmwf","icon","meteomatics","nasaSat","copernicus"].some(k => (sources?.[k]||"").toString().toLowerCase()==="ko");
-
-  const items = [
-    {label:"1. Modèles OK", v: hasModelsOK},
-    {label:"2. Modèles non OK", v: someModelKO},
-    {label:"3. Sources OK", v: Object.keys(sources).length>0},
-    {label:"4. Sources non OK", v: Object.keys(sources).length===0? true:false},
-    {label:"5. Analyse IA prévisions", v: state.forecasts??null},
-    {label:"6. Analyse IA alertes", v: state.alerts??null},
-    {label:"7. Prévisions locales (zones couvertes)", v: Object.keys(zones).length>0},
-    {label:"8. Prévisions nationales (zones couvertes)", v: Object.keys(zones).length>0},
-    {label:"9. Alertes locales (zones couvertes)", v: alertsList.some(a=>a.scope==="covered")},
-    {label:"10. Alertes nationales (zones couvertes)", v: alertsList.some(a=>a.scope==="covered" && a.level)},
-    {label:"11. Alertes continentales (non couvertes)", v: alertsList.some(a=>a.scope==="global")},
-    {label:"12. Assemblage alertes mondiales", v: alertsList.length>0},
-    {label:"13. Open-data prévisions (non couvertes)", v: (sources?.openweather||"").toString().toLowerCase()==="ok" }
-  ];
-  const box = $("#checkup");
-  box.innerHTML = items.map(it=>`<div class="row">${chip(it.v===true?true:it.v===false?false:null)} <span>${htmlEscape(it.label)}</span></div>`).join("");
-}
-async function runGlobal(){
-  $("#runResult").textContent = "RUN GLOBAL en cours…";
-  const res = await fetch("/api/run-global",{method:"POST"});
-  const data = await jsonOrError(res);
-  $("#runResult").textContent = JSON.stringify(data, null, 2);
-  await loadEngineState();
-}
-async function runContinental(){
-  $("#runResult").textContent = "RUN CONTINENTAL en cours…";
-  const res = await fetch("/api/run-continental",{method:"POST"});
-  const data = await jsonOrError(res);
-  $("#runResult").textContent = JSON.stringify(data, null, 2);
-  await loadEngineState();
-}
-async function loadLogs(){
-  const res = await fetch("/api/logs");
-  const data = await jsonOrError(res);
-  const logs = Array.isArray(data)? data : (data.logs||data);
-  store.set("engine.logs", logs);
-  const box = $("#logs");
-  box.innerHTML = logs.map(l=>{
-    const isErr = /error|erreur|❌/i.test(l.message||"");
-    return `<div class="log">
-      <div class="t">${htmlEscape(fmtTS(l.timestamp||""))}</div>
-      <div class="${isErr?'ko':''}">${htmlEscape(l.message||"")}</div>
-    </div>`;
-  }).join("") || '<div class="small muted">Aucun log.</div>';
-}
-$("#btnRunGlobal").onclick = runGlobal;
-$("#btnRunContinental").onclick = runContinental;
-$("#btnRefresh").onclick = loadEngineState;
-$("#btnLoadLogs").onclick = loadLogs;
-
-/* ==== Chat IA moteur ==== */
-async function askChat(msg){
-  const res = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg||""})});
-  const data = await jsonOrError(res);
-  const reply = data.reply?.reply || data.reply || data.response || data;
-  $("#chatReply").value = typeof reply==="string" ? reply : JSON.stringify(reply,null,2);
-}
-$("#btnAsk").onclick = ()=> askChat($("#chatMsg").value.trim());
-$("#btnAskAudit").onclick = ()=>{
-  const s = store.get("engine.state", {});
-  const question = `Audit intégral moteur:
-- runTime: ${s.runTime}
-- sources: ${JSON.stringify(s.sources||{})}
-- zones: ${Object.keys(s.zonesCovered||{}).length}
-- alertes: ${(s.alertsList||[]).length}
-Vérifie que les modèles et sources sont bien attestés, que l’IA a produit prévisions+alertes, et dis si tout est publiable.`;
-  $("#chatMsg").value = question;
-  askChat(question);
-};
-
-/* ==== Alertes (buckets + actions) ==== */
-function renderAlertItem(a){
-  const meta = [
-    a.country? `Pays: ${a.country}`:"",
-    a.continent? `Continent: ${a.continent}`:"",
-    a.level? `Niveau: ${a.level}`:"",
-    (a.confidence!=null)? `Fiabilité: ${a.confidence}%`:"",
-    a.firstDetectedByUs===true? "Premiers: oui": (a.firstDetectedByUs===false? "Premiers: non":"")
-  ].filter(Boolean).join(" • ");
-  const id = a._id || a.id || "";
-  return `<div class="card" style="margin-bottom:8px">
-    <div class="row"><strong>${htmlEscape(a.title||"Alerte")}</strong> <span class="small muted">${htmlEscape(meta)}</span></div>
-    <div class="small muted mono" style="margin-top:6px">${htmlEscape(JSON.stringify(a.details||{},null,2))}</div>
-    ${id? `<div class="row" style="margin-top:8px">
-      <button data-act="validate" data-id="${id}" class="ghost">Valider</button>
-      <button data-act="expert" data-id="${id}" class="ghost">Envoyer expert</button>
-      <button data-act="wait" data-id="${id}" class="ghost">Mettre en attente</button>
-      <button data-act="ignore" data-id="${id}" class="ghost">Ignorer</button>
-    </div>` : ""}
-  </div>`;
-}
-function bucketize(list){
-  const auto=[], review=[], low=[];
-  for(const a of list){
-    const c = Number(a.confidence ?? -1);
-    if(c>=90) auto.push(a);
-    else if(c>=70) review.push(a);
-    else low.push(a);
-  }
-  return {auto,review,low};
-}
-async function loadAlerts(){
-  const res = await fetch("/api/alerts");
-  const data = await jsonOrError(res);
-  // tolérer différents formats de service
-  const alerts = data.alerts?.covered || data.covered || data.alerts || [];
-  const globals = data.alerts?.global || data.global || [];
-  const merged = Array.isArray(alerts) ? alerts.slice() : [];
-  if(Array.isArray(globals)) merged.push(...globals);
-  const {auto,review,low} = bucketize(merged);
-
-  $("#alertsAuto").innerHTML = auto.map(renderAlertItem).join("") || '<div class="small muted">Aucune alerte auto pour l’instant.</div>';
-  $("#alertsReview").innerHTML = review.map(renderAlertItem).join("") || '<div class="small muted">Aucune alerte à examiner.</div>';
-  $("#alertsLow").innerHTML = low.map(renderAlertItem).join("") || '<div class="small muted">Aucune alerte <70 %.</div>';
-
-  // Comparaison – placeholders robustes si non fournis
-  $("#cmpFirst").innerHTML = auto.filter(a=>a.firstDetectedByUs===true).map(renderAlertItem).join("") || '<div class="small muted">Aucune détectée uniquement par nous pour l’instant.</div>';
-  $("#cmpOthers").innerHTML = auto.filter(a=>a.firstDetectedByUs===false).map(renderAlertItem).join("") || '<div class="small muted">Aucune aussi vue ailleurs listée.</div>';
-}
-$("#btnLoadAlerts").onclick = loadAlerts;
-
-document.addEventListener("click", async (e)=>{
-  const btn = e.target.closest('button[data-act][data-id]');
-  if(!btn) return;
-  const id = btn.dataset.id, act = btn.dataset.act;
-  try{
-    const res = await fetch(`/api/alerts/${encodeURIComponent(id)}/${encodeURIComponent(act)}`,{method:"POST"});
-    const data = await jsonOrError(res);
-    await loadAlerts();
-    alert("OK");
-  }catch(err){ alert("Erreur action alerte: "+err.message) }
-});
-
-/* ==== Vue utilisateur ==== */
-async function geocode(city, country){
-  if(!city || !country) return null;
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&country=${encodeURIComponent(country)}&q=${encodeURIComponent(city)}`;
-  const res = await fetch(url);
-  const j = await res.json().catch(()=>[]);
-  if(!Array.isArray(j) || !j.length) return null;
-  return {lat:parseFloat(j[0].lat), lon:parseFloat(j[0].lon), display:j[0].display_name};
-}
-$("#btnUserView").onclick = async ()=>{
-  const country = $("#uvCountry").value.trim();
-  const city = $("#uvCity").value.trim();
-  const sum = $("#userViewSummary");
-  sum.innerHTML = '<span class="small muted">Résolution…</span>';
-  let lat=null, lon=null, display=null;
-  const g = await geocode(city, country);
-  if(g){ lat=g.lat; lon=g.lon; display=g.display; }
-  sum.innerHTML = `<div class="small">Pays: <b>${htmlEscape(country||"—")}</b> • Ville: <b>${htmlEscape(city||"—")}</b> ${display? `• ${htmlEscape(display)}`:""}</div>` +
-                  (lat? `<div class="small mono muted">lat=${lat} lon=${lon}</div>`:"");
-  // tenter de forcer l’index avec paramètres, sinon simple index
-  const params = (lat && lon && country)? `?lat=${lat}&lon=${lon}&country=${encodeURIComponent(country)}` : "";
-  $("#userViewFrame").src = "index.html"+params;
-  store.set("uv.last",{country,city,lat,lon});
-};
-$("#btnUserViewClear").onclick = ()=>{
-  $("#uvCountry").value = ""; $("#uvCity").value="";
-  $("#userViewSummary").innerHTML="";
-  $("#userViewFrame").src = "index.html";
-  store.del("uv.last");
-};
-// restaurer dernière vue
-const lastUV = store.get("uv.last", null);
-if(lastUV){ $("#uvCountry").value=lastUV.country||""; $("#uvCity").value=lastUV.city||""; }
-
-/* ==== Outils & Radar ==== */
-let leafletMap=null, leafletLayer=null;
-async function loadRadar(){
-  try{
-    const res = await fetch("/api/radar/global");
-    const data = await jsonOrError(res);
-    const radar = data.radar || data;
-    if(radar && radar.tileUrl){
-      $("#windy").classList.add("hidden");
-      $("#leafletBox").classList.remove("hidden");
-      if(!leafletMap){
-        leafletMap = L.map('leafletBox',{zoomControl:true}).setView([20,0],3);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(leafletMap);
-      }
-      if(leafletLayer){ leafletMap.removeLayer(leafletLayer); leafletLayer=null; }
-      leafletLayer = L.tileLayer(radar.tileUrl, {opacity:0.7});
-      leafletLayer.addTo(leafletMap);
-    }else{
-      // fallback Windy
-      $("#leafletBox").classList.add("hidden");
-      $("#windy").classList.remove("hidden");
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(tab => tab.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
     }
-  }catch{
-    $("#leafletBox").classList.add("hidden");
-    $("#windy").classList.remove("hidden");
-  }
-}
-$("#btnLoadRadar").onclick = loadRadar;
 
-$("#btnQuickHealth").onclick = ()=>{
-  const s = store.get("engine.state", {});
-  const logs = store.get("engine.logs", []);
-  const out = {
-    runTime: s.runTime||null,
-    sources: s.sources||{},
-    zones: Object.keys(s.zonesCovered||{}).length,
-    alerts: (s.alertsList||[]).length,
-    lastLog: logs[0]?.message||null
-  };
-  $("#toolsOut").textContent = JSON.stringify(out,null,2);
-};
-$("#btnReloadState").onclick = loadEngineState;
+    function runGlobal() {
+      document.getElementById("runResult").innerText = "RUN GLOBAL lancé… (simulation affichage)";
+      // TODO: connecter à /api/run/global
+    }
 
-/* ==== News ==== */
-async function loadNews(){
-  try{
-    const res = await fetch("/api/news");
-    const data = await jsonOrError(res);
-    const list = Array.isArray(data)? data : (data.articles||data.items||[]);
-    $("#newsList").innerHTML = list.map(a=>`
-      <div class="card" style="margin-bottom:8px">
-        <div><strong>${htmlEscape(a.title||"")}</strong></div>
-        <div class="small muted">${htmlEscape(a.source?.name||a.source||"")}</div>
-        <div class="small">${htmlEscape(a.description||"")}</div>
-        ${a.url? `<div class="small"><a class="btn" href="${htmlEscape(a.url)}" target="_blank" rel="noopener">Ouvrir</a></div>`:""}
-      </div>
-    `).join("") || '<div class="small muted">Aucune actualité.</div>';
-  }catch(err){
-    $("#newsList").innerHTML = `<div class="small ko">Erreur news: ${htmlEscape(err.message)}</div>`;
-  }
-}
-$("#btnLoadNews").onclick = loadNews;
+    function runContinental() {
+      document.getElementById("runResult").innerText = "RUN CONTINENTAL lancé…";
+      // TODO: connecter à /api/run/continental
+    }
 
-/* ==== Boot (ne pas lancer de RUN automatiquement) ==== */
-(async function boot(){
-  // restaurer état sans déclencher de run
-  try{ await loadEngineState(); }catch(e){ /* silencieux */ }
-  try{
-    const logs = store.get("engine.logs", null);
-    if(logs){ $("#logs").innerHTML = logs.map(l=>`<div class="log"><div class="t">${htmlEscape(fmtTS(l.timestamp||""))}</div><div>${htmlEscape(l.message||"")}</div></div>`).join(""); }
-  }catch{}
-})();
-</script>
+    function checkIA() {
+      document.getElementById("runResult").innerText = "Vérification IA en cours…";
+      // TODO: connecter à /api/ia/check
+    }
+
+    function copyLogs() {
+      const text = document.getElementById("logsBox").innerText;
+      navigator.clipboard.writeText(text);
+      alert("Logs copiés !");
+    }
+
+    function askIA() {
+      const q = document.getElementById("chatInput").value;
+      if (!q) return;
+      const history = document.getElementById("chatHistory");
+      history.innerText += "\n👤 " + q + "\n🤖 Réponse IA: (à connecter)";
+      document.getElementById("chatInput").value = "";
+    }
+
+    // Exemple checkup dynamique (à remplacer par fetch /api/engine/state)
+    const sampleCheckup = [
+      {label:"1. Modèles OK", status:"ok"},
+      {label:"2. Modèles non OK", status:"ko"},
+      {label:"3. Sources OK", status:"ok"},
+      {label:"4. Sources non OK", status:"ko"},
+      {label:"5. Analyse IA prévisions", status:"warn"},
+      {label:"6. Analyse IA alertes", status:"warn"},
+      {label:"7. Prévisions locales (zones couvertes)", status:"ok"},
+      {label:"8. Prévisions nationales (zones couvertes)", status:"ok"},
+      {label:"9. Alertes locales (zones couvertes)", status:"ko"},
+      {label:"10. Alertes nationales (zones couvertes)", status:"ko"},
+      {label:"11. Alertes continentales (zones non couvertes)", status:"ko"},
+      {label:"12. Assemblage alertes mondiales", status:"ko"},
+      {label:"13. Open-data prévisions (zones non couvertes)", status:"warn"}
+    ];
+    const checkupBox = document.getElementById("checkup");
+    sampleCheckup.forEach(item=>{
+      const div = document.createElement("div");
+      div.className = "check-item " + item.status;
+      div.innerText = item.label;
+      checkupBox.appendChild(div);
+    });
+  </script>
 </body>
 </html>
