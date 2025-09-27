@@ -1,247 +1,163 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>TINSFLASH – Console Administrateur</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      background: #0d0d0d;
-      color: #e0e0e0;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #111;
-      padding: 10px 20px;
-      font-size: 18px;
-      font-weight: bold;
-      border-bottom: 2px solid #222;
-    }
-    nav {
-      display: flex;
-      gap: 10px;
-      background: #1a1a1a;
-      padding: 8px;
-    }
-    nav button {
-      background: #222;
-      color: #eee;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    nav button:hover {
-      background: #333;
-    }
-    .container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      padding: 15px;
-    }
-    .card {
-      background: #1a1a1a;
-      border-radius: 10px;
-      padding: 12px;
-      box-shadow: 0 0 6px rgba(0,0,0,0.5);
-    }
-    .scroll-box {
-      max-height: 250px;
-      overflow-y: auto;
-      background: #111;
-      padding: 10px;
-      border-radius: 8px;
-      font-family: monospace;
-      white-space: pre-wrap;
-    }
-    .checkup-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .check-item {
-      padding: 8px;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    .ok { background: #133d13; border-left: 5px solid #4CAF50; }
-    .ko { background: #3d1313; border-left: 5px solid #F44336; }
-    .warn { background: #3d3213; border-left: 5px solid #FF9800; }
-    .unknown { background: #262626; border-left: 5px solid #888; }
-    .section-title {
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 6px;
-    }
-    .btn {
-      margin: 3px;
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-    }
-    .btn-primary { background: #1976d2; color: #fff; }
-    .btn-secondary { background: #388e3c; color: #fff; }
-    .btn-danger { background: #d32f2f; color: #fff; }
-    .copy-btn {
-      background: #444;
-      color: #fff;
-      border: none;
-      padding: 4px 8px;
-      font-size: 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      float: right;
-    }
+    body { margin:0; font-family:Arial; background:#111; color:#eee; }
+    header { background:#222; padding:10px; font-size:18px; }
+    nav { display:flex; gap:10px; margin-bottom:10px; }
+    nav button { padding:8px 12px; cursor:pointer; border:none; border-radius:4px; }
+    section { padding:10px; }
+    .ok { color:lime; }
+    .ko { color:red; }
+    .inconnu { color:orange; }
+    .card { background:#1a1a1a; padding:10px; border-radius:6px; margin-bottom:10px; }
+    pre { background:#000; padding:10px; border-radius:4px; overflow-x:auto; }
   </style>
 </head>
 <body>
-  <header>⚡ TINSFLASH – Console Administrateur</header>
+  <header>
+    ⚡ TINSFLASH – Console Administrateur
+    <span id="lastState" style="font-size:14px;color:gray;margin-left:10px;"></span>
+  </header>
 
   <nav>
     <button onclick="showTab('dashboard')">Dashboard</button>
-    <button onclick="showTab('alertes')">Alertes</button>
-    <button onclick="showTab('vueuser')">Vue utilisateur</button>
+    <button onclick="showTab('alerts')">Alertes</button>
+    <button onclick="showTab('users')">Vue utilisateur</button>
     <button onclick="showTab('chat')">Chat IA (moteur)</button>
-    <button onclick="showTab('radar')">Outils & Radar</button>
-    <button onclick="showTab('news')">Actualités</button>
+    <button onclick="showTab('tools')">Outils & Radar</button>
   </nav>
 
   <!-- Dashboard -->
   <section id="dashboard" class="tab">
-    <div class="container">
-      <div class="card">
-        <div class="section-title">🚀 Lancer le moteur</div>
-        <button class="btn btn-primary" onclick="runGlobal()">RUN GLOBAL (zones couvertes)</button>
-        <button class="btn btn-secondary" onclick="runContinental()">RUN CONTINENTAL (non couvertes)</button>
-        <button class="btn btn-danger" onclick="checkIA()">Vérifier (IA)</button>
-        <div class="scroll-box" id="runResult">Résultat du run affiché ici…</div>
-      </div>
+    <div class="card">
+      <h3>🚀 Lancer le moteur</h3>
+      <button onclick="runGlobal()">RUN GLOBAL (zones couvertes)</button>
+      <button onclick="runContinental()">RUN CONTINENTAL (non couvertes)</button>
+      <button onclick="loadEngineState()">Actualiser état</button>
+      <pre id="runResult">Résultat du run affiché ici…</pre>
+    </div>
 
-      <div class="card">
-        <div class="section-title">🧠 Checkup 13 points</div>
-        <div id="checkup" class="checkup-list">
-          <!-- Dynamique -->
-        </div>
-      </div>
+    <div class="card">
+      <h3>🧠 Checkup 13 points</h3>
+      <ul id="checkupList"></ul>
+    </div>
 
-      <div class="card">
-        <div class="section-title">📜 Logs (moteur & admin)</div>
-        <button class="copy-btn" onclick="copyLogs()">Copier tout</button>
-        <div class="scroll-box" id="logsBox">Aucun log.</div>
-      </div>
+    <div class="card">
+      <h3>📜 Logs (moteur & admin)</h3>
+      <button onclick="loadLogs()">Charger logs</button>
+      <pre id="logs">Aucun log.</pre>
+    </div>
 
-      <div class="card">
-        <div class="section-title">🧩 État & Utilisateurs</div>
-        <div id="etatBox">Moteur: actif<br>IA: inconnue<br>Radar: inactif<br>Alertes: inconnu</div>
-        <div id="usersBox" class="scroll-box">Pas de données utilisateurs…</div>
-      </div>
+    <div class="card">
+      <h3>🧩 État & Utilisateurs</h3>
+      <pre id="stateUsers">Chargement…</pre>
     </div>
   </section>
 
   <!-- Alertes -->
-  <section id="alertes" class="tab" style="display:none;">
+  <section id="alerts" class="tab" style="display:none;">
     <div class="card">
-      <div class="section-title">⚠️ Gestion des alertes (automatiques & à valider)</div>
-      <div class="scroll-box" id="alertsBox">Chargement alertes…</div>
+      <h3>⚠️ Gestion des alertes</h3>
+      <button onclick="loadAlerts()">Actualiser les alertes</button>
+      <pre id="alertsList">Chargement…</pre>
     </div>
   </section>
 
-  <!-- Vue utilisateur -->
-  <section id="vueuser" class="tab" style="display:none;">
+  <!-- Utilisateurs -->
+  <section id="users" class="tab" style="display:none;">
     <div class="card">
-      <div class="section-title">👤 Vue Utilisateur</div>
-      <div class="scroll-box" id="userView">Prévisualisation page index utilisateur…</div>
+      <h3>👥 Vue utilisateur</h3>
+      <p>Simulation de la page index (à implémenter plus tard)</p>
     </div>
   </section>
 
-  <!-- Chat IA -->
+  <!-- Chat -->
   <section id="chat" class="tab" style="display:none;">
     <div class="card">
-      <div class="section-title">💬 Chat IA (moteur)</div>
-      <div class="scroll-box" id="chatHistory">Historique vide…</div>
-      <input type="text" id="chatInput" placeholder="Posez une question…" style="width:80%;">
-      <button class="btn btn-primary" onclick="askIA()">Envoyer</button>
+      <h3>💬 Chat IA (moteur)</h3>
+      <input id="chatInput" placeholder="Posez une question…" style="width:80%;" />
+      <button onclick="askChat()">Envoyer</button>
+      <pre id="chatReply">Réponse IA…</pre>
     </div>
   </section>
 
-  <!-- Radar -->
-  <section id="radar" class="tab" style="display:none;">
+  <!-- Outils -->
+  <section id="tools" class="tab" style="display:none;">
     <div class="card">
-      <div class="section-title">🌍 Outils & Radar</div>
-      <div id="radarBox">Radar global interactif ici…</div>
-    </div>
-  </section>
-
-  <!-- Actualités -->
-  <section id="news" class="tab" style="display:none;">
-    <div class="card">
-      <div class="section-title">📰 Actualités météo & climat</div>
-      <div class="scroll-box" id="newsBox">Chargement actualités…</div>
+      <h3>🛰 Outils & Radar</h3>
+      <p>Radar global en cours d’intégration…</p>
     </div>
   </section>
 
   <script>
-    function showTab(id) {
-      document.querySelectorAll('.tab').forEach(tab => tab.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
+    async function runGlobal() {
+      const res = await fetch("/api/run-global", { method: "POST" });
+      document.getElementById("runResult").textContent = JSON.stringify(await res.json(), null, 2);
+      loadEngineState();
     }
-
-    function runGlobal() {
-      document.getElementById("runResult").innerText = "RUN GLOBAL lancé… (simulation affichage)";
-      // TODO: connecter à /api/run/global
+    async function runContinental() {
+      const res = await fetch("/api/run-continental", { method: "POST" });
+      document.getElementById("runResult").textContent = JSON.stringify(await res.json(), null, 2);
+      loadEngineState();
     }
-
-    function runContinental() {
-      document.getElementById("runResult").innerText = "RUN CONTINENTAL lancé…";
-      // TODO: connecter à /api/run/continental
+    async function loadEngineState() {
+      const res = await fetch("/api/engine-state");
+      const data = await res.json();
+      document.getElementById("lastState").textContent = data.runTime ? "Dernier état: " + data.runTime : "Aucun run encore";
+      renderCheckup(data);
+      document.getElementById("stateUsers").textContent = JSON.stringify({ moteur:"actif", ia:data.ia, users:data.users }, null, 2);
     }
-
-    function checkIA() {
-      document.getElementById("runResult").innerText = "Vérification IA en cours…";
-      // TODO: connecter à /api/ia/check
+    async function loadLogs() {
+      const res = await fetch("/api/logs");
+      document.getElementById("logs").textContent = JSON.stringify(await res.json(), null, 2);
     }
-
-    function copyLogs() {
-      const text = document.getElementById("logsBox").innerText;
-      navigator.clipboard.writeText(text);
-      alert("Logs copiés !");
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      document.getElementById("alertsList").textContent = JSON.stringify(await res.json(), null, 2);
     }
-
-    function askIA() {
-      const q = document.getElementById("chatInput").value;
-      if (!q) return;
-      const history = document.getElementById("chatHistory");
-      history.innerText += "\n👤 " + q + "\n🤖 Réponse IA: (à connecter)";
-      document.getElementById("chatInput").value = "";
+    async function askChat() {
+      const msg = document.getElementById("chatInput").value;
+      const res = await fetch("/api/chat", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ message: msg })
+      });
+      document.getElementById("chatReply").textContent = JSON.stringify(await res.json(), null, 2);
     }
-
-    // Exemple checkup dynamique (à remplacer par fetch /api/engine/state)
-    const sampleCheckup = [
-      {label:"1. Modèles OK", status:"ok"},
-      {label:"2. Modèles non OK", status:"ko"},
-      {label:"3. Sources OK", status:"ok"},
-      {label:"4. Sources non OK", status:"ko"},
-      {label:"5. Analyse IA prévisions", status:"warn"},
-      {label:"6. Analyse IA alertes", status:"warn"},
-      {label:"7. Prévisions locales (zones couvertes)", status:"ok"},
-      {label:"8. Prévisions nationales (zones couvertes)", status:"ok"},
-      {label:"9. Alertes locales (zones couvertes)", status:"ko"},
-      {label:"10. Alertes nationales (zones couvertes)", status:"ko"},
-      {label:"11. Alertes continentales (zones non couvertes)", status:"ko"},
-      {label:"12. Assemblage alertes mondiales", status:"ko"},
-      {label:"13. Open-data prévisions (zones non couvertes)", status:"warn"}
-    ];
-    const checkupBox = document.getElementById("checkup");
-    sampleCheckup.forEach(item=>{
-      const div = document.createElement("div");
-      div.className = "check-item " + item.status;
-      div.innerText = item.label;
-      checkupBox.appendChild(div);
-    });
+    function renderCheckup(state) {
+      const points = [
+        { id:"models.ok", label:"1. Modèles OK", value:state.models.ok.length>0 },
+        { id:"models.ko", label:"2. Modèles non OK", value:state.models.ko.length>0 ? false : null },
+        { id:"sources.ok", label:"3. Sources OK", value:state.sources.ok.length>0 },
+        { id:"sources.ko", label:"4. Sources non OK", value:state.sources.ko.length>0 ? false : null },
+        { id:"ia.forecasts", label:"5. Analyse IA prévisions", value:state.ia.forecasts },
+        { id:"ia.alerts", label:"6. Analyse IA alertes", value:state.ia.alerts },
+        { id:"forecasts.local", label:"7. Prévisions locales (zones couvertes)", value:state.forecasts.local },
+        { id:"forecasts.national", label:"8. Prévisions nationales (zones couvertes)", value:state.forecasts.national },
+        { id:"alerts.local", label:"9. Alertes locales (zones couvertes)", value:state.alerts.local },
+        { id:"alerts.national", label:"10. Alertes nationales (zones couvertes)", value:state.alerts.national },
+        { id:"alerts.continental", label:"11. Alertes continentales (zones non couvertes)", value:state.alerts.continental },
+        { id:"alerts.world", label:"12. Assemblage alertes mondiales", value:state.alerts.world },
+        { id:"forecasts.openData", label:"13. Open-data prévisions (zones non couvertes)", value:state.forecasts.openData },
+      ];
+      const ul = document.getElementById("checkupList");
+      ul.innerHTML = "";
+      points.forEach(p=>{
+        let cls = "inconnu", txt = "inconnu";
+        if (p.value === true) { cls="ok"; txt="OK"; }
+        if (p.value === false) { cls="ko"; txt="KO"; }
+        const li=document.createElement("li");
+        li.innerHTML = `<span class="${cls}">${p.label}: ${txt}</span>`;
+        ul.appendChild(li);
+      });
+    }
+    function showTab(tab) {
+      document.querySelectorAll(".tab").forEach(el=>el.style.display="none");
+      document.getElementById(tab).style.display="block";
+    }
+    loadEngineState();
   </script>
 </body>
 </html>
