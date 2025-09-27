@@ -1,161 +1,265 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Centrale Nucléaire Météo — Console Admin</title>
   <style>
-    body { background:#0a0a0a; color:#00ffe0; font-family:"Courier New", monospace; margin:0; padding:0;}
-    h1,h2 { text-align:center; text-shadow:0 0 10px #00ffe0;}
-    .section { margin:20px; padding:20px; border-radius:10px; background:#111; box-shadow:0 0 15px rgba(0,255,224,0.3);}
-    button { background:#00ffe0; color:#000; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;}
-    button:hover { background:#00c2a8;}
-    pre,.output { background:#000; padding:10px; border-radius:8px; overflow-x:auto; color:#00ffe0;}
-    img { max-width:100%; margin:5px 0; border:1px solid #00ffe0; border-radius:6px;}
-    input,select,textarea { padding:10px; margin:5px 0; width:95%; border-radius:6px; border:1px solid #00ffe0; background:#000; color:#00ffe0;}
+    :root{
+      --bg:#0b0f12;--panel:#121a1f;--ink:#00ffd1;--muted:#9be7e0;--btn:#10e7c2;--bad:#ff5d5d;--good:#4be477;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
+    .container{max-width:920px;margin:24px auto;padding:0 14px}
+    h1{font-size:28px;margin:0 0 18px;display:flex;align-items:center;gap:12px}
+    h2{font-size:22px;margin:0 0 12px;display:flex;align-items:center;gap:10px;text-shadow:0 0 10px rgba(0,255,209,.25)}
+    .card{background:var(--panel);border-radius:16px;padding:18px;margin:18px 0;box-shadow:0 0 0 1px rgba(0,255,209,.08),0 12px 28px rgba(0,0,0,.35)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{background:var(--btn);color:#00332a;border:none;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer}
+    .btn:active{transform:translateY(1px)}
+    .danger{background:var(--bad);color:#2a0000}
+    .ok{background:var(--good);color:#001f14}
+    .field{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(0,255,209,.25);background:#0b1216;color:var(--ink)}
+    .select{appearance:none}
+    pre{white-space:pre-wrap;margin:12px 0 0;max-height:320px;overflow:auto;background:#0a0f12;border-radius:12px;padding:12px;border:1px solid rgba(0,255,209,.15)}
+    .err{color:var(--bad)}
+    .hint{color:var(--muted);font-size:13px;margin-top:6px}
+    .list{display:grid;gap:14px}
+    .news a{color:var(--muted);text-decoration:underline}
+    .mono{font-family:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#0c1418;border:1px solid rgba(0,255,209,.2);font-size:12px;color:var(--muted);margin-left:6px}
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  <div class="container">
+    <h1>⚡ Centrale Nucléaire Météo — Console Admin</h1>
 
-  <!-- RUN GLOBAL -->
-  <div class="section">
-    <h2>🚀 Lancer un Run Global</h2>
-    <button onclick="callAPI('/api/superforecast','runOutput')">Lancer le moteur</button>
-    <div id="runOutput" class="output"></div>
+    <!-- RUN GLOBAL -->
+    <section class="card" id="sec-run">
+      <h2>🚀 Lancer un Run Global <span class="pill mono">POST /api/superforecast</span></h2>
+      <div class="row" style="margin-top:8px">
+        <input id="city" class="field" placeholder="Ville (ex: Bruxelles) — facultatif pour ce run" />
+        <select id="country" class="field select" style="max-width:260px">
+          <option value="Belgium">Belgium</option>
+          <option value="France">France</option>
+          <option value="Germany">Germany</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="Ukraine">Ukraine</option>
+          <option value="United States">United States</option>
+          <!-- Ajoute ici d'autres pays couverts si tu veux -->
+        </select>
+        <button class="btn" id="btn-run">Lancer le moteur</button>
+      </div>
+      <div class="hint">Si aucune coordonnée n’est fournie, le run utilise un point par défaut (Bruxelles) et renvoie le bulletin fusionné réel.</div>
+      <pre id="out-run" class="mono"></pre>
+    </section>
+
+    <!-- LOGS -->
+    <section class="card">
+      <h2>📡 Logs moteur <span class="pill mono">GET /api/logs</span></h2>
+      <button class="btn" id="btn-logs">Actualiser</button>
+      <pre id="out-logs" class="mono">[]</pre>
+    </section>
+
+    <!-- ÉTAT -->
+    <section class="card">
+      <h2>🛠️ État du moteur <span class="pill mono">GET /api/checkup</span></h2>
+      <button class="btn" id="btn-status">Vérifier</button>
+      <pre id="out-status" class="mono"></pre>
+    </section>
+
+    <!-- CHECKUP -->
+    <section class="card">
+      <h2>✅ Checkup zones <span class="pill mono">GET /api/checkup</span></h2>
+      <button class="btn" id="btn-check">Vérifier zones</button>
+      <pre id="out-check" class="mono"></pre>
+    </section>
+
+    <!-- ALERTES -->
+    <section class="card">
+      <h2>⚠️ Alertes météo <span class="pill mono">GET /api/alerts</span></h2>
+      <button class="btn" id="btn-alerts">Charger</button>
+      <pre id="out-alerts" class="mono"></pre>
+    </section>
+
+    <!-- RADAR -->
+    <section class="card">
+      <h2>🌍 Radar météo global <span class="pill mono">GET /api/radar/global</span></h2>
+      <button class="btn" id="btn-radar">Afficher</button>
+      <div id="radar-tiles" class="list"></div>
+      <pre id="out-radar" class="mono"></pre>
+    </section>
+
+    <!-- NEWS -->
+    <section class="card">
+      <h2>🗞️ Actualités météo <span class="pill mono">GET /api/news</span></h2>
+      <button class="btn" id="btn-news">Charger</button>
+      <div id="news" class="list news"></div>
+    </section>
+
+    <!-- USERS -->
+    <section class="card">
+      <h2>👥 Utilisateurs <span class="pill mono">GET /api/users</span></h2>
+      <button class="btn" id="btn-users">Lister</button>
+      <pre id="out-users" class="mono"></pre>
+    </section>
+
+    <!-- RECHERCHE LOCALITÉ (utilise pour le RUN si lat/lon fournis plus tard) -->
+    <section class="card">
+      <h2>🌐 Rechercher une localité (zones couvertes)</h2>
+      <div class="row">
+        <input id="city2" class="field" placeholder="Ville (ex: Marseille)" />
+        <select id="country2" class="field select" style="max-width:260px">
+          <option value="France">France</option>
+          <option value="Belgium">Belgium</option>
+          <option value="Germany">Germany</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="Ukraine">Ukraine</option>
+          <option value="United States">United States</option>
+        </select>
+        <button class="btn" id="btn-lookup">Chercher</button>
+      </div>
+      <div class="hint">Cette zone prépare la connexion à un géocodeur (plus tard). Pour l’instant, on affiche la prévision nationale via <span class="pill mono">GET /api/forecast/:country</span>.</div>
+      <pre id="out-lookup" class="mono"></pre>
+    </section>
+
+    <!-- CHAT IA -->
+    <section class="card">
+      <h2>🤖 Chat IA — Moteur météo nucléaire <span class="pill mono">POST /api/chat</span></h2>
+      <textarea id="prompt" class="field" rows="4" placeholder="Pose une question..."></textarea>
+      <div class="row"><button class="btn" id="btn-chat">Envoyer</button></div>
+      <pre id="out-chat" class="mono"></pre>
+    </section>
   </div>
 
-  <!-- LOGS -->
-  <div class="section">
-    <h2>📡 Logs moteur</h2>
-    <button onclick="callAPI('/api/logs','logsOutput')">Actualiser</button>
-    <div id="logsOutput" class="output"></div>
-  </div>
+  <script>
+    // ---------- Helper fetch JSON robuste ----------
+    async function safeJSON(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Accept': 'application/json',
+          ...(options.body ? {'Content-Type':'application/json'} : {}),
+          ...(options.headers||{})
+        }
+      });
+      const txt = await res.text();
+      try {
+        return JSON.parse(txt);
+      } catch (e) {
+        throw new Error(`HTTP ${res.status} ${res.statusText} — Réponse non-JSON:\n` + txt.slice(0, 400));
+      }
+    }
+    function show(preEl, data, isError=false) {
+      preEl.classList.toggle('err', isError);
+      preEl.textContent = (typeof data === 'string') ? data : JSON.stringify(data, null, 2);
+    }
 
-  <!-- ÉTAT -->
-  <div class="section">
-    <h2>🛠️ État du moteur</h2>
-    <button onclick="callAPI('/api/engine','engineOutput')">Vérifier</button>
-    <div id="engineOutput" class="output"></div>
-  </div>
-
-  <!-- ZONES -->
-  <div class="section">
-    <h2>✅ Checkup zones</h2>
-    <button onclick="callAPI('/api/zones','zonesOutput')">Vérifier zones</button>
-    <div id="zonesOutput" class="output"></div>
-  </div>
-
-  <!-- ALERTES -->
-  <div class="section">
-    <h2>⚠️ Alertes météo</h2>
-    <button onclick="callAPI('/api/alerts','alertsOutput')">Charger</button>
-    <div id="alertsOutput" class="output"></div>
-  </div>
-
-  <!-- RADAR -->
-  <div class="section">
-    <h2>🌍 Radar météo global</h2>
-    <button onclick="loadRadar()">Afficher</button>
-    <div id="radarOutput" class="output"></div>
-  </div>
-
-  <!-- ACTUALITÉS -->
-  <div class="section">
-    <h2>📰 Actualités météo</h2>
-    <button onclick="loadNews()">Charger</button>
-    <div id="newsOutput" class="output"></div>
-  </div>
-
-  <!-- UTILISATEURS -->
-  <div class="section">
-    <h2>👥 Utilisateurs</h2>
-    <button onclick="callAPI('/api/users','usersOutput')">Lister</button>
-    <div id="usersOutput" class="output"></div>
-  </div>
-
-  <!-- RECHERCHE LOCALE -->
-  <div class="section">
-    <h2>🌐 Rechercher une localité (zones couvertes)</h2>
-    <input id="city" placeholder="Ville (ex: Marseille)"/>
-    <select id="country">
-      <option>France</option>
-      <option>Belgium</option>
-      <option>Germany</option>
-      <option>Spain</option>
-      <option>Italy</option>
-      <option>United Kingdom</option>
-      <option>Norway</option>
-      <option>Ukraine</option>
-      <option>United States</option>
-    </select>
-    <button onclick="searchLocal()">Chercher</button>
-    <div id="localOutput" class="output"></div>
-  </div>
-
-  <!-- CHAT IA -->
-  <div class="section">
-    <h2>🤖 Chat IA – Moteur météo nucléaire</h2>
-    <textarea id="chatInput" rows="3" placeholder="Posez une question..."></textarea>
-    <button onclick="askChat()">Envoyer</button>
-    <div id="chatOutput" class="output"></div>
-  </div>
-
-<script>
-async function callAPI(endpoint, targetId) {
-  try {
-    const res = await fetch(endpoint);
-    const data = await res.json();
-    document.getElementById(targetId).innerText = JSON.stringify(data, null, 2);
-  } catch (err) {
-    document.getElementById(targetId).innerText = "❌ Erreur: " + err.message;
-  }
-}
-
-async function loadRadar() {
-  const res = await fetch("/api/radar");
-  const data = await res.json();
-  let html = "";
-  if (data.success && data.tiles) {
-    data.tiles.forEach(tile => {
-      html += `<p>${tile.name}</p><img src="${tile.url}" alt="${tile.name}"/>`;
+    // ---------- RUN GLOBAL ----------
+    document.getElementById('btn-run').addEventListener('click', async () => {
+      const out = document.getElementById('out-run');
+      try {
+        // Point par défaut : Bruxelles (évite de bloquer le run si pas de géocodage)
+        const body = {
+          lat: 50.8466,
+          lon: 4.3528,
+          country: document.getElementById('country').value
+        };
+        const data = await safeJSON('/api/superforecast', { method:'POST', body: JSON.stringify(body) });
+        show(out, data);
+      } catch (err) { show(out, String(err), true); }
     });
-  } else {
-    html = "<p>⚠️ Radar indisponible</p>";
-  }
-  document.getElementById("radarOutput").innerHTML = html;
-}
 
-async function loadNews() {
-  const res = await fetch("/api/news");
-  const data = await res.json();
-  let html = "";
-  if (Array.isArray(data)) {
-    data.forEach(n => {
-      html += `<p><strong>${n.title}</strong> – ${n.source}<br/><a href="${n.url}" target="_blank">Lire</a></p>`;
+    // ---------- LOGS ----------
+    document.getElementById('btn-logs').addEventListener('click', async () => {
+      const out = document.getElementById('out-logs');
+      try { show(out, await safeJSON('/api/logs')); }
+      catch(err){ show(out, String(err), true); }
     });
-  }
-  document.getElementById("newsOutput").innerHTML = html || "⚠️ Pas de news";
-}
 
-async function searchLocal() {
-  const city = document.getElementById("city").value;
-  const country = document.getElementById("country").value;
-  const res = await fetch(`/api/localforecast?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}`);
-  const data = await res.json();
-  document.getElementById("localOutput").innerText = JSON.stringify(data, null, 2);
-}
+    // ---------- ÉTAT ----------
+    document.getElementById('btn-status').addEventListener('click', async () => {
+      const out = document.getElementById('out-status');
+      try { show(out, await safeJSON('/api/checkup')); }
+      catch(err){ show(out, String(err), true); }
+    });
 
-async function askChat() {
-  const message = document.getElementById("chatInput").value;
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
-  });
-  const data = await res.json();
-  document.getElementById("chatOutput").innerText = data.reply?.reply || JSON.stringify(data, null, 2);
-}
-</script>
+    // ---------- CHECKUP ----------
+    document.getElementById('btn-check').addEventListener('click', async () => {
+      const out = document.getElementById('out-check');
+      try { show(out, await safeJSON('/api/checkup')); }
+      catch(err){ show(out, String(err), true); }
+    });
+
+    // ---------- ALERTES ----------
+    document.getElementById('btn-alerts').addEventListener('click', async () => {
+      const out = document.getElementById('out-alerts');
+      try { show(out, await safeJSON('/api/alerts')); }
+      catch(err){ show(out, String(err), true); }
+    });
+
+    // ---------- RADAR ----------
+    document.getElementById('btn-radar').addEventListener('click', async () => {
+      const out = document.getElementById('out-radar');
+      const tilesDiv = document.getElementById('radar-tiles');
+      tilesDiv.innerHTML = '';
+      try {
+        const data = await safeJSON('/api/radar/global');
+        show(out, data);
+        if (data && Array.isArray(data.tiles)) {
+          data.tiles.forEach(t => {
+            const a = document.createElement('a');
+            a.href = t.url; a.textContent = t.name || t.url; a.target = '_blank';
+            tilesDiv.appendChild(a);
+          });
+        }
+      } catch (err) { show(out, String(err), true); }
+    });
+
+    // ---------- NEWS ----------
+    document.getElementById('btn-news').addEventListener('click', async () => {
+      const wrap = document.getElementById('news');
+      wrap.innerHTML = '';
+      try {
+        const items = await safeJSON('/api/news');
+        (items || []).forEach(n => {
+          const div = document.createElement('div');
+          div.innerHTML = `<div style="font-weight:700">${n.title || 'Sans titre'}</div>
+                           <div class="hint">${n.source || ''}</div>
+                           ${n.url ? `<a href="${n.url}" target="_blank">Lire</a>`:''}`;
+          wrap.appendChild(div);
+        });
+        if (!items || !items.length) wrap.innerHTML = '<div class="hint">Aucune actu.</div>';
+      } catch (err) {
+        wrap.innerHTML = `<pre class="mono err">${String(err)}</pre>`;
+      }
+    });
+
+    // ---------- USERS ----------
+    document.getElementById('btn-users').addEventListener('click', async () => {
+      const out = document.getElementById('out-users');
+      try { show(out, await safeJSON('/api/users')); }
+      catch(err){ show(out, String(err), true); }
+    });
+
+    // ---------- LOOKUP (prévision nationale) ----------
+    document.getElementById('btn-lookup').addEventListener('click', async () => {
+      const out = document.getElementById('out-lookup');
+      const country = document.getElementById('country2').value;
+      try { show(out, await safeJSON(`/api/forecast/${encodeURIComponent(country)}`)); }
+      catch(err){ show(out, String(err), true); }
+    });
+
+    // ---------- CHAT IA ----------
+    document.getElementById('btn-chat').addEventListener('click', async () => {
+      const out = document.getElementById('out-chat');
+      try {
+        const prompt = document.getElementById('prompt').value.trim();
+        if (!prompt) return show(out, 'Pose une question…');
+        const data = await safeJSON('/api/chat', { method:'POST', body: JSON.stringify({ message: prompt }) });
+        show(out, data?.reply ?? data);
+      } catch (err) { show(out, String(err), true); }
+    });
+  </script>
 </body>
 </html>
