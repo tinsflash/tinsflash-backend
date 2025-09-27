@@ -1,7 +1,8 @@
 // services/checkCoverage.js
+import { getEngineState } from "./engineState.js";
 
-// Liste zones couvertes (noms normalisés)
-const COVERED = [
+// Liste zones couvertes par défaut (fallback)
+const STATIC_ZONES = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
   "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
   "Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands",
@@ -11,18 +12,20 @@ const COVERED = [
 
 export default function checkCoverage(req, res, next) {
   const { zone } = req.params;
+  const state = getEngineState();
 
   if (!zone) {
-    req.coverage = { covered: false, type: "unknown" };
+    req.coverage = {
+      covered: Object.keys(state.zonesCovered || {}),
+      type: "global"
+    };
     return next();
   }
 
-  const found = COVERED.find(
-    (z) => z.toLowerCase() === zone.toLowerCase()
-  );
-
+  const found = STATIC_ZONES.find(z => z.toLowerCase() === zone.toLowerCase());
   if (found) {
-    req.coverage = { covered: true, type: "covered", zone: found };
+    const coveredNow = !!state.zonesCovered?.[found];
+    req.coverage = { covered: coveredNow, type: "covered", zone: found };
   } else {
     req.coverage = { covered: false, type: "uncovered", zone };
   }
