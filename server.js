@@ -1,210 +1,132 @@
 // server.js
 import express from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import cors from "cors";
 
-// === Services internes ===
-import { getActiveAlerts } from "./services/alertsService.js";
-import generateBulletin from "./services/bulletinService.js";
-import { addLog, getLogs } from "./services/adminLogs.js";
-import checkCoverage from "./services/checkCoverage.js";
-import { getWeatherIcon, generateCode } from "./services/codesService.js";
-import aiRouter from "./services/aiRouter.js";
-
-// === Services météo ===
+// === Services ===
+import superForecast from "./services/superForecast.js";
 import forecastService from "./services/forecastService.js";
-import runSuperForecast from "./services/superForecast.js";
-import { radarHandler } from "./services/radarService.js";
-import { getNews } from "./services/newsService.js";
-import { getUserStats } from "./services/userService.js";
-
-// === AJOUTS: moteur global & journal ===
 import runGlobal from "./services/runGlobal.js";
-import { getEngineState, saveEngineState } from "./services/engineState.js";
+import runContinental from "./services/runContinental.js";
+import radarService from "./services/radarService.js";
+import podcastService from "./services/podcastService.js";
+import chatService from "./services/chatService.js";
+import { getLogs, addLog } from "./services/adminLogs.js";
+import { getEngineState, saveEngineState, addEngineLog } from "./services/engineState.js";
+import { getActiveAlerts, updateAlertStatus } from "./services/alertsService.js";
+
+// === DB Models ===
+import Forecast from "./models/Forecast.js";
+import Alert from "./models/Alerts.js";
 
 dotenv.config();
 
 const app = express();
+app.use(express.json());
 app.use(cors());
-app.use(bodyParser.json());
 
-// === Correction __dirname pour ES Modules ===
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// === MongoDB connection ===
+mongoose
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// === Fichiers statiques ===
-app.use(express.static(path.join(__dirname, "public")));
+// ==============================
+// 📡 API ROUTES
+// ==============================
 
-// ==========================
-// ROUTES API
-// ==========================
-
-// 🌍 Prévisions locales
-app.get("/api/localforecast/:lat/:lon/:country?", async (req, res) => {
-  try {
-    const { lat, lon, country } = req.params;
-    const data = await forecastService.getLocalForecast(lat, lon, country);
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Test API
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "🌍 Centrale Nucléaire Météo Backend en ligne" });
 });
 
-// 🌐 Prévisions nationales
-app.get("/api/forecast/:country", async (req, res) => {
-  try {
-    const { country } = req.params;
-    const data = await forecastService.getForecast(country);
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 🚀 SuperForecast (par point)
-app.post("/api/superforecast", async (req, res) => {
-  try {
-    const { lat, lon, country } = req.body;
-    const result = await runSuperForecast({ lat, lon, country });
-    addLog("Superforecast lancé");
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 🚀🚀 RUN GLOBAL
+// Run Global Forecasts
 app.post("/api/run-global", async (req, res) => {
   try {
-    const report = await runGlobal();
-    addLog("RUN GLOBAL terminé");
-    res.json(report);
-  } catch (err) {
-    addLog(`RUN GLOBAL erreur: ${err.message}`);
-    res.status(500).json({ error: err.message });
+    const result = await runGlobal();
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// 🧠 Journal moteur
-app.get("/api/engine-state", (req, res) => {
+// Run Continental Forecasts (zones non couvertes)
+app.post("/api/run-continental", async (req, res) => {
   try {
-    res.json(getEngineState());
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const result = await runContinental();
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// 🔔 Alertes météo
+// Get Logs
+app.get("/api/logs", (req, res) => {
+  res.json({ success: true, logs: getLogs() });
+});
+
+// Get Engine State
+app.get("/api/engine-state", (req, res) => {
+  res.json({ success: true, state: getEngineState() });
+});
+
+// Alerts - Get Active
 app.get("/api/alerts", async (req, res) => {
   try {
-    const data = await getActiveAlerts();
-    res.json({ success: true, ...data });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    const alerts = await getActiveAlerts();
+    res.json({ success: true, alerts });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// 🚨 Action sur alertes
-app.post("/api/alerts/action", (req, res) => {
+// Alerts - Update Status (validate / expert / wait / ignore)
+app.post("/api/alerts/:id/:action", (req, res) => {
   try {
-    const { index, action } = req.body;
-    const state = getEngineState();
-    const alerts = state.alertsList || [];
-
-    if (!alerts[index]) return res.status(404).json({ status: "Alerte introuvable" });
-
-    if (action === "validate") alerts[index].reliability = 95;
-    if (action === "expert") alerts[index].tag = "expert";
-    if (action === "wait") alerts[index].tag = "wait";
-
-    saveEngineState({ ...state, alertsList: alerts });
-    res.json({ status: `Action ${action} appliquée` });
-  } catch (err) {
-    res.status(500).json({ status: "Erreur", error: err.message });
+    const { id, action } = req.params;
+    const result = updateAlertStatus(id, action);
+    if (!result.ok) return res.status(404).json(result);
+    res.json({ success: true, buckets: result.buckets });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// 📡 Radar météo
-app.get("/api/radar/:zone", async (req, res) => {
+// Radar
+app.get("/api/radar/global", async (req, res) => {
   try {
-    const { zone } = req.params;
-    const radar = await radarHandler(zone);
-    res.json(radar);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const radar = await radarService.getGlobalRadar();
+    res.json({ success: true, radar });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// 📰 Bulletin météo
-app.get("/api/bulletin/:zone", async (req, res) => {
+// Podcasts
+app.get("/api/podcast/:country", async (req, res) => {
   try {
-    const { zone } = req.params;
-    const result = await generateBulletin(zone);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const { country } = req.params;
+    const podcast = await podcastService.generatePodcast(country);
+    res.json({ success: true, podcast });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// 🤖 Chat IA
-app.use("/api/chat", aiRouter);
-
-// 🗂️ Logs
-app.get("/api/logs", (req, res) => {
+// Chat with AI (admin only)
+app.post("/api/chat", async (req, res) => {
   try {
-    res.json(getLogs());
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const { message } = req.body;
+    const response = await chatService.askAI(message);
+    res.json({ success: true, response });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// ✅ Couverture
-app.get("/api/checkup/:zone?", checkCoverage, (req, res) => {
-  res.json(req.coverage);
-});
-
-// 📰 Actualités météo
-app.get("/api/news", async (req, res) => {
-  try {
-    const news = await getNews();
-    res.json(news);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 👥 Utilisateurs
-app.get("/api/users", async (req, res) => {
-  try {
-    const stats = await getUserStats();
-    res.json(stats);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 🎟️ Codes promo
-app.get("/api/codes/:type", (req, res) => {
-  try {
-    const { type } = req.params;
-    res.json(generateCode(type));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 🔒 Alias admin
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin-pp.html"));
-});
-
-// ==========================
-// DÉMARRAGE SERVEUR
-// ==========================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur TINSFLASH en marche sur le port ${PORT}`);
-});
+// ==============================
+// 🚀 Server Start
+// ==============================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
