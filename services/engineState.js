@@ -1,43 +1,55 @@
 // services/engineState.js
+// ✅ Centralise l'état du moteur TINSFLASH
+
 let engineState = {
   runTime: null,
   models: { ok: [], ko: [] },
   sources: { ok: [], ko: [] },
-  forecasts: { local: false, national: false, openData: false },
-  alerts: { local: false, national: false, continental: false, world: false },
-  ia: { forecasts: false, alerts: false },
-  users: {},
+  forecasts: {
+    local: null,     // true = OK, false = KO, null = inconnu
+    national: null,
+    openData: null,
+  },
+  alerts: {
+    local: null,
+    national: null,
+    continental: null,
+    world: null,
+  },
+  ia: {
+    forecasts: null,
+    alerts: null,
+  },
   logs: [],
+  users: {}, // exemple: { BE: { free:0, premium:0, pro:0 } }
 };
 
-// --- Helpers ---
-function addLog(message, level = "info") {
+export function resetEngineState() {
+  engineState = {
+    runTime: null,
+    models: { ok: [], ko: [] },
+    sources: { ok: [], ko: [] },
+    forecasts: { local: null, national: null, openData: null },
+    alerts: { local: null, national: null, continental: null, world: null },
+    ia: { forecasts: null, alerts: null },
+    logs: [],
+    users: {},
+  };
+}
+
+export function saveEngineState(newState = {}) {
+  engineState = { ...engineState, ...newState };
+}
+
+export function addLog(message, type = "info") {
   engineState.logs.push({
     timestamp: new Date().toISOString(),
-    level,
+    type,
     message,
   });
   if (engineState.logs.length > 200) engineState.logs.shift();
 }
 
-function saveEngineState(partial) {
-  engineState = { ...engineState, ...partial };
+export function getEngineState() {
   return engineState;
 }
-
-function getEngineState() {
-  return engineState;
-}
-
-// --- Pour reset avant un nouveau run ---
-function resetEngineState() {
-  engineState.runTime = new Date().toISOString();
-  engineState.models = { ok: [], ko: [] };
-  engineState.sources = { ok: [], ko: [] };
-  engineState.forecasts = { local: false, national: false, openData: false };
-  engineState.alerts = { local: false, national: false, continental: false, world: false };
-  engineState.ia = { forecasts: false, alerts: false };
-  addLog("Nouvelle exécution initialisée", "system");
-}
-
-export { getEngineState, saveEngineState, addLog, resetEngineState };
