@@ -1,163 +1,104 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>⚡ Centrale Nucléaire Météo — Console Admin</title>
   <style>
     body {
-      font-family: monospace, monospace;
-      background: #0c0f16;
-      color: #00ffc6;
-      margin: 0;
-      padding: 1rem;
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 20px;
     }
     h1 {
-      color: #00ff84;
-      text-align: center;
+      color: #0ff;
     }
-    section {
-      border: 1px solid #00ff84;
+    .section {
+      border: 1px solid #0f0;
+      padding: 15px;
+      margin-bottom: 20px;
       border-radius: 8px;
-      padding: 1rem;
-      margin: 1rem 0;
-      background: #111522;
-      box-shadow: 0 0 12px rgba(0, 255, 132, 0.3);
-    }
-    .card-title {
-      font-weight: bold;
-      margin-bottom: .5rem;
-      font-size: 1.1rem;
-    }
-    .card-sub {
-      font-size: .85rem;
-      color: #ccc;
-      margin-bottom: .5rem;
+      background: #111;
     }
     button {
-      background: #00ffc6;
+      background: #0f0;
       color: #000;
-      border: none;
-      padding: .6rem 1.2rem;
-      border-radius: 5px;
-      cursor: pointer;
-      margin: .3rem 0;
       font-weight: bold;
+      border: none;
+      padding: 6px 12px;
+      margin: 5px 0;
+      cursor: pointer;
+      border-radius: 4px;
     }
     pre {
       background: #000;
       color: #0f0;
-      padding: .7rem;
-      border-radius: 5px;
+      padding: 10px;
       overflow-x: auto;
-      white-space: pre-wrap;
+      border-radius: 5px;
     }
   </style>
+  <script>
+    async function callApi(method, endpoint, body = null) {
+      try {
+        const res = await fetch(endpoint, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: body ? JSON.stringify(body) : null
+        });
+        const data = await res.json();
+        document.getElementById(endpoint).textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById(endpoint).textContent = "❌ Erreur: " + err.message;
+      }
+    }
+  </script>
 </head>
 <body>
   <h1>⚡ Centrale Nucléaire Météo — Console Admin</h1>
 
-  <!-- 🚀 Bouton Global -->
-  <section>
-    <div class="card-title">🚀 Démarrer TOUT (global)</div>
-    <div class="card-sub">POST /api/run/global</div>
-    <button id="btnRunAll">Démarrer TOUT</button>
-    <pre id="outRunAll"></pre>
-  </section>
+  <!-- RUN GLOBAL corrigé -->
+  <div class="section">
+    <h2>🚀 Démarrer TOUT (global)</h2>
+    <p><b>POST /api/run-global</b></p>
+    <button onclick="callApi('POST','/api/run-global')">Démarrer TOUT</button>
+    <pre id="/api/run-global"></pre>
+  </div>
 
-  <!-- 📡 Logs -->
-  <section>
-    <div class="card-title">📡 Logs moteur</div>
-    <div class="card-sub">GET /api/logs</div>
-    <button id="btnLogs">Actualiser</button>
-    <pre id="outLogs"></pre>
-  </section>
+  <div class="section">
+    <h2>🛰️ Logs moteur</h2>
+    <p><b>GET /api/logs</b></p>
+    <button onclick="callApi('GET','/api/logs')">Actualiser</button>
+    <pre id="/api/logs"></pre>
+  </div>
 
-  <!-- 🛠️ État -->
-  <section>
-    <div class="card-title">🛠️ État du moteur</div>
-    <div class="card-sub">GET /api/checkup</div>
-    <button id="btnState">Vérifier</button>
-    <pre id="outState"></pre>
-  </section>
+  <div class="section">
+    <h2>🛠️ État du moteur</h2>
+    <p><b>GET /api/checkup</b></p>
+    <button onclick="callApi('GET','/api/checkup')">Vérifier</button>
+    <pre id="/api/checkup"></pre>
+  </div>
 
-  <!-- ✅ Alertes -->
-  <section>
-    <div class="card-title">⚠️ Alertes météo</div>
-    <div class="card-sub">GET /api/alerts</div>
-    <button id="btnAlerts">Charger</button>
-    <pre id="outAlerts"></pre>
-  </section>
+  <div class="section">
+    <h2>⚠️ Alertes météo</h2>
+    <p><b>GET /api/alerts</b></p>
+    <button onclick="callApi('GET','/api/alerts')">Charger</button>
+    <pre id="/api/alerts"></pre>
+  </div>
 
-  <!-- 🌍 Radar -->
-  <section>
-    <div class="card-title">🌍 Radar météo global</div>
-    <div class="card-sub">GET /api/radar/global</div>
-    <button id="btnRadar">Afficher</button>
-    <pre id="outRadar"></pre>
-  </section>
+  <div class="section">
+    <h2>🌍 Radar météo global</h2>
+    <p><b>GET /api/radar/global</b></p>
+    <button onclick="callApi('GET','/api/radar/global')">Afficher</button>
+    <pre id="/api/radar/global"></pre>
+  </div>
 
-  <!-- 🤖 Chat IA -->
-  <section>
-    <div class="card-title">🤖 Chat IA — Moteur météo nucléaire</div>
-    <div class="card-sub">POST /api/chat</div>
-    <textarea id="chatInput" rows="2" style="width:100%"></textarea><br/>
-    <button id="btnChat">Envoyer</button>
-    <pre id="outChat"></pre>
-  </section>
-
-  <script>
-    async function callAPI(method, url, body) {
-      const opts = { method, headers: { "Content-Type": "application/json" } };
-      if (body && method !== "GET") opts.body = JSON.stringify(body);
-      const r = await fetch(url, opts);
-      const text = await r.text();
-      try { return { status: r.status, json: JSON.parse(text) }; }
-      catch { return { status: r.status, text }; }
-    }
-
-    // --- Run Global
-    document.getElementById("btnRunAll").onclick = async () => {
-      const out = document.getElementById("outRunAll");
-      out.textContent = "⏳ Lancement du run global…";
-      const res = await callAPI("POST", "/api/run/global");
-      out.textContent = JSON.stringify(res.json ?? { error: res.text }, null, 2);
-    };
-
-    // --- Logs
-    document.getElementById("btnLogs").onclick = async () => {
-      const out = document.getElementById("outLogs");
-      const res = await callAPI("GET", "/api/logs");
-      out.textContent = JSON.stringify(res.json ?? { error: res.text }, null, 2);
-    };
-
-    // --- État
-    document.getElementById("btnState").onclick = async () => {
-      const out = document.getElementById("outState");
-      const res = await callAPI("GET", "/api/checkup");
-      out.textContent = JSON.stringify(res.json ?? { error: res.text }, null, 2);
-    };
-
-    // --- Alertes
-    document.getElementById("btnAlerts").onclick = async () => {
-      const out = document.getElementById("outAlerts");
-      const res = await callAPI("GET", "/api/alerts");
-      out.textContent = JSON.stringify(res.json ?? { error: res.text }, null, 2);
-    };
-
-    // --- Radar
-    document.getElementById("btnRadar").onclick = async () => {
-      const out = document.getElementById("outRadar");
-      const res = await callAPI("GET", "/api/radar/global");
-      out.textContent = JSON.stringify(res.json ?? { error: res.text }, null, 2);
-    };
-
-    // --- Chat
-    document.getElementById("btnChat").onclick = async () => {
-      const out = document.getElementById("outChat");
-      const msg = document.getElementById("chatInput").value;
-      const res = await callAPI("POST", "/api/chat", { message: msg });
-      out.textContent = JSON.stringify(res.json ?? { error: res.text }, null, 2);
-    };
-  </script>
+  <div class="section">
+    <h2>🤖 Chat IA — Moteur météo nucléaire</h2>
+    <p><b>POST /api/chat</b></p>
+    <textarea id="chatInput" rows="3" cols="60" placeholder="Posez une question au moteur..."></textarea><br>
+    <button onclick="callApi('POST','/api/chat',{message: document.getElementById('chatInput').value})">Envoyer</button>
+    <pre id="/api/chat"></pre>
+  </div>
 </body>
 </html>
