@@ -1,66 +1,95 @@
 // services/runGlobal.js
-import { saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
+// ⚡ Centrale nucléaire météo — RUN GLOBAL
+import forecastService from "./forecastService.js";
+import { resetEngineState, saveEngineState, addLog, getEngineState } from "./engineState.js";
+import { classifyAlert, resetAlerts } from "./alertsService.js";
+
+const COVERED = [
+  "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
+  "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
+  "Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands",
+  "Poland","Portugal","Czechia","Romania","Slovakia","Slovenia","Sweden",
+  "Ukraine","United Kingdom","Norway","USA"
+];
 
 export default async function runGlobal() {
+  resetEngineState();
+  resetAlerts();
+  addLog("🔵 RUN GLOBAL démarré", "system");
+
   const startedAt = new Date().toISOString();
-  addEngineLog("RUN GLOBAL démarré");
+  const modelsOk = ["GFS","ECMWF","ICON","Meteomatics"];
+  const modelsKo = []; // à compléter si échec
+  const sourcesOk = ["NASA","Copernicus","OpenWeather"];
+  const sourcesKo = []; // idem
 
-  try {
-    // === Simuler ingestion réelle des modèles météo ===
-    // (à remplacer par tes vrais connecteurs d’API GFS, ECMWF, ICON, Meteomatics…)
-    const sources = {
-      GFS: {
-        time: startedAt,      // horodatage de la donnée récupérée
-        status: "ok",         // ok | outdated | error
-        provider: "NOAA GFS"
-      },
-      ECMWF: {
-        time: startedAt,
-        status: "ok",
-        provider: "ECMWF"
-      },
-      ICON: {
-        time: startedAt,
-        status: "ok",
-        provider: "DWD ICON"
-      },
-      Meteomatics: {
-        time: startedAt,
-        status: "ok",
-        provider: "Meteomatics API"
+  const zonesProcessed = [];
+  const alertsGenerated = [];
+
+  for (const country of COVERED) {
+    try {
+      addLog(`⏳ Prévisions ${country}…`, "info");
+
+      // 1️⃣ Récupérer prévisions nationales
+      const national = await forecastService.getForecast(country);
+
+      // 2️⃣ Marquer prévisions nationales
+      saveEngineState({
+        forecasts: { ...getEngineState().forecasts, national: true },
+      });
+
+      // 3️⃣ Prévisions locales (si dispo)
+      if (national?.forecasts) {
+        saveEngineState({
+          forecasts: { ...getEngineState().forecasts, local: true },
+        });
+
+        for (const [region, fc] of Object.entries(national.forecasts)) {
+          // 🔔 Exemple d’alerte brute (dans la réalité → analyse IA du forecast)
+          if (fc?.risk && fc.risk > 0.7) {
+            const alert = {
+              id: `${country}-${region}-${Date.now()}`,
+              zone: `${region}, ${country}`,
+              fiability: Math.round(fc.risk * 100),
+              details: fc,
+            };
+            classifyAlert(alert);
+            alertsGenerated.push(alert);
+          }
+        }
       }
-    };
 
-    // === Exemple zones couvertes (Europe + US + UK + Ukraine + Norvège) ===
-    const zonesCovered = {
-      Germany: true, Austria: true, Belgium: true, France: true,
-      Spain: true, Italy: true, Portugal: true, Netherlands: true,
-      Poland: true, Sweden: true, Finland: true, Denmark: true,
-      Norway: true, Ukraine: true, UnitedKingdom: true,
-      USA: true
-      // ... (complète si nécessaire)
-    };
-
-    // === Mise à jour état moteur ===
-    saveEngineState({
-      runTime: startedAt,
-      zonesCovered,
-      sources,
-      alertsList: [] // pas d’alertes ici, ce sera géré dans alertsService
-    });
-
-    addEngineLog("RUN GLOBAL terminé");
-
-    return {
-      success: true,
-      result: {
-        startedAt,
-        countriesProcessed: Object.keys(zonesCovered).length,
-        alerts: 0
-      }
-    };
-  } catch (err) {
-    addEngineError(err);
-    return { success: false, error: err.message };
+      zonesProcessed.push(country);
+      addLog(`✅ ${country} traité`, "success");
+    } catch (err) {
+      addLog(`❌ Erreur ${country}: ${err.message}`, "error");
+      modelsKo.push(country);
+    }
   }
+
+  // 🔄 Finalisation moteur
+  saveEngineState({
+    runTime: startedAt,
+    models: { ok: modelsOk, ko: modelsKo },
+    sources: { ok: sourcesOk, ko: sourcesKo },
+    alerts: {
+      local: alertsGenerated.length > 0,
+      national: zonesProcessed.length > 0,
+      continental: false, // réservé pour runContinental
+      world: alertsGenerated.length > 0,
+    },
+    ia: { forecasts: true, alerts: true },
+  });
+
+  addLog("🟢 RUN GLOBAL terminé", "system");
+
+  return {
+    startedAt,
+    modelsOk,
+    modelsKo,
+    sourcesOk,
+    sourcesKo,
+    zonesProcessed,
+    alertsGenerated: alertsGenerated.length,
+  };
 }
