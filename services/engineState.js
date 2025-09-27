@@ -25,8 +25,22 @@ export function addEngineError(message) {
   if (engineState.errors.length > 200) engineState.errors = engineState.errors.slice(0, 200);
 }
 
+/**
+ * Sauvegarde un nouvel état moteur.
+ * ⚡ Ecrase totalement les données dynamiques du run (zones, erreurs, alertes, logs)
+ * pour éviter de polluer avec l’ancien état.
+ */
 export function saveEngineState(newState) {
-  engineState = { ...engineState, ...newState };
+  engineState = {
+    ...engineState,      // garde les flags persistants (ia, radar, etc.)
+    runTime: newState.runTime || null,
+    zonesCovered: newState.zonesCovered || {},
+    zonesContinental: newState.zonesContinental || {},
+    sources: newState.sources || {},
+    alertsList: newState.alertsList || [],
+    errors: newState.errors || [],
+    logs: newState.logs || []
+  };
 }
 
 export function getEngineState() {
