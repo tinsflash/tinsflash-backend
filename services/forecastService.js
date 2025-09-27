@@ -5,10 +5,8 @@ import adjustWithLocalFactors from "./localFactors.js";
 import openweather from "./openweather.js";
 import { REGIONS_COORDS } from "./regionsCoords.js";
 
-/**
- * Prévisions nationales (zones couvertes par la Centrale)
- */
-async function getForecast(country) {
+/** Bulletin national (zones couvertes) — conserve forecast + sources numériques */
+async function getNationalForecast(country) {
   try {
     const regions = REGIONS_COORDS[country] || {};
     const forecasts = {};
@@ -18,31 +16,29 @@ async function getForecast(country) {
       sf = applyClimateFactors(sf, coords.lat, coords.lon);
       sf = adjustWithLocalFactors(sf, country);
 
-      forecasts[region] = sf.forecast || sf.error || "⚠️ Pas de données";
+      forecasts[region] = {
+        lat: coords.lat, lon: coords.lon, country,
+        forecast: sf.forecast || "⚠️ Pas de données",
+        sources: sf.sources || null
+      };
     }
 
     return { country, forecasts, source: "Centrale Nucléaire Météo" };
   } catch (err) {
-    console.error("❌ getForecast error:", err.message);
-    return { country, error: err.message };
+    console.error("❌ getNationalForecast error:", err.message);
+    return { country, error: err.message, forecasts: {} };
   }
 }
 
-/**
- * Prévisions locales
- * - Zones couvertes → moteur nucléaire météo
- * - Zones non couvertes → OpenWeather fallback
- */
+/** Prévision locale — moteur pour zones couvertes, OpenWeather sinon */
 async function getLocalForecast(lat, lon, country) {
   try {
     if (REGIONS_COORDS[country]) {
       let sf = await runSuperForecast({ lat, lon, country });
       sf = applyClimateFactors(sf, lat, lon);
       sf = adjustWithLocalFactors(sf, country);
-      return sf;
+      return sf; // {forecast, sources}
     }
-
-    // fallback pour zones non couvertes
     const ow = await openweather(lat, lon);
     return { lat, lon, country, forecast: ow, source: "OpenWeather (fallback)" };
   } catch (err) {
@@ -51,4 +47,4 @@ async function getLocalForecast(lat, lon, country) {
   }
 }
 
-export default { getForecast, getLocalForecast };
+export default { getNationalForecast, getLocalForecast };
