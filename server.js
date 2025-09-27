@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -37,6 +36,7 @@ import * as chatServiceMod from "./services/chatService.js";
 import * as logsMod from "./services/adminLogs.js";
 import * as engineStateMod from "./services/engineState.js";
 import * as alertsServiceMod from "./services/alertsService.js";
+import * as newsServiceMod from "./services/newsService.js"; // ✅ AJOUT
 
 // Helpers
 const runGlobal = runGlobalMod.default ?? runGlobalMod.runGlobal ?? runGlobalMod;
@@ -49,6 +49,7 @@ const chatService = chatServiceMod.default ?? chatServiceMod;
 const { getLogs } = logsMod;
 const { getEngineState } = engineStateMod;
 const { getActiveAlerts, updateAlertStatus } = alertsServiceMod;
+const newsService = newsServiceMod.default ?? newsServiceMod;
 
 // ==============================
 // API ROUTES
@@ -131,6 +132,14 @@ app.post("/api/chat", async (req, res) => {
 // Logs & State
 app.get("/api/logs", (req, res) => res.json(getLogs()));
 app.get("/api/engine-state", (req, res) => res.json(getEngineState()));
+
+// News
+app.get("/api/news", async (req, res) => {
+  try {
+    if (!newsService.getNews) throw new Error("getNews non dispo");
+    res.json({ success: true, news: await newsService.getNews() });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
 
 // Admin page
 app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-pp.html")));
