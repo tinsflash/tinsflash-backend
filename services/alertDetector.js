@@ -1,116 +1,99 @@
 // services/alertDetector.js
-import { logInfo, logError } from "../utils/logger.js";
+// Détection d’alertes TINSFLASH
+// 🔥 Zones couvertes = local & national
+// 🌍 Zones non couvertes = alertes continentales
 
 /**
- * Détection intelligente des alertes météo
- * @param {Object} forecast - données météo fusionnées par superForecast
- * @returns {Array} - liste des alertes détectées
+ * Détection brute d’alertes météo sur base des données ajustées
+ * @param {Object} data - { precipitation_adjusted, wind, temp, returnLevel }
+ * @returns {Array} alertes brutes
  */
-export function detectAlerts(forecast) {
+export function detectAlerts(data) {
+  if (!data) return [];
+
   const alerts = [];
 
-  try {
-    logInfo("🔎 Analyse des conditions météo pour détection d’alertes...");
-
-    // Pluie forte
-    if (forecast.rain && forecast.rain > 50) {
-      const confidence = forecast.rain > 100 ? 95 : 80;
+  // 🌧️ Alerte pluie
+  if (data.precipitation_adjusted != null && data.returnLevel) {
+    if (data.precipitation_adjusted > data.returnLevel) {
       alerts.push({
-        type: "Pluie forte",
-        value: `${forecast.rain} mm/24h`,
-        confidence,
-        action: confidence >= 90 ? "AUTO" : "MANUAL"
+        type: "rain",
+        value: data.precipitation_adjusted,
+        threshold: data.returnLevel,
+        confidence: 85, // sera recalculée plus tard
+        message: `Précipitations extrêmes détectées (${data.precipitation_adjusted.toFixed(1)} mm/h)`
       });
-      logInfo(`🌧️ Alerte pluie forte détectée (${forecast.rain} mm)`);
     }
+  }
 
-    // Neige forte
-    if (forecast.snow && forecast.snow > 20) {
-      const confidence = forecast.snow > 50 ? 92 : 75;
+  // 💨 Alerte vent
+  if (data.wind != null) {
+    if (data.wind > 90) { // km/h
       alerts.push({
-        type: "Neige forte",
-        value: `${forecast.snow} cm/24h`,
-        confidence,
-        action: confidence >= 90 ? "AUTO" : "MANUAL"
+        type: "wind",
+        value: data.wind,
+        threshold: 90,
+        confidence: 80,
+        message: `Rafales violentes > ${data.wind} km/h`
       });
-      logInfo(`❄️ Alerte neige forte détectée (${forecast.snow} cm)`);
     }
+  }
 
-    // Vent violent
-    if (forecast.wind && forecast.wind > 80) {
-      const confidence = forecast.wind > 120 ? 95 : 85;
+  // 🌡️ Alerte température
+  if (data.temp != null) {
+    if (data.temp < -15) {
       alerts.push({
-        type: "Vent violent",
-        value: `${forecast.wind} km/h`,
-        confidence,
-        action: confidence >= 90 ? "AUTO" : "MANUAL"
+        type: "cold",
+        value: data.temp,
+        threshold: -15,
+        confidence: 75,
+        message: `Grand froid détecté (${data.temp} °C)`
       });
-      logInfo(`💨 Alerte vent violent détectée (${forecast.wind} km/h)`);
     }
-
-    // Tempête / Ouragan (pression + vent)
-    if (forecast.wind > 120 && forecast.pressure < 980) {
+    if (data.temp > 40) {
       alerts.push({
-        type: "Tempête / Ouragan",
-        value: `${forecast.wind} km/h, pression ${forecast.pressure} hPa`,
-        confidence: 97,
-        action: "AUTO"
+        type: "heat",
+        value: data.temp,
+        threshold: 40,
+        confidence: 80,
+        message: `Canicule extrême (${data.temp} °C)`
       });
-      logInfo(`🌀 Alerte tempête/ouragan détectée`);
     }
-
-    // Orage fort (via convection CAPE ou indicateur orage)
-    if (forecast.thunderstorm || (forecast.cape && forecast.cape > 1500)) {
-      const confidence = forecast.cape > 2500 ? 93 : 80;
-      alerts.push({
-        type: "Orage fort",
-        value: `CAPE=${forecast.cape || "?"}`,
-        confidence,
-        action: confidence >= 90 ? "AUTO" : "MANUAL"
-      });
-      logInfo(`⛈️ Alerte orage fort détectée`);
-    }
-
-    // Inondations (pluie cumulée + sol saturé si dispo)
-    if (forecast.rain && forecast.rain > 80 && forecast.soil && forecast.soil > 90) {
-      alerts.push({
-        type: "Inondation",
-        value: `${forecast.rain} mm + sol saturé ${forecast.soil}%`,
-        confidence: 92,
-        action: "AUTO"
-      });
-      logInfo(`🌊 Alerte inondation détectée`);
-    }
-
-    // Chaleur extrême
-    if (forecast.tempMax && forecast.tempMax > 38) {
-      const confidence = forecast.tempMax > 42 ? 95 : 85;
-      alerts.push({
-        type: "Chaleur extrême",
-        value: `${forecast.tempMax}°C`,
-        confidence,
-        action: confidence >= 90 ? "AUTO" : "MANUAL"
-      });
-      logInfo(`🔥 Alerte chaleur extrême détectée (${forecast.tempMax}°C)`);
-    }
-
-    // Grand froid
-    if (forecast.tempMin && forecast.tempMin < -15) {
-      const confidence = forecast.tempMin < -25 ? 95 : 80;
-      alerts.push({
-        type: "Grand froid",
-        value: `${forecast.tempMin}°C`,
-        confidence,
-        action: confidence >= 90 ? "AUTO" : "MANUAL"
-      });
-      logInfo(`🥶 Alerte grand froid détectée (${forecast.tempMin}°C)`);
-    }
-
-    logInfo(`✅ Analyse terminée : ${alerts.length} alerte(s) trouvée(s)`);
-
-  } catch (err) {
-    logError("Erreur dans detectAlerts: " + err.message);
   }
 
   return alerts;
+}
+
+/**
+ * Filtrage et classement des alertes selon la règle Patrick (fiabilité)
+ * @param {Array} rawAlerts - sorties de detectAlerts
+ * @param {Object} context - { country, capital, continent }
+ * @returns {Object} alertes filtrées + statut publication
+ */
+export function classifyAlerts(rawAlerts, context = {}) {
+  const processed = [];
+
+  for (const a of rawAlerts) {
+    let status = "memory"; // défaut = en mémoire
+
+    if (a.confidence < 70) {
+      status = "discard"; // en mémoire uniquement
+    } else if (a.confidence >= 70 && a.confidence < 90) {
+      status = "review"; // à valider manuellement
+    } else if (a.confidence >= 90) {
+      status = "publish"; // publication auto
+    }
+
+    processed.push({
+      ...a,
+      status,
+      country: context.country || null,
+      capital: context.capital || null,
+      continent: context.continent || null,
+      firstDetectedByUs: true, // on marque systématiquement premier
+      detectedAt: new Date().toISOString()
+    });
+  }
+
+  return processed;
 }
