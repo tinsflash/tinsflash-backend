@@ -1,25 +1,24 @@
 // services/chatService.js
-import express from "express";
-import { askAI } from "./aiService.js";
+// Service pour dialoguer avec l'IA (ChatGPT5 réservé console/moteur)
 
-const router = express.Router();
-
-/**
- * Chat IA — Console Admin uniquement
- * ⚡ Relié au moteur nucléaire météo
- */
-router.post("/", async (req, res) => {
+async function askAI(message) {
   try {
-    const { message } = req.body;
-
-    // 🔒 Toujours en mode cockpit (pas d’utilisateur public ici)
-    const reply = await askAI(message, { context: "cockpit" });
-
-    res.json({ reply });
+    // Ici on simulera la réponse IA avec un objet structuré
+    // (tu pourras brancher ton connecteur GPT-5 ensuite)
+    return {
+      result: "Diagnostic effectué",
+      input: message,
+      checks: {
+        moteur: "OK",
+        ia: "OK",
+        server: "OK",
+        previsions: "OK"
+      },
+      timestamp: new Date().toISOString()
+    };
   } catch (err) {
-    console.error("❌ Erreur Chat IA cockpit:", err);
-    res.status(500).json({ error: "Erreur serveur Chat IA cockpit" });
+    return { error: err.message };
   }
-});
+}
 
-export default router;
+export default { askAI };
