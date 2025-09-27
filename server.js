@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -7,12 +6,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // === Services internes ===
-import { getActiveAlerts } from "./services/alertsService.js";  // ✅ corrigé
+import { getActiveAlerts } from "./services/alertsService.js";
 import generateBulletin from "./services/bulletinService.js";
 import { addLog, getLogs } from "./services/adminLogs.js";
 import checkCoverage from "./services/checkCoverage.js";
 import { getWeatherIcon, generateCode } from "./services/codesService.js";
 import aiRouter from "./services/aiRouter.js";
+import verifyRouter from "./services/verifyRouter.js";   // ✅ nouveau
 
 // === Services météo ===
 import forecastService from "./services/forecastService.js";
@@ -76,7 +76,7 @@ app.post("/api/superforecast", async (req, res) => {
   }
 });
 
-// 🚀🚀 RUN GLOBAL (toutes zones couvertes) — 100% réel
+// 🚀🚀 RUN GLOBAL (toutes zones couvertes)
 app.post("/api/run-global", async (req, res) => {
   try {
     const report = await runGlobal();
@@ -100,7 +100,7 @@ app.get("/api/engine-state", (req, res) => {
 // 🔔 Alertes météo
 app.get("/api/alerts", async (req, res) => {
   try {
-    const data = await getActiveAlerts();   // ✅ corrigé
+    const data = await getActiveAlerts();
     res.json({ success: true, ...data });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -131,6 +131,9 @@ app.get("/api/bulletin/:zone", async (req, res) => {
 
 // 🤖 Chat IA
 app.use("/api/chat", aiRouter);
+
+// ✅ Vérification complète moteur
+app.use("/api/verify-all", verifyRouter);
 
 // 🗂️ Logs
 app.get("/api/logs", (req, res) => {
