@@ -1,30 +1,47 @@
-// services/nasaSat.js
-import axios from "axios";
+// PATH: services/nasaSat.js
+import fetch from "node-fetch";
 
 /**
- * Récupère données satellites NASA POWER
- * @param {number} lat
- * @param {number} lon
+ * NASA POWER (daily point) — paramètres essentiels :
+ * T2M (temp 2m), WS10M (vent 10m), PRECTOTCORR (précip), ALLSKY_SFC_SW_DWN (rayonnement).
  */
-async function nasaSat(lat, lon) {
+export default async function nasaSat({ lat, lon }) {
   try {
-    const url = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOT,WS2M&community=RE&longitude=${lon}&latitude=${lat}&start=20240101&end=20240107&format=JSON`;
+    const today = new Date();
+    const ymd = (d) =>
+      d.getFullYear().toString().padStart(4, "0") +
+      String(d.getMonth() + 1).padStart(2, "0") +
+      String(d.getDate()).padStart(2, "0");
 
-    const res = await axios.get(url);
-    const data = res.data?.properties?.parameter;
+    // On prend J-1 à J (certaines séries sont D-1 consolidées)
+    const end = ymd(today);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 1);
+    const start = ymd(startDate);
 
-    if (!data) throw new Error("Données NASA indisponibles");
+    const params = [
+      "T2M",
+      "WS10M",
+      "PRECTOTCORR",
+      "ALLSKY_SFC_SW_DWN",
+    ].join(",");
+
+    const url =
+      `https://power.larc.nasa.gov/api/temporal/daily/point?` +
+      `parameters=${params}&community=RE&longitude=${lon}&latitude=${lat}` +
+      `&start=${start}&end=${end}&format=JSON`;
+
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`NASA POWER error: ${resp.status} ${resp.statusText}`);
+    const data = await resp.json();
 
     return {
       source: "NASA POWER",
-      temperature: data.T2M,
-      precipitation: data.PRECTOT,
-      wind: data.WS2M,
+      period: { start, end },
+      parameters: Object.keys(data?.properties?.parameter || {}),
+      raw: data?.properties?.parameter || {},
     };
-  } catch (err) {
-    console.error("❌ Erreur NASA POWER:", err.message);
-    return null;
+  } catch (e) {
+    return { source: "NASA POWER", error: e.message };
   }
 }
-
-export default nasaSat;
