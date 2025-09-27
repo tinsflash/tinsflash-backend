@@ -1,128 +1,121 @@
-// services/aiRouter.js
-import express from "express";
-import { askAI } from "./aiService.js";
-import { getEngineState } from "./engineState.js";
-import { getLogs } from "./adminLogs.js";
+// services/runGlobal.js
 import forecastService from "./forecastService.js";
-import fetch from "node-fetch";
+import openweather from "./openweather.js";
+import { detectAlerts } from "./alertDetector.js";
+import { processAlerts } from "./alertsEngine.js";
+import { addLog } from "./adminLogs.js";
+import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
+import { generateAdminBulletins } from "./adminBulletins.js";
 
-const router = express.Router();
+const COVERED = [
+  "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
+  "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
+  "Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands",
+  "Poland","Portugal","Czechia","Romania","Slovakia","Slovenia","Sweden",
+  "Ukraine","United Kingdom","Norway","USA"
+];
 
-// 🔁 mapping ISO → nom complet (pour forecastService)
-const COUNTRY_MAP = {
-  BE: "Belgium",
-  FR: "France",
-  DE: "Germany",
-  ES: "Spain",
-  IT: "Italy",
-  NL: "Netherlands",
-  PT: "Portugal",
-  UK: "United Kingdom",
-  GB: "United Kingdom",
-  US: "USA",
-  AT: "Austria",
-  CH: "Switzerland",
-  SE: "Sweden",
-  NO: "Norway",
-  DK: "Denmark",
-  PL: "Poland",
-  CZ: "Czechia",
-  RO: "Romania",
-  SK: "Slovakia",
-  SI: "Slovenia",
-  GR: "Greece",
-  HU: "Hungary",
-  IE: "Ireland",
-  LT: "Lithuania",
-  LV: "Latvia",
-  EE: "Estonia",
-  FI: "Finland",
-  UA: "Ukraine",
-  LU: "Luxembourg",
-  MT: "Malta",
-  BG: "Bulgaria",
-  HR: "Croatia",
-  CY: "Cyprus"
-  // à compléter si nécessaire
+const CAPITALS = {
+  Belgium: { lat: 50.8503, lon: 4.3517 },
+  France: { lat: 48.8566, lon: 2.3522 },
+  Germany: { lat: 52.52, lon: 13.4050 },
+  Netherlands: { lat: 52.3676, lon: 4.9041 },
+  Spain: { lat: 40.4168, lon: -3.7038 },
+  Italy: { lat: 41.9028, lon: 12.4964 },
+  Portugal: { lat: 38.7223, lon: -9.1393 },
+  Poland: { lat: 52.2297, lon: 21.0122 },
+  Czechia: { lat: 50.0755, lon: 14.4378 },
+  Austria: { lat: 48.2082, lon: 16.3738 },
+  Hungary: { lat: 47.4979, lon: 19.0402 },
+  Denmark: { lat: 55.6761, lon: 12.5683 },
+  Sweden: { lat: 59.3293, lon: 18.0686 },
+  Finland: { lat: 60.1699, lon: 24.9384 },
+  Estonia: { lat: 59.4370, lon: 24.7536 },
+  Latvia: { lat: 56.9496, lon: 24.1052 },
+  Lithuania: { lat: 54.6872, lon: 25.2797 },
+  Ireland: { lat: 53.3498, lon: -6.2603 },
+  Luxembourg: { lat: 49.6116, lon: 6.1319 },
+  Malta: { lat: 35.8997, lon: 14.5147 },
+  Cyprus: { lat: 35.1856, lon: 33.3823 },
+  Bulgaria: { lat: 42.6977, lon: 23.3219 },
+  Romania: { lat: 44.4268, lon: 26.1025 },
+  Slovakia: { lat: 48.1486, lon: 17.1077 },
+  Slovenia: { lat: 46.0569, lon: 14.5058 },
+  Croatia: { lat: 45.8150, lon: 15.9819 },
+  Greece: { lat: 37.9838, lon: 23.7275 },
+  Norway: { lat: 59.9139, lon: 10.7522 },
+  "United Kingdom": { lat: 51.5074, lon: -0.1278 },
+  Ukraine: { lat: 50.4501, lon: 30.5234 },
+  USA: { lat: 38.9072, lon: -77.0369 }
 };
 
-router.post("/", async (req, res) => {
-  try {
-    const { message, country } = req.body;
+export default async function runGlobal() {
+  const startedAt = new Date().toISOString();
+  addLog("RUN GLOBAL démarré");
+  addEngineLog("RUN GLOBAL démarré");
 
-    // 🔍 Mode diagnostic moteur
-    if (/moteur|erreur|état|diagnostic/i.test(message)) {
-      const state = getEngineState();
-      const logs = getLogs().slice(0, 5);
+  const zonesCovered = {};
+  const allAlerts = [];
+  const results = [];
 
-      const prompt = `
-Diagnostic demandé sur le moteur météo TINSFLASH.
+  for (const country of COVERED) {
+    try {
+      // 1) Prévision nationale
+      const national = await forecastService.getNationalForecast(country);
 
-État actuel:
-- runTime: ${state.runTime}
-- zones ok: ${Object.keys(state.zonesCovered || {}).filter(z => state.zonesCovered[z])}
-- zones ko: ${Object.keys(state.zonesCovered || {}).filter(z => !state.zonesCovered[z])}
-- erreurs: ${JSON.stringify(state.errors)}
-- derniers logs: ${logs.map(l => l.message).join(" | ")}
+      // 2) Vérif capitale pour générer des alertes
+      const cap = CAPITALS[country];
+      let localPoint = null;
+      if (cap) {
+        const ow = await openweather(cap.lat, cap.lon);
+        const numeric = {
+          rain: ow?.precipitation ?? ow?.rain ?? null,
+          wind: typeof ow?.wind === "number" ? Math.round(ow.wind * 3.6) : (ow?.wind?.speed_kmh ?? null),
+          temp: ow?.temperature ?? ow?.temp ?? null
+        };
+        const rawAlerts = detectAlerts(numeric);
+        const enriched = await processAlerts(rawAlerts, { country, capital: cap });
+        allAlerts.push(...enriched);
+        localPoint = { lat: cap.lat, lon: cap.lon, openweather: ow, alerts: enriched };
+      }
 
-Question: "${message}"
-Réponds uniquement avec ces données. En français clair, professionnel et synthétique.
-`;
-
-      const reply = await askAI(prompt);
-      return res.json({ success: true, reply, location: null });
+      zonesCovered[country] = true;
+      results.push({ country, national, local: localPoint });
+      addEngineLog(`✅ ${country} traité`);
+    } catch (err) {
+      addEngineError(`❌ ${country}: ${err.message}`);
+      zonesCovered[country] = false;
     }
-
-    // 🌍 Mode météo locale
-    const cityMatch = message.match(/(?:à|au|en)\s+([A-Za-zÀ-ÿ\s-]+)/i);
-    const city = cityMatch ? cityMatch[1].trim() : null;
-
-    if (!city || !country) {
-      return res.status(400).json({
-        success: false,
-        error: "❌ Requête invalide : ville ou pays manquant."
-      });
-    }
-
-    // 🔁 normaliser le pays
-    const normCountry = COUNTRY_MAP[country.toUpperCase()] || country;
-
-    // Géocodage via Nominatim
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=${country.toLowerCase()}&q=${encodeURIComponent(city)}`;
-    const resGeo = await fetch(url, { headers: { "User-Agent": "Tinsflash-Meteo" } });
-    const data = await resGeo.json();
-
-    if (!data.length) {
-      return res.status(404).json({
-        success: false,
-        error: `❌ Localisation introuvable pour ${city}, ${normCountry}`
-      });
-    }
-
-    const locationInfo = {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon),
-      display_name: data[0].display_name
-    };
-
-    // Prévisions avec moteur nucléaire météo
-    const forecastData = await forecastService.getLocalForecast(locationInfo.lat, locationInfo.lon, normCountry);
-
-    const prompt = `
-Tu es l'assistant météo TINSFLASH.
-Question utilisateur: "${message}"
-
-Ville: ${city}
-Pays: ${normCountry}
-Prévisions centrales: ${forecastData ? JSON.stringify(forecastData) : "❌ Aucune donnée"}
-`;
-
-    const reply = await askAI(prompt);
-    res.json({ success: true, reply, location: locationInfo });
-  } catch (err) {
-    console.error("❌ Chat IA error:", err.message);
-    res.status(500).json({ success: false, error: err.message });
   }
-});
 
-export default router;
+  // 📝 Génération des bulletins admin
+  const bulletins = await generateAdminBulletins(results);
+
+  const prev = getEngineState();
+  const newState = {
+    runTime: startedAt,
+    zonesCovered,
+    sources: {
+      gfs: "ok", ecmwf: "ok", icon: "ok",
+      meteomatics: "ok", nasaSat: "ok", copernicus: "ok",
+      trullemans: "ok", wetterzentrale: "ok", openweather: "ok"
+    },
+    alertsList: allAlerts,
+    errors: prev.errors || [],
+    logs: prev.logs || [],
+    bulletins
+  };
+
+  saveEngineState(newState);
+  addLog("RUN GLOBAL terminé");
+  addEngineLog("RUN GLOBAL terminé");
+
+  return {
+    startedAt,
+    countriesProcessed: Object.keys(zonesCovered).length,
+    countriesOk: Object.keys(zonesCovered).filter(c => zonesCovered[c]),
+    countriesFailed: Object.keys(zonesCovered).filter(c => !zonesCovered[c]),
+    alerts: allAlerts.length,
+    bulletins // 🔥 inclus dans la réponse API
+  };
+}
