@@ -31,7 +31,8 @@ export async function generateAIResponse(prompt) {
         messages: [
           {
             role: "system",
-            content: "Tu es le moteur IA météo nucléaire TINSFLASH, spécialisé en météorologie et en alertes précises."
+            content:
+              "Tu es le moteur IA météo nucléaire TINSFLASH, spécialisé en prévisions et alertes météorologiques ultra précises."
           },
           { role: "user", content: prompt },
         ],
@@ -74,3 +75,6 @@ export async function generateAIResponse(prompt) {
     error: lastErr?.message || "Erreur inconnue",
   };
 }
+
+// 🔁 Alias rétro-compatible pour l’ancien code
+export const askAI = generateAIResponse;
