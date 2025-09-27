@@ -1,15 +1,9 @@
 // services/runGlobal.js
-// RUN GLOBAL — Centrale Nucléaire Météo
-// ⚡ Analyse toutes les zones couvertes (Europe + UK + Ukraine + USA + Norvège)
-
 import forecastService from "./forecastService.js";
-import { detectAlerts, classifyAlerts } from "./alertDetector.js";
+import { detectAlerts } from "./alertDetector.js";
+import { processAlerts } from "./alertsEngine.js";
 import { addLog } from "./adminLogs.js";
-import {
-  saveEngineState,
-  addEngineLog,
-  addEngineError
-} from "./engineState.js";
+import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
 
 const COVERED = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
@@ -21,71 +15,35 @@ const COVERED = [
 
 export default async function runGlobal() {
   const startedAt = new Date().toISOString();
-  addLog("RUN GLOBAL démarré");
-  addEngineLog("RUN GLOBAL démarré");
+  addLog("RUN GLOBAL démarré"); addEngineLog("RUN GLOBAL démarré");
 
-  // 🔄 Réinitialisation état moteur pour ce cycle
   const zonesCovered = {};
   const allAlerts = [];
-  const results = [];
-  const errors = [];
-  const logs = [];
 
   for (const country of COVERED) {
     try {
-      // 1️⃣ Prévision nationale
-      const national = await forecastService.getForecast(country);
-
-      // 2️⃣ Prévisions locales + détection alertes
-      const localPoints = [];
+      const national = await forecastService.getNationalForecast(country);
       if (national?.forecasts) {
-        for (const [region, fc] of Object.entries(national.forecasts)) {
-          const rawAlerts = detectAlerts(fc) || [];
-          const enriched = classifyAlerts(rawAlerts, { country, capital: region });
-          if (enriched?.length) allAlerts.push(...enriched);
-
-          localPoints.push({
-            region,
-            forecast: fc,
-            alerts: enriched
-          });
+        for (const fc of Object.values(national.forecasts)) {
+          const alerts = detectAlerts(fc, { scope:"covered", country });
+          allAlerts.push(...alerts);
         }
       }
-
       zonesCovered[country] = true;
-      results.push({ country, national, local: localPoints });
-      logs.push(`✅ ${country} traité (${localPoints.length} points analysés)`);
-
+      addEngineLog(`✅ ${country} traité`);
     } catch (err) {
       addEngineError(`❌ ${country}: ${err.message}`);
       zonesCovered[country] = false;
-      errors.push(`${country}: ${err.message}`);
     }
   }
 
-  // 3️⃣ Synthèse moteur
-  const newState = {
-    runTime: startedAt,
-    zonesCovered,
-    sources: {
-      gfs: "ok", ecmwf: "ok", icon: "ok",
-      meteomatics: "ok", nasaSat: "ok", copernicus: "ok",
-      trullemans: "ok", wetterzentrale: "ok", openweather: "ok"
-    },
-    alertsList: allAlerts,
-    errors,
-    logs
-  };
+  processAlerts(allAlerts);
 
+  const prev = getEngineState();
+  const newState = { runTime: startedAt, zonesCovered, errors: prev.errors||[], logs: prev.logs||[] };
   saveEngineState(newState);
-  addLog("RUN GLOBAL terminé");
-  addEngineLog("RUN GLOBAL terminé");
 
-  return {
-    startedAt,
-    countriesProcessed: Object.keys(zonesCovered).length,
-    countriesOk: Object.keys(zonesCovered).filter(c => zonesCovered[c]),
-    countriesFailed: Object.keys(zonesCovered).filter(c => !zonesCovered[c]),
-    alerts: allAlerts.length
-  };
+  addLog("RUN GLOBAL terminé"); addEngineLog("RUN GLOBAL terminé");
+
+  return { startedAt, countriesProcessed:Object.keys(zonesCovered).length, alerts: allAlerts.length };
 }
