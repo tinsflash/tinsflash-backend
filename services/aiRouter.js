@@ -12,30 +12,28 @@ router.post("/", async (req, res) => {
   try {
     const { message, country } = req.body;
 
-    // 🔍 Mode diagnostic moteur
+    // 🔍 Diagnostic du moteur
     if (/moteur|erreur|état|diagnostic/i.test(message)) {
       const state = getEngineState();
-      const logs = getLogs().slice(0, 5);
+      const logs = getLogs().slice(0, 10);
 
       const prompt = `
 Diagnostic demandé sur le moteur météo TINSFLASH.
 
-État actuel:
+État:
 - runTime: ${state.runTime}
 - zones ok: ${Object.keys(state.zonesCovered || {}).filter(z => state.zonesCovered[z])}
 - zones ko: ${Object.keys(state.zonesCovered || {}).filter(z => !state.zonesCovered[z])}
 - erreurs: ${JSON.stringify(state.errors)}
 - derniers logs: ${logs.map(l => l.message).join(" | ")}
 
-Question: "${message}"
-Réponds uniquement avec ces données. En français clair, professionnel et synthétique.
+Réponds en français, clair et pro, uniquement avec ces données.
 `;
-
       const reply = await askAI(prompt);
       return res.json({ reply, location: null });
     }
 
-    // 🌍 Mode météo locale
+    // 🌍 Prévisions locales si ville détectée
     const cityMatch = message.match(/(?:à|au|en)\s+([A-Za-zÀ-ÿ\s-]+)/i);
     const city = cityMatch ? cityMatch[1].trim() : null;
 
@@ -43,10 +41,10 @@ Réponds uniquement avec ces données. En français clair, professionnel et synt
     let locationInfo = null;
 
     if (city && country) {
-      // Géocodage
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=${country.toLowerCase()}&q=${encodeURIComponent(city)}`;
       const resGeo = await fetch(url, { headers: { "User-Agent": "Tinsflash-Meteo" } });
       const data = await resGeo.json();
+
       if (data.length) {
         locationInfo = {
           lat: parseFloat(data[0].lat),
@@ -59,7 +57,7 @@ Réponds uniquement avec ces données. En français clair, professionnel et synt
 
     const prompt = `
 Tu es l'assistant météo TINSFLASH.
-Question utilisateur: "${message}"
+Question: "${message}"
 
 Ville: ${city || "❌ non détectée"}
 Pays: ${country || "❌ non spécifié"}
