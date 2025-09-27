@@ -1,48 +1,33 @@
 // services/alertsService.js
-import { addLog, saveEngineState, getEngineState } from "./engineState.js";
+import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-let alerts = {
-  auto: [],       // >90%
-  toValidate: [], // 70–90%
-  ignored: [],    // <70%
-  comparison: { first: [], others: [] },
-};
-
-function classifyAlert(alert) {
-  if (alert.fiability > 90) {
-    alerts.auto.push(alert);
-    addLog(`Alerte publiée automatiquement (${alert.zone}, fiabilité ${alert.fiability}%)`, "success");
-  } else if (alert.fiability >= 70) {
-    alerts.toValidate.push(alert);
-    addLog(`Alerte à valider (${alert.zone}, fiabilité ${alert.fiability}%)`, "warn");
-  } else {
-    alerts.ignored.push(alert);
-    addLog(`Alerte ignorée (${alert.zone}, fiabilité ${alert.fiability}%)`, "info");
-  }
-}
-
-function compareSources(alert, externalSources) {
-  if (externalSources.length === 0) {
-    alerts.comparison.first.push(alert);
-    addLog(`Nous sommes les SEULS à détecter l’alerte ${alert.id}`, "critical");
-  } else {
-    alerts.comparison.others.push({ alert, sources: externalSources });
-    addLog(`Alerte ${alert.id} aussi vue chez ${externalSources.join(", ")}`, "info");
-  }
-}
-
-function getAlerts() {
-  return alerts;
-}
-
-function resetAlerts() {
-  alerts = { auto: [], toValidate: [], ignored: [], comparison: { first: [], others: [] } };
-  addLog("Réinitialisation des alertes", "system");
+export async function processAlerts() {
   const state = getEngineState();
-  saveEngineState({
-    ...state,
-    alerts: { local: false, national: false, continental: false, world: false },
-  });
-}
+  try {
+    addEngineLog("🔔 Démarrage du module Alertes...");
 
-export { classifyAlert, compareSources, getAlerts, resetAlerts };
+    // Ici ton pipeline d’alertes
+    const alerts = state.alertsList || [];
+
+    // Exemple tri par fiabilité
+    const highConfidence = alerts.filter(a => a.reliability > 90);
+    const toValidate     = alerts.filter(a => a.reliability >= 70 && a.reliability <= 90);
+    const ignored        = alerts.filter(a => a.reliability < 70);
+
+    state.alerts = { highConfidence, toValidate, ignored };
+    saveEngineState(state);
+
+    addEngineLog("✅ Module Alertes terminé");
+
+    return { 
+      published: highConfidence.length, 
+      pending: toValidate.length, 
+      ignored: ignored.length 
+    };
+
+  } catch (err) {
+    addEngineError(err.message || "Erreur inconnue dans alertsService");
+    addEngineLog("❌ Erreur module Alertes");
+    return { error: err.message };
+  }
+}
