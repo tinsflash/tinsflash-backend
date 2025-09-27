@@ -1,28 +1,39 @@
 // services/openaiService.js
-import { openai } from "./openai.js";
+import OpenAI from "openai";
+import dotenv from "dotenv";
 
-export async function askOpenAI(message, context = {}) {
+dotenv.config();
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // ⚠️ clé à mettre dans Render (ENV VAR)
+});
+
+/**
+ * Fonction générique pour poser une question à GPT-5
+ * @param {string} prompt - Le texte envoyé à GPT
+ * @returns {string} Réponse texte de GPT-5
+ */
+export async function askOpenAI(prompt) {
   try {
-    const zone = context.zone || "global";
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o", // tu peux changer pour "gpt-4o-mini" si tu veux réduire le coût
+    const response = await client.chat.completions.create({
+      model: "gpt-5", // 👉 forcer GPT-5
       messages: [
-        { role: "system", content: "Tu es un assistant météorologique expert." },
-        { role: "user", content: `${message} (zone: ${zone})` },
+        {
+          role: "system",
+          content: `Tu es ChatGPT-5, expert en météorologie, climatologie, mathématiques et codage.
+Tu travailles pour la centrale nucléaire météo TINSFLASH.
+Toujours répondre de manière professionnelle, fiable, connectée au moteur.
+Jamais de test, jamais de simulation : uniquement du 100% réel.`,
+        },
+        { role: "user", content: prompt },
       ],
-      temperature: 0.4,
+      temperature: 0.2, // maximum précision, pas de créativité inutile
+      max_tokens: 800,
     });
 
-    const reply =
-      completion.choices?.[0]?.message?.content || "Réponse vide de GPT";
-
-    return { success: true, reply };
+    return response.choices[0].message.content.trim();
   } catch (err) {
-    console.error("❌ OpenAI error:", err.message);
-    return {
-      success: false,
-      reply: "⚠️ Service IA (OpenAI) indisponible, réessayez plus tard.",
-    };
+    console.error("❌ Erreur OpenAI API:", err.message);
+    return `❌ Erreur OpenAI: ${err.message}`;
   }
 }
