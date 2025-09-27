@@ -2,162 +2,160 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>TINSFLASH – Console Administrateur</title>
+  <title>TINSFLASH – Console Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { margin:0; font-family:Arial; background:#111; color:#eee; }
-    header { background:#222; padding:10px; font-size:18px; }
-    nav { display:flex; gap:10px; margin-bottom:10px; }
-    nav button { padding:8px 12px; cursor:pointer; border:none; border-radius:4px; }
-    section { padding:10px; }
-    .ok { color:lime; }
-    .ko { color:red; }
-    .inconnu { color:orange; }
-    .card { background:#1a1a1a; padding:10px; border-radius:6px; margin-bottom:10px; }
-    pre { background:#000; padding:10px; border-radius:4px; overflow-x:auto; }
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#111; color:#eee; }
+    header { background:#222; padding:10px; text-align:center; }
+    nav { background:#333; padding:10px; display:flex; gap:15px; justify-content:center; }
+    nav a { color:#eee; text-decoration:none; padding:5px 10px; border-radius:5px; }
+    nav a:hover { background:#555; }
+    section { padding:20px; display:none; }
+    section.active { display:block; }
+    h2,h3 { color:#0ff; }
+    button { padding:6px 12px; margin:5px 0; }
+    pre { background:#222; padding:10px; white-space:pre-wrap; max-height:250px; overflow-y:auto; }
+    table { width:100%; border-collapse:collapse; margin:10px 0; }
+    th, td { border:1px solid #555; padding:6px; text-align:left; }
+    iframe { width:100%; height:600px; border:none; background:#fff; }
+    textarea { width:100%; height:120px; }
   </style>
 </head>
 <body>
-  <header>
-    ⚡ TINSFLASH – Console Administrateur
-    <span id="lastState" style="font-size:14px;color:gray;margin-left:10px;"></span>
-  </header>
+<header>
+  <h1>🌍 Centrale Nucléaire Météo – Console Admin</h1>
+</header>
 
-  <nav>
-    <button onclick="showTab('dashboard')">Dashboard</button>
-    <button onclick="showTab('alerts')">Alertes</button>
-    <button onclick="showTab('users')">Vue utilisateur</button>
-    <button onclick="showTab('chat')">Chat IA (moteur)</button>
-    <button onclick="showTab('tools')">Outils & Radar</button>
-  </nav>
+<nav>
+  <a href="#" onclick="showTab('dashboard')">Dashboard</a>
+  <a href="#" onclick="showTab('alertes')">Alertes</a>
+  <a href="#" onclick="showTab('vueuser')">Vue Utilisateur</a>
+  <a href="#" onclick="showTab('chat')">Chat IA</a>
+  <a href="#" onclick="showTab('radar')">Radar</a>
+</nav>
 
-  <!-- Dashboard -->
-  <section id="dashboard" class="tab">
-    <div class="card">
-      <h3>🚀 Lancer le moteur</h3>
-      <button onclick="runGlobal()">RUN GLOBAL (zones couvertes)</button>
-      <button onclick="runContinental()">RUN CONTINENTAL (non couvertes)</button>
-      <button onclick="loadEngineState()">Actualiser état</button>
-      <pre id="runResult">Résultat du run affiché ici…</pre>
-    </div>
+<!-- === Dashboard === -->
+<section id="dashboard" class="active">
+  <h2>⚡ Dashboard</h2>
+  <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+  <h3>Résultat du run</h3>
+  <pre id="checkup-result">En attente...</pre>
 
-    <div class="card">
-      <h3>🧠 Checkup 13 points</h3>
-      <ul id="checkupList"></ul>
-    </div>
+  <h3>📡 Sources météo</h3>
+  <table id="sources-table">
+    <thead>
+      <tr><th>Modèle</th><th>Cycle</th><th>Horodatage</th><th>Statut</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    <div class="card">
-      <h3>📜 Logs (moteur & admin)</h3>
-      <button onclick="loadLogs()">Charger logs</button>
-      <pre id="logs">Aucun log.</pre>
-    </div>
+  <h3>📝 Logs récents</h3>
+  <pre id="logs">En attente...</pre>
 
-    <div class="card">
-      <h3>🧩 État & Utilisateurs</h3>
-      <pre id="stateUsers">Chargement…</pre>
-    </div>
-  </section>
+  <h3>❌ Erreurs</h3>
+  <pre id="errors">En attente...</pre>
+</section>
 
-  <!-- Alertes -->
-  <section id="alerts" class="tab" style="display:none;">
-    <div class="card">
-      <h3>⚠️ Gestion des alertes</h3>
-      <button onclick="loadAlerts()">Actualiser les alertes</button>
-      <pre id="alertsList">Chargement…</pre>
-    </div>
-  </section>
+<!-- === Alertes === -->
+<section id="alertes">
+  <h2>🚨 Alertes</h2>
+  <h3>✅ Auto-validées (>90%)</h3>
+  <table id="alerts-auto"><thead><tr><th>Pays/Zone</th><th>Détail</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
+  
+  <h3>🟠 À examiner (70–90%)</h3>
+  <table id="alerts-review"><thead><tr><th>Pays/Zone</th><th>Détail</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
+</section>
 
-  <!-- Utilisateurs -->
-  <section id="users" class="tab" style="display:none;">
-    <div class="card">
-      <h3>👥 Vue utilisateur</h3>
-      <p>Simulation de la page index (à implémenter plus tard)</p>
-    </div>
-  </section>
+<!-- === Vue Utilisateur === -->
+<section id="vueuser">
+  <h2>👤 Vue Utilisateur</h2>
+  <label>Ville: <input type="text" id="city" /></label>
+  <label>Pays:
+    <select id="country">
+      <option value="be">Belgique</option>
+      <option value="fr">France</option>
+      <option value="us">USA</option>
+      <option value="gb">UK</option>
+      <option value="de">Allemagne</option>
+    </select>
+  </label>
+  <button onclick="loadUserView()">Voir la vue</button>
+  <iframe id="user-view" src=""></iframe>
+</section>
 
-  <!-- Chat -->
-  <section id="chat" class="tab" style="display:none;">
-    <div class="card">
-      <h3>💬 Chat IA (moteur)</h3>
-      <input id="chatInput" placeholder="Posez une question…" style="width:80%;" />
-      <button onclick="askChat()">Envoyer</button>
-      <pre id="chatReply">Réponse IA…</pre>
-    </div>
-  </section>
+<!-- === Chat IA === -->
+<section id="chat">
+  <h2>🤖 Chat IA (moteur & prévisions)</h2>
+  <textarea id="chat-input" placeholder="Posez une question..."></textarea><br>
+  <button onclick="askAI()">Envoyer</button>
+  <pre id="chat-output">En attente...</pre>
+</section>
 
-  <!-- Outils -->
-  <section id="tools" class="tab" style="display:none;">
-    <div class="card">
-      <h3>🛰 Outils & Radar</h3>
-      <p>Radar global en cours d’intégration…</p>
-    </div>
-  </section>
+<!-- === Radar === -->
+<section id="radar">
+  <h2>🌐 Radar Global</h2>
+  <iframe src="/api/radar/global"></iframe>
+</section>
 
-  <script>
-    async function runGlobal() {
-      const res = await fetch("/api/run-global", { method: "POST" });
-      document.getElementById("runResult").textContent = JSON.stringify(await res.json(), null, 2);
-      loadEngineState();
-    }
-    async function runContinental() {
-      const res = await fetch("/api/run-continental", { method: "POST" });
-      document.getElementById("runResult").textContent = JSON.stringify(await res.json(), null, 2);
-      loadEngineState();
-    }
-    async function loadEngineState() {
-      const res = await fetch("/api/engine-state");
-      const data = await res.json();
-      document.getElementById("lastState").textContent = data.runTime ? "Dernier état: " + data.runTime : "Aucun run encore";
-      renderCheckup(data);
-      document.getElementById("stateUsers").textContent = JSON.stringify({ moteur:"actif", ia:data.ia, users:data.users }, null, 2);
-    }
-    async function loadLogs() {
-      const res = await fetch("/api/logs");
-      document.getElementById("logs").textContent = JSON.stringify(await res.json(), null, 2);
-    }
-    async function loadAlerts() {
-      const res = await fetch("/api/alerts");
-      document.getElementById("alertsList").textContent = JSON.stringify(await res.json(), null, 2);
-    }
-    async function askChat() {
-      const msg = document.getElementById("chatInput").value;
-      const res = await fetch("/api/chat", {
-        method:"POST", headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ message: msg })
-      });
-      document.getElementById("chatReply").textContent = JSON.stringify(await res.json(), null, 2);
-    }
-    function renderCheckup(state) {
-      const points = [
-        { id:"models.ok", label:"1. Modèles OK", value:state.models.ok.length>0 },
-        { id:"models.ko", label:"2. Modèles non OK", value:state.models.ko.length>0 ? false : null },
-        { id:"sources.ok", label:"3. Sources OK", value:state.sources.ok.length>0 },
-        { id:"sources.ko", label:"4. Sources non OK", value:state.sources.ko.length>0 ? false : null },
-        { id:"ia.forecasts", label:"5. Analyse IA prévisions", value:state.ia.forecasts },
-        { id:"ia.alerts", label:"6. Analyse IA alertes", value:state.ia.alerts },
-        { id:"forecasts.local", label:"7. Prévisions locales (zones couvertes)", value:state.forecasts.local },
-        { id:"forecasts.national", label:"8. Prévisions nationales (zones couvertes)", value:state.forecasts.national },
-        { id:"alerts.local", label:"9. Alertes locales (zones couvertes)", value:state.alerts.local },
-        { id:"alerts.national", label:"10. Alertes nationales (zones couvertes)", value:state.alerts.national },
-        { id:"alerts.continental", label:"11. Alertes continentales (zones non couvertes)", value:state.alerts.continental },
-        { id:"alerts.world", label:"12. Assemblage alertes mondiales", value:state.alerts.world },
-        { id:"forecasts.openData", label:"13. Open-data prévisions (zones non couvertes)", value:state.forecasts.openData },
-      ];
-      const ul = document.getElementById("checkupList");
-      ul.innerHTML = "";
-      points.forEach(p=>{
-        let cls = "inconnu", txt = "inconnu";
-        if (p.value === true) { cls="ok"; txt="OK"; }
-        if (p.value === false) { cls="ko"; txt="KO"; }
-        const li=document.createElement("li");
-        li.innerHTML = `<span class="${cls}">${p.label}: ${txt}</span>`;
-        ul.appendChild(li);
-      });
-    }
-    function showTab(tab) {
-      document.querySelectorAll(".tab").forEach(el=>el.style.display="none");
-      document.getElementById(tab).style.display="block";
-    }
-    loadEngineState();
-  </script>
+<script>
+function showTab(id) {
+  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// === RUN GLOBAL ===
+async function runGlobal() {
+  const res = await fetch("/api/run-global", { method: "POST" });
+  const data = await res.json();
+  if (!data.success) {
+    document.getElementById("checkup-result").textContent = "❌ " + data.error;
+    return;
+  }
+  const result = data.result;
+  document.getElementById("checkup-result").textContent = JSON.stringify(result, null, 2);
+
+  // Sources
+  const tbody = document.querySelector("#sources-table tbody");
+  tbody.innerHTML = "";
+  if (result.sources && result.sources.length) {
+    result.sources.forEach(src => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${src.name}</td><td>${src.cycleId||"-"}</td><td>${src.timestamp||"-"}</td><td>${src.status==="ok"?"✅ OK":"❌ KO"}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  loadLogs();
+}
+
+// === Logs & Erreurs ===
+async function loadLogs() {
+  const res = await fetch("/api/logs");
+  const logs = await res.json();
+  document.getElementById("logs").textContent = JSON.stringify(logs, null, 2);
+  const stateRes = await fetch("/api/engine-state");
+  const state = await stateRes.json();
+  document.getElementById("errors").textContent = JSON.stringify(state.errors || [], null, 2);
+}
+
+// === Vue Utilisateur ===
+function loadUserView() {
+  const city = document.getElementById("city").value;
+  const country = document.getElementById("country").value;
+  document.getElementById("user-view").src = `/index.html?city=${encodeURIComponent(city)}&country=${country}`;
+}
+
+// === Chat IA ===
+async function askAI() {
+  const input = document.getElementById("chat-input").value;
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ message: input })
+  });
+  const data = await res.json();
+  document.getElementById("chat-output").textContent = data.reply || JSON.stringify(data, null, 2);
+}
+</script>
 </body>
 </html>
