@@ -6,6 +6,7 @@ import { processAlerts } from "./alertsEngine.js";
 import { addLog } from "./adminLogs.js";
 import { getEngineState, saveEngineState, addEngineLog, addEngineError } from "./engineState.js";
 import { generateAdminBulletins } from "./adminBulletins.js";
+import { REGIONS_COORDS } from "./regionsCoords.js";
 
 const COVERED = [
   "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
@@ -14,40 +15,6 @@ const COVERED = [
   "Poland","Portugal","Czechia","Romania","Slovakia","Slovenia","Sweden",
   "Ukraine","United Kingdom","Norway","USA"
 ];
-
-const CAPITALS = {
-  Belgium: { lat: 50.8503, lon: 4.3517 },
-  France: { lat: 48.8566, lon: 2.3522 },
-  Germany: { lat: 52.52, lon: 13.4050 },
-  Netherlands: { lat: 52.3676, lon: 4.9041 },
-  Spain: { lat: 40.4168, lon: -3.7038 },
-  Italy: { lat: 41.9028, lon: 12.4964 },
-  Portugal: { lat: 38.7223, lon: -9.1393 },
-  Poland: { lat: 52.2297, lon: 21.0122 },
-  Czechia: { lat: 50.0755, lon: 14.4378 },
-  Austria: { lat: 48.2082, lon: 16.3738 },
-  Hungary: { lat: 47.4979, lon: 19.0402 },
-  Denmark: { lat: 55.6761, lon: 12.5683 },
-  Sweden: { lat: 59.3293, lon: 18.0686 },
-  Finland: { lat: 60.1699, lon: 24.9384 },
-  Estonia: { lat: 59.4370, lon: 24.7536 },
-  Latvia: { lat: 56.9496, lon: 24.1052 },
-  Lithuania: { lat: 54.6872, lon: 25.2797 },
-  Ireland: { lat: 53.3498, lon: -6.2603 },
-  Luxembourg: { lat: 49.6116, lon: 6.1319 },
-  Malta: { lat: 35.8997, lon: 14.5147 },
-  Cyprus: { lat: 35.1856, lon: 33.3823 },
-  Bulgaria: { lat: 42.6977, lon: 23.3219 },
-  Romania: { lat: 44.4268, lon: 26.1025 },
-  Slovakia: { lat: 48.1486, lon: 17.1077 },
-  Slovenia: { lat: 46.0569, lon: 14.5058 },
-  Croatia: { lat: 45.8150, lon: 15.9819 },
-  Greece: { lat: 37.9838, lon: 23.7275 },
-  Norway: { lat: 59.9139, lon: 10.7522 },
-  "United Kingdom": { lat: 51.5074, lon: -0.1278 },
-  Ukraine: { lat: 50.4501, lon: 30.5234 },
-  USA: { lat: 38.9072, lon: -77.0369 }
-};
 
 export default async function runGlobal() {
   const startedAt = new Date().toISOString();
@@ -60,35 +27,49 @@ export default async function runGlobal() {
 
   for (const country of COVERED) {
     try {
-      // 1) Prévision nationale
+      // 1) Prévisions multi-régions
       const national = await forecastService.getNationalForecast(country);
 
-      // 2) Vérif capitale pour générer des alertes
-      const cap = CAPITALS[country];
-      let localPoint = null;
-      if (cap) {
-        const ow = await openweather(cap.lat, cap.lon);
-        const numeric = {
-          rain: ow?.precipitation ?? ow?.rain ?? null,
-          wind: typeof ow?.wind === "number" ? Math.round(ow.wind * 3.6) : (ow?.wind?.speed_kmh ?? null),
-          temp: ow?.temperature ?? ow?.temp ?? null
-        };
-        const rawAlerts = detectAlerts(numeric);
-        const enriched = await processAlerts(rawAlerts, { country, capital: cap });
-        allAlerts.push(...enriched);
-        localPoint = { lat: cap.lat, lon: cap.lon, openweather: ow, alerts: enriched };
+      // 2) Génération d’alertes pour TOUTES les régions couvertes
+      const regions = REGIONS_COORDS[country] || {};
+      const localPoints = [];
+
+      for (const [region, coords] of Object.entries(regions)) {
+        try {
+          const ow = await openweather(coords.lat, coords.lon);
+          const numeric = {
+            rain: ow?.precipitation ?? ow?.rain ?? null,
+            wind: typeof ow?.wind === "number" ? Math.round(ow.wind * 3.6) : (ow?.wind?.speed_kmh ?? null),
+            temp: ow?.temperature ?? ow?.temp ?? null
+          };
+
+          const rawAlerts = detectAlerts(numeric);
+          const enriched = await processAlerts(rawAlerts, { country, region, coords });
+          allAlerts.push(...enriched);
+
+          localPoints.push({
+            name: region,
+            lat: coords.lat,
+            lon: coords.lon,
+            openweather: ow,
+            alerts: enriched
+          });
+        } catch (err) {
+          addEngineError(`❌ ${country} - ${region}: ${err.message}`);
+        }
       }
 
       zonesCovered[country] = true;
-      results.push({ country, national, local: localPoint });
-      addEngineLog(`✅ ${country} traité`);
+      results.push({ country, national, locals: localPoints });
+      addEngineLog(`✅ ${country} traité (${Object.keys(regions).length} régions)`);
+
     } catch (err) {
       addEngineError(`❌ ${country}: ${err.message}`);
       zonesCovered[country] = false;
     }
   }
 
-  // 📝 Génération des bulletins admin
+  // 📝 Génération des bulletins IA pour toutes les zones couvertes
   const bulletins = await generateAdminBulletins(results);
 
   const prev = getEngineState();
@@ -116,6 +97,6 @@ export default async function runGlobal() {
     countriesOk: Object.keys(zonesCovered).filter(c => zonesCovered[c]),
     countriesFailed: Object.keys(zonesCovered).filter(c => !zonesCovered[c]),
     alerts: allAlerts.length,
-    bulletins // 🔥 inclus dans la réponse API
+    bulletins
   };
 }
