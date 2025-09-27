@@ -1,72 +1,54 @@
 // services/runContinental.js
-// 🌍 RUN CONTINENTAL — Zones non couvertes
-import { resetEngineState, saveEngineState, addLog, getEngineState } from "./engineState.js";
-import { classifyAlert, resetAlerts } from "./alertsService.js";
-
-// Continents surveillés
-const CONTINENTS = ["Africa", "Asia", "South America", "Oceania"];
+import { saveEngineState, addLog, getEngineState } from "./engineState.js";
 
 export default async function runContinental() {
-  resetEngineState();
-  resetAlerts();
-  addLog("🔵 RUN CONTINENTAL démarré", "system");
+  const startTime = new Date().toISOString();
+  addLog("RUN CONTINENTAL démarré", "info");
 
-  const startedAt = new Date().toISOString();
-  const modelsOk = ["GFS", "ECMWF", "ICON"]; // modèles globaux utilisés
-  const modelsKo = []; // à remplir si échec
-  const sourcesOk = ["NASA", "Copernicus"];
-  const sourcesKo = [];
+  try {
+    // Ici on simule un scan global (hors zones couvertes)
+    const zones = ["Afrique", "Asie", "Amérique du Sud", "Océanie"];
+    const alertsContinental = true; // si pipeline continental a tourné
 
-  const alertsGenerated = [];
+    // Récupération état existant
+    const currentState = getEngineState();
 
-  for (const continent of CONTINENTS) {
-    try {
-      addLog(`⏳ Analyse continentale ${continent}…`, "info");
+    // Calcul assemblage mondial : locales + nationales + continentales
+    const alertsWorld =
+      (currentState.alerts.local || false) ||
+      (currentState.alerts.national || false) ||
+      alertsContinental;
 
-      // 🔎 Ici, dans le vrai moteur → on scanne les anomalies sur GFS/ECMWF/ICON
-      // Exemple simplifié : simulation d’une anomalie détectée
-      const anomalyRisk = Math.random(); // ⚠️ remplacer par vraie analyse IA
-      if (anomalyRisk > 0.65) {
-        const alert = {
-          id: `${continent}-${Date.now()}`,
-          zone: continent,
-          fiability: Math.round(anomalyRisk * 100),
-          details: { anomaly: true, risk: anomalyRisk },
-        };
-        classifyAlert(alert);
-        alertsGenerated.push(alert);
-      }
+    // Sauvegarde état moteur
+    saveEngineState({
+      runTime: startTime,
+      models: currentState.models,
+      sources: currentState.sources,
+      forecasts: currentState.forecasts,
+      alerts: {
+        local: currentState.alerts.local,
+        national: currentState.alerts.national,
+        continental: alertsContinental,
+        world: alertsWorld,
+      },
+      ia: {
+        forecasts: currentState.ia.forecasts,
+        alerts: currentState.ia.alerts,
+      },
+    });
 
-      addLog(`✅ ${continent} analysé`, "success");
-    } catch (err) {
-      addLog(`❌ Erreur ${continent}: ${err.message}`, "error");
-      modelsKo.push(continent);
-    }
+    addLog("RUN CONTINENTAL terminé", "success");
+
+    return {
+      success: true,
+      result: {
+        startedAt: startTime,
+        continentsProcessed: zones.length,
+        alerts: alertsContinental ? 1 : 0,
+      },
+    };
+  } catch (err) {
+    addLog("Erreur RUN CONTINENTAL: " + err.message, "error");
+    return { success: false, error: err.message };
   }
-
-  // 🔄 Finalisation moteur
-  saveEngineState({
-    runTime: startedAt,
-    models: { ok: modelsOk, ko: modelsKo },
-    sources: { ok: sourcesOk, ko: sourcesKo },
-    alerts: {
-      local: false,
-      national: false,
-      continental: alertsGenerated.length > 0,
-      world: alertsGenerated.length > 0,
-    },
-    ia: { forecasts: false, alerts: true }, // pas de prévisions, mais alertes IA faites
-  });
-
-  addLog("🟢 RUN CONTINENTAL terminé", "system");
-
-  return {
-    startedAt,
-    modelsOk,
-    modelsKo,
-    sourcesOk,
-    sourcesKo,
-    continentsProcessed: CONTINENTS,
-    alertsGenerated: alertsGenerated.length,
-  };
 }
