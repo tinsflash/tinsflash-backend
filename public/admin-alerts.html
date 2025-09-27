@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin — Alertes météo</title>
+  <style>
+    body { background:#000; color:#eee; font-family:Arial; margin:0; }
+    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
+    section { padding:20px; border-bottom:1px solid #333; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
+    th, td { border:1px solid #444; padding:6px; text-align:left; }
+    th { background:#333; }
+    button { background:#0f0; color:#000; padding:5px 10px; border:none; cursor:pointer; }
+    button:hover { background:#9f9; }
+    a { color:#0f0; margin:10px; display:inline-block; }
+  </style>
+</head>
+<body>
+  <h1>🚨 Gestion des alertes météo</h1>
+  <a href="admin-pp.html">⬅️ Retour Cockpit</a>
+
+  <section>
+    <h2>Publiées (>90%)</h2>
+    <table id="alerts-90"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
+  </section>
+
+  <section>
+    <h2>À valider (70–90%)</h2>
+    <table id="alerts-70"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th><th>Actions</th></tr></table>
+  </section>
+
+  <section>
+    <h2>Envoyées expert</h2>
+    <table id="alerts-expert"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
+  </section>
+
+  <section>
+    <h2>En attente</h2>
+    <table id="alerts-wait"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
+  </section>
+
+  <section>
+    <h2>Ignorées (<70%)</h2>
+    <table id="alerts-low"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
+  </section>
+
+  <script>
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      const alerts = data.covered || [];
+
+      alerts.forEach((a, idx)=>{
+        let row = `<tr>
+          <td>${a.country||"-"}</td>
+          <td>${a.type||"-"}</td>
+          <td>${a.message||"-"}</td>
+          <td>${a.reliability||"?"}%</td>`;
+
+        if(a.reliability>=90){
+          document.getElementById("alerts-90").innerHTML+=row+"</tr>";
+        } else if(a.reliability>=70 && !a.tag){
+          row += `<td>
+            <button onclick="handleAlertAction(${idx}, 'validate')">✅ Valider</button>
+            <button onclick="handleAlertAction(${idx}, 'expert')">📤 Expert</button>
+            <button onclick="handleAlertAction(${idx}, 'wait')">⏳ Attente</button>
+          </td></tr>`;
+          document.getElementById("alerts-70").innerHTML+=row;
+        } else if(a.tag==="expert"){
+          document.getElementById("alerts-expert").innerHTML+=row+"</tr>";
+        } else if(a.tag==="wait"){
+          document.getElementById("alerts-wait").innerHTML+=row+"</tr>";
+        } else {
+          document.getElementById("alerts-low").innerHTML+=row+"</tr>";
+        }
+      });
+    }
+    async function handleAlertAction(index, action){
+      await fetch("/api/alerts/action", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ index, action })
+      });
+      location.reload();
+    }
+    loadAlerts();
+  </script>
+</body>
+</html>
