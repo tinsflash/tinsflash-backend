@@ -1,21 +1,29 @@
 // services/radarService.js
-export async function radarHandler(zone) {
+import fetch from "node-fetch";
+
+const RAINVIEWER_API = "https://api.rainviewer.com/public/weather-maps.json";
+
+/**
+ * Handler radar météo global
+ * - zone peut être "global" ou un pays
+ * - retour format JSON pour Leaflet / OpenLayers
+ */
+export async function radarHandler(zone = "global") {
   try {
+    const response = await fetch(RAINVIEWER_API);
+    if (!response.ok) throw new Error(`Radar fetch error: ${response.status}`);
+    const data = await response.json();
+
     return {
-      success: true,
-      tiles: [
-        {
-          name: "Radar pluie",
-          url: "https://tilecache.rainviewer.com/v2/radar/{z}/{x}/{y}/2/1_1.png",
-        },
-        {
-          name: "Radar nuages",
-          url: "https://tilecache.rainviewer.com/v2/satellite/{z}/{x}/{y}/0/1_1.png",
-        },
-      ],
+      source: "Rainviewer",
+      zone,
+      generated: new Date().toISOString(),
+      radar: data.radar || [],
+      satellites: data.satellite || [],
+      past: data.past || [],
+      nowcast: data.nowcast || []
     };
   } catch (err) {
-    console.error("❌ Radar error:", err.message);
-    return { success: false, error: "Radar service failed" };
+    return { error: err.message, zone };
   }
 }
