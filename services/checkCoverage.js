@@ -1,39 +1,30 @@
 // services/checkCoverage.js
-// Vérifie si une zone est couverte par la centrale météo
-// Si non couverte → fallback open data (prévisions) ou alertes continentales
 
-const coveredCountries = [
-  // 🇪🇺 Union Européenne (27)
-  "Allemagne", "Autriche", "Belgique", "Bulgarie", "Chypre", "Croatie",
-  "Danemark", "Espagne", "Estonie", "Finlande", "France", "Grèce",
-  "Hongrie", "Irlande", "Italie", "Lettonie", "Lituanie", "Luxembourg",
-  "Malte", "Pays-Bas", "Pologne", "Portugal", "République tchèque",
-  "Roumanie", "Slovaquie", "Slovénie", "Suède",
-  // Extensions
-  "Royaume-Uni", "Ukraine", "Norvège",
-  // 🇺🇸 USA
-  "USA", "États-Unis", "United States", "US"
+// Liste zones couvertes (noms normalisés)
+const COVERED = [
+  "Germany","Austria","Belgium","Bulgaria","Cyprus","Croatia","Denmark",
+  "Spain","Estonia","Finland","France","Greece","Hungary","Ireland",
+  "Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands",
+  "Poland","Portugal","Czechia","Romania","Slovakia","Slovenia","Sweden",
+  "Ukraine","United Kingdom","Norway","USA"
 ];
 
-// Middleware Express
 export default function checkCoverage(req, res, next) {
-  const { zone, country } = req.params;
-  const queryZone = zone || country;
+  const { zone } = req.params;
 
-  if (!queryZone) {
+  if (!zone) {
     req.coverage = { covered: false, type: "unknown" };
     return next();
   }
 
-  // Vérifie si la zone est couverte
-  const isCovered = coveredCountries.some(
-    c => c.toLowerCase() === queryZone.toLowerCase()
+  const found = COVERED.find(
+    (z) => z.toLowerCase() === zone.toLowerCase()
   );
 
-  if (isCovered) {
-    req.coverage = { covered: true, type: "nuclear" }; // moteur complet
+  if (found) {
+    req.coverage = { covered: true, type: "covered", zone: found };
   } else {
-    req.coverage = { covered: false, type: "open" }; // open data ou alertes continentales
+    req.coverage = { covered: false, type: "uncovered", zone };
   }
 
   return next();
