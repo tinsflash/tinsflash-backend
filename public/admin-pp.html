@@ -1,165 +1,138 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Cockpit Administrateur — Centrale Nucléaire Météo</title>
   <style>
-    body { background:#111; color:#0f0; font-family:monospace; margin:0; }
-    header { background:#000; padding:10px; }
-    nav a { margin-right:20px; color:#ccc; text-decoration:none; }
+    body { background:#111; color:#eee; font-family: monospace; margin:0; padding:0; }
+    nav { background:#222; padding:10px; }
+    nav a { color:#ccc; margin-right:15px; text-decoration:none; }
     nav a:hover { color:#fff; }
-    h2 { margin-top:20px; color:#fff; }
-    .ok { background:#060; color:#fff; padding:5px 10px; border-radius:5px; }
-    .error { background:#600; color:#fff; padding:5px 10px; border-radius:5px; }
-    .warn { background:#663; color:#fff; padding:5px 10px; border-radius:5px; }
-    pre { background:#000; color:#0f0; padding:10px; overflow-x:auto; }
-    button { margin:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; }
-    .btn-run { background:#900; color:#fff; }
-    .btn-copy { background:#444; color:#fff; }
-    .btn-export { background:#060; color:#fff; }
-    details summary { cursor:pointer; }
-    ul { list-style:none; padding-left:20px; }
-    li { margin:2px 0; }
+    h2 { margin-top:20px; color:#0f0; }
+    .checklist { background:#000; padding:10px; border:1px solid #333; }
+    .logbox { background:#000; color:#0f0; padding:10px; height:200px; overflow-y:auto; border:1px solid #333; }
+    .badge { padding:2px 6px; border-radius:4px; font-weight:bold; }
+    .pending { background:#555; color:#fff; }
+    .running { background:orange; color:#000; }
+    .ok { background:green; color:#fff; }
+    .fail { background:red; color:#fff; }
+    details { margin:5px 0; }
+    pre { background:#111; padding:10px; border:1px solid #333; overflow-x:auto; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</h1>
-    <nav>
-      <a href="/admin">Cockpit</a>
-      <a href="/admin-alertes.html">Alertes</a>
-      <a href="/admin-chat.html">Chat IA</a>
-      <a href="/admin-radar.html">Radar</a>
-      <a href="/admin-index.html">Prévisualisation Index</a>
-      <a href="/admin-news.html">Infos Météo Mondiales</a>
-      <a href="/admin-users.html">Utilisateurs</a>
-    </nav>
-  </header>
 
-  <section id="cockpit">
-    <h2>🌍 Cockpit</h2>
-    <button class="btn-run" onclick="runGlobal()">▶️ Lancer Run Global</button>
-    <div id="checklist"></div>
-  </section>
+  <!-- Navigation -->
+  <nav>
+    <a href="/admin">Cockpit</a>
+    <a href="/admin-alerts">Alertes</a>
+    <a href="/admin-chat">Chat IA</a>
+    <a href="/admin-radar">Radar</a>
+    <a href="/admin-index">Prévisualisation Index</a>
+    <a href="/admin-infos">Infos Météo Mondiales</a>
+    <a href="/admin-users">Utilisateurs</a>
+  </nav>
 
-  <section id="logs">
+  <div style="padding:20px;">
+    <h1>⚡ Cockpit Administrateur</h1>
+
+    <!-- Bouton RUN -->
+    <button onclick="launchRun()" style="padding:10px; background:red; color:#fff; font-size:16px;">
+      🚀 Lancer Run Global
+    </button>
+
+    <!-- Checklist moteur -->
+    <h2>✅ Checklist moteur</h2>
+    <div id="checkup" class="checklist">Chargement...</div>
+
+    <!-- Logs moteur -->
     <h2>📜 Logs moteur</h2>
-    <pre id="logsContent">Chargement...</pre>
-  </section>
+    <div id="logs" class="logbox">Chargement...</div>
 
-  <section id="engine">
+    <!-- État complet moteur -->
     <h2>🛰️ État complet du moteur</h2>
-    <button class="btn-export" onclick="exportJSON()">📂 Export JSON</button>
-    <button class="btn-copy" onclick="copyJSON()">📋 Copier JSON</button>
-    <div id="engineState">Chargement...</div>
-  </section>
+    <button onclick="exportJSON()">📂 Export JSON</button>
+    <button onclick="copyJSON()">📋 Copier JSON</button>
+    <div id="engineState"></div>
+  </div>
 
-  <script>
-    async function refreshChecklist() {
-      try {
-        const res = await fetch("/api/checkup");
-        const data = await res.json();
-        let html = "<h3>✅ Checklist moteur</h3>";
-        for (const [key, val] of Object.entries(data)) {
-          let cls = (val === "OK" ? "ok" : (val === "PENDING" ? "warn" : "error"));
-          html += `<span class="${cls}">${key}: ${val}</span> `;
-        }
-        document.getElementById("checklist").innerHTML = html;
-      } catch (err) {
-        document.getElementById("checklist").innerHTML = "<span class='error'>Erreur chargement</span>";
-      }
-    }
+<script>
+async function fetchCheckup() {
+  const res = await fetch("/api/checkup");
+  const data = await res.json();
+  let html = "<table>";
+  for (const [step, status] of Object.entries(data)) {
+    let cls = "pending", label = "⚪";
+    if (status === "RUNNING") { cls = "running"; label = "🟠"; }
+    if (status === "OK") { cls = "ok"; label = "🟢"; }
+    if (status === "FAIL") { cls = "fail"; label = "🔴"; }
+    html += `<tr><td>${label}</td><td>${step}</td><td><span class="badge ${cls}">${status}</span></td></tr>`;
+  }
+  html += "</table>";
+  document.getElementById("checkup").innerHTML = html;
+}
 
-    async function refreshLogs() {
-      try {
-        const res = await fetch("/api/logs");
-        const data = await res.json();
-        document.getElementById("logsContent").textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("logsContent").textContent = "Erreur logs: " + err;
-      }
-    }
+async function fetchLogs() {
+  const res = await fetch("/api/logs");
+  const logs = await res.json();
+  const box = document.getElementById("logs");
+  box.innerHTML = logs.map(l => l).join("<br>");
+  box.scrollTop = box.scrollHeight;
+}
 
-    function renderEngineState(data) {
-      if (!data || !data.zonesCovered) return "Aucune donnée centrale météo.";
+async function fetchEngineState() {
+  const res = await fetch("/api/engine-state");
+  const data = await res.json();
+  const container = document.getElementById("engineState");
+  container.innerHTML = "";
+  for (const [key, val] of Object.entries(data)) {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = key;
+    details.appendChild(summary);
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify(val, null, 2);
+    details.appendChild(pre);
+    container.appendChild(details);
+  }
+}
 
-      let html = "";
-      for (const [country, info] of Object.entries(data.zonesCovered)) {
-        html += `<details><summary>🌍 ${country}</summary><ul>`;
-        if (info.regions) {
-          for (const region of info.regions) {
-            html += `<li><details><summary>📍 ${region.region}</summary>`;
-            // Forecast synthétique
-            if (region.forecast && region.forecast.startsWith("Erreur")) {
-              html += `<div class="error">❌ Forecast: ${region.forecast}</div>`;
-            } else if (region.forecast) {
-              html += `<div class="ok">✅ Forecast généré</div>`;
-            } else {
-              html += `<div class="warn">⚠️ Forecast: Pas de données</div>`;
-            }
-            // Sources
-            if (region.sources) {
-              html += `<div>📡 Sources:<ul>`;
-              for (const [src, val] of Object.entries(region.sources)) {
-                if (val && val.error) {
-                  html += `<li class="error">${src}: ${val.error}</li>`;
-                } else {
-                  html += `<li class="ok">${src}: OK</li>`;
-                }
-              }
-              html += `</ul></div>`;
-            }
-            html += `</details></li>`;
-          }
-        }
-        html += `</ul></details>`;
-      }
-      return html;
-    }
+function exportJSON() {
+  fetch("/api/engine-state").then(r => r.json()).then(data => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "engineState.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
 
-    async function refreshEngine() {
-      try {
-        const res = await fetch("/api/engine-state");
-        const data = await res.json();
-        window._lastEngineState = data;
-        document.getElementById("engineState").innerHTML = renderEngineState(data);
-      } catch (err) {
-        document.getElementById("engineState").textContent = "Erreur moteur: " + err;
-      }
-    }
+function copyJSON() {
+  fetch("/api/engine-state").then(r => r.json()).then(data => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    alert("JSON copié dans le presse-papier !");
+  });
+}
 
-    async function runGlobal() {
-      document.getElementById("logsContent").textContent = "⏳ Lancement en cours...";
-      await fetch("/api/run-global", { method: "POST" });
-      await refreshLogs();
-      await refreshEngine();
-      await refreshChecklist();
-    }
+async function launchRun() {
+  const res = await fetch("/api/run-global", { method:"POST" });
+  const data = await res.json();
+  alert("Run global lancé !");
+  console.log(data);
+}
 
-    function exportJSON() {
-      const data = window._lastEngineState || {};
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "engine-state.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+// Refresh auto
+setInterval(fetchCheckup, 2000);
+setInterval(fetchLogs, 2000);
+setInterval(fetchEngineState, 5000);
 
-    function copyJSON() {
-      const data = window._lastEngineState || {};
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      alert("JSON copié !");
-    }
+// Premier load
+fetchCheckup();
+fetchLogs();
+fetchEngineState();
+</script>
 
-    // Auto refresh toutes les 20s
-    setInterval(() => { refreshChecklist(); refreshLogs(); refreshEngine(); }, 20000);
-
-    refreshChecklist();
-    refreshLogs();
-    refreshEngine();
-  </script>
 </body>
 </html>
