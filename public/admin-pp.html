@@ -12,186 +12,57 @@
       color: #e0e0e0;
       display: flex;
     }
-    a { color: #00c9ff; text-decoration: none; }
-    h1, h2, h3 { color: #00eaff; margin: 0.5em 0; }
-
+    h1, h2 { color: #00eaff; margin: 0.5em 0; }
     .sidebar {
-      width: 230px;
-      background: #111726;
-      height: 100vh;
-      padding: 20px;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.8);
-      position: fixed;
-      top: 0; left: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .sidebar h1 {
-      font-size: 1.2em;
-      text-align: center;
-      margin-bottom: 1em;
-      color: #00eaff;
+      width: 230px; background: #111726; height: 100vh; padding: 20px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.8); position: fixed; top: 0; left: 0;
+      display: flex; flex-direction: column;
     }
     .sidebar a {
-      padding: 12px;
-      margin: 6px 0;
-      border-radius: 6px;
-      display: block;
-      background: #1a2235;
-      transition: background 0.3s;
+      padding: 12px; margin: 6px 0; border-radius: 6px; display: block;
+      background: #1a2235; transition: background 0.3s;
+      color: #00c9ff; text-decoration: none;
     }
     .sidebar a:hover { background: #00c9ff33; }
-
-    .content {
-      margin-left: 250px;
-      padding: 20px;
-      flex: 1;
-      overflow-y: auto;
-      height: 100vh;
-    }
-
+    .content { margin-left: 250px; padding: 20px; flex: 1; overflow-y: auto; height: 100vh; }
     .panel {
-      background: #161d2e;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 20px;
+      background: #161d2e; border-radius: 10px; padding: 15px; margin-bottom: 20px;
       box-shadow: 0 0 10px #00c9ff55;
     }
-    .panel h2 { border-bottom: 1px solid #00eaff33; padding-bottom: 5px; }
-
-    .logs {
-      background: #0f141f;
-      padding: 10px;
-      border-radius: 6px;
-      max-height: 250px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 0.9em;
-    }
-
-    .checkup-list {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-    }
-    .checkup-item {
-      padding: 6px;
-      border-radius: 4px;
-      background: #1a2235;
-    }
-    .ok { color: #00ff9d; font-weight: bold; }
-    .fail { color: #ff5555; font-weight: bold; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      border: 1px solid #00c9ff33;
-      padding: 8px;
-      text-align: left;
-    }
-    th { background: #1a2235; }
-
-    input, select, textarea, button {
-      padding: 8px;
-      margin: 5px 0;
-      border: none;
-      border-radius: 6px;
-      background: #1a2235;
-      color: #e0e0e0;
-      width: 100%;
-    }
-    button {
-      background: #00c9ff;
-      color: #0b0f1a;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover { background: #00eaff; }
+    .logs { background: #0f141f; padding: 10px; border-radius: 6px;
+      max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+    .checkup-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .checkup-item { padding: 6px; border-radius: 4px; background: #1a2235; }
   </style>
   <script>
     function showSection(id) {
       document.querySelectorAll(".section").forEach(s => s.style.display = "none");
       document.getElementById(id).style.display = "block";
     }
+    window.onload = () => { showSection("console"); refreshLogs(); refreshCheckup(); };
 
     async function refreshLogs() {
       const res = await fetch("/api/logs");
       const data = await res.json();
-      const logs = document.getElementById("logs");
-      logs.innerHTML = "";
-      (data || []).forEach(l => {
-        const div = document.createElement("div");
-        div.textContent = `[${l.ts}] ${l.msg}`;
-        logs.appendChild(div);
-      });
-      logs.scrollTop = logs.scrollHeight;
+      const logsDiv = document.getElementById("logs");
+      logsDiv.innerHTML = data.map(l => `[${l.ts}] ${l.msg}`).join("<br>");
     }
 
     async function refreshCheckup() {
-      // Charger état moteur
-      const stateRes = await fetch("/api/engine-state");
-      const state = await stateRes.json();
+      const res = await fetch("/api/checkup");
+      const data = await res.json();
+      const container = document.getElementById("checkup");
+      container.innerHTML = "";
 
-      // Charger sources
-      const srcRes = await fetch("/api/sources");
-      const srcData = await srcRes.json();
-
-      // === Check-up points ===
-      const checkup = document.getElementById("checkup");
-      checkup.innerHTML = "";
-      const points = [
-        { label: "Modèles OK", value: state?.sources?.length ? "OK" : "NO OK" },
-        { label: "Analyse IA prévisions", value: state?.superForecast ? "OK" : "NO OK" },
-        { label: "Analyse IA alertes", value: state?.alerts ? "OK" : "NO OK" },
-        { label: "Prévisions locales", value: state?.zonesCovered?.local ? "OK" : "NO OK" },
-        { label: "Prévisions nationales", value: state?.zonesCovered?.national ? "OK" : "NO OK" },
-        { label: "Alertes locales", value: state?.alerts?.local ? "OK" : "NO OK" },
-        { label: "Alertes nationales", value: state?.alerts?.national ? "OK" : "NO OK" },
-        { label: "Alertes continentales", value: state?.continentalAlerts ? "OK" : "NO OK" },
-        { label: "Assemblage alertes mondiales", value: state?.alertsList?.length ? "OK" : "NO OK" },
-        { label: "Open Data non couvertes", value: state?.openData ? "OK" : "NO OK" },
-        { label: "Moteur opérationnel", value: state?.errors?.length ? "NO OK" : "OK" },
-        { label: "Utilisateurs par zone", value: state?.users ? "OK" : "NO OK" }
-      ];
-      points.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "checkup-item " + (p.value==="OK"?"ok":"fail");
-        div.textContent = `${p.label} : ${p.value}`;
-        checkup.appendChild(div);
-      });
-
-      // === Sources détaillées ===
-      const tbody = document.getElementById("checkup-sources");
-      tbody.innerHTML = "";
-      if (srcData.sources) {
-        Object.entries(srcData.sources).forEach(([src, status]) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${src}</td>
-            <td class="${status==="OK"?"ok":"fail"}">${status}</td>
-          `;
-          tbody.appendChild(tr);
-        });
+      for (const [key, val] of Object.entries(data)) {
+        let icon = "🟠"; // attente par défaut
+        if (val === "OK") icon = "🟢";
+        if (val === "FAIL") icon = "🔴";
+        container.innerHTML += `<div class="checkup-item">${key} : ${icon}</div>`;
       }
     }
 
-    // Rafraîchissement auto
-    setInterval(refreshLogs, 5000);
-    setInterval(refreshCheckup, 15000);
-    window.onload = () => { showSection("console"); refreshLogs(); refreshCheckup(); };
-
-    async function askAI(type){
-      const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
-      const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({message:msg})
-      });
-      const data = await res.json();
-      document.getElementById("reply"+(type==="console"?"Console":"Engine")).innerText = data.reply||"Erreur IA";
-    }
+    setInterval(() => { refreshLogs(); refreshCheckup(); }, 5000);
   </script>
 </head>
 <body>
@@ -219,41 +90,20 @@
       <div class="panel">
         <h2>Check-up Moteur</h2>
         <div class="checkup-list" id="checkup"></div>
-        <h3>Sources météo</h3>
-        <table>
-          <thead>
-            <tr><th>Source</th><th>Statut</th></tr>
-          </thead>
-          <tbody id="checkup-sources"></tbody>
-        </table>
       </div>
     </div>
 
     <!-- Alertes -->
     <div id="alerts" class="section" style="display:none">
-      <div class="panel">
-        <h2>Alertes auto-validées (>90%)</h2>
-        <table><thead><tr><th>Pays</th><th>Type</th><th>Indice</th></tr></thead><tbody id="alerts-validated"></tbody></table>
-      </div>
-      <div class="panel">
-        <h2>Alertes à examiner (70–90%)</h2>
-        <table><thead><tr><th>Pays</th><th>Type</th><th>Indice</th><th>Action</th></tr></thead><tbody id="alerts-pending"></tbody></table>
-      </div>
-      <div class="panel">
-        <h2>Comparaison avec autres sources</h2>
-        <h3>A. Premiers détecteurs</h3>
-        <div id="alerts-first"></div>
-        <h3>B. Déjà vues ailleurs</h3>
-        <div id="alerts-others"></div>
-      </div>
+      <div class="panel"><h2>Alertes auto-validées</h2><div id="alerts-validated"></div></div>
+      <div class="panel"><h2>Alertes à examiner</h2><div id="alerts-pending"></div></div>
     </div>
 
     <!-- Vue utilisateur -->
     <div id="user" class="section" style="display:none">
       <div class="panel">
         <h2>Vue utilisateur</h2>
-        <label>Ville :</label>
-        <input type="text" id="city">
+        <label>Ville :</label><input type="text" id="city">
         <label>Pays :</label>
         <select id="country">
           <option value="Belgium">Belgium</option>
@@ -261,24 +111,19 @@
           <option value="USA">USA</option>
           <option value="United Kingdom">United Kingdom</option>
         </select>
-        <button>Voir la page utilisateur</button>
+        <button>Voir</button>
       </div>
-      <div class="panel" id="user-preview">
-        <h2>Prévisualisation</h2>
-        <iframe src="/index.html" width="100%" height="400"></iframe>
-      </div>
+      <div class="panel"><h2>Prévisualisation</h2><iframe src="/index.html" width="100%" height="400"></iframe></div>
     </div>
 
-    <!-- Chat IA -->
+    <!-- Chat -->
     <div id="chat" class="section" style="display:none">
-      <div class="panel">
-        <h2>Chat IA Console</h2>
+      <div class="panel"><h2>Chat IA Console</h2>
         <textarea id="msgConsole"></textarea>
         <button onclick="askAI('console')">Envoyer</button>
         <div id="replyConsole"></div>
       </div>
-      <div class="panel">
-        <h2>Chat IA Moteur</h2>
+      <div class="panel"><h2>Chat IA Moteur</h2>
         <textarea id="msgEngine"></textarea>
         <button onclick="askAI('engine')">Envoyer</button>
         <div id="replyEngine"></div>
@@ -287,15 +132,20 @@
 
     <!-- Radar -->
     <div id="radar" class="section" style="display:none">
-      <div class="panel">
-        <h2>Radar Global</h2>
-        <iframe src="/api/radar/global" width="100%" height="400"></iframe>
-      </div>
-      <div class="panel">
-        <h2>Outils techniques</h2>
-        <p>Benchmark modèles, freshness sources (déjà branché).</p>
-      </div>
+      <div class="panel"><h2>Radar Global</h2><iframe src="/api/radar/global" width="100%" height="400"></iframe></div>
     </div>
   </div>
+
+  <script>
+    async function askAI(type){
+      const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
+      const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message:msg})
+      });
+      const data = await res.json();
+      document.getElementById("reply"+(type==="console"?"Console":"Engine")).innerText = data.reply||"Erreur IA";
+    }
+  </script>
 </body>
 </html>
