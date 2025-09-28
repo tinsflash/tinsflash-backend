@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -49,9 +48,8 @@ app.get("/", (req, res) =>
 // Runs
 app.post("/api/run-global", async (req, res) => {
   try {
-    // ✅ on vérifie aussi les sources à chaque run
     await checkSourcesFreshness();
-    res.json({ success: true, result: await safeCall(runGlobal.default ?? runGlobal.runGlobal) });
+    res.json({ success: true, result: await safeCall(runGlobal.runGlobal) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -62,7 +60,7 @@ app.post("/api/run-continental", async (req, res) => {
     await checkSourcesFreshness();
     res.json({
       success: true,
-      result: await safeCall(runContinental.default ?? runContinental.runContinental),
+      result: await safeCall(runContinental.runContinental),
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -72,14 +70,10 @@ app.post("/api/run-continental", async (req, res) => {
 // Forecasts
 app.post("/api/superforecast", async (req, res) => {
   try {
-    const { lat, lon, country } = req.body;
+    const { lat, lon, country, region } = req.body;
     await checkSourcesFreshness();
     res.json(
-      await safeCall(superForecast.default ?? superForecast.runSuperForecast, {
-        lat,
-        lon,
-        country,
-      })
+      await safeCall(superForecast.runSuperForecast, { lat, lon, country, region })
     );
   } catch (e) {
     res.status(500).json({ error: e.message });
