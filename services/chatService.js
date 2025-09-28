@@ -1,79 +1,55 @@
 // PATH: services/chatService.js
-// Chat IA – Centrale Nucléaire Météo TINSFLASH
-// Double rôle :
-// 1. Console admin (questions générales sur le moteur + météo)
-// 2. Analyse moteur (runs, alertes, prévisions détaillées)
+// Chat IA (général) + Chat IA moteur — sans passer de paramètres non supportés
 
-import OpenAI from "openai";
+import { askOpenAI } from "./openaiService.js";
 import { getEngineState } from "./engineState.js";
+import { getLogs } from "./adminLogs.js";
 
-// === Initialisation client OpenAI ===
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // ⚠️ clé API dans Render
-});
-
-// === Prompt système commun ===
-const SYSTEM_PROMPT = `
-Tu es ChatGPT-5, intégré à la Centrale Nucléaire Météo TINSFLASH.
-
-Règles :
-- Toujours analyser à partir des résultats du moteur (engineState).
-- Zones couvertes : produire prévisions locales et nationales très précises (relief, climat, altitude, environnement).
-- Zones non couvertes : produire uniquement alertes continentales.
-- Ne jamais inventer de données : si manquantes → dire "donnée indisponible".
-- Indiquer fiabilité (en %) et si TINSFLASH est premier détecteur.
-- Comparer aux autres modèles seulement pour valider, jamais comme source principale.
-- Style clair, structuré, professionnel, type bulletin météo NASA.
+const SYSTEM_GENERAL = `
+Tu es ChatGPT5 intégré à la Centrale Nucléaire Météo.
+Réponds en français, précisément, en t’appuyant d'abord sur nos résultats (prévisions et alertes du moteur).
 `;
 
-// === Fonction générique IA ===
-async function queryAI(prompt, state) {
-  const fullPrompt = `
-${SYSTEM_PROMPT}
-
-État moteur actuel :
-${JSON.stringify(state, null, 2)}
-
-Question / consigne :
-${prompt}
+const SYSTEM_ENGINE = `
+Tu es l'expert "technicien moteur" + "météorologue" de la Centrale.
+Tu disposes de l'état moteur, des logs et des sorties IA (prévisions/alertes).
+Réponds de façon opérationnelle et concise.
 `;
 
-  try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-5", // ⚡ forcé ChatGPT-5
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: fullPrompt },
-      ],
-      temperature: 0.2,
-      // ❌ plus de max_tokens ici → bug corrigé
-    });
-
-    return completion.choices[0].message.content.trim();
-  } catch (err) {
-    return `❌ Erreur ChatGPT-5: ${err.message}`;
-  }
+// Chat IA général (page publique ou utilitaire)
+export async function askAI(message = "") {
+  const prompt = `Question:\n${message}\n\nContexte: reste factuel.`;
+  // ⚠️ On n’envoie AUCUN réglage (temp/max_tokens), openaiService gère la compat.
+  const reply = await askOpenAI(SYSTEM_GENERAL, prompt);
+  return reply;
 }
 
-// === Fonctions exportées ===
-
-// IA console admin (questions générales)
-export async function askAI(message) {
+// Chat IA “moteur” (console admin)
+export async function askAIEngine(message = "") {
   const state = getEngineState();
-  return await queryAI(message, state);
-}
+  const logs = await getLogs();
 
-// IA moteur (analyse runs + alertes + sources + erreurs)
-export async function askAIEngine(message) {
-  const state = getEngineState();
-  const extra = `
-Analyse approfondie côté moteur :
-- Logs : ${JSON.stringify(state.logs || [], null, 2)}
-- Alertes : ${JSON.stringify(state.alertsList || [], null, 2)}
-- Sources : ${JSON.stringify(state.sources || [], null, 2)}
-- Erreurs : ${JSON.stringify(state.errors || [], null, 2)}
+  const context = {
+    checkup: state?.checkup || {},
+    lastRun: state?.runTime,
+    zonesCovered: Object.keys(state?.zonesCovered || {}).length || 0,
+    alerts: state?.alerts || [],
+    logs: logs?.slice(-200) || [],
+  };
+
+  const prompt = `
+[QUESTION]
+${message}
+
+[CONTEXTE]
+${JSON.stringify(context, null, 2)}
+
+[INSTRUCTIONS]
+- Si la question concerne l’état du run, réponds avec un statut clair (OK/PENDING/FAIL) par point.
+- Si on demande une explication d’alerte/prévision, synthétise et précise l’incertitude.
+- Pas d'invention. Base-toi sur les données fournies.
 `;
-  return await queryAI(message + extra, state);
-}
 
-export default { askAI, askAIEngine };
+  const reply = await askOpenAI(SYSTEM_ENGINE, prompt);
+  return reply;
+}
