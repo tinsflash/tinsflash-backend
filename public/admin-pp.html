@@ -16,8 +16,9 @@
     .running { background:orange; color:#000; }
     .ok { background:green; color:#fff; }
     .fail { background:red; color:#fff; }
-    details { margin:5px 0; }
-    pre { background:#111; padding:10px; border:1px solid #333; overflow-x:auto; }
+    .country-block { border:1px solid #333; margin:8px 0; padding:6px; background:#181818; }
+    .region { margin-left:20px; }
+    pre { background:#111; padding:6px; border:1px solid #333; overflow-x:auto; }
   </style>
 </head>
 <body>
@@ -46,17 +47,18 @@
     <div id="checkup" class="checklist">Chargement...</div>
 
     <!-- Logs moteur -->
-    <h2>📜 Logs moteur</h2>
-    <div id="logs" class="logbox">Chargement...</div>
+    <h2>📜 Logs moteur (live)</h2>
+    <div id="logs" class="logbox"></div>
 
     <!-- État complet moteur -->
-    <h2>🛰️ État complet du moteur</h2>
+    <h2>🛰️ État du moteur (live)</h2>
     <button onclick="exportJSON()">📂 Export JSON</button>
     <button onclick="copyJSON()">📋 Copier JSON</button>
     <div id="engineState"></div>
   </div>
 
 <script>
+// === Checklist moteur ===
 async function fetchCheckup() {
   const res = await fetch("/api/checkup");
   const data = await res.json();
@@ -72,28 +74,39 @@ async function fetchCheckup() {
   document.getElementById("checkup").innerHTML = html;
 }
 
-async function fetchLogs() {
-  const res = await fetch("/api/logs");
-  const logs = await res.json();
-  const box = document.getElementById("logs");
-  box.innerHTML = logs.map(l => l).join("<br>");
-  box.scrollTop = box.scrollHeight;
-}
+// === Logs moteur (SSE) ===
+const logBox = document.getElementById("logs");
+const evtSource = new EventSource("/api/logs/stream");
+evtSource.onmessage = function(e) {
+  const logs = JSON.parse(e.data);
+  logBox.innerHTML = logs.map(l => l).join("<br>");
+  logBox.scrollTop = logBox.scrollHeight;
+};
 
+// === État moteur détaillé ===
 async function fetchEngineState() {
   const res = await fetch("/api/engine-state");
   const data = await res.json();
   const container = document.getElementById("engineState");
   container.innerHTML = "";
-  for (const [key, val] of Object.entries(data)) {
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
-    summary.textContent = key;
-    details.appendChild(summary);
-    const pre = document.createElement("pre");
-    pre.textContent = JSON.stringify(val, null, 2);
-    details.appendChild(pre);
-    container.appendChild(details);
+
+  // Boucle pays
+  for (const [country, content] of Object.entries(data.zonesCovered || {})) {
+    const block = document.createElement("div");
+    block.className = "country-block";
+    block.innerHTML = `<b>🌍 ${country}</b>`;
+
+    // Boucle régions
+    if (content.regions) {
+      content.regions.forEach(r => {
+        const regionDiv = document.createElement("div");
+        regionDiv.className = "region";
+        regionDiv.innerHTML = `📍 <b>${r.region}</b> (${r.lat},${r.lon})<br>
+          <pre>${JSON.stringify(r.forecast || r.error || {}, null, 2)}</pre>`;
+        block.appendChild(regionDiv);
+      });
+    }
+    container.appendChild(block);
   }
 }
 
@@ -125,12 +138,8 @@ async function launchRun() {
 
 // Refresh auto
 setInterval(fetchCheckup, 2000);
-setInterval(fetchLogs, 2000);
-setInterval(fetchEngineState, 5000);
-
-// Premier load
+setInterval(fetchEngineState, 4000);
 fetchCheckup();
-fetchLogs();
 fetchEngineState();
 </script>
 
