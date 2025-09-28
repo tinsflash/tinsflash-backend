@@ -7,15 +7,14 @@ import ecmwf from "./ecmwf.js";
 import icon from "./icon.js";
 import meteomatics from "./meteomatics.js";
 import nasaSat from "./nasaSat.js";
-import copernicus from "./copernicusService.js"; // ⚠️ on l’utilise correctement
+import copernicus from "./copernicusService.js"; 
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
-import openweather from "./openweather.js";
-import { askAI } from "./aiService.js";
+import { askOpenAI } from "./openaiService.js"; // ✅ remplacement
 
 export default async function runSuperForecast({ lat, lon, country }) {
   try {
-    // Préparer la requête Copernicus ERA5 (exemple simplifié)
+    // Préparer la requête Copernicus ERA5 (simplifié)
     const copernicusRequest = {
       variable: ["2m_temperature", "total_precipitation"],
       product_type: "reanalysis",
@@ -23,7 +22,7 @@ export default async function runSuperForecast({ lat, lon, country }) {
       month: String(new Date().getUTCMonth() + 1).padStart(2, "0"),
       day: String(new Date().getUTCDate()).padStart(2, "0"),
       time: ["00:00", "06:00", "12:00", "18:00"],
-      area: [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25], // bbox ~0.5° autour du point
+      area: [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25],
       format: "json"
     };
 
@@ -38,7 +37,7 @@ export default async function runSuperForecast({ lat, lon, country }) {
       icon({ lat, lon, country }),
       meteomatics({ lat, lon, country }),
       nasaSat({ lat, lon, country }),
-      copernicus("reanalysis-era5-land", copernicusRequest), // ✅ appel correct
+      copernicus("reanalysis-era5-land", copernicusRequest),
       trullemans({ lat, lon, country }),
       wetterzentrale({ lat, lon, country })
     ]);
@@ -79,7 +78,7 @@ Consignes IA:
 - Style clair, professionnel, bulletin météo en français.
 `;
 
-    const analysis = await askAI(prompt);
+    const analysis = await askOpenAI(prompt); // ✅ correction ici
 
     return {
       lat,
