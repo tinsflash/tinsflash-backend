@@ -1,216 +1,172 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>⚡ Centrale Nucléaire Météo - Cockpit</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>⚡ Console Administrateur — Centrale Nucléaire Météo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #161b22;
-      padding: 12px;
-      text-align: center;
-      font-size: 20px;
-      color: #00ff9d;
-      font-weight: bold;
-    }
-    nav {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      background: #1f2937;
-      padding: 10px;
-    }
-    nav a {
-      color: #9ca3af;
-      text-decoration: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    nav a:hover {
-      background: #374151;
-      color: #fff;
-    }
-    .container {
-      padding: 20px;
-    }
-    .card {
-      background: #161b22;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-    .btn {
-      background: #2563eb;
-      color: #fff;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .btn:disabled {
-      background: #6b7280;
-    }
-    #logs {
-      font-family: monospace;
-      background: black;
-      color: #0f0;
-      padding: 10px;
-      height: 200px;
-      overflow-y: auto;
-    }
-    .status-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-    .status-item {
-      background: #111827;
-      padding: 8px;
-      border-radius: 6px;
-    }
-    .ok { color: #10b981; font-weight: bold; }
-    .pending { color: orange; font-weight: bold; }
-    .error { color: red; font-weight: bold; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      padding: 8px;
-      border-bottom: 1px solid #374151;
-    }
-    th { text-align: left; color: #9ca3af; }
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; padding:0; }
+    header { background:#222; padding:15px; text-align:center; font-size:20px; }
+    nav { background:#333; padding:10px; display:flex; flex-wrap:wrap; justify-content:space-around; }
+    nav a { color:#fff; text-decoration:none; padding:8px; }
+    nav a:hover { background:#555; border-radius:5px; }
+    section { padding:20px; }
+    button { padding:10px 20px; margin:10px 0; font-size:16px; cursor:pointer; }
+    #logs { background:#000; color:#0f0; padding:10px; height:200px; overflow:auto; font-family:monospace; }
+    .status-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:20px; }
+    .status { padding:10px; text-align:center; border-radius:5px; font-size:14px; }
+    .green { background:#0a0; }
+    .red { background:#a00; }
+    .orange { background:#fa0; }
+    textarea { width:100%; height:100px; margin-top:10px; }
+    pre { background:#000; color:#0f0; padding:10px; overflow:auto; }
+    iframe { width:100%; height:500px; border:none; }
   </style>
 </head>
 <body>
-  <header>⚡ Centrale Nucléaire Météo - Admin Cockpit</header>
+  <header>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</header>
 
-  <!-- 🔹 Menu Navigation -->
   <nav>
-    <a href="admin-pp.html">Cockpit</a>
-    <a href="admin-alerts.html">Alertes</a>
-    <a href="admin-chat.html">Chat IA</a>
-    <a href="admin-radar.html">Radar</a>
-    <a href="admin-index-preview.html">Index Preview</a>
-    <a href="admin-users.html">Utilisateurs</a>
-    <a href="admin-news.html">Infos Mondiales</a>
+    <a href="#cockpit">Cockpit</a>
+    <a href="#alerts">Alertes</a>
+    <a href="#chat">Chat IA</a>
+    <a href="#radar">Radar</a>
+    <a href="#preview">Prévisualisation Index</a>
+    <a href="#news">Infos Météo Mondiales</a>
+    <a href="#users">Utilisateurs</a>
   </nav>
 
-  <div class="container">
+  <!-- Cockpit principal -->
+  <section id="cockpit">
+    <h2>🌍 Cockpit</h2>
+    <button onclick="launchRun()">🚀 Lancer Run Global</button>
 
-    <!-- 🔹 Lancer un run -->
-    <div class="card">
-      <h3>Lancer le RUN</h3>
-      <button id="runBtn" class="btn" onclick="launchRun()">🚀 Lancer RUN Global</button>
-    </div>
+    <h3>✅ Checklist moteur</h3>
+    <div class="status-grid" id="checkup-grid"></div>
 
-    <!-- 🔹 Logs moteur -->
-    <div class="card">
-      <h3>Logs moteur</h3>
-      <div id="logs">En attente de lancement…</div>
-    </div>
+    <h3>📜 Logs</h3>
+    <div id="logs">En attente…</div>
 
-    <!-- 🔹 Check-up Moteur -->
-    <div class="card">
-      <h3>Check-up Moteur</h3>
-      <div class="status-grid" id="checkup">
-        <div class="status-item">Modèles : <span class="pending">PENDING</span></div>
-        <div class="status-item">Analyse IA prévisions : <span class="pending">PENDING</span></div>
-        <div class="status-item">Analyse IA alertes : <span class="pending">PENDING</span></div>
-        <div class="status-item">Prévisions locales : <span class="pending">PENDING</span></div>
-        <div class="status-item">Prévisions nationales : <span class="pending">PENDING</span></div>
-        <div class="status-item">Alertes locales : <span class="pending">PENDING</span></div>
-        <div class="status-item">Alertes nationales : <span class="pending">PENDING</span></div>
-        <div class="status-item">Alertes continentales : <span class="pending">PENDING</span></div>
-        <div class="status-item">Assemblage alertes mondiales : <span class="pending">PENDING</span></div>
-        <div class="status-item">Open Data non couvertes : <span class="pending">PENDING</span></div>
-        <div class="status-item">Utilisateurs par zone : <span class="pending">PENDING</span></div>
-        <div class="status-item">Moteur opérationnel : <span class="pending">PENDING</span></div>
-      </div>
-    </div>
+    <h3>📡 État du moteur</h3>
+    <pre id="engineState">Chargement…</pre>
+  </section>
 
-    <!-- 🔹 Sources météo -->
-    <div class="card">
-      <h3>Sources météo</h3>
-      <table>
-        <thead>
-          <tr><th>Source</th><th>Statut</th></tr>
-        </thead>
-        <tbody id="sourcesTable"></tbody>
-      </table>
-    </div>
-  </div>
+  <!-- Alertes -->
+  <section id="alerts">
+    <h2>⚠️ Alertes</h2>
+    <pre id="alertsBox">Chargement…</pre>
+  </section>
+
+  <!-- Chat IA -->
+  <section id="chat">
+    <h2>🤖 Chat IA (GPT-5)</h2>
+    <textarea id="prompt" placeholder="Posez une question à l’IA…"></textarea>
+    <button onclick="askIA()">Envoyer</button>
+    <pre id="iaReply">Réponse ici…</pre>
+  </section>
+
+  <!-- Radar -->
+  <section id="radar">
+    <h2>🌐 Radar Global</h2>
+    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=5&zoom=4&level=surface&overlay=rain&menu=&message=&marker=&calendar=&pressure=&type=map&location=coordinates&detail=&detailLat=50&detailLon=5&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
+  </section>
+
+  <!-- Prévisualisation Index -->
+  <section id="preview">
+    <h2>👁️ Prévisualisation Index Utilisateur</h2>
+    <input type="text" id="previewLocation" placeholder="Ville, pays…" />
+    <button onclick="previewIndex()">Voir Index</button>
+    <pre id="previewBox">Résultat ici…</pre>
+  </section>
+
+  <!-- Infos météo mondiales -->
+  <section id="news">
+    <h2>📰 Infos Météo Mondiales</h2>
+    <pre id="newsBox">Chargement…</pre>
+  </section>
+
+  <!-- Utilisateurs -->
+  <section id="users">
+    <h2>👥 Suivi Utilisateurs</h2>
+    <pre id="usersBox">Chargement…</pre>
+  </section>
 
   <script>
     async function launchRun() {
-      const btn = document.getElementById("runBtn");
-      btn.disabled = true;
-      btn.textContent = "RUN en cours…";
+      log("▶️ Lancement Run Global…");
+      const res = await fetch("/api/run-global", { method: "POST" });
+      const data = await res.json();
+      log("✅ Run terminé");
+      updateCheckup();
+      loadAlerts();
+      loadEngineState();
+    }
 
-      log("⏳ Lancement du RUN global…");
+    function log(msg) {
+      const logsDiv = document.getElementById("logs");
+      logsDiv.innerText += "\\n" + msg;
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
 
-      try {
-        const res = await fetch("/api/run/global");
-        const data = await res.json();
-        log("✅ Run terminé : " + (data.message || "OK"));
-
-        // Mise à jour checkup
-        updateCheckup(data.checkup || {});
-
-        // Mise à jour sources
-        refreshSources();
-      } catch (err) {
-        log("❌ Erreur RUN : " + err.message, true);
+    async function updateCheckup() {
+      const res = await fetch("/api/checkup");
+      const checkup = await res.json();
+      const grid = document.getElementById("checkup-grid");
+      grid.innerHTML = "";
+      for (const [k,v] of Object.entries(checkup)) {
+        const div = document.createElement("div");
+        div.className = "status " + (v==="OK"?"green": v==="PENDING"?"orange":"red");
+        div.innerText = k + ": " + v;
+        grid.appendChild(div);
       }
-
-      btn.disabled = false;
-      btn.textContent = "🚀 Lancer RUN Global";
     }
 
-    function log(msg, isError = false) {
-      const logs = document.getElementById("logs");
-      const time = new Date().toLocaleTimeString();
-      logs.innerHTML += `<br>${time} - ${isError ? "<span style='color:red'>✘</span>" : "✔"} ${msg}`;
-      logs.scrollTop = logs.scrollHeight;
+    async function loadEngineState() {
+      const res = await fetch("/api/engine-state");
+      const state = await res.json();
+      document.getElementById("engineState").innerText = JSON.stringify(state,null,2);
     }
 
-    function updateCheckup(statuses) {
-      const items = document.querySelectorAll("#checkup .status-item span");
-      items.forEach(span => {
-        const text = span.parentNode.textContent.split(":")[0].trim();
-        const key = text.toLowerCase().replace(/\s+/g, "_");
-        const val = statuses[key] || "PENDING";
-        span.textContent = val.toUpperCase();
-        span.className = val === "ok" ? "ok" : (val === "error" ? "error" : "pending");
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      document.getElementById("alertsBox").innerText = JSON.stringify(data.alerts,null,2);
+    }
+
+    async function askIA() {
+      const prompt = document.getElementById("prompt").value;
+      const res = await fetch("/api/textgen", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ prompt })
       });
+      const data = await res.json();
+      document.getElementById("iaReply").innerText = data.reply || "❌ Pas de réponse";
     }
 
-    async function refreshSources() {
-      try {
-        const res = await fetch("/api/sources/status");
-        const data = await res.json();
-        const table = document.getElementById("sourcesTable");
-        table.innerHTML = "";
-        (data.sources || []).forEach(src => {
-          table.innerHTML += `<tr><td>${src.name}</td><td class="ok">${src.status}</td></tr>`;
-        });
-      } catch (err) {
-        log("❌ Erreur refresh sources : " + err.message, true);
-      }
+    async function previewIndex() {
+      const loc = document.getElementById("previewLocation").value;
+      const res = await fetch("/api/forecast/" + encodeURIComponent(loc));
+      const data = await res.json();
+      document.getElementById("previewBox").innerText = JSON.stringify(data,null,2);
     }
 
-    // Auto-refresh toutes les 30 sec
-    setInterval(refreshSources, 30000);
+    async function loadNews() {
+      const res = await fetch("/api/news"); // à créer côté backend
+      const data = await res.json();
+      document.getElementById("newsBox").innerText = JSON.stringify(data,null,2);
+    }
+
+    async function loadUsers() {
+      const res = await fetch("/api/users"); // à créer côté backend
+      const data = await res.json();
+      document.getElementById("usersBox").innerText = JSON.stringify(data,null,2);
+    }
+
+    // Auto-refresh
+    setInterval(updateCheckup, 15000);
+    setInterval(loadAlerts, 30000);
+    setInterval(loadEngineState, 60000);
   </script>
 </body>
 </html>
