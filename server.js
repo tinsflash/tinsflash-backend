@@ -160,6 +160,16 @@ app.get("/api/engine-state", async (req, res) => {
   res.json(await safeCall(engineStateService.getEngineState));
 });
 
+// ✅ Nouveau : route Checkup
+app.get("/api/checkup", async (req, res) => {
+  try {
+    const state = await safeCall(engineStateService.getEngineState);
+    res.json(state?.checkup || {});
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Admin page
 app.get("/admin", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-pp.html"))
