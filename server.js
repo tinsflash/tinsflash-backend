@@ -24,7 +24,7 @@ if (process.env.MONGO_URI) {
     .catch((err) => console.error("❌ MongoDB error:", err));
 }
 
-// === Services ===
+// === Services (imports globaux) ===
 import * as runGlobal from "./services/runGlobal.js";
 import * as runContinental from "./services/runContinental.js";
 import * as superForecast from "./services/superForecast.js";
@@ -36,12 +36,11 @@ import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
 
-// === Helper pour éviter les crashs si fn n’existe pas ===
-const safeCall = async (fn, ...args) => (typeof fn === "function" ? await fn(...args) : null);
+// Helper safeCall
+const safeCall = async (fn, ...args) =>
+  typeof fn === "function" ? await fn(...args) : null;
 
 // === Routes ===
-
-// Test backend
 app.get("/", (req, res) =>
   res.json({ success: true, message: "🌍 Centrale Nucléaire Météo Backend en ligne" })
 );
@@ -54,6 +53,7 @@ app.post("/api/run-global", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+
 app.post("/api/run-continental", async (req, res) => {
   try {
     res.json({
@@ -80,6 +80,7 @@ app.post("/api/superforecast", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 app.get("/api/forecast/:country", async (req, res) => {
   try {
     res.json(await safeCall(forecastService.getForecast, req.params.country));
@@ -96,6 +97,7 @@ app.get("/api/alerts", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+
 app.post("/api/alerts/:id/:action", async (req, res) => {
   try {
     res.json({
@@ -129,19 +131,34 @@ app.get("/api/podcast/:country", async (req, res) => {
   }
 });
 
-// Chat cockpit (IA GPT-5 reliée au moteur nucléaire météo)
+// Chat IA général
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    res.json({ success: true, reply: await chatService.askAIChat(message) });
+    res.json({ success: true, reply: await safeCall(chatService.askAI, message || "") });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// Logs & State
-app.get("/api/logs", (req, res) => res.json(safeCall(logsService.getLogs)));
-app.get("/api/engine-state", (req, res) => res.json(safeCall(engineStateService.getEngineState)));
+// Chat IA moteur (runs + alertes)
+app.post("/api/chat/engine", async (req, res) => {
+  try {
+    const { message } = req.body;
+    res.json({ success: true, reply: await safeCall(chatService.askAIEngine, message || "") });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Logs & Engine state
+app.get("/api/logs", async (req, res) => {
+  res.json(await safeCall(logsService.getLogs));
+});
+
+app.get("/api/engine-state", async (req, res) => {
+  res.json(await safeCall(engineStateService.getEngineState));
+});
 
 // Admin page
 app.get("/admin", (req, res) =>
