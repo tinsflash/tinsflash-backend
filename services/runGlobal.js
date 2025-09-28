@@ -2,7 +2,7 @@
 // ⚡ RUN GLOBAL – Zones couvertes (prévisions locales & nationales)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecast } from "./superForecast.js";
+import runSuperForecast from "./superForecast.js";   // ✅ import default
 import { processAlerts } from "./alertsService.js";
 
 export async function runGlobal() {
