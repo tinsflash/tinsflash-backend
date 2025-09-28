@@ -2,150 +2,122 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🌌 TINSFLASH - Console Admin NASA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Console Admin TINSFLASH</title>
   <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Roboto, sans-serif;
-      background-color: #0b0f1a;
-      color: #e0e0e0;
-      display: flex;
-    }
-    h1, h2 { color: #00eaff; margin: 0.5em 0; }
-    .sidebar {
-      width: 230px; background: #111726; height: 100vh; padding: 20px;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.8); position: fixed; top: 0; left: 0;
-      display: flex; flex-direction: column;
-    }
-    .sidebar a {
-      padding: 12px; margin: 6px 0; border-radius: 6px; display: block;
-      background: #1a2235; transition: background 0.3s;
-      color: #00c9ff; text-decoration: none;
-    }
-    .sidebar a:hover { background: #00c9ff33; }
-    .content { margin-left: 250px; padding: 20px; flex: 1; overflow-y: auto; height: 100vh; }
-    .panel {
-      background: #161d2e; border-radius: 10px; padding: 15px; margin-bottom: 20px;
-      box-shadow: 0 0 10px #00c9ff55;
-    }
-    .logs { background: #0f141f; padding: 10px; border-radius: 6px;
-      max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
-    .checkup-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .checkup-item { padding: 6px; border-radius: 4px; background: #1a2235; }
+    body { font-family: Arial, sans-serif; background: #0d1117; color: #e6edf3; margin: 20px; }
+    .card { background: #161b22; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
+    h1,h2 { color: #58a6ff; }
+    .status { font-weight: bold; margin: 10px 0; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 5px 0; }
+    pre { background: #0d1117; color: #7ee787; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #30363d; padding: 6px; }
+    th { background: #21262d; color: #58a6ff; }
+    tr:hover { background: #21262d; }
+    .country { cursor: pointer; color: #7ee787; }
+    .regions { display: none; background: #0d1117; }
   </style>
+</head>
+<body>
+  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+
+  <div class="card">
+    <h2>Résumé Moteur</h2>
+    <div id="engineStatus" class="status">🟠 En attente</div>
+    <ul>
+      <li><b>Pays couverts :</b> <span id="countriesCount">0</span></li>
+      <li><b>Points calculés :</b> <span id="pointsCount">0</span></li>
+      <li><b>Points réussis :</b> <span id="successCount">0</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Détail par pays</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Pays</th>
+          <th>Nb régions</th>
+        </tr>
+      </thead>
+      <tbody id="countriesTable"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Logs</h2>
+    <pre id="logs">Chargement…</pre>
+  </div>
+
   <script>
-    function showSection(id) {
-      document.querySelectorAll(".section").forEach(s => s.style.display = "none");
-      document.getElementById(id).style.display = "block";
-    }
-    window.onload = () => { showSection("console"); refreshLogs(); refreshCheckup(); };
+    async function refreshEngineStatus() {
+      try {
+        const res = await fetch("/api/engine-state");
+        const state = await res.json();
 
-    async function refreshLogs() {
-      const res = await fetch("/api/logs");
-      const data = await res.json();
-      const logsDiv = document.getElementById("logs");
-      logsDiv.innerHTML = data.map(l => `[${l.ts}] ${l.msg}`).join("<br>");
-    }
+        // === Statut global ===
+        const statusEl = document.getElementById("engineStatus");
+        const status = state?.checkup?.engineStatus || "PENDING";
+        if (status === "OK") statusEl.innerHTML = "🟢 OK";
+        else if (status === "FAIL") statusEl.innerHTML = "🔴 FAIL";
+        else statusEl.innerHTML = "🟠 En attente";
 
-    async function refreshCheckup() {
-      const res = await fetch("/api/checkup");
-      const data = await res.json();
-      const container = document.getElementById("checkup");
-      container.innerHTML = "";
+        // === Résumé global ===
+        if (state?.zonesCoveredSummary) {
+          document.getElementById("countriesCount").innerText = state.zonesCoveredSummary.countries || 0;
+          document.getElementById("pointsCount").innerText = state.zonesCoveredSummary.points || 0;
+          document.getElementById("successCount").innerText = state.zonesCoveredSummary.success || 0;
+        }
 
-      for (const [key, val] of Object.entries(data)) {
-        let icon = "🟠"; // attente par défaut
-        if (val === "OK") icon = "🟢";
-        if (val === "FAIL") icon = "🔴";
-        container.innerHTML += `<div class="checkup-item">${key} : ${icon}</div>`;
+        // === Détail par pays ===
+        const tableBody = document.getElementById("countriesTable");
+        tableBody.innerHTML = "";
+        if (state?.zonesCovered) {
+          for (const [country, data] of Object.entries(state.zonesCovered)) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td class="country">${country}</td>
+              <td>${data.regions.length}</td>
+            `;
+            tr.addEventListener("click", () => {
+              let detailRow = tr.nextSibling;
+              if (detailRow && detailRow.classList?.contains("regions")) {
+                detailRow.style.display = detailRow.style.display === "none" ? "table-row" : "none";
+              } else {
+                detailRow = document.createElement("tr");
+                detailRow.className = "regions";
+                detailRow.style.display = "table-row";
+                detailRow.innerHTML = `
+                  <td colspan="2">
+                    <ul>
+                      ${data.regions.map(r => `<li><b>${r.region}</b> (lat:${r.lat}, lon:${r.lon})</li>`).join("")}
+                    </ul>
+                  </td>
+                `;
+                tr.parentNode.insertBefore(detailRow, tr.nextSibling);
+              }
+            });
+            tableBody.appendChild(tr);
+          }
+        }
+      } catch (err) {
+        console.error("Erreur refreshEngineStatus:", err);
       }
     }
 
-    setInterval(() => { refreshLogs(); refreshCheckup(); }, 5000);
-  </script>
-</head>
-<body>
-  <div class="sidebar">
-    <h1>⚡ TINSFLASH</h1>
-    <a href="#" onclick="showSection('console')">Console</a>
-    <a href="#" onclick="showSection('alerts')">Alertes</a>
-    <a href="#" onclick="showSection('user')">Vue Utilisateur</a>
-    <a href="#" onclick="showSection('chat')">Chat IA</a>
-    <a href="#" onclick="showSection('radar')">Outils & Radar</a>
-  </div>
-
-  <div class="content">
-    <!-- Console -->
-    <div id="console" class="section">
-      <div class="panel">
-        <h2>Lancer un run</h2>
-        <button onclick="fetch('/api/run-global',{method:'POST'})">🚀 Run Global</button>
-        <button onclick="fetch('/api/run-continental',{method:'POST'})">🌍 Run Continental</button>
-      </div>
-      <div class="panel">
-        <h2>Logs moteur</h2>
-        <div class="logs" id="logs">Chargement...</div>
-      </div>
-      <div class="panel">
-        <h2>Check-up Moteur</h2>
-        <div class="checkup-list" id="checkup"></div>
-      </div>
-    </div>
-
-    <!-- Alertes -->
-    <div id="alerts" class="section" style="display:none">
-      <div class="panel"><h2>Alertes auto-validées</h2><div id="alerts-validated"></div></div>
-      <div class="panel"><h2>Alertes à examiner</h2><div id="alerts-pending"></div></div>
-    </div>
-
-    <!-- Vue utilisateur -->
-    <div id="user" class="section" style="display:none">
-      <div class="panel">
-        <h2>Vue utilisateur</h2>
-        <label>Ville :</label><input type="text" id="city">
-        <label>Pays :</label>
-        <select id="country">
-          <option value="Belgium">Belgium</option>
-          <option value="France">France</option>
-          <option value="USA">USA</option>
-          <option value="United Kingdom">United Kingdom</option>
-        </select>
-        <button>Voir</button>
-      </div>
-      <div class="panel"><h2>Prévisualisation</h2><iframe src="/index.html" width="100%" height="400"></iframe></div>
-    </div>
-
-    <!-- Chat -->
-    <div id="chat" class="section" style="display:none">
-      <div class="panel"><h2>Chat IA Console</h2>
-        <textarea id="msgConsole"></textarea>
-        <button onclick="askAI('console')">Envoyer</button>
-        <div id="replyConsole"></div>
-      </div>
-      <div class="panel"><h2>Chat IA Moteur</h2>
-        <textarea id="msgEngine"></textarea>
-        <button onclick="askAI('engine')">Envoyer</button>
-        <div id="replyEngine"></div>
-      </div>
-    </div>
-
-    <!-- Radar -->
-    <div id="radar" class="section" style="display:none">
-      <div class="panel"><h2>Radar Global</h2><iframe src="/api/radar/global" width="100%" height="400"></iframe></div>
-    </div>
-  </div>
-
-  <script>
-    async function askAI(type){
-      const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
-      const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({message:msg})
-      });
-      const data = await res.json();
-      document.getElementById("reply"+(type==="console"?"Console":"Engine")).innerText = data.reply||"Erreur IA";
+    async function refreshLogs() {
+      try {
+        const res = await fetch("/api/logs");
+        const logs = await res.json();
+        document.getElementById("logs").innerText = logs.join("\n");
+      } catch (err) {
+        console.error("Erreur refreshLogs:", err);
+      }
     }
+
+    setInterval(() => { refreshEngineStatus(); refreshLogs(); }, 5000);
+    refreshEngineStatus(); refreshLogs();
   </script>
 </body>
 </html>
