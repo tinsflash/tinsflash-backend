@@ -1,12 +1,12 @@
 // services/forecastService.js
-import runSuperForecast from "./superForecast.js";
+import { runSuperForecast } from "./superForecast.js";   // ✅ import corrigé
 import applyClimateFactors from "./climateFactors.js";
 import adjustWithLocalFactors from "./localFactors.js";
 import openweather from "./openweather.js";
 import { REGIONS_COORDS } from "./regionsCoords.js";
 
 /** Bulletin national (zones couvertes) — conserve forecast + sources numériques */
-async function getNationalForecast(country) {
+export async function getNationalForecast(country) {
   try {
     const regions = REGIONS_COORDS[country] || {};
     const forecasts = {};
@@ -17,9 +17,11 @@ async function getNationalForecast(country) {
       sf = adjustWithLocalFactors(sf, country);
 
       forecasts[region] = {
-        lat: coords.lat, lon: coords.lon, country,
+        lat: coords.lat,
+        lon: coords.lon,
+        country,
         forecast: sf.forecast || "⚠️ Pas de données",
-        sources: sf.sources || null
+        sources: sf.sources || null,
       };
     }
 
@@ -31,7 +33,7 @@ async function getNationalForecast(country) {
 }
 
 /** Prévision locale — moteur pour zones couvertes, OpenWeather sinon */
-async function getLocalForecast(lat, lon, country) {
+export async function getLocalForecast(lat, lon, country) {
   try {
     if (REGIONS_COORDS[country]) {
       let sf = await runSuperForecast({ lat, lon, country });
@@ -46,5 +48,3 @@ async function getLocalForecast(lat, lon, country) {
     return { lat, lon, country, error: err.message };
   }
 }
-
-export default { getNationalForecast, getLocalForecast };
