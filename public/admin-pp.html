@@ -5,7 +5,6 @@
   <title>🌌 TINSFLASH - Console Admin NASA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ======== Style NASA ======== */
     body {
       margin: 0;
       font-family: "Segoe UI", Roboto, sans-serif;
@@ -16,7 +15,6 @@
     a { color: #00c9ff; text-decoration: none; }
     h1, h2, h3 { color: #00eaff; margin: 0.5em 0; }
 
-    /* Sidebar */
     .sidebar {
       width: 230px;
       background: #111726;
@@ -44,7 +42,6 @@
     }
     .sidebar a:hover { background: #00c9ff33; }
 
-    /* Content */
     .content {
       margin-left: 250px;
       padding: 20px;
@@ -53,7 +50,6 @@
       height: 100vh;
     }
 
-    /* Panels */
     .panel {
       background: #161d2e;
       border-radius: 10px;
@@ -63,7 +59,6 @@
     }
     .panel h2 { border-bottom: 1px solid #00eaff33; padding-bottom: 5px; }
 
-    /* Logs */
     .logs {
       background: #0f141f;
       padding: 10px;
@@ -72,10 +67,8 @@
       overflow-y: auto;
       font-family: monospace;
       font-size: 0.9em;
-      white-space: pre-wrap;
     }
 
-    /* Check-up */
     .checkup-list {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -89,7 +82,6 @@
     .ok { color: #00ff9d; font-weight: bold; }
     .fail { color: #ff5555; font-weight: bold; }
 
-    /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -102,7 +94,6 @@
     }
     th { background: #1a2235; }
 
-    /* Inputs */
     input, select, textarea, button {
       padding: 8px;
       margin: 5px 0;
@@ -125,37 +116,73 @@
       document.querySelectorAll(".section").forEach(s => s.style.display = "none");
       document.getElementById(id).style.display = "block";
     }
-    window.onload = () => {
-      showSection("console");
-      loadLogs();
-      setInterval(loadLogs, 3000); // refresh auto logs
-    };
 
-    // === Logs moteur en direct ===
-    async function loadLogs() {
-      try {
-        const res = await fetch("/api/logs");
-        const data = await res.json();
+    async function refreshLogs() {
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      const logs = document.getElementById("logs");
+      logs.innerHTML = "";
+      (data || []).forEach(l => {
+        const div = document.createElement("div");
+        div.textContent = `[${l.ts}] ${l.msg}`;
+        logs.appendChild(div);
+      });
+      logs.scrollTop = logs.scrollHeight;
+    }
 
-        if (!data || !Array.isArray(data)) {
-          document.getElementById("logs").innerText = "❌ Aucun log disponible.";
-          return;
-        }
+    async function refreshCheckup() {
+      // Charger état moteur
+      const stateRes = await fetch("/api/engine-state");
+      const state = await stateRes.json();
 
-        const lines = data
-          .sort((a, b) => new Date(a.ts) - new Date(b.ts))
-          .map(l => `[${new Date(l.ts).toLocaleTimeString()}] ${l.msg}`)
-          .join("\n");
+      // Charger sources
+      const srcRes = await fetch("/api/sources");
+      const srcData = await srcRes.json();
 
-        const logsDiv = document.getElementById("logs");
-        logsDiv.innerText = lines || "Aucun log pour le moment.";
-        logsDiv.scrollTop = logsDiv.scrollHeight;
-      } catch (err) {
-        document.getElementById("logs").innerText = "❌ Erreur chargement logs : " + err.message;
+      // === Check-up points ===
+      const checkup = document.getElementById("checkup");
+      checkup.innerHTML = "";
+      const points = [
+        { label: "Modèles OK", value: state?.sources?.length ? "OK" : "NO OK" },
+        { label: "Analyse IA prévisions", value: state?.superForecast ? "OK" : "NO OK" },
+        { label: "Analyse IA alertes", value: state?.alerts ? "OK" : "NO OK" },
+        { label: "Prévisions locales", value: state?.zonesCovered?.local ? "OK" : "NO OK" },
+        { label: "Prévisions nationales", value: state?.zonesCovered?.national ? "OK" : "NO OK" },
+        { label: "Alertes locales", value: state?.alerts?.local ? "OK" : "NO OK" },
+        { label: "Alertes nationales", value: state?.alerts?.national ? "OK" : "NO OK" },
+        { label: "Alertes continentales", value: state?.continentalAlerts ? "OK" : "NO OK" },
+        { label: "Assemblage alertes mondiales", value: state?.alertsList?.length ? "OK" : "NO OK" },
+        { label: "Open Data non couvertes", value: state?.openData ? "OK" : "NO OK" },
+        { label: "Moteur opérationnel", value: state?.errors?.length ? "NO OK" : "OK" },
+        { label: "Utilisateurs par zone", value: state?.users ? "OK" : "NO OK" }
+      ];
+      points.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "checkup-item " + (p.value==="OK"?"ok":"fail");
+        div.textContent = `${p.label} : ${p.value}`;
+        checkup.appendChild(div);
+      });
+
+      // === Sources détaillées ===
+      const tbody = document.getElementById("checkup-sources");
+      tbody.innerHTML = "";
+      if (srcData.sources) {
+        Object.entries(srcData.sources).forEach(([src, status]) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${src}</td>
+            <td class="${status==="OK"?"ok":"fail"}">${status}</td>
+          `;
+          tbody.appendChild(tr);
+        });
       }
     }
 
-    // === Chat IA ===
+    // Rafraîchissement auto
+    setInterval(refreshLogs, 5000);
+    setInterval(refreshCheckup, 15000);
+    window.onload = () => { showSection("console"); refreshLogs(); refreshCheckup(); };
+
     async function askAI(type){
       const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
       const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
@@ -191,14 +218,14 @@
       </div>
       <div class="panel">
         <h2>Check-up Moteur</h2>
-        <div class="checkup-list" id="checkup">
-          <!-- Les 13 points apparaîtront ici -->
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Résumé moteur</h2>
-        <p>Moteur opérationnel : <span id="engine-status" class="ok">OK</span></p>
-        <p>Détails utilisateurs par zone : <span id="users">Chargement...</span></p>
+        <div class="checkup-list" id="checkup"></div>
+        <h3>Sources météo</h3>
+        <table>
+          <thead>
+            <tr><th>Source</th><th>Statut</th></tr>
+          </thead>
+          <tbody id="checkup-sources"></tbody>
+        </table>
       </div>
     </div>
 
@@ -266,7 +293,7 @@
       </div>
       <div class="panel">
         <h2>Outils techniques</h2>
-        <p>Benchmark modèles, freshness sources (à brancher).</p>
+        <p>Benchmark modèles, freshness sources (déjà branché).</p>
       </div>
     </div>
   </div>
