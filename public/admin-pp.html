@@ -124,7 +124,81 @@
       document.querySelectorAll(".section").forEach(s => s.style.display = "none");
       document.getElementById(id).style.display = "block";
     }
-    window.onload = () => showSection("console");
+    window.onload = () => {
+      showSection("console");
+      refreshLogs();
+      refreshCheckup();
+      setInterval(refreshLogs, 5000);
+      setInterval(refreshCheckup, 5000);
+    };
+
+    async function refreshLogs() {
+      try {
+        const res = await fetch("/api/logs");
+        const data = await res.json();
+        const logsEl = document.getElementById("logs");
+        logsEl.innerHTML = "";
+        (data || []).slice(-50).forEach(l => {
+          const div = document.createElement("div");
+          div.textContent = `[${l.ts}] ${l.msg}`;
+          logsEl.appendChild(div);
+        });
+      } catch(e) {
+        document.getElementById("logs").innerText = "Erreur chargement logs";
+      }
+    }
+
+    async function refreshCheckup() {
+      try {
+        const res = await fetch("/api/checkup");
+        const data = await res.json();
+        const cEl = document.getElementById("checkup");
+        cEl.innerHTML = "";
+
+        const labels = {
+          modelsOk: "1: Modèles OK",
+          modelsNok: "2: Modèles NON OK",
+          sourcesOk: "3: Sources OK",
+          sourcesNok: "4: Sources NON OK",
+          aiForecastOk: "5: Analyse IA prévisions",
+          aiAlertsOk: "6: Analyse IA alertes",
+          forecastsLocalOk: "7: Prévisions locales zones couvertes",
+          forecastsNationalOk: "8: Prévisions nationales zones couvertes",
+          alertsLocalOk: "9: Alertes locales zones couvertes",
+          alertsNationalOk: "10: Alertes nationales zones couvertes",
+          alertsContinentalOk: "11: Alertes continentales zones non couvertes",
+          alertsGlobalOk: "12: Assemblage alertes mondiales",
+          openDataOk: "13: OpenData zones non couvertes"
+        };
+
+        Object.keys(labels).forEach(key => {
+          const div = document.createElement("div");
+          div.className = "checkup-item";
+          const val = data[key];
+          div.innerHTML = `${labels[key]} : <span class="${val ? "ok" : "fail"}">${val ? "OK" : "NOK"}</span>`;
+          cEl.appendChild(div);
+        });
+
+        // Résumé moteur
+        document.getElementById("engine-status").innerText = data.engineOperational ? "OK" : "NOK";
+        document.getElementById("engine-status").className = data.engineOperational ? "ok" : "fail";
+
+        document.getElementById("users").innerText = JSON.stringify(data.usersByZone || {});
+      } catch(e) {
+        document.getElementById("checkup").innerText = "Erreur chargement check-up";
+      }
+    }
+
+    // IA Chat
+    async function askAI(type){
+      const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
+      const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message:msg})
+      });
+      const data = await res.json();
+      document.getElementById("reply"+(type==="console"?"Console":"Engine")).innerText = data.reply||"Erreur IA";
+    }
   </script>
 </head>
 <body>
@@ -151,13 +225,11 @@
       </div>
       <div class="panel">
         <h2>Check-up Moteur</h2>
-        <div class="checkup-list" id="checkup">
-          <!-- Les 13 points apparaîtront ici -->
-        </div>
+        <div class="checkup-list" id="checkup"></div>
       </div>
       <div class="panel">
         <h2>Résumé moteur</h2>
-        <p>Moteur opérationnel : <span id="engine-status" class="ok">OK</span></p>
+        <p>Moteur opérationnel : <span id="engine-status" class="ok">...</span></p>
         <p>Détails utilisateurs par zone : <span id="users">Chargement...</span></p>
       </div>
     </div>
@@ -230,18 +302,5 @@
       </div>
     </div>
   </div>
-
-  <script>
-    // IA Chat
-    async function askAI(type){
-      const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
-      const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({message:msg})
-      });
-      const data = await res.json();
-      document.getElementById("reply"+(type==="console"?"Console":"Engine")).innerText = data.reply||"Erreur IA";
-    }
-  </script>
 </body>
 </html>
