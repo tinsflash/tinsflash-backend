@@ -1,23 +1,9 @@
 // services/verifyRouter.js
 import express from "express";
-import { verifyToken } from "../utils/tokenUtils.js"; // si tu utilises déjà une vérification JWT
 import { getEngineState } from "./engineState.js";
-import { askAIEngine } from "./chatService.js"; // IA moteur déjà dispo ici
+import { askAIEngine } from "./chatService.js"; // IA moteur
 
 const router = express.Router();
-
-// Vérification de token (accès sécurisé à la console admin)
-router.use((req, res, next) => {
-  try {
-    const token = req.headers["authorization"];
-    if (!token || !verifyToken(token)) {
-      return res.status(403).json({ success: false, error: "Accès refusé" });
-    }
-    next();
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
 
 // Route : état du moteur météo
 router.get("/engine-state", async (req, res) => {
