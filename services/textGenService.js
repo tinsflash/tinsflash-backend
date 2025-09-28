@@ -1,17 +1,9 @@
-// services/textGenService.js
-import { askAI } from "./chatService.js";
+// PATH: services/textGenService.js
+import { askOpenAI } from "./openaiService.js";
 
-/**
- * Génération de texte via ChatGPT5 (utilisé dans la console admin)
- * @param {string} prompt
- * @returns {Promise<string>}
- */
-export async function generateText(prompt) {
-  try {
-    const reply = await askAI(prompt);
-    return reply || "⚠️ Pas de réponse de l'IA";
-  } catch (err) {
-    console.error("❌ generateText error:", err.message);
-    return `Erreur IA: ${err.message}`;
-  }
+export async function generateText(context) {
+  const sys = "Tu es un rédacteur météo spécialisé. Rédige des synthèses fiables et concises.";
+  const prompt = `Produis une analyse claire à partir de ces données:\n${JSON.stringify(context)}\nRéponds en français, structuré, 10 lignes max.`;
+  const reply = await askOpenAI(sys, prompt);
+  return { text: reply };
 }
