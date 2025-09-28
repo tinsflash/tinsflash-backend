@@ -35,6 +35,7 @@ import * as chatService from "./services/chatService.js";
 import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
+import { checkSourcesFreshness } from "./services/sourcesFreshness.js"; // ✅
 
 // Helper safeCall
 const safeCall = async (fn, ...args) =>
@@ -48,6 +49,8 @@ app.get("/", (req, res) =>
 // Runs
 app.post("/api/run-global", async (req, res) => {
   try {
+    // ✅ on vérifie aussi les sources à chaque run
+    await checkSourcesFreshness();
     res.json({ success: true, result: await safeCall(runGlobal.default ?? runGlobal.runGlobal) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -56,6 +59,7 @@ app.post("/api/run-global", async (req, res) => {
 
 app.post("/api/run-continental", async (req, res) => {
   try {
+    await checkSourcesFreshness();
     res.json({
       success: true,
       result: await safeCall(runContinental.default ?? runContinental.runContinental),
@@ -69,6 +73,7 @@ app.post("/api/run-continental", async (req, res) => {
 app.post("/api/superforecast", async (req, res) => {
   try {
     const { lat, lon, country } = req.body;
+    await checkSourcesFreshness();
     res.json(
       await safeCall(superForecast.default ?? superForecast.runSuperForecast, {
         lat,
@@ -158,6 +163,15 @@ app.get("/api/logs", async (req, res) => {
 
 app.get("/api/engine-state", async (req, res) => {
   res.json(await safeCall(engineStateService.getEngineState));
+});
+
+// ✅ Nouveau : route Sources
+app.get("/api/sources", async (req, res) => {
+  try {
+    res.json({ success: true, sources: await checkSourcesFreshness() });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ✅ Nouveau : route Checkup
