@@ -7,14 +7,18 @@ import ecmwf from "./ecmwf.js";
 import icon from "./icon.js";
 import meteomatics from "./meteomatics.js";
 import nasaSat from "./nasaSat.js";
-import copernicus from "./copernicusService.js"; 
+import copernicus from "./copernicusService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
-import { askOpenAI } from "./openaiService.js"; // ✅ remplacement
+import { askOpenAI } from "./openaiService.js"; // ✅ IA centrale
+import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-export default async function runSuperForecast({ lat, lon, country }) {
+export async function runSuperForecast({ lat, lon, country }) {
+  const state = getEngineState();
   try {
-    // Préparer la requête Copernicus ERA5 (simplifié)
+    addEngineLog(`⚡ Lancement du SuperForecast pour ${country} (${lat},${lon})`);
+
+    // === Étape 1 : préparer Copernicus
     const copernicusRequest = {
       variable: ["2m_temperature", "total_precipitation"],
       product_type: "reanalysis",
@@ -26,7 +30,8 @@ export default async function runSuperForecast({ lat, lon, country }) {
       format: "json"
     };
 
-    // Multi-sources en parallèle
+    // === Étape 2 : récupérer toutes les sources
+    addEngineLog("📡 Récupération multi-sources météo…");
     const [
       gfsData, ecmwfData, iconData,
       meteomaticsData, nasaData, copernicusData,
@@ -52,7 +57,10 @@ export default async function runSuperForecast({ lat, lon, country }) {
       trullemans: trullemansData.value ?? { error: trullemansData.reason?.message },
       wetterzentrale: wetterzentraleData.value ?? { error: wetterzentraleData.reason?.message }
     };
+    addEngineLog("✅ Sources météo collectées");
 
+    // === Étape 3 : IA
+    addEngineLog("🤖 Analyse IA des données multi-sources…");
     const prompt = `
 Prévisions météo enrichies pour un point précis.
 Coordonnées: lat=${lat}, lon=${lon}, pays=${country}
@@ -77,17 +85,19 @@ Consignes IA:
 - Mentionner incertitudes et fiabilité globale.
 - Style clair, professionnel, bulletin météo en français.
 `;
+    const analysis = await askOpenAI(prompt);
+    addEngineLog("✅ Analyse IA terminée");
 
-    const analysis = await askOpenAI(prompt); // ✅ correction ici
+    // === Étape 4 : sauvegarde
+    state.superForecast = { lat, lon, country, forecast: analysis, sources };
+    saveEngineState(state);
+    addEngineLog("💾 SuperForecast sauvegardé");
 
-    return {
-      lat,
-      lon,
-      country,
-      forecast: analysis,
-      sources
-    };
+    addEngineLog("🏁 SuperForecast terminé avec succès");
+    return { lat, lon, country, forecast: analysis, sources };
   } catch (err) {
+    addEngineError(err.message || "Erreur inconnue SuperForecast");
+    addEngineLog("❌ Erreur dans SuperForecast");
     return { error: err.message };
   }
 }
