@@ -1,6 +1,6 @@
-// PATH: services/superForecast.js
-// SuperForecast — prévisions enrichies multi-sources par point unique
-// ⚡ Centrale nucléaire météo – Moteur atomique
+// services/superForecast.js
+// ⚡ SuperForecast — prévisions enrichies multi-sources par point unique
+// + orchestration globale (Europe + USA)
 
 import gfs from "./gfs.js";
 import ecmwf from "./ecmwf.js";
@@ -13,7 +13,13 @@ import wetterzentrale from "./wetterzentrale.js";
 import { askOpenAI } from "./openaiService.js"; // ✅ IA centrale
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-// ✅ Export explicite (pas de "default")
+import { runGlobalEurope } from "./runGlobalEurope.js";
+import { runGlobalUSA } from "./runGlobalUSA.js";
+import { processAlerts } from "./alertsService.js";
+
+// =======================================================
+// 1) SuperForecast par point unique (inchangé)
+// =======================================================
 export async function runSuperForecast({ lat, lon, country, region }) {
   const state = getEngineState();
   try {
@@ -103,6 +109,65 @@ Consignes IA:
   } catch (err) {
     addEngineError(err.message || "Erreur inconnue SuperForecast");
     addEngineLog("❌ Erreur dans SuperForecast");
+    return { error: err.message };
+  }
+}
+
+// =======================================================
+// 2) Orchestration Globale (Europe + USA)
+// =======================================================
+export async function runSuperForecastGlobal() {
+  const state = getEngineState();
+  try {
+    addEngineLog("🌍 Lancement du SUPER FORECAST GLOBAL (Europe + USA)…");
+    state.runTime = new Date().toISOString();
+    state.checkup = { europe: "PENDING", usa: "PENDING", alerts: "PENDING" };
+    saveEngineState(state);
+
+    let europeResult, usaResult;
+
+    try {
+      europeResult = await runGlobalEurope();
+      state.checkup.europe = europeResult?.error ? "FAIL" : "OK";
+    } catch (e) {
+      addEngineError(`❌ Erreur Europe: ${e.message}`);
+      state.checkup.europe = "FAIL";
+    }
+
+    try {
+      usaResult = await runGlobalUSA();
+      state.checkup.usa = usaResult?.error ? "FAIL" : "OK";
+    } catch (e) {
+      addEngineError(`❌ Erreur USA: ${e.message}`);
+      state.checkup.usa = "FAIL";
+    }
+
+    // Fusion globale
+    state.zonesGlobal = {
+      europe: europeResult?.summary || {},
+      usa: usaResult?.summary || {}
+    };
+
+    // Alertes
+    let alertsResult;
+    try {
+      alertsResult = await processAlerts();
+      state.checkup.alerts = alertsResult?.error ? "FAIL" : "OK";
+    } catch (e) {
+      addEngineError(`❌ Erreur alertes: ${e.message}`);
+      state.checkup.alerts = "FAIL";
+    }
+
+    state.checkup.engineStatus = "OK";
+    saveEngineState(state);
+    addEngineLog("✅ SUPER FORECAST GLOBAL terminé");
+
+    return { europe: europeResult, usa: usaResult, alerts: alertsResult, summary: state.zonesGlobal };
+  } catch (err) {
+    addEngineError(err.message || "Erreur inconnue SUPER FORECAST GLOBAL");
+    state.checkup.engineStatus = "FAIL";
+    saveEngineState(state);
+    addEngineLog("❌ SUPER FORECAST GLOBAL en échec");
     return { error: err.message };
   }
 }
