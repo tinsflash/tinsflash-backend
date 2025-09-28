@@ -2,34 +2,48 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Admin — Actualités météo</title>
+  <title>⚡ Admin - Infos Mondiales</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
   <style>
-    body { background:#000; color:#eee; font-family:Arial; margin:0; }
-    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
-    section { padding:20px; }
-    a { color:#0f0; margin:10px; display:inline-block; }
-    .news { margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px; }
+    body{background:#0d1117;color:#e6edf3;font-family:Arial,sans-serif;margin:0;}
+    header{background:#161b22;padding:12px;text-align:center;font-size:20px;color:#00ff9d;font-weight:bold;}
+    nav{display:flex;justify-content:center;gap:15px;background:#1f2937;padding:10px;}
+    nav a{color:#9ca3af;text-decoration:none;padding:6px 12px;border-radius:6px;}
+    nav a:hover{background:#374151;color:#fff;}
+    .container{padding:20px;}
+    .card{background:#161b22;border-radius:8px;padding:15px;margin-bottom:20px;}
+    a{color:#2563eb;}
   </style>
 </head>
 <body>
-  <h1>📰 Actualités météo & climat</h1>
-  <a href="admin-pp.html">⬅️ Retour Cockpit</a>
+  <header>⚡ Centrale Nucléaire Météo - Infos Mondiales</header>
+  <nav>
+    <a href="admin-pp.html">Cockpit</a>
+    <a href="admin-alerts.html">Alertes</a>
+    <a href="admin-chat.html">Chat IA</a>
+    <a href="admin-radar.html">Radar</a>
+    <a href="admin-index-preview.html">Index Preview</a>
+    <a href="admin-users.html">Utilisateurs</a>
+    <a href="admin-news.html">Infos Mondiales</a>
+  </nav>
 
-  <section id="news-list">Chargement...</section>
+  <div class="container" id="news"></div>
 
   <script>
     async function loadNews(){
-      const res = await fetch("/api/news");
-      const news = await res.json();
-      let html="";
-      news.forEach(n=>{
-        html += `<div class="news">
-          <b>${n.title}</b><br>
-          ${n.summary||""}<br>
-          <a href="${n.link}" target="_blank">Lire plus</a>
-        </div>`;
+      const res=await fetch("/api/news");
+      const data=await res.json();
+      const box=document.getElementById("news");
+      box.innerHTML="";
+      (data.articles||[]).forEach(n=>{
+        box.innerHTML+=`
+          <div class="card">
+            <h3>${n.title}</h3>
+            <p>${n.summary}</p>
+            <a href="${n.url}" target="_blank">Lire l’article complet</a>
+          </div>`;
       });
-      document.getElementById("news-list").innerHTML = html;
     }
     loadNews();
   </script>
