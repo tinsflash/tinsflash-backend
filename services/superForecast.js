@@ -13,7 +13,7 @@ import wetterzentrale from "./wetterzentrale.js";
 import { askOpenAI } from "./openaiService.js"; // ✅ IA centrale
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-export async function runSuperForecast({ lat, lon, country }) {
+export default async function runSuperForecast({ lat, lon, country }) {
   const state = getEngineState();
   try {
     addEngineLog(`⚡ Lancement du SuperForecast pour ${country} (${lat},${lon})`);
