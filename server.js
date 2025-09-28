@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -34,9 +35,10 @@ import * as chatService from "./services/chatService.js";
 import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
+import * as textGenService from "./services/textGenService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 
-// ✅ Nouveau : router vérification/IA moteur
+// ✅ Router vérification
 import verifyRouter from "./services/verifyRouter.js";
 app.use("/api/verify", verifyRouter);
 
@@ -144,11 +146,25 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Chat IA moteur (runs + alertes)
+// Chat IA moteur
 app.post("/api/chat/engine", async (req, res) => {
   try {
     const { message } = req.body;
     res.json({ success: true, reply: await safeCall(chatService.askAIEngine, message || "") });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ✅ TextGen (IA console admin)
+app.post("/api/textgen", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ success: false, error: "Prompt manquant" });
+    }
+    const result = await safeCall(textGenService.generateText, prompt);
+    res.json({ success: true, reply: result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
