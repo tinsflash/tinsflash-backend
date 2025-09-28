@@ -3,7 +3,7 @@
 // Découpage fin : capitales, reliefs, côtes, régions climatiques
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export
+import { runSuperForecast } from "./superForecast.js"; // ✅ correct
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
@@ -229,7 +229,7 @@ export async function runGlobalEurope() {
       byCountry[country] = { regions: [] };
       for (const z of zones) {
         try {
-          const res = await runSuperForecastGlobal({
+          const res = await runSuperForecast({
             lat: z.lat,
             lon: z.lon,
             country,
@@ -270,5 +270,3 @@ export async function runGlobalEurope() {
     throw err;
   }
 }
-
-  
