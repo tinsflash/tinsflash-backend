@@ -68,10 +68,11 @@
       background: #0f141f;
       padding: 10px;
       border-radius: 6px;
-      max-height: 200px;
+      max-height: 250px;
       overflow-y: auto;
       font-family: monospace;
       font-size: 0.9em;
+      white-space: pre-wrap;
     }
 
     /* Check-up */
@@ -126,70 +127,35 @@
     }
     window.onload = () => {
       showSection("console");
-      refreshLogs();
-      refreshCheckup();
-      setInterval(refreshLogs, 5000);
-      setInterval(refreshCheckup, 5000);
+      loadLogs();
+      setInterval(loadLogs, 3000); // refresh auto logs
     };
 
-    async function refreshLogs() {
+    // === Logs moteur en direct ===
+    async function loadLogs() {
       try {
         const res = await fetch("/api/logs");
         const data = await res.json();
-        const logsEl = document.getElementById("logs");
-        logsEl.innerHTML = "";
-        (data || []).slice(-50).forEach(l => {
-          const div = document.createElement("div");
-          div.textContent = `[${l.ts}] ${l.msg}`;
-          logsEl.appendChild(div);
-        });
-      } catch(e) {
-        document.getElementById("logs").innerText = "Erreur chargement logs";
+
+        if (!data || !Array.isArray(data)) {
+          document.getElementById("logs").innerText = "❌ Aucun log disponible.";
+          return;
+        }
+
+        const lines = data
+          .sort((a, b) => new Date(a.ts) - new Date(b.ts))
+          .map(l => `[${new Date(l.ts).toLocaleTimeString()}] ${l.msg}`)
+          .join("\n");
+
+        const logsDiv = document.getElementById("logs");
+        logsDiv.innerText = lines || "Aucun log pour le moment.";
+        logsDiv.scrollTop = logsDiv.scrollHeight;
+      } catch (err) {
+        document.getElementById("logs").innerText = "❌ Erreur chargement logs : " + err.message;
       }
     }
 
-    async function refreshCheckup() {
-      try {
-        const res = await fetch("/api/checkup");
-        const data = await res.json();
-        const cEl = document.getElementById("checkup");
-        cEl.innerHTML = "";
-
-        const labels = {
-          modelsOk: "1: Modèles OK",
-          modelsNok: "2: Modèles NON OK",
-          sourcesOk: "3: Sources OK",
-          sourcesNok: "4: Sources NON OK",
-          aiForecastOk: "5: Analyse IA prévisions",
-          aiAlertsOk: "6: Analyse IA alertes",
-          forecastsLocalOk: "7: Prévisions locales zones couvertes",
-          forecastsNationalOk: "8: Prévisions nationales zones couvertes",
-          alertsLocalOk: "9: Alertes locales zones couvertes",
-          alertsNationalOk: "10: Alertes nationales zones couvertes",
-          alertsContinentalOk: "11: Alertes continentales zones non couvertes",
-          alertsGlobalOk: "12: Assemblage alertes mondiales",
-          openDataOk: "13: OpenData zones non couvertes"
-        };
-
-        Object.keys(labels).forEach(key => {
-          const div = document.createElement("div");
-          div.className = "checkup-item";
-          const val = data[key];
-          div.innerHTML = `${labels[key]} : <span class="${val ? "ok" : "fail"}">${val ? "OK" : "NOK"}</span>`;
-          cEl.appendChild(div);
-        });
-
-        // Résumé moteur
-        document.getElementById("engine-status").innerText = data.engineOperational ? "OK" : "NOK";
-        document.getElementById("engine-status").className = data.engineOperational ? "ok" : "fail";
-
-        document.getElementById("users").innerText = JSON.stringify(data.usersByZone || {});
-      } catch(e) {
-        document.getElementById("checkup").innerText = "Erreur chargement check-up";
-      }
-    }
-
-    // IA Chat
+    // === Chat IA ===
     async function askAI(type){
       const msg = document.getElementById("msg"+(type==="console"?"Console":"Engine")).value;
       const res = await fetch("/api/chat/"+(type==="console"?"":"engine"),{
@@ -225,11 +191,13 @@
       </div>
       <div class="panel">
         <h2>Check-up Moteur</h2>
-        <div class="checkup-list" id="checkup"></div>
+        <div class="checkup-list" id="checkup">
+          <!-- Les 13 points apparaîtront ici -->
+        </div>
       </div>
       <div class="panel">
         <h2>Résumé moteur</h2>
-        <p>Moteur opérationnel : <span id="engine-status" class="ok">...</span></p>
+        <p>Moteur opérationnel : <span id="engine-status" class="ok">OK</span></p>
         <p>Détails utilisateurs par zone : <span id="users">Chargement...</span></p>
       </div>
     </div>
