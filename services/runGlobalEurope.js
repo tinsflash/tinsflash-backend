@@ -3,7 +3,7 @@
 // Découpage fin : reliefs, côtes, régions climatiques
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecast } from "./superForecast.js";
+import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
@@ -111,9 +111,8 @@ const EUROPE_ZONES = {
     { lat: 37.01, lon: -7.93, region: "South - Algarve" },
     { lat: 32.65, lon: -16.91, region: "Madeira" },
     { lat: 37.74, lon: -25.67, region: "Azores" }
-  ],
-  // ⚡ Ajout des autres pays UE (Croatie, Slovénie, Roumanie, Pologne, Pays Baltes…)
-  // => Même logique : capitales + zones relief/maritime
+  ]
+  // ⚡ TODO: ajouter Croatie, Slovénie, Roumanie, Pologne, Pays Baltes…
 };
 
 // ==================================
@@ -135,7 +134,7 @@ export async function runGlobalEurope() {
       byCountry[country] = { regions: [] };
       for (const z of zones) {
         try {
-          const res = await runSuperForecast({ lat: z.lat, lon: z.lon, country, region: z.region });
+          const res = await runSuperForecastGlobal({ lat: z.lat, lon: z.lon, country, region: z.region });
           byCountry[country].regions.push({ ...z, forecast: res?.forecast });
           successCount++;
           totalPoints++;
@@ -147,8 +146,8 @@ export async function runGlobalEurope() {
       }
     }
 
-    state.zonesCovered = byCountry;
-    state.zonesCoveredSummary = { countries: Object.keys(byCountry).length, points: totalPoints, success: successCount };
+    state.zonesCoveredEurope = byCountry;
+    state.zonesCoveredSummaryEurope = { countries: Object.keys(byCountry).length, points: totalPoints, success: successCount };
     state.checkup.models = "OK";
     state.checkup.localForecasts = successCount > 0 ? "OK" : "FAIL";
     state.checkup.nationalForecasts = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
@@ -160,7 +159,7 @@ export async function runGlobalEurope() {
     saveEngineState(state);
 
     addEngineLog("✅ RUN GLOBAL EUROPE terminé");
-    return { summary: state.zonesCoveredSummary, alerts: alertsResult || {} };
+    return { summary: state.zonesCoveredSummaryEurope, alerts: alertsResult || {} };
   } catch (err) {
     addEngineError(err.message || "Erreur inconnue RUN GLOBAL EUROPE");
     state.checkup.engineStatus = "FAIL";
