@@ -1,6 +1,6 @@
 // services/runGlobalEurope.js
 // ⚡ RUN GLOBAL EUROPE — Zones couvertes (UE27 + UK + Norvège + Suisse + Ukraine)
-// Découpage fin : reliefs, côtes, régions climatiques
+// Découpage fin : capitales, reliefs, côtes, régions climatiques
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export
@@ -111,8 +111,98 @@ const EUROPE_ZONES = {
     { lat: 37.01, lon: -7.93, region: "South - Algarve" },
     { lat: 32.65, lon: -16.91, region: "Madeira" },
     { lat: 37.74, lon: -25.67, region: "Azores" }
+  ],
+  Netherlands: [
+    { lat: 52.37, lon: 4.90, region: "West - Amsterdam" },
+    { lat: 51.92, lon: 4.48, region: "Southwest - Rotterdam" },
+    { lat: 53.22, lon: 6.57, region: "North - Groningen" }
+  ],
+  Luxembourg: [
+    { lat: 49.61, lon: 6.13, region: "Central - Luxembourg City" },
+    { lat: 49.76, lon: 6.10, region: "North - Ardennes" }
+  ],
+  Denmark: [
+    { lat: 55.68, lon: 12.57, region: "East - Copenhagen" },
+    { lat: 57.05, lon: 9.92, region: "North - Aalborg" },
+    { lat: 55.40, lon: 10.39, region: "Central - Odense" }
+  ],
+  Poland: [
+    { lat: 52.23, lon: 21.01, region: "Central - Warsaw" },
+    { lat: 50.06, lon: 19.94, region: "South - Krakow" },
+    { lat: 51.11, lon: 17.03, region: "West - Wroclaw" },
+    { lat: 54.35, lon: 18.64, region: "North - Gdansk" },
+    { lat: 49.30, lon: 19.95, region: "Tatras - Zakopane" }
+  ],
+  Czechia: [
+    { lat: 50.08, lon: 14.43, region: "Central - Prague" },
+    { lat: 49.20, lon: 16.61, region: "South - Brno" },
+    { lat: 50.08, lon: 17.40, region: "East - Ostrava" }
+  ],
+  Slovakia: [
+    { lat: 48.15, lon: 17.11, region: "West - Bratislava" },
+    { lat: 49.08, lon: 19.61, region: "North - Tatras - Žilina" },
+    { lat: 48.73, lon: 21.25, region: "East - Košice" }
+  ],
+  Hungary: [
+    { lat: 47.50, lon: 19.04, region: "Central - Budapest" },
+    { lat: 46.07, lon: 18.23, region: "South - Pécs" },
+    { lat: 47.53, lon: 21.63, region: "East - Debrecen" }
+  ],
+  Romania: [
+    { lat: 44.43, lon: 26.10, region: "South - Bucharest" },
+    { lat: 46.77, lon: 23.59, region: "Northwest - Cluj-Napoca" },
+    { lat: 45.76, lon: 21.23, region: "West - Timișoara" },
+    { lat: 47.16, lon: 27.58, region: "East - Iași" },
+    { lat: 45.52, lon: 25.58, region: "Central - Carpathians - Brașov" },
+    { lat: 44.16, lon: 28.64, region: "Southeast - Constanța (Black Sea)" }
+  ],
+  Bulgaria: [
+    { lat: 42.70, lon: 23.32, region: "West - Sofia" },
+    { lat: 42.15, lon: 24.75, region: "Central - Plovdiv" },
+    { lat: 43.21, lon: 27.91, region: "East - Varna (Black Sea)" }
+  ],
+  Croatia: [
+    { lat: 45.81, lon: 15.98, region: "Inland - Zagreb" },
+    { lat: 43.51, lon: 16.44, region: "Dalmatian Coast - Split" },
+    { lat: 42.65, lon: 18.09, region: "South Coast - Dubrovnik" },
+    { lat: 46.16, lon: 16.83, region: "North - Varaždin" }
+  ],
+  Slovenia: [
+    { lat: 46.06, lon: 14.51, region: "Central - Ljubljana" },
+    { lat: 46.55, lon: 15.65, region: "East - Maribor" },
+    { lat: 46.38, lon: 13.82, region: "West - Julian Alps" }
+  ],
+  Greece: [
+    { lat: 37.98, lon: 23.72, region: "Central - Athens" },
+    { lat: 40.64, lon: 22.94, region: "North - Thessaloniki" },
+    { lat: 35.34, lon: 25.13, region: "South - Crete - Heraklion" },
+    { lat: 39.62, lon: 19.92, region: "Ionian Islands - Corfu" },
+    { lat: 36.44, lon: 28.23, region: "Dodecanese - Rhodes" }
+  ],
+  Cyprus: [
+    { lat: 35.17, lon: 33.36, region: "Central - Nicosia" },
+    { lat: 34.68, lon: 33.04, region: "South - Limassol" },
+    { lat: 34.77, lon: 32.42, region: "West - Paphos" }
+  ],
+  Estonia: [
+    { lat: 59.44, lon: 24.75, region: "North - Tallinn" },
+    { lat: 58.38, lon: 26.73, region: "South - Tartu" },
+    { lat: 58.25, lon: 22.48, region: "West - Saaremaa Island" }
+  ],
+  Latvia: [
+    { lat: 56.95, lon: 24.10, region: "Central - Riga" },
+    { lat: 56.51, lon: 21.01, region: "West - Liepāja" },
+    { lat: 55.88, lon: 26.52, region: "East - Daugavpils" }
+  ],
+  Lithuania: [
+    { lat: 54.68, lon: 25.28, region: "Central - Vilnius" },
+    { lat: 55.70, lon: 21.14, region: "West - Klaipėda (Baltic Sea)" },
+    { lat: 54.90, lon: 23.89, region: "South - Kaunas" }
+  ],
+  Malta: [
+    { lat: 35.90, lon: 14.51, region: "Malta - Valletta" },
+    { lat: 36.04, lon: 14.24, region: "Gozo Island" }
   ]
-  // ⚡ TODO: ajouter Croatie, Slovénie, Roumanie, Pologne, Pays Baltes…
 };
 
 // ==================================
@@ -123,7 +213,12 @@ export async function runGlobalEurope() {
   try {
     addEngineLog("🌍 Démarrage du RUN GLOBAL EUROPE (zones couvertes complètes)…");
     state.runTime = new Date().toISOString();
-    state.checkup = { models: "PENDING", localForecasts: "PENDING", nationalForecasts: "PENDING", aiAlerts: "PENDING" };
+    state.checkup = {
+      models: "PENDING",
+      localForecasts: "PENDING",
+      nationalForecasts: "PENDING",
+      aiAlerts: "PENDING"
+    };
     saveEngineState(state);
 
     const byCountry = {};
@@ -134,7 +229,12 @@ export async function runGlobalEurope() {
       byCountry[country] = { regions: [] };
       for (const z of zones) {
         try {
-          const res = await runSuperForecastGlobal({ lat: z.lat, lon: z.lon, country, region: z.region });
+          const res = await runSuperForecastGlobal({
+            lat: z.lat,
+            lon: z.lon,
+            country,
+            region: z.region
+          });
           byCountry[country].regions.push({ ...z, forecast: res?.forecast });
           successCount++;
           totalPoints++;
@@ -147,24 +247,28 @@ export async function runGlobalEurope() {
     }
 
     state.zonesCoveredEurope = byCountry;
-    state.zonesCoveredSummaryEurope = { countries: Object.keys(byCountry).length, points: totalPoints, success: successCount };
+    state.zonesCoveredSummaryEurope = {
+      countries: Object.keys(byCountry).length,
+      points: totalPoints,
+      success: successCount
+    };
     state.checkup.models = "OK";
     state.checkup.localForecasts = successCount > 0 ? "OK" : "FAIL";
-    state.checkup.nationalForecasts = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
+    state.checkup.nationalForecasts =
+      Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
     saveEngineState(state);
 
     const alertsResult = await processAlerts();
-    state.checkup.aiAlerts = alertsResult?.error ? "FAIL" : "OK";
-    state.checkup.engineStatus = "OK";
-    saveEngineState(state);
+    state.checkup.aiAlerts = alertsResult?.status || "OK";
 
-    addEngineLog("✅ RUN GLOBAL EUROPE terminé");
-    return { summary: state.zonesCoveredSummaryEurope, alerts: alertsResult || {} };
-  } catch (err) {
-    addEngineError(err.message || "Erreur inconnue RUN GLOBAL EUROPE");
-    state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
-    addEngineLog("❌ RUN GLOBAL EUROPE en échec");
-    return { error: err.message };
+    addEngineLog("✅ RUN GLOBAL EUROPE terminé avec succès.");
+    return { summary: state.zonesCoveredSummaryEurope, alerts: alertsResult };
+  } catch (err) {
+    addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
+    saveEngineState(state);
+    throw err;
   }
 }
+
+  
