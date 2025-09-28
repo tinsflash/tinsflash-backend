@@ -3,7 +3,7 @@
 // Découpage fin : Nord/Sud/Est/Ouest + sites stratégiques (NASA, aéroports)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecast } from "./superForecast.js";
+import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export actuel
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
@@ -40,7 +40,7 @@ const USA_ZONES = {
     { lat: 43.16, lon: -77.61, region: "West - Rochester" },
     { lat: 42.89, lon: -78.88, region: "Buffalo - Great Lakes" }
   ],
-  // ⚡ États moyens → un seul point central (capitale ou ville majeure)
+  // ⚡ États moyens → 1 ou 2 points
   Ohio: [{ lat: 39.96, lon: -82.99, region: "Columbus - Central" }],
   Illinois: [
     { lat: 41.88, lon: -87.62, region: "Chicago - North" },
@@ -63,7 +63,7 @@ const USA_ZONES = {
     { lat: 33.45, lon: -112.07, region: "Phoenix - Central" },
     { lat: 35.20, lon: -111.65, region: "Flagstaff - Highlands" }
   ],
-  // ⚡ Pour les petits États → capitale uniquement
+  // ⚡ Petits États → capitale uniquement
   Alabama: [{ lat: 32.36, lon: -86.30, region: "Montgomery" }],
   Arkansas: [{ lat: 34.75, lon: -92.29, region: "Little Rock" }],
   Connecticut: [{ lat: 41.77, lon: -72.67, region: "Hartford" }],
@@ -129,7 +129,9 @@ export async function runGlobalUSA() {
       byState[stateName] = { regions: [] };
       for (const z of zones) {
         try {
-          const res = await runSuperForecast({ lat: z.lat, lon: z.lon, country: "USA", region: `${stateName} - ${z.region}` });
+          const res = await runSuperForecastGlobal({
+            lat: z.lat, lon: z.lon, country: "USA", region: `${stateName} - ${z.region}`
+          });
           byState[stateName].regions.push({ ...z, forecast: res?.forecast });
           successCount++;
           totalPoints++;
