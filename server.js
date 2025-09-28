@@ -25,7 +25,7 @@ if (process.env.MONGO_URI) {
 }
 
 // === Services ===
-import * as runGlobal from "./services/runGlobal.js";
+import { runGlobal } from "./services/runGlobal.js";
 import * as runContinental from "./services/runContinental.js";
 import * as superForecast from "./services/superForecast.js";
 import * as forecastService from "./services/forecastService.js";
@@ -36,8 +36,8 @@ import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
 import * as textGenService from "./services/textGenService.js";
-import * as newsService from "./services/newsService.js";     
-import * as userService from "./services/userService.js";     
+import * as newsService from "./services/newsService.js";
+import * as userService from "./services/userService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 
 // ✅ Router vérification
@@ -57,7 +57,9 @@ app.get("/", (req, res) =>
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
-    res.json({ success: true, result: await safeCall(runGlobal.runGlobal) });
+    const { zone } = req.body;
+    const result = await safeCall(runGlobal, zone || "Europe");
+    res.json({ success: true, result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -215,7 +217,7 @@ app.get("/api/checkup", async (req, res) => {
   }
 });
 
-// ✅ Infos météo mondiales (branché sur ton service)
+// ✅ Infos météo mondiales
 app.get("/api/news", async (req, res) => {
   try {
     res.json({ success: true, news: await safeCall(newsService.getNews) });
@@ -224,7 +226,7 @@ app.get("/api/news", async (req, res) => {
   }
 });
 
-// ✅ Utilisateurs (branché sur ton service)
+// ✅ Utilisateurs
 app.get("/api/users", async (req, res) => {
   try {
     res.json({ success: true, users: await safeCall(userService.getUsers) });
