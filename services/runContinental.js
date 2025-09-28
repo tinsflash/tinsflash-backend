@@ -14,6 +14,10 @@ export async function runContinental() {
   try {
     addEngineLog("🌎 Lancement du RUN CONTINENTAL…");
 
+    // Réinitialiser les flags relatifs
+    state.continentalAlertsOK = false;
+    state.globalAlertsOK = false;
+
     const alerts = [];
 
     for (const cont of continents) {
@@ -34,7 +38,8 @@ Réponds en JSON: { continent, type, reliability, firstDetector }
 
         try {
           parsedAlert = JSON.parse(aiAnalysis);
-          alerts.push(parsedAlert);
+          if (!Array.isArray(parsedAlert)) parsedAlert = [parsedAlert];
+          alerts.push(...parsedAlert);
         } catch {
           addEngineError("⚠️ Impossible de parser l’alerte continentale " + cont);
         }
@@ -43,16 +48,24 @@ Réponds en JSON: { continent, type, reliability, firstDetector }
       }
     }
 
-    // Stocker dans state
+    // Mettre à jour l’état
     state.continentalAlerts = alerts;
     state.alertsList = [...(state.alertsList || []), ...alerts];
+    state.continentalAlertsOK = alerts.length > 0;
+
+    // Fusion avec les alertes nationales → globales
+    if (state.alertsList && state.alertsList.length > 0) {
+      state.globalAlertsOK = true;
+    }
+
+    // Sauvegarde
     saveEngineState(state);
 
     // Tri via alertsService
     const alertStats = await processAlerts();
 
     addEngineLog("✅ RUN CONTINENTAL terminé");
-    return { alerts, alertStats };
+    return { alerts, alertStats, state };
   } catch (err) {
     addEngineError(err.message || "Erreur inconnue RUN CONTINENTAL");
     return { error: err.message };
