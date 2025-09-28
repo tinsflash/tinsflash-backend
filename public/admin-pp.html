@@ -2,132 +2,142 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>⚡ Console Admin – Centrale Nucléaire Météo</title>
+  <title>⚡ Centrale Nucléaire Météo - Admin</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #0b0e17;
+      background: #0b0e14;
       color: #f0f0f0;
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 20px;
     }
-    header {
-      background: #1b2133;
-      padding: 15px;
-      text-align: center;
-    }
-    h1 { margin: 0; font-size: 20px; }
-    .container { padding: 20px; }
+    h1 { color: #4ec9b0; }
     button {
-      padding: 10px 20px;
-      margin: 10px 5px;
+      background: #1f6feb;
+      color: white;
       border: none;
-      border-radius: 5px;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
     }
-    .btn-run { background: #28a745; color: white; }
-    .btn-ai  { background: #007bff; color: white; }
-    pre {
-      background: #1e2639;
-      color: #e0e0e0;
-      padding: 10px;
-      border-radius: 5px;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    .status {
-      margin: 15px 0;
-      padding: 10px;
-      border-radius: 5px;
-      background: #1e2639;
-    }
-    .dot {
-      height: 12px; width: 12px;
-      border-radius: 50%;
+    button:hover { background: #388bfd; }
+    .status-dot {
       display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
       margin-right: 8px;
     }
-    .pending { background: orange; }
-    .ok { background: limegreen; }
-    .fail { background: red; }
+    .orange { background: orange; }
+    .green { background: limegreen; }
+    .red { background: red; }
+    #logs {
+      background: #111;
+      border: 1px solid #333;
+      padding: 10px;
+      margin-top: 15px;
+      height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    #checkup {
+      margin-top: 15px;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
-  </header>
+  <h1>⚡ Centrale Nucléaire Météo - Admin Cockpit</h1>
 
-  <div class="container">
-    <button class="btn-run" onclick="launchSuperForecast()">🚀 Lancer le moteur complet</button>
-    <button class="btn-ai" onclick="launchAIOnly()">🤖 Lancer uniquement l’IA (optionnel)</button>
-
-    <h2>📊 Checkup</h2>
-    <div id="checkup"></div>
-
-    <h2>📜 Logs</h2>
-    <pre id="logs">En attente…</pre>
-
-    <h2>⚠️ Alertes</h2>
-    <pre id="alerts">En attente…</pre>
+  <div>
+    <button onclick="runGlobal()">🌍 Run Global (Europe + USA)</button>
+    <button onclick="runContinental()">🌐 Run Continental</button>
+    <button onclick="superForecast()">⚡ SuperForecast (manuel)</button>
   </div>
 
+  <div id="checkup">
+    <h2>État du moteur</h2>
+    <p><span class="status-dot orange" id="dot-models"></span> Modèles</p>
+    <p><span class="status-dot orange" id="dot-local"></span> Prévisions locales</p>
+    <p><span class="status-dot orange" id="dot-national"></span> Prévisions nationales</p>
+    <p><span class="status-dot orange" id="dot-ai"></span> IA / Alertes</p>
+    <p><span class="status-dot orange" id="dot-engine"></span> Status moteur</p>
+  </div>
+
+  <h2>Logs</h2>
+  <div id="logs">En attente…</div>
+
   <script>
-    async function refreshLogs() {
-      const res = await fetch("/api/logs");
+    async function runGlobal() {
+      addLog("🚀 Lancement du RUN GLOBAL (Europe + USA)...");
+      const res = await fetch("/api/run-global", { method: "POST" });
       const data = await res.json();
-      document.getElementById("logs").textContent = 
-        (data || []).map(l => `[${l.ts}] ${l.msg}`).join("\n") || "Aucun log";
+      addLog(JSON.stringify(data, null, 2));
+      refreshCheckup();
+    }
+
+    async function runContinental() {
+      addLog("🌐 Lancement du RUN CONTINENTAL...");
+      const res = await fetch("/api/run-continental", { method: "POST" });
+      const data = await res.json();
+      addLog(JSON.stringify(data, null, 2));
+      refreshCheckup();
+    }
+
+    async function superForecast() {
+      const lat = prompt("Latitude ?");
+      const lon = prompt("Longitude ?");
+      const country = prompt("Pays ?");
+      const region = prompt("Région ?");
+      addLog(`⚡ SuperForecast pour ${country} - ${region} (${lat},${lon})`);
+      const res = await fetch("/api/superforecast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat: parseFloat(lat), lon: parseFloat(lon), country, region })
+      });
+      const data = await res.json();
+      addLog(JSON.stringify(data, null, 2));
+      refreshCheckup();
     }
 
     async function refreshCheckup() {
       const res = await fetch("/api/checkup");
       const data = await res.json();
-      let html = "";
-      for (const [key, val] of Object.entries(data)) {
-        let cls = "pending";
-        if (val === "OK") cls = "ok";
-        if (val === "FAIL") cls = "fail";
-        html += `<div class="status"><span class="dot ${cls}"></span>${key}: ${val}</div>`;
-      }
-      document.getElementById("checkup").innerHTML = html || "Pas de données.";
+
+      updateDot("dot-models", data.models);
+      updateDot("dot-local", data.localForecasts);
+      updateDot("dot-national", data.nationalForecasts);
+      updateDot("dot-ai", data.aiAlerts);
+      updateDot("dot-engine", data.engineStatus);
     }
 
-    async function refreshAlerts() {
-      const res = await fetch("/api/alerts");
-      const data = await res.json();
-      document.getElementById("alerts").textContent =
-        JSON.stringify(data.alerts || [], null, 2);
+    function updateDot(id, status) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = "status-dot " + 
+        (status === "OK" ? "green" : status === "FAIL" ? "red" : "orange");
     }
 
-    async function launchSuperForecast() {
-      document.getElementById("logs").textContent = "🚀 Lancement du SuperForecast Global…";
-      await fetch("/api/superforecast", { method: "POST" });
-      await refreshLogs();
-      await refreshCheckup();
-      await refreshAlerts();
+    async function refreshLogs() {
+      const res = await fetch("/api/logs");
+      const logs = await res.json();
+      document.getElementById("logs").innerText = logs.join("\n");
     }
 
-    async function launchAIOnly() {
-      document.getElementById("logs").textContent = "🤖 Lancement uniquement IA…";
-      await fetch("/api/chat/engine", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Analyse finale IA du moteur météo" })
-      });
-      await refreshLogs();
+    function addLog(msg) {
+      const logs = document.getElementById("logs");
+      logs.innerText += "\n" + msg;
+      logs.scrollTop = logs.scrollHeight;
     }
 
-    // Rafraîchissement auto toutes les 10s
-    setInterval(() => {
-      refreshLogs();
-      refreshCheckup();
-      refreshAlerts();
-    }, 10000);
+    // Auto-refresh
+    setInterval(refreshLogs, 5000);
+    setInterval(refreshCheckup, 7000);
 
-    // Premier chargement
     refreshLogs();
     refreshCheckup();
-    refreshAlerts();
   </script>
 </body>
 </html>
