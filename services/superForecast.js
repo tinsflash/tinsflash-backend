@@ -10,16 +10,16 @@ import nasaSat from "./nasaSat.js";
 import copernicus from "./copernicusService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
-
 import { askOpenAI } from "./openaiService.js"; // ✅ IA centrale
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-export default async function runSuperForecast({ lat, lon, country }) {
+// ✅ Export explicite (pas de "default")
+export async function runSuperForecast({ lat, lon, country, region }) {
   const state = getEngineState();
   try {
-    addEngineLog(`⚡ Lancement du SuperForecast pour ${country} (${lat},${lon})`);
+    addEngineLog(`⚡ Lancement du SuperForecast pour ${country}${region ? " - " + region : ""} (${lat},${lon})`);
 
-    // === Étape 1 : préparer Copernicus
+    // === Étape 1 : préparer Copernicus ERA5
     const copernicusRequest = {
       variable: ["2m_temperature", "total_precipitation"],
       product_type: "reanalysis",
@@ -31,7 +31,7 @@ export default async function runSuperForecast({ lat, lon, country }) {
       format: "json"
     };
 
-    // === Étape 2 : récupérer toutes les sources
+    // === Étape 2 : récupérer toutes les sources météo
     addEngineLog("📡 Récupération multi-sources météo…");
     const [
       gfsData, ecmwfData, iconData,
@@ -60,11 +60,11 @@ export default async function runSuperForecast({ lat, lon, country }) {
     };
     addEngineLog("✅ Sources météo collectées");
 
-    // === Étape 3 : IA
+    // === Étape 3 : analyse IA
     addEngineLog("🤖 Analyse IA des données multi-sources…");
     const prompt = `
 Prévisions météo enrichies pour un point précis.
-Coordonnées: lat=${lat}, lon=${lon}, pays=${country}
+Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${region ? ", région=" + region : ""}
 
 Sources principales:
 - GFS: ${JSON.stringify(sources.gfs)}
@@ -86,16 +86,20 @@ Consignes IA:
 - Mentionner incertitudes et fiabilité globale.
 - Style clair, professionnel, bulletin météo en français.
 `;
+
     const analysis = await askOpenAI(prompt);
     addEngineLog("✅ Analyse IA terminée");
 
     // === Étape 4 : sauvegarde
-    state.superForecast = { lat, lon, country, forecast: analysis, sources };
+    if (!state.superForecasts) state.superForecasts = [];
+    state.superForecasts.push({
+      lat, lon, country, region, forecast: analysis, sources
+    });
     saveEngineState(state);
     addEngineLog("💾 SuperForecast sauvegardé");
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
-    return { lat, lon, country, forecast: analysis, sources };
+    return { lat, lon, country, region, forecast: analysis, sources };
   } catch (err) {
     addEngineError(err.message || "Erreur inconnue SuperForecast");
     addEngineLog("❌ Erreur dans SuperForecast");
