@@ -23,25 +23,28 @@ export async function runSuperForecastGlobal() {
     addEngineLog("⚡ Lancement du SuperForecast Global…");
 
     // === Étape 1 : RUN Europe + USA ===
-    addEngineLog("🌍 RUN Europe (zones couvertes) …");
+    addEngineLog("🌍 RUN Europe (zones couvertes détaillées) …");
     const europeData = await runGlobalEurope();
 
-    addEngineLog("🇺🇸 RUN USA (par États + sous-régions) …");
+    addEngineLog("🇺🇸 RUN USA (États + sous-régions stratégiques) …");
     const usaData = await runGlobalUSA();
 
     // === Étape 2 : Collecte multi-sources météo ===
-    addEngineLog("📡 Récupération des modèles et satellites…");
-    const [gfsData, ecmwfData, iconData, meteomaticsData, nasaData, copernicusData, trullemansData, wetterzentraleData] =
-      await Promise.allSettled([
-        gfs(),
-        ecmwf(),
-        icon(),
-        meteomatics(),
-        nasaSat(),
-        copernicus("reanalysis-era5-land", { variable: ["2m_temperature", "total_precipitation"] }),
-        trullemans(),
-        wetterzentrale()
-      ]);
+    addEngineLog("📡 Collecte des modèles et satellites…");
+    const [
+      gfsData, ecmwfData, iconData,
+      meteomaticsData, nasaData, copernicusData,
+      trullemansData, wetterzentraleData
+    ] = await Promise.allSettled([
+      gfs(),
+      ecmwf(),
+      icon(),
+      meteomatics(),
+      nasaSat(),
+      copernicus("reanalysis-era5-land", { variable: ["2m_temperature", "total_precipitation"] }),
+      trullemans(),
+      wetterzentrale()
+    ]);
 
     const sources = {
       gfs: gfsData.value ?? { error: gfsData.reason?.message },
@@ -76,44 +79,38 @@ export async function runSuperForecastGlobal() {
         ecmwf: sources.ecmwf?.wind,
         icon: sources.icon?.wind
       }
-      // 🔧 extensible pour pression, humidité, etc.
     };
 
-    // === Étape 4 : Application facteurs relief/climat/environnement ===
-    addEngineLog("⛰️ Application des facteurs relief, climat, océans…");
+    // === Étape 4 : Facteurs relief/climat/environnement ===
+    addEngineLog("⛰️ Ajustements relief, climat, océans…");
     const adjustedData = await applyGeoFactors(fusedModels, europeData, usaData);
 
-    // === Étape 5 : IA Finale (analyse + prévisions + alertes) ===
+    // === Étape 5 : IA Finale ===
     addEngineLog("🤖 Analyse IA finale…");
     const prompt = `
 SuperForecast Global — Synthèse finale
 
-Tu dois générer :
-1. Prévisions locales (zones Europe + USA par régions/États)
-2. Prévisions nationales
-3. Prévisions mondiales
-4. Alertes locales, nationales et mondiales (règles fiabilité incluses)
+Prévisions attendues :
+1. Locales (Europe par pays/régions + USA par États/sous-régions)
+2. Nationales
+3. Mondiales
+4. Alertes locales, nationales, mondiales (règles fiabilité incluses)
 
-Sources fusionnées (après collecte et ajustements internes):
+Sources fusionnées et ajustées:
 ${JSON.stringify(adjustedData)}
 
-Données internes zones couvertes:
-- Europe: ${JSON.stringify(europeData)}
-- USA: ${JSON.stringify(usaData)}
+Zones internes couvertes:
+Europe: ${JSON.stringify(europeData)}
+USA: ${JSON.stringify(usaData)}
 
-Benchmarks (comparaison uniquement, ne pas copier):
-- Trullemans: ${JSON.stringify(sources.trullemans)}
-- Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
+Comparatifs (qualité uniquement, ne pas copier):
+Trullemans: ${JSON.stringify(sources.trullemans)}
+Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
 
-Consignes IA:
-- Croiser uniquement les données principales fusionnées
-- Ajuster avec relief, climat, océans, lacs
-- Générer bulletin clair, structuré en français
-- Horizon: aujourd'hui + 7 jours
-- Appliquer règle alertes:
-  • fiabilité <70% = ignorée
-  • 70–90% = en attente / à valider
-  • >90% = publiée automatiquement
+Règles alertes:
+- fiabilité <70% = ignorée
+- 70–90% = attente / expert
+- >90% = publiée automatiquement
     `;
 
     const analysis = await askOpenAI(prompt);
