@@ -2,48 +2,34 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Admin — Radar météo</title>
+  <title>⚡ Admin - Radar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
   <style>
-    body { background:#000; color:#eee; font-family:Arial; margin:0; }
-    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
-    section { padding:20px; }
-    iframe { width:100%; height:600px; border:1px solid #333; margin-top:10px; }
-    select { margin:5px; padding:6px; background:#222; color:#eee; border:1px solid #555; }
-    a { color:#0f0; margin:10px; display:inline-block; }
+    body{background:#0d1117;color:#e6edf3;font-family:Arial,sans-serif;margin:0;}
+    header{background:#161b22;padding:12px;text-align:center;font-size:20px;color:#00ff9d;font-weight:bold;}
+    nav{display:flex;justify-content:center;gap:15px;background:#1f2937;padding:10px;}
+    nav a{color:#9ca3af;text-decoration:none;padding:6px 12px;border-radius:6px;}
+    nav a:hover{background:#374151;color:#fff;}
+    .container{padding:20px;}
+    iframe{width:100%;height:600px;border:none;border-radius:8px;}
   </style>
 </head>
 <body>
-  <h1>📡 Radar météo</h1>
-  <a href="admin-pp.html">⬅️ Retour Cockpit</a>
+  <header>⚡ Centrale Nucléaire Météo - Radar</header>
+  <nav>
+    <a href="admin-pp.html">Cockpit</a>
+    <a href="admin-alerts.html">Alertes</a>
+    <a href="admin-chat.html">Chat IA</a>
+    <a href="admin-radar.html">Radar</a>
+    <a href="admin-index-preview.html">Index Preview</a>
+    <a href="admin-users.html">Utilisateurs</a>
+    <a href="admin-news.html">Infos Mondiales</a>
+  </nav>
 
-  <section>
-    <h2>Radar global interne</h2>
-    <iframe id="radar-frame" src="/api/radar/global"></iframe>
-  </section>
-
-  <section>
-    <h2>Radar interactif Windy</h2>
-    <label>Type :</label>
-    <select id="overlay-select" onchange="updateWindyOverlay()">
-      <option value="rain">🌧️ Pluie</option>
-      <option value="snow">❄️ Neige</option>
-      <option value="wind">💨 Vent</option>
-      <option value="temp">🌡️ Température</option>
-      <option value="pressure">🔵 Pression</option>
-    </select>
-    <iframe 
-      id="windy-frame"
-      src="https://embed.windy.com/embed2.html?lat=50&lon=5&zoom=4&overlay=rain&product=ecmwf"
-      width="100%" height="600" frameborder="0">
-    </iframe>
-  </section>
-
-  <script>
-    function updateWindyOverlay(){
-      const overlay = document.getElementById("overlay-select").value;
-      document.getElementById("windy-frame").src = 
-        `https://embed.windy.com/embed2.html?lat=50&lon=5&zoom=4&overlay=${overlay}&product=ecmwf`;
-    }
-  </script>
+  <div class="container">
+    <h3>Radar météo interactif (Windy)</h3>
+    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&zoom=5&level=surface&overlay=rain&product=ecmwf" allowfullscreen></iframe>
+  </div>
 </body>
 </html>
