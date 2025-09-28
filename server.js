@@ -36,8 +36,8 @@ import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
 import * as textGenService from "./services/textGenService.js";
-import * as newsService from "./services/newsService.js";     // ✅ Réel
-import * as userService from "./services/userService.js";     // ✅ Réel
+import * as newsService from "./services/newsService.js";     
+import * as userService from "./services/userService.js";     
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 
 // ✅ Router vérification
@@ -174,11 +174,26 @@ app.post("/api/textgen", async (req, res) => {
 
 // Logs & Engine state
 app.get("/api/logs", async (req, res) => {
-  res.json(await safeCall(logsService.getLogs));
+  res.json((await safeCall(logsService.getLogs)) || []);
+});
+
+// ✅ Logs SSE (live stream)
+app.get("/api/logs/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const interval = setInterval(async () => {
+    const logs = (await safeCall(logsService.getLogs)) || [];
+    res.write(`data: ${JSON.stringify(logs)}\n\n`);
+  }, 2000);
+
+  req.on("close", () => clearInterval(interval));
 });
 
 app.get("/api/engine-state", async (req, res) => {
-  res.json(await safeCall(engineStateService.getEngineState));
+  res.json((await safeCall(engineStateService.getEngineState)) || {});
 });
 
 // Sources
@@ -218,9 +233,27 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-// Admin page
+// === Admin pages ===
 app.get("/admin", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-pp.html"))
+);
+app.get("/admin-alerts", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-alerts.html"))
+);
+app.get("/admin-chat", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-chat.html"))
+);
+app.get("/admin-radar", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-radar.html"))
+);
+app.get("/admin-index", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-index.html"))
+);
+app.get("/admin-infos", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-infos.html"))
+);
+app.get("/admin-users", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-users.html"))
 );
 
 // === Start server ===
