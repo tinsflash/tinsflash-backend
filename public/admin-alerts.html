@@ -2,87 +2,72 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Admin — Alertes météo</title>
+  <title>⚡ Admin - Gestion Alertes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
   <style>
-    body { background:#000; color:#eee; font-family:Arial; margin:0; }
-    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
-    section { padding:20px; border-bottom:1px solid #333; }
-    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
-    th, td { border:1px solid #444; padding:6px; text-align:left; }
-    th { background:#333; }
-    button { background:#0f0; color:#000; padding:5px 10px; border:none; cursor:pointer; }
-    button:hover { background:#9f9; }
-    a { color:#0f0; margin:10px; display:inline-block; }
+    body { background:#0d1117; color:#e6edf3; font-family:Arial,sans-serif; margin:0; }
+    header { background:#161b22; padding:12px; text-align:center; font-size:20px; color:#00ff9d; font-weight:bold; }
+    nav { display:flex; justify-content:center; gap:15px; background:#1f2937; padding:10px; }
+    nav a { color:#9ca3af; text-decoration:none; padding:6px 12px; border-radius:6px; }
+    nav a:hover { background:#374151; color:#fff; }
+    .container { padding:20px; }
+    .card { background:#161b22; border-radius:8px; padding:15px; margin-bottom:20px; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:8px; border-bottom:1px solid #374151; }
+    th { text-align:left; color:#9ca3af; }
+    button { padding:6px 12px; margin:2px; border:none; border-radius:5px; cursor:pointer; }
+    .ok{color:#10b981;} .pending{color:orange;} .error{color:red;}
   </style>
 </head>
 <body>
-  <h1>🚨 Gestion des alertes météo</h1>
-  <a href="admin-pp.html">⬅️ Retour Cockpit</a>
+  <header>⚡ Centrale Nucléaire Météo - Gestion Alertes</header>
+  <nav>
+    <a href="admin-pp.html">Cockpit</a>
+    <a href="admin-alerts.html">Alertes</a>
+    <a href="admin-chat.html">Chat IA</a>
+    <a href="admin-radar.html">Radar</a>
+    <a href="admin-index-preview.html">Index Preview</a>
+    <a href="admin-users.html">Utilisateurs</a>
+    <a href="admin-news.html">Infos Mondiales</a>
+  </nav>
 
-  <section>
-    <h2>Publiées (>90%)</h2>
-    <table id="alerts-90"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
-  </section>
-
-  <section>
-    <h2>À valider (70–90%)</h2>
-    <table id="alerts-70"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th><th>Actions</th></tr></table>
-  </section>
-
-  <section>
-    <h2>Envoyées expert</h2>
-    <table id="alerts-expert"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
-  </section>
-
-  <section>
-    <h2>En attente</h2>
-    <table id="alerts-wait"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
-  </section>
-
-  <section>
-    <h2>Ignorées (<70%)</h2>
-    <table id="alerts-low"><tr><th>Pays</th><th>Type</th><th>Message</th><th>Fiabilité</th></tr></table>
-  </section>
+  <div class="container">
+    <div class="card">
+      <h3>Alertes en attente</h3>
+      <table id="alertsTable">
+        <thead>
+          <tr><th>Date</th><th>Zone</th><th>Type</th><th>Confiance</th><th>Action</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
   <script>
-    async function loadAlerts() {
-      const res = await fetch("/api/alerts");
+    async function loadAlerts(){
+      const res = await fetch("/api/alerts/pending");
       const data = await res.json();
-      const alerts = data.covered || [];
-
-      alerts.forEach((a, idx)=>{
-        let row = `<tr>
-          <td>${a.country||"-"}</td>
-          <td>${a.type||"-"}</td>
-          <td>${a.message||"-"}</td>
-          <td>${a.reliability||"?"}%</td>`;
-
-        if(a.reliability>=90){
-          document.getElementById("alerts-90").innerHTML+=row+"</tr>";
-        } else if(a.reliability>=70 && !a.tag){
-          row += `<td>
-            <button onclick="handleAlertAction(${idx}, 'validate')">✅ Valider</button>
-            <button onclick="handleAlertAction(${idx}, 'expert')">📤 Expert</button>
-            <button onclick="handleAlertAction(${idx}, 'wait')">⏳ Attente</button>
-          </td></tr>`;
-          document.getElementById("alerts-70").innerHTML+=row;
-        } else if(a.tag==="expert"){
-          document.getElementById("alerts-expert").innerHTML+=row+"</tr>";
-        } else if(a.tag==="wait"){
-          document.getElementById("alerts-wait").innerHTML+=row+"</tr>";
-        } else {
-          document.getElementById("alerts-low").innerHTML+=row+"</tr>";
-        }
+      const tbody=document.querySelector("#alertsTable tbody");
+      tbody.innerHTML="";
+      (data.alerts||[]).forEach(a=>{
+        tbody.innerHTML+=`
+          <tr>
+            <td>${a.date}</td>
+            <td>${a.zone}</td>
+            <td>${a.type}</td>
+            <td>${a.confidence}%</td>
+            <td>
+              <button onclick="validate('${a.id}')">✅ Valider</button>
+              <button onclick="wait('${a.id}')">⏳ Attente</button>
+              <button onclick="reject('${a.id}')">❌ Rejeter</button>
+            </td>
+          </tr>`;
       });
     }
-    async function handleAlertAction(index, action){
-      await fetch("/api/alerts/action", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ index, action })
-      });
-      location.reload();
-    }
+    async function validate(id){ await fetch("/api/alerts/validate/"+id,{method:"POST"}); loadAlerts(); }
+    async function wait(id){ await fetch("/api/alerts/wait/"+id,{method:"POST"}); loadAlerts(); }
+    async function reject(id){ await fetch("/api/alerts/reject/"+id,{method:"POST"}); loadAlerts(); }
     loadAlerts();
   </script>
 </body>
