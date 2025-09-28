@@ -10,6 +10,7 @@ import nasaSat from "./nasaSat.js";
 import copernicus from "./copernicusService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
+
 import { askOpenAI } from "./openaiService.js"; // ✅ IA centrale
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
