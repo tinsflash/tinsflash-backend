@@ -1,12 +1,17 @@
-// PATH: services/textGenService.js
-// Génération de textes météo spécialisés
-import { askAI } from "./aiService.js";
+// services/textGenService.js
+import { askAI } from "./chatService.js";
 
-export async function generateText(context) {
-  const prompt = `Rédige une analyse météo claire basée sur ces données:\n${JSON.stringify(
-    context
-  )}\nFais une synthèse concise en français.`;
-
-  const reply = await askAI(prompt);
-  return { text: reply };
+/**
+ * Génération de texte via ChatGPT5 (utilisé dans la console admin)
+ * @param {string} prompt
+ * @returns {Promise<string>}
+ */
+export async function generateText(prompt) {
+  try {
+    const reply = await askAI(prompt);
+    return reply || "⚠️ Pas de réponse de l'IA";
+  } catch (err) {
+    console.error("❌ generateText error:", err.message);
+    return `Erreur IA: ${err.message}`;
+  }
 }
