@@ -3,7 +3,7 @@
 // Division fine : grandes villes, reliefs, côtes, régions stratégiques (NASA, ouragans, etc.)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export
+import { runSuperForecast } from "./superForecast.js"; // ✅ correction
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
@@ -132,7 +132,7 @@ export async function runGlobalUSA() {
       byState[stateName] = { regions: [] };
       for (const z of zones) {
         try {
-          const res = await runSuperForecastGlobal({
+          const res = await runSuperForecast({
             lat: z.lat,
             lon: z.lon,
             country: "USA",
