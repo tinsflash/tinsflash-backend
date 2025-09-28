@@ -1,147 +1,147 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Cockpit Administrateur — Centrale Nucléaire Météo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>⚡ Centrale Nucléaire Météo — Cockpit</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
   <style>
-    body { background:#111; color:#eee; font-family: monospace; margin:0; padding:0; }
-    nav { background:#222; padding:10px; }
-    nav a { color:#ccc; margin-right:15px; text-decoration:none; }
-    nav a:hover { color:#fff; }
-    h2 { margin-top:20px; color:#0f0; }
-    .checklist { background:#000; padding:10px; border:1px solid #333; }
-    .logbox { background:#000; color:#0f0; padding:10px; height:200px; overflow-y:auto; border:1px solid #333; }
-    .badge { padding:2px 6px; border-radius:4px; font-weight:bold; }
-    .pending { background:#555; color:#fff; }
-    .running { background:orange; color:#000; }
-    .ok { background:green; color:#fff; }
-    .fail { background:red; color:#fff; }
-    .country-block { border:1px solid #333; margin:8px 0; padding:6px; background:#181818; }
-    .region { margin-left:20px; }
-    pre { background:#111; padding:6px; border:1px solid #333; overflow-x:auto; }
+    body {
+      background-color: #000;
+      color: #0f0;
+      font-family: "Courier New", monospace;
+    }
+    .terminal-box {
+      background: #111;
+      border: 2px solid #0f0;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+    }
+    .log-ok { color: #0f0; }
+    .log-error { color: #f00; }
+    .log-info { color: #0ff; }
+    .btn-run {
+      padding: 10px 20px;
+      font-weight: bold;
+      margin: 5px;
+      border-radius: 6px;
+      border: 2px solid #fff;
+      transition: all 0.2s;
+    }
+    .btn-run:hover { transform: scale(1.05); }
+    .btn-europe { background: #1e3a8a; color: #fff; }
+    .btn-usa { background: #b91c1c; color: #fff; }
+    .btn-all { background: #047857; color: #fff; }
   </style>
 </head>
 <body>
+  <header class="text-center p-4 border-b border-green-500">
+    <h1 class="text-3xl font-bold">⚡ Centrale Nucléaire Météo</h1>
+    <p class="text-lg">Cockpit Administrateur — Frissons NASA</p>
+  </header>
 
-  <!-- Navigation -->
-  <nav>
-    <a href="/admin">Cockpit</a>
-    <a href="/admin-alerts">Alertes</a>
-    <a href="/admin-chat">Chat IA</a>
-    <a href="/admin-radar">Radar</a>
-    <a href="/admin-index">Prévisualisation Index</a>
-    <a href="/admin-infos">Infos Météo Mondiales</a>
-    <a href="/admin-users">Utilisateurs</a>
-  </nav>
-
-  <div style="padding:20px;">
-    <h1>⚡ Cockpit Administrateur</h1>
-
-    <!-- Bouton RUN -->
-    <button onclick="launchRun()" style="padding:10px; background:red; color:#fff; font-size:16px;">
-      🚀 Lancer Run Global
-    </button>
+  <main class="p-4 space-y-6">
+    <!-- Boutons de lancement -->
+    <div class="flex justify-center space-x-4">
+      <button onclick="launchRun('Europe')" class="btn-run btn-europe">🌍 Run Europe</button>
+      <button onclick="launchRun('USA')" class="btn-run btn-usa">🇺🇸 Run USA</button>
+      <button onclick="launchRun('All')" class="btn-run btn-all">🌐 Run ALL</button>
+    </div>
 
     <!-- Checklist moteur -->
-    <h2>✅ Checklist moteur</h2>
-    <div id="checkup" class="checklist">Chargement...</div>
+    <section>
+      <h2 class="text-2xl mb-2">✅ Checklist Moteur</h2>
+      <div id="checklist" class="terminal-box"></div>
+    </section>
 
-    <!-- Logs moteur -->
-    <h2>📜 Logs moteur (live)</h2>
-    <div id="logs" class="logbox"></div>
+    <!-- Logs -->
+    <section>
+      <h2 class="text-2xl mb-2">📜 Logs moteur (live)</h2>
+      <div id="logs" class="terminal-box"></div>
+    </section>
 
-    <!-- État complet moteur -->
-    <h2>🛰️ État du moteur (live)</h2>
-    <button onclick="exportJSON()">📂 Export JSON</button>
-    <button onclick="copyJSON()">📋 Copier JSON</button>
-    <div id="engineState"></div>
-  </div>
+    <!-- État complet -->
+    <section>
+      <h2 class="text-2xl mb-2">🛰️ État du moteur (live)</h2>
+      <div id="engineState" class="terminal-box"></div>
+      <button onclick="exportJSON()" class="mt-2 px-4 py-2 bg-yellow-500 text-black font-bold rounded">📂 Export JSON</button>
+    </section>
+  </main>
 
-<script>
-// === Checklist moteur ===
-async function fetchCheckup() {
-  const res = await fetch("/api/checkup");
-  const data = await res.json();
-  let html = "<table>";
-  for (const [step, status] of Object.entries(data)) {
-    let cls = "pending", label = "⚪";
-    if (status === "RUNNING") { cls = "running"; label = "🟠"; }
-    if (status === "OK") { cls = "ok"; label = "🟢"; }
-    if (status === "FAIL") { cls = "fail"; label = "🔴"; }
-    html += `<tr><td>${label}</td><td>${step}</td><td><span class="badge ${cls}">${status}</span></td></tr>`;
-  }
-  html += "</table>";
-  document.getElementById("checkup").innerHTML = html;
-}
+  <script>
+    const logsDiv = document.getElementById("logs");
+    const checklistDiv = document.getElementById("checklist");
+    const engineStateDiv = document.getElementById("engineState");
 
-// === Logs moteur (SSE) ===
-const logBox = document.getElementById("logs");
-const evtSource = new EventSource("/api/logs/stream");
-evtSource.onmessage = function(e) {
-  const logs = JSON.parse(e.data);
-  logBox.innerHTML = logs.map(l => l).join("<br>");
-  logBox.scrollTop = logBox.scrollHeight;
-};
+    // 🔄 Rafraîchissement périodique
+    async function refresh() {
+      try {
+        const stateRes = await fetch("/api/engine-state");
+        const state = await stateRes.json();
+        renderChecklist(state?.checkup || {});
+        engineStateDiv.innerHTML = "<pre>" + JSON.stringify(state, null, 2) + "</pre>";
 
-// === État moteur détaillé ===
-async function fetchEngineState() {
-  const res = await fetch("/api/engine-state");
-  const data = await res.json();
-  const container = document.getElementById("engineState");
-  container.innerHTML = "";
-
-  // Boucle pays
-  for (const [country, content] of Object.entries(data.zonesCovered || {})) {
-    const block = document.createElement("div");
-    block.className = "country-block";
-    block.innerHTML = `<b>🌍 ${country}</b>`;
-
-    // Boucle régions
-    if (content.regions) {
-      content.regions.forEach(r => {
-        const regionDiv = document.createElement("div");
-        regionDiv.className = "region";
-        regionDiv.innerHTML = `📍 <b>${r.region}</b> (${r.lat},${r.lon})<br>
-          <pre>${JSON.stringify(r.forecast || r.error || {}, null, 2)}</pre>`;
-        block.appendChild(regionDiv);
-      });
+        const logsRes = await fetch("/api/logs");
+        const logs = await logsRes.json();
+        renderLogs(logs || []);
+      } catch (err) {
+        console.error("Erreur refresh:", err);
+      }
     }
-    container.appendChild(block);
-  }
-}
 
-function exportJSON() {
-  fetch("/api/engine-state").then(r => r.json()).then(data => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "engineState.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-}
+    function renderChecklist(checkup) {
+      checklistDiv.innerHTML = "";
+      for (const [k, v] of Object.entries(checkup)) {
+        let color = v === "OK" ? "log-ok" : (v === "FAIL" ? "log-error" : "log-info");
+        checklistDiv.innerHTML += `<div><span class="${color}">▶ ${k}: ${v}</span></div>`;
+      }
+    }
 
-function copyJSON() {
-  fetch("/api/engine-state").then(r => r.json()).then(data => {
-    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-    alert("JSON copié dans le presse-papier !");
-  });
-}
+    function renderLogs(logs) {
+      logsDiv.innerHTML = "";
+      logs.forEach(log => {
+        const cls = log.type === "error" ? "log-error" : (log.type === "info" ? "log-info" : "log-ok");
+        logsDiv.innerHTML += `<div class="${cls}">[${log.time}] ${log.message}</div>`;
+      });
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
 
-async function launchRun() {
-  const res = await fetch("/api/run-global", { method:"POST" });
-  const data = await res.json();
-  alert("Run global lancé !");
-  console.log(data);
-}
+    async function launchRun(zone) {
+      logsDiv.innerHTML += `<div class="log-info">🚀 Lancement du RUN GLOBAL ${zone}...</div>`;
+      try {
+        const res = await fetch("/api/run-global", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ zone })
+        });
+        const data = await res.json();
+        logsDiv.innerHTML += `<div class="log-ok">✅ Résultat RUN ${zone}: ${JSON.stringify(data.summary || data)}</div>`;
+      } catch (e) {
+        logsDiv.innerHTML += `<div class="log-error">❌ Erreur RUN ${zone}: ${e.message}</div>`;
+      }
+    }
 
-// Refresh auto
-setInterval(fetchCheckup, 2000);
-setInterval(fetchEngineState, 4000);
-fetchCheckup();
-fetchEngineState();
-</script>
+    function exportJSON() {
+      fetch("/api/engine-state")
+        .then(res => res.json())
+        .then(data => {
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "engine-state.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+    }
 
+    // Auto-refresh toutes les 5s
+    setInterval(refresh, 5000);
+    refresh();
+  </script>
 </body>
 </html>
