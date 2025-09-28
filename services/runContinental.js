@@ -1,8 +1,7 @@
-// PATH: services/runContinental.js
-// RUN CONTINENTAL – Détection anomalies sur zones non couvertes
-// Objectif : générer des alertes continentales
+// services/runContinental.js
+// 🌎 RUN CONTINENTAL – Zones non couvertes → alertes continentales
 
-import { askAI } from "./chatService.js";
+import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import { processAlerts } from "./alertsService.js";
 
@@ -11,28 +10,28 @@ const continents = ["Europe", "Africa", "Asia", "North America", "South America"
 export async function runContinental() {
   const state = getEngineState();
   try {
-    addEngineLog("🌍 Lancement du RUN CONTINENTAL…");
+    addEngineLog("🌎 Lancement du RUN CONTINENTAL…");
+    state.runTime = new Date().toISOString();
+    state.checkup.continentalAlerts = "PENDING";
+    saveEngineState(state);
 
     const alerts = [];
 
     for (const cont of continents) {
       try {
-        addEngineLog(`🔎 Analyse IA continentale : ${cont}…`);
-
         const aiPrompt = `
 Analyse météo RUN CONTINENTAL – ${cont}
 Objectif: détecter toute anomalie majeure (tempête, cyclone, vague de chaleur, inondation…).
-Réponds en JSON strict :
-{ "continent": "${cont}", "type": "string", "reliability": 0-100, "firstDetector": true/false }
-        `;
-
-        const aiAnalysis = await askAI(aiPrompt);
-        let parsedAlert;
-
+Consignes:
+1. Générer des alertes continentales uniquement.
+2. Donner un indice de fiabilité (0–100).
+3. Indiquer si nous sommes les premiers à détecter.
+Réponds en JSON: { continent, type, reliability, firstDetector }
+`;
+        const aiAnalysis = await askOpenAI(aiPrompt);
         try {
-          parsedAlert = JSON.parse(aiAnalysis);
-          alerts.push(parsedAlert);
-          addEngineLog(`✅ Alerte continentale détectée : ${cont} (${parsedAlert.type}) fiabilité ${parsedAlert.reliability}%`);
+          const parsed = JSON.parse(aiAnalysis);
+          alerts.push(parsed);
         } catch {
           addEngineError("⚠️ Impossible de parser l’alerte continentale " + cont);
         }
@@ -41,20 +40,29 @@ Réponds en JSON strict :
       }
     }
 
-    // Sauvegarde
     state.continentalAlerts = alerts;
     state.alertsList = [...(state.alertsList || []), ...alerts];
+    state.checkup.continentalAlerts = alerts.length > 0 ? "OK" : "FAIL";
     saveEngineState(state);
 
-    // Tri via alertsService
-    addEngineLog("🚨 Tri et classification des alertes continentales…");
     const alertStats = await processAlerts();
-    addEngineLog("✅ RUN CONTINENTAL terminé");
+    if (alertStats.error) {
+      state.checkup.globalAlerts = "FAIL";
+      addEngineError(alertStats.error);
+    } else {
+      state.checkup.globalAlerts = "OK";
+    }
+    saveEngineState(state);
 
+    state.checkup.engineStatus = "OK";
+    saveEngineState(state);
+    addEngineLog("✅ RUN CONTINENTAL terminé");
     return { alerts, alertStats };
   } catch (err) {
+    state.checkup.engineStatus = "FAIL";
+    saveEngineState(state);
     addEngineError(err.message || "Erreur inconnue RUN CONTINENTAL");
-    addEngineLog("❌ Erreur dans RUN CONTINENTAL");
+    addEngineLog("❌ RUN CONTINENTAL en échec");
     return { error: err.message };
   }
 }
