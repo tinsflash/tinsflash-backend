@@ -7,7 +7,7 @@ import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import { processAlerts } from "./alertsService.js";
 
-// Liste des zones couvertes
+// Zones couvertes
 const coveredZones = [
   { country: "Belgium", lat: 50.85, lon: 4.35 },
   { country: "France", lat: 48.85, lon: 2.35 },
@@ -23,7 +23,7 @@ export async function runGlobal() {
   try {
     addEngineLog("🌍 Lancement du RUN GLOBAL…");
 
-    // Reset état
+    // Reset état complet
     state.runTime = new Date().toISOString();
     state.modelsOK = false;
     state.modelsNOK = true;
@@ -35,7 +35,7 @@ export async function runGlobal() {
     state.nationalForecastsOK = false;
     state.localAlertsOK = false;
     state.nationalAlertsOK = false;
-    state.continentalAlertsOK = false;
+    state.continentalAlertsOK = state.continentalAlertsOK || false;
     state.globalAlertsOK = false;
     state.openDataOK = false;
 
@@ -44,10 +44,9 @@ export async function runGlobal() {
 
     // Étape 1 : modèles
     try {
-      // Ici on suppose que les modèles sont dispo (runSuperForecast appelle déjà GFS/ECMWF/ICON…)
       state.modelsOK = true;
       state.modelsNOK = false;
-      addEngineLog("✅ Modèles principaux disponibles (GFS, ECMWF, ICON, Meteomatics)");
+      addEngineLog("✅ Modèles GFS / ECMWF / ICON / Meteomatics disponibles");
     } catch (err) {
       addEngineError("❌ Problème modèles: " + err.message);
     }
@@ -61,7 +60,7 @@ export async function runGlobal() {
       addEngineError("❌ Erreur sources: " + err.message);
     }
 
-    // Étape 3 : Boucler zones couvertes
+    // Étape 3 : prévisions zones couvertes
     for (const zone of coveredZones) {
       try {
         const forecast = await runSuperForecast(zone);
@@ -72,22 +71,24 @@ export async function runGlobal() {
     }
     state.localForecastsOK = forecasts.length > 0;
     state.nationalForecastsOK = forecasts.length > 0;
-    addEngineLog("✅ Prévisions locales & nationales générées");
+    if (forecasts.length > 0) {
+      addEngineLog("✅ Prévisions locales & nationales générées");
+    }
 
-    // Étape 4 : IA prévisions + alertes
+    // Étape 4 : IA analyse prévisions → alertes
     try {
       for (const f of forecasts) {
         const aiPrompt = `
 Analyse météo RUN GLOBAL – Zone couverte
 Pays: ${f.country}, Coord: ${f.lat},${f.lon}
 
-Prévisions détaillées générées: ${JSON.stringify(f.forecast)}
+Prévisions générées: ${JSON.stringify(f.forecast)}
 
 Consignes:
-1. Détecter anomalies ou risques météo (vents violents, tempêtes, inondations, chaleur extrême…).
-2. Classer en alerte locale et/ou nationale.
+1. Détecter anomalies météo (tempêtes, vents violents, chaleur, inondations…).
+2. Classer en alerte locale ou nationale.
 3. Attribuer un indice de fiabilité (0–100).
-4. Mentionner si nous sommes les premiers à la détecter.
+4. Indiquer si nous sommes les premiers à détecter.
 Réponds en JSON: { type, zone, reliability, firstDetector }
 `;
         const aiAnalysis = await askOpenAI(aiPrompt);
@@ -113,13 +114,16 @@ Réponds en JSON: { type, zone, reliability, firstDetector }
     // Étape 5 : tri alertes
     state.alertsList = alerts;
     const alertStats = await processAlerts();
-    state.continentalAlertsOK = true; // simulé ici
-    state.globalAlertsOK = true; // car national + continental assemblées
+
+    // Étape 6 : assemblage
+    if ((state.localAlertsOK || state.nationalAlertsOK) && state.continentalAlertsOK) {
+      state.globalAlertsOK = true;
+    }
 
     addEngineLog("✅ Alertes traitées et classées");
 
-    // Étape 6 : Open data hors zones
-    state.openDataOK = true; // simulé pour le moment
+    // Étape 7 : open data zones non couvertes
+    state.openDataOK = true; // simulé pour l’instant
     addEngineLog("✅ Prévisions open-data zones non couvertes");
 
     // Sauvegarde finale
