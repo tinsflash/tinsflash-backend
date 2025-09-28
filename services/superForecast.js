@@ -76,6 +76,7 @@ export async function runSuperForecast({ lat, lon, country, region }) {
 
     // === Étape 3 : analyse IA
     addEngineLog("🤖 Analyse IA des données multi-sources…");
+
     const prompt = `
 Prévisions météo enrichies pour un point précis.
 Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${
@@ -103,7 +104,12 @@ Consignes IA:
 - Style clair, professionnel, bulletin météo en français.
 `;
 
-    const analysis = await askOpenAI(prompt);
+    // ✅ Appel IA corrigé : plus de max_tokens/temperature → openaiService gère
+    const analysis = await askOpenAI(
+      "Tu es un moteur météo avancé qui rédige un bulletin météo fiable.",
+      prompt
+    );
+
     addEngineLog("✅ Analyse IA terminée");
 
     // === Étape 4 : sauvegarde
