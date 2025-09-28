@@ -36,6 +36,8 @@ import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
 import * as textGenService from "./services/textGenService.js";
+import * as newsService from "./services/newsService.js";     // ✅ Réel
+import * as userService from "./services/userService.js";     // ✅ Réel
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 
 // ✅ Router vérification
@@ -193,6 +195,24 @@ app.get("/api/checkup", async (req, res) => {
   try {
     const state = await safeCall(engineStateService.getEngineState);
     res.json(state?.checkup || {});
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ✅ Infos météo mondiales (branché sur ton service)
+app.get("/api/news", async (req, res) => {
+  try {
+    res.json({ success: true, news: await safeCall(newsService.getNews) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ✅ Utilisateurs (branché sur ton service)
+app.get("/api/users", async (req, res) => {
+  try {
+    res.json({ success: true, users: await safeCall(userService.getUsers) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
