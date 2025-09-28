@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -25,18 +24,20 @@ if (process.env.MONGO_URI) {
 }
 
 // === Services (imports globaux) ===
-import * as runGlobalEurope from "./services/runGlobalEurope.js";
-import * as runGlobalUSA from "./services/runGlobalUSA.js";
-import * as runContinental from "./services/runContinental.js";
-import * as superForecast from "./services/superForecast.js";
-import * as forecastService from "./services/forecastService.js";
+import { runGlobal } from "./services/runGlobal.js";
+import { runGlobalEurope } from "./services/runGlobalEurope.js";
+import { runGlobalUSA } from "./services/runGlobalUSA.js";
+import { runContinental } from "./services/runContinental.js";
+import { runSuperForecast } from "./services/superForecast.js";
+import forecastService from "./services/forecastService.js";
 import * as radarService from "./services/radarService.js";
 import * as podcastService from "./services/podcastService.js";
 import * as chatService from "./services/chatService.js";
 import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
-import { checkSourcesFreshness } from "./services/sourcesFreshness.js"; // ✅
+import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
+import verifyRouter from "./services/verifyRouter.js";
 
 // Helper safeCall
 const safeCall = async (fn, ...args) =>
@@ -51,14 +52,25 @@ app.get("/", (req, res) =>
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
+    res.json({ success: true, result: await safeCall(runGlobal) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
-    const europe = await safeCall(runGlobalEurope.runGlobalEurope);
-    const usa = await safeCall(runGlobalUSA.runGlobalUSA);
+app.post("/api/run-global-europe", async (req, res) => {
+  try {
+    await checkSourcesFreshness();
+    res.json({ success: true, result: await safeCall(runGlobalEurope) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
-    res.json({
-      success: true,
-      result: { europe, usa },
-    });
+app.post("/api/run-global-usa", async (req, res) => {
+  try {
+    await checkSourcesFreshness();
+    res.json({ success: true, result: await safeCall(runGlobalUSA) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -67,10 +79,7 @@ app.post("/api/run-global", async (req, res) => {
 app.post("/api/run-continental", async (req, res) => {
   try {
     await checkSourcesFreshness();
-    res.json({
-      success: true,
-      result: await safeCall(runContinental.runContinental),
-    });
+    res.json({ success: true, result: await safeCall(runContinental) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -81,9 +90,7 @@ app.post("/api/superforecast", async (req, res) => {
   try {
     const { lat, lon, country, region } = req.body;
     await checkSourcesFreshness();
-    res.json(
-      await safeCall(superForecast.runSuperForecast, { lat, lon, country, region })
-    );
+    res.json(await safeCall(runSuperForecast, { lat, lon, country, region }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -91,7 +98,7 @@ app.post("/api/superforecast", async (req, res) => {
 
 app.get("/api/forecast/:country", async (req, res) => {
   try {
-    res.json(await safeCall(forecastService.getForecast, req.params.country));
+    res.json(await safeCall(forecastService.getNationalForecast, req.params.country));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -186,6 +193,9 @@ app.get("/api/checkup", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+
+// ✅ Route Verify (IA checkup)
+app.use("/api/verify", verifyRouter);
 
 // Admin page
 app.get("/admin", (req, res) =>
