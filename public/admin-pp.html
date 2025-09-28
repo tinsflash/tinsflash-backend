@@ -1,123 +1,133 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Console Admin TINSFLASH</title>
+  <meta charset="UTF-8" />
+  <title>⚡ Console Admin – Centrale Nucléaire Météo</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #0d1117; color: #e6edf3; margin: 20px; }
-    .card { background: #161b22; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
-    h1,h2 { color: #58a6ff; }
-    .status { font-weight: bold; margin: 10px 0; }
-    ul { list-style: none; padding: 0; }
-    li { margin: 5px 0; }
-    pre { background: #0d1117; color: #7ee787; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #30363d; padding: 6px; }
-    th { background: #21262d; color: #58a6ff; }
-    tr:hover { background: #21262d; }
-    .country { cursor: pointer; color: #7ee787; }
-    .regions { display: none; background: #0d1117; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0e17;
+      color: #f0f0f0;
+      margin: 0; padding: 0;
+    }
+    header {
+      background: #1b2133;
+      padding: 15px;
+      text-align: center;
+    }
+    h1 { margin: 0; font-size: 20px; }
+    .container { padding: 20px; }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-run { background: #28a745; color: white; }
+    .btn-ai  { background: #007bff; color: white; }
+    pre {
+      background: #1e2639;
+      color: #e0e0e0;
+      padding: 10px;
+      border-radius: 5px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .status {
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 5px;
+      background: #1e2639;
+    }
+    .dot {
+      height: 12px; width: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .pending { background: orange; }
+    .ok { background: limegreen; }
+    .fail { background: red; }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  <header>
+    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  </header>
 
-  <div class="card">
-    <h2>Résumé Moteur</h2>
-    <div id="engineStatus" class="status">🟠 En attente</div>
-    <ul>
-      <li><b>Pays couverts :</b> <span id="countriesCount">0</span></li>
-      <li><b>Points calculés :</b> <span id="pointsCount">0</span></li>
-      <li><b>Points réussis :</b> <span id="successCount">0</span></li>
-    </ul>
-  </div>
+  <div class="container">
+    <button class="btn-run" onclick="launchSuperForecast()">🚀 Lancer le moteur complet</button>
+    <button class="btn-ai" onclick="launchAIOnly()">🤖 Lancer uniquement l’IA (optionnel)</button>
 
-  <div class="card">
-    <h2>Détail par pays</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Pays</th>
-          <th>Nb régions</th>
-        </tr>
-      </thead>
-      <tbody id="countriesTable"></tbody>
-    </table>
-  </div>
+    <h2>📊 Checkup</h2>
+    <div id="checkup"></div>
 
-  <div class="card">
-    <h2>Logs</h2>
-    <pre id="logs">Chargement…</pre>
+    <h2>📜 Logs</h2>
+    <pre id="logs">En attente…</pre>
+
+    <h2>⚠️ Alertes</h2>
+    <pre id="alerts">En attente…</pre>
   </div>
 
   <script>
-    async function refreshEngineStatus() {
-      try {
-        const res = await fetch("/api/engine-state");
-        const state = await res.json();
-
-        // === Statut global ===
-        const statusEl = document.getElementById("engineStatus");
-        const status = state?.checkup?.engineStatus || "PENDING";
-        if (status === "OK") statusEl.innerHTML = "🟢 OK";
-        else if (status === "FAIL") statusEl.innerHTML = "🔴 FAIL";
-        else statusEl.innerHTML = "🟠 En attente";
-
-        // === Résumé global ===
-        if (state?.zonesCoveredSummary) {
-          document.getElementById("countriesCount").innerText = state.zonesCoveredSummary.countries || 0;
-          document.getElementById("pointsCount").innerText = state.zonesCoveredSummary.points || 0;
-          document.getElementById("successCount").innerText = state.zonesCoveredSummary.success || 0;
-        }
-
-        // === Détail par pays ===
-        const tableBody = document.getElementById("countriesTable");
-        tableBody.innerHTML = "";
-        if (state?.zonesCovered) {
-          for (const [country, data] of Object.entries(state.zonesCovered)) {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-              <td class="country">${country}</td>
-              <td>${data.regions.length}</td>
-            `;
-            tr.addEventListener("click", () => {
-              let detailRow = tr.nextSibling;
-              if (detailRow && detailRow.classList?.contains("regions")) {
-                detailRow.style.display = detailRow.style.display === "none" ? "table-row" : "none";
-              } else {
-                detailRow = document.createElement("tr");
-                detailRow.className = "regions";
-                detailRow.style.display = "table-row";
-                detailRow.innerHTML = `
-                  <td colspan="2">
-                    <ul>
-                      ${data.regions.map(r => `<li><b>${r.region}</b> (lat:${r.lat}, lon:${r.lon})</li>`).join("")}
-                    </ul>
-                  </td>
-                `;
-                tr.parentNode.insertBefore(detailRow, tr.nextSibling);
-              }
-            });
-            tableBody.appendChild(tr);
-          }
-        }
-      } catch (err) {
-        console.error("Erreur refreshEngineStatus:", err);
-      }
-    }
-
     async function refreshLogs() {
-      try {
-        const res = await fetch("/api/logs");
-        const logs = await res.json();
-        document.getElementById("logs").innerText = logs.join("\n");
-      } catch (err) {
-        console.error("Erreur refreshLogs:", err);
-      }
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      document.getElementById("logs").textContent = 
+        (data || []).map(l => `[${l.ts}] ${l.msg}`).join("\n") || "Aucun log";
     }
 
-    setInterval(() => { refreshEngineStatus(); refreshLogs(); }, 5000);
-    refreshEngineStatus(); refreshLogs();
+    async function refreshCheckup() {
+      const res = await fetch("/api/checkup");
+      const data = await res.json();
+      let html = "";
+      for (const [key, val] of Object.entries(data)) {
+        let cls = "pending";
+        if (val === "OK") cls = "ok";
+        if (val === "FAIL") cls = "fail";
+        html += `<div class="status"><span class="dot ${cls}"></span>${key}: ${val}</div>`;
+      }
+      document.getElementById("checkup").innerHTML = html || "Pas de données.";
+    }
+
+    async function refreshAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      document.getElementById("alerts").textContent =
+        JSON.stringify(data.alerts || [], null, 2);
+    }
+
+    async function launchSuperForecast() {
+      document.getElementById("logs").textContent = "🚀 Lancement du SuperForecast Global…";
+      await fetch("/api/superforecast", { method: "POST" });
+      await refreshLogs();
+      await refreshCheckup();
+      await refreshAlerts();
+    }
+
+    async function launchAIOnly() {
+      document.getElementById("logs").textContent = "🤖 Lancement uniquement IA…";
+      await fetch("/api/chat/engine", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Analyse finale IA du moteur météo" })
+      });
+      await refreshLogs();
+    }
+
+    // Rafraîchissement auto toutes les 10s
+    setInterval(() => {
+      refreshLogs();
+      refreshCheckup();
+      refreshAlerts();
+    }, 10000);
+
+    // Premier chargement
+    refreshLogs();
+    refreshCheckup();
+    refreshAlerts();
   </script>
 </body>
 </html>
