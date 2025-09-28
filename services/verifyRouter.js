@@ -1,43 +1,42 @@
 // services/verifyRouter.js
 import express from "express";
-import { askAI } from "./aiService.js";
+import { verifyToken } from "../utils/tokenUtils.js"; // si tu utilises déjà une vérification JWT
 import { getEngineState } from "./engineState.js";
-import { getLogs } from "./adminLogs.js";
+import { askAIEngine } from "./chatService.js"; // IA moteur déjà dispo ici
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+// Vérification de token (accès sécurisé à la console admin)
+router.use((req, res, next) => {
+  try {
+    const token = req.headers["authorization"];
+    if (!token || !verifyToken(token)) {
+      return res.status(403).json({ success: false, error: "Accès refusé" });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Route : état du moteur météo
+router.get("/engine-state", async (req, res) => {
   try {
     const state = getEngineState();
-    const logs = getLogs().slice(0, 15);
-
-    const prompt = `
-Vérifie que le moteur TINSFLASH a correctement produit les résultats attendus :
-
-- Prévisions locales et nationales pour les zones couvertes
-- Alertes locales et nationales pour les zones couvertes
-- Alertes continentales pour les zones non couvertes
-
-Données moteur :
-- runTime: ${state.runTime}
-- zones couvertes OK: ${Object.keys(state.zonesCovered || {}).filter(z => state.zonesCovered[z])}
-- zones KO: ${Object.keys(state.zonesCovered || {}).filter(z => !state.zonesCovered[z])}
-- erreurs: ${JSON.stringify(state.errors)}
-- alertes: ${state.alertsList?.length || 0}
-- logs: ${logs.map(l => l.message).join(" | ")}
-
-Réponds uniquement par catégories claires :
-1/ Prévisions zones couvertes → Oui/Non + explication
-2/ Alertes zones couvertes → Oui/Non + explication
-3/ Alertes zones non couvertes → Oui/Non + explication
-Conclusion: ✅ Tout ok ou ⚠️ Problème détecté
-`;
-
-    const reply = await askAI(prompt);
-    res.json({ reply });
+    res.json({ success: true, state });
   } catch (err) {
-    console.error("❌ Verify-all error:", err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Route : chat IA moteur (console admin)
+router.post("/chat/engine", async (req, res) => {
+  try {
+    const { message } = req.body;
+    const reply = await askAIEngine(message || "");
+    res.json({ success: true, reply });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
