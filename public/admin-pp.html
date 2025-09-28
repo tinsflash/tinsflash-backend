@@ -10,16 +10,17 @@
     nav { background:#333; padding:10px; display:flex; flex-wrap:wrap; justify-content:space-around; }
     nav a { color:#fff; text-decoration:none; padding:8px; }
     nav a:hover { background:#555; border-radius:5px; }
-    section { padding:20px; }
-    button { padding:10px 20px; margin:10px 0; font-size:16px; cursor:pointer; }
+    section { padding:20px; display:none; }
+    section.active { display:block; }
+    button { padding:8px 15px; margin:5px; cursor:pointer; }
     #logs { background:#000; color:#0f0; padding:10px; height:200px; overflow:auto; font-family:monospace; }
-    .status-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:20px; }
+    .status-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
     .status { padding:10px; text-align:center; border-radius:5px; font-size:14px; }
     .green { background:#0a0; }
     .red { background:#a00; }
     .orange { background:#fa0; }
-    textarea { width:100%; height:100px; margin-top:10px; }
-    pre { background:#000; color:#0f0; padding:10px; overflow:auto; }
+    pre { background:#000; color:#0f0; padding:10px; overflow:auto; max-height:400px; }
+    details { margin:5px 0; }
     iframe { width:100%; height:500px; border:none; }
   </style>
 </head>
@@ -27,17 +28,17 @@
   <header>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</header>
 
   <nav>
-    <a href="#cockpit">Cockpit</a>
-    <a href="#alerts">Alertes</a>
-    <a href="#chat">Chat IA</a>
-    <a href="#radar">Radar</a>
-    <a href="#preview">Prévisualisation Index</a>
-    <a href="#news">Infos Météo Mondiales</a>
-    <a href="#users">Utilisateurs</a>
+    <a href="#cockpit" onclick="showPage('cockpit')">Cockpit</a>
+    <a href="#alerts" onclick="showPage('alerts')">Alertes</a>
+    <a href="#chat" onclick="showPage('chat')">Chat IA</a>
+    <a href="#radar" onclick="showPage('radar')">Radar</a>
+    <a href="#preview" onclick="showPage('preview')">Prévisualisation Index</a>
+    <a href="#news" onclick="showPage('news')">Infos Météo Mondiales</a>
+    <a href="#users" onclick="showPage('users')">Utilisateurs</a>
   </nav>
 
-  <!-- Cockpit principal -->
-  <section id="cockpit">
+  <!-- Cockpit -->
+  <section id="cockpit" class="active">
     <h2>🌍 Cockpit</h2>
     <button onclick="launchRun()">🚀 Lancer Run Global</button>
 
@@ -48,7 +49,9 @@
     <div id="logs">En attente…</div>
 
     <h3>📡 État du moteur</h3>
-    <pre id="engineState">Chargement…</pre>
+    <button onclick="exportEngineState()">📥 Export JSON</button>
+    <button onclick="copyEngineState()">📋 Copier JSON</button>
+    <div id="engineAccordion">Chargement…</div>
   </section>
 
   <!-- Alertes -->
@@ -60,7 +63,7 @@
   <!-- Chat IA -->
   <section id="chat">
     <h2>🤖 Chat IA (GPT-5)</h2>
-    <textarea id="prompt" placeholder="Posez une question à l’IA…"></textarea>
+    <textarea id="prompt" style="width:100%;height:100px;"></textarea>
     <button onclick="askIA()">Envoyer</button>
     <pre id="iaReply">Réponse ici…</pre>
   </section>
@@ -73,7 +76,7 @@
 
   <!-- Prévisualisation Index -->
   <section id="preview">
-    <h2>👁️ Prévisualisation Index Utilisateur</h2>
+    <h2>👁️ Prévisualisation Index</h2>
     <input type="text" id="previewLocation" placeholder="Ville, pays…" />
     <button onclick="previewIndex()">Voir Index</button>
     <pre id="previewBox">Résultat ici…</pre>
@@ -92,20 +95,25 @@
   </section>
 
   <script>
-    async function launchRun() {
-      log("▶️ Lancement Run Global…");
-      const res = await fetch("/api/run-global", { method: "POST" });
-      const data = await res.json();
-      log("✅ Run terminé");
-      updateCheckup();
-      loadAlerts();
-      loadEngineState();
+    function showPage(id) {
+      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
     }
 
     function log(msg) {
       const logsDiv = document.getElementById("logs");
       logsDiv.innerText += "\\n" + msg;
       logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+
+    async function launchRun() {
+      log("▶️ Lancement Run Global…");
+      const res = await fetch("/api/run-global", { method: "POST" });
+      const data = await res.json();
+      log("✅ Run terminé");
+      updateCheckup();
+      loadEngineState();
+      loadAlerts();
     }
 
     async function updateCheckup() {
@@ -124,7 +132,51 @@
     async function loadEngineState() {
       const res = await fetch("/api/engine-state");
       const state = await res.json();
-      document.getElementById("engineState").innerText = JSON.stringify(state,null,2);
+      renderAccordion(state);
+    }
+
+    function renderAccordion(data) {
+      const container = document.getElementById("engineAccordion");
+      container.innerHTML = "";
+      if (!data || !data.zonesCovered) {
+        container.innerText = "Pas de données";
+        return;
+      }
+      for (const [country, cdata] of Object.entries(data.zonesCovered)) {
+        const details = document.createElement("details");
+        const summary = document.createElement("summary");
+        summary.innerText = "🌍 " + country;
+        details.appendChild(summary);
+
+        for (const region of cdata.regions || []) {
+          const sub = document.createElement("details");
+          const sum = document.createElement("summary");
+          sum.innerText = "📍 " + region.region;
+          sub.appendChild(sum);
+          sub.innerHTML += "<pre>"+JSON.stringify(region,null,2)+"</pre>";
+          details.appendChild(sub);
+        }
+        container.appendChild(details);
+      }
+    }
+
+    async function exportEngineState() {
+      const res = await fetch("/api/engine-state");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "engine-state.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function copyEngineState() {
+      const res = await fetch("/api/engine-state");
+      const data = await res.json();
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      alert("📋 Copié dans le presse-papier !");
     }
 
     async function loadAlerts() {
@@ -135,10 +187,9 @@
 
     async function askIA() {
       const prompt = document.getElementById("prompt").value;
-      const res = await fetch("/api/textgen", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ prompt })
+      const res = await fetch("/api/chat", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ message: prompt })
       });
       const data = await res.json();
       document.getElementById("iaReply").innerText = data.reply || "❌ Pas de réponse";
@@ -152,21 +203,23 @@
     }
 
     async function loadNews() {
-      const res = await fetch("/api/news"); // à créer côté backend
+      const res = await fetch("/api/news");
       const data = await res.json();
-      document.getElementById("newsBox").innerText = JSON.stringify(data,null,2);
+      document.getElementById("newsBox").innerText = JSON.stringify(data.news,null,2);
     }
 
     async function loadUsers() {
-      const res = await fetch("/api/users"); // à créer côté backend
+      const res = await fetch("/api/users");
       const data = await res.json();
-      document.getElementById("usersBox").innerText = JSON.stringify(data,null,2);
+      document.getElementById("usersBox").innerText = JSON.stringify(data.users,null,2);
     }
 
     // Auto-refresh
     setInterval(updateCheckup, 15000);
     setInterval(loadAlerts, 30000);
     setInterval(loadEngineState, 60000);
+    setInterval(loadNews, 60000);
+    setInterval(loadUsers, 60000);
   </script>
 </body>
 </html>
