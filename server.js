@@ -23,13 +23,11 @@ if (process.env.MONGO_URI) {
     .catch((err) => console.error("❌ MongoDB error:", err));
 }
 
-// === Services (imports globaux) ===
-import { runGlobal } from "./services/runGlobal.js";
-import { runGlobalEurope } from "./services/runGlobalEurope.js";
-import { runGlobalUSA } from "./services/runGlobalUSA.js";
-import { runContinental } from "./services/runContinental.js";
-import { runSuperForecast } from "./services/superForecast.js";
-import forecastService from "./services/forecastService.js";
+// === Services ===
+import * as runGlobal from "./services/runGlobal.js";
+import * as runContinental from "./services/runContinental.js";
+import * as superForecast from "./services/superForecast.js";
+import * as forecastService from "./services/forecastService.js";
 import * as radarService from "./services/radarService.js";
 import * as podcastService from "./services/podcastService.js";
 import * as chatService from "./services/chatService.js";
@@ -37,7 +35,10 @@ import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
+
+// ✅ Nouveau : router vérification/IA moteur
 import verifyRouter from "./services/verifyRouter.js";
+app.use("/api/verify", verifyRouter);
 
 // Helper safeCall
 const safeCall = async (fn, ...args) =>
@@ -52,25 +53,7 @@ app.get("/", (req, res) =>
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
-    res.json({ success: true, result: await safeCall(runGlobal) });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.post("/api/run-global-europe", async (req, res) => {
-  try {
-    await checkSourcesFreshness();
-    res.json({ success: true, result: await safeCall(runGlobalEurope) });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.post("/api/run-global-usa", async (req, res) => {
-  try {
-    await checkSourcesFreshness();
-    res.json({ success: true, result: await safeCall(runGlobalUSA) });
+    res.json({ success: true, result: await safeCall(runGlobal.runGlobal) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -79,7 +62,10 @@ app.post("/api/run-global-usa", async (req, res) => {
 app.post("/api/run-continental", async (req, res) => {
   try {
     await checkSourcesFreshness();
-    res.json({ success: true, result: await safeCall(runContinental) });
+    res.json({
+      success: true,
+      result: await safeCall(runContinental.runContinental),
+    });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -90,7 +76,9 @@ app.post("/api/superforecast", async (req, res) => {
   try {
     const { lat, lon, country, region } = req.body;
     await checkSourcesFreshness();
-    res.json(await safeCall(runSuperForecast, { lat, lon, country, region }));
+    res.json(
+      await safeCall(superForecast.runSuperForecast, { lat, lon, country, region })
+    );
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -98,7 +86,7 @@ app.post("/api/superforecast", async (req, res) => {
 
 app.get("/api/forecast/:country", async (req, res) => {
   try {
-    res.json(await safeCall(forecastService.getNationalForecast, req.params.country));
+    res.json(await safeCall(forecastService.getForecast, req.params.country));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -175,7 +163,7 @@ app.get("/api/engine-state", async (req, res) => {
   res.json(await safeCall(engineStateService.getEngineState));
 });
 
-// ✅ Nouveau : route Sources
+// Sources
 app.get("/api/sources", async (req, res) => {
   try {
     res.json({ success: true, sources: await checkSourcesFreshness() });
@@ -184,7 +172,7 @@ app.get("/api/sources", async (req, res) => {
   }
 });
 
-// ✅ Nouveau : route Checkup
+// Checkup
 app.get("/api/checkup", async (req, res) => {
   try {
     const state = await safeCall(engineStateService.getEngineState);
@@ -193,9 +181,6 @@ app.get("/api/checkup", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-
-// ✅ Route Verify (IA checkup)
-app.use("/api/verify", verifyRouter);
 
 // Admin page
 app.get("/admin", (req, res) =>
