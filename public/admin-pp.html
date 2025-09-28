@@ -2,142 +2,260 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>⚡ Centrale Nucléaire Météo - Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Centrale Nucléaire Météo - Admin Cockpit</title>
   <style>
     body {
+      background: #0d1117;
+      color: #e6edf3;
       font-family: Arial, sans-serif;
-      background: #0b0e14;
-      color: #f0f0f0;
       margin: 0;
-      padding: 20px;
+      padding: 0;
     }
-    h1 { color: #4ec9b0; }
-    button {
-      background: #1f6feb;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      margin: 5px;
+    header {
+      background: #161b22;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #2ecc71;
+    }
+    .container {
+      padding: 1rem;
+      max-width: 900px;
+      margin: auto;
+    }
+    .hidden { display: none; }
+    .card {
+      background: #161b22;
       border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    }
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: #58a6ff;
+    }
+    button {
+      background: #238636;
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
+      font-size: 1rem;
     }
-    button:hover { background: #388bfd; }
-    .status-dot {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      margin-right: 8px;
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
     }
-    .orange { background: orange; }
-    .green { background: limegreen; }
-    .red { background: red; }
     #logs {
-      background: #111;
-      border: 1px solid #333;
-      padding: 10px;
-      margin-top: 15px;
-      height: 300px;
-      overflow-y: auto;
-      white-space: pre-wrap;
+      background: black;
+      color: #0f0;
       font-family: monospace;
-      font-size: 13px;
+      height: 200px;
+      overflow-y: auto;
+      padding: 0.5rem;
+      font-size: 0.85rem;
     }
-    #checkup {
-      margin-top: 15px;
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      padding: 0.3rem 0.5rem;
+      border-radius: 4px;
+      background: #21262d;
+    }
+    .status-indicator {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+    }
+    .green { background: #2ecc71; }
+    .orange { background: #f39c12; }
+    .red { background: #e74c3c; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #30363d;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      background: #21262d;
     }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo - Admin Cockpit</h1>
+  <header>⚡ Centrale Nucléaire Météo - Admin Cockpit</header>
 
-  <div>
-    <button onclick="runGlobal()">🌍 Run Global (Europe + USA)</button>
-    <button onclick="runContinental()">🌐 Run Continental</button>
-    <button onclick="superForecast()">⚡ SuperForecast (manuel)</button>
+  <div class="container">
+    <!-- Mot de passe -->
+    <div id="login-card" class="card">
+      <h2>🔒 Connexion requise</h2>
+      <input type="password" id="password" placeholder="Mot de passe" />
+      <button onclick="checkPassword()">Se connecter</button>
+      <p id="login-error" style="color:red;display:none;">❌ Mot de passe incorrect</p>
+    </div>
+
+    <!-- Console principale -->
+    <div id="console" class="hidden">
+      <!-- Run -->
+      <div class="card">
+        <h2>Lancer le RUN</h2>
+        <button id="runBtn" onclick="launchRun()">⚡ Lancer le RUN</button>
+      </div>
+
+      <!-- Logs -->
+      <div class="card">
+        <h2>Logs moteur</h2>
+        <div id="logs"></div>
+      </div>
+
+      <!-- Check-up -->
+      <div class="card">
+        <h2>Check-up Moteur</h2>
+        <div id="checkup" class="status-grid"></div>
+      </div>
+
+      <!-- Sources -->
+      <div class="card">
+        <h2>Sources météo</h2>
+        <table>
+          <thead>
+            <tr><th>Source</th><th>Statut</th></tr>
+          </thead>
+          <tbody id="sources"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
-
-  <div id="checkup">
-    <h2>État du moteur</h2>
-    <p><span class="status-dot orange" id="dot-models"></span> Modèles</p>
-    <p><span class="status-dot orange" id="dot-local"></span> Prévisions locales</p>
-    <p><span class="status-dot orange" id="dot-national"></span> Prévisions nationales</p>
-    <p><span class="status-dot orange" id="dot-ai"></span> IA / Alertes</p>
-    <p><span class="status-dot orange" id="dot-engine"></span> Status moteur</p>
-  </div>
-
-  <h2>Logs</h2>
-  <div id="logs">En attente…</div>
 
   <script>
-    async function runGlobal() {
-      addLog("🚀 Lancement du RUN GLOBAL (Europe + USA)...");
-      const res = await fetch("/api/run-global", { method: "POST" });
-      const data = await res.json();
-      addLog(JSON.stringify(data, null, 2));
-      refreshCheckup();
+    const PASSWORD = "202679";
+
+    function checkPassword() {
+      const input = document.getElementById("password").value;
+      if (input === PASSWORD) {
+        document.getElementById("login-card").style.display = "none";
+        document.getElementById("console").classList.remove("hidden");
+        startAutoRefresh();
+      } else {
+        document.getElementById("login-error").style.display = "block";
+      }
     }
 
-    async function runContinental() {
-      addLog("🌐 Lancement du RUN CONTINENTAL...");
-      const res = await fetch("/api/run-continental", { method: "POST" });
-      const data = await res.json();
-      addLog(JSON.stringify(data, null, 2));
-      refreshCheckup();
+    async function launchRun() {
+      const btn = document.getElementById("runBtn");
+      btn.disabled = true;
+      btn.innerText = "⏳ RUN en cours...";
+      try {
+        const res = await fetch("/api/run-global", { method: "POST" });
+        const data = await res.json();
+        addLog("RUN Global lancé ✅");
+        console.log(data);
+      } catch (err) {
+        addLog("❌ Erreur lancement RUN : " + err.message);
+      }
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerText = "⚡ Lancer le RUN";
+      }, 10000);
     }
 
-    async function superForecast() {
-      const lat = prompt("Latitude ?");
-      const lon = prompt("Longitude ?");
-      const country = prompt("Pays ?");
-      const region = prompt("Région ?");
-      addLog(`⚡ SuperForecast pour ${country} - ${region} (${lat},${lon})`);
-      const res = await fetch("/api/superforecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: parseFloat(lat), lon: parseFloat(lon), country, region })
-      });
-      const data = await res.json();
-      addLog(JSON.stringify(data, null, 2));
-      refreshCheckup();
-    }
-
-    async function refreshCheckup() {
-      const res = await fetch("/api/checkup");
-      const data = await res.json();
-
-      updateDot("dot-models", data.models);
-      updateDot("dot-local", data.localForecasts);
-      updateDot("dot-national", data.nationalForecasts);
-      updateDot("dot-ai", data.aiAlerts);
-      updateDot("dot-engine", data.engineStatus);
-    }
-
-    function updateDot(id, status) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.className = "status-dot " + 
-        (status === "OK" ? "green" : status === "FAIL" ? "red" : "orange");
-    }
-
-    async function refreshLogs() {
-      const res = await fetch("/api/logs");
-      const logs = await res.json();
-      document.getElementById("logs").innerText = logs.join("\n");
-    }
-
-    function addLog(msg) {
+    function addLog(text) {
       const logs = document.getElementById("logs");
-      logs.innerText += "\n" + msg;
+      logs.innerHTML += `<div>${new Date().toLocaleTimeString()} - ${text}</div>`;
       logs.scrollTop = logs.scrollHeight;
     }
 
-    // Auto-refresh
-    setInterval(refreshLogs, 5000);
-    setInterval(refreshCheckup, 7000);
+    async function refreshLogs() {
+      try {
+        const res = await fetch("/api/logs");
+        const data = await res.json();
+        const logs = document.getElementById("logs");
+        logs.innerHTML = "";
+        (data || []).forEach(l => {
+          logs.innerHTML += `<div>${l.timestamp} - ${l.message}</div>`;
+        });
+        logs.scrollTop = logs.scrollHeight;
+      } catch (err) {
+        addLog("❌ Erreur refresh logs : " + err.message);
+      }
+    }
 
-    refreshLogs();
-    refreshCheckup();
+    async function refreshCheckup() {
+      try {
+        const res = await fetch("/api/checkup");
+        const state = await res.json();
+        const container = document.getElementById("checkup");
+        container.innerHTML = "";
+        const items = {
+          models: "Modèles",
+          aiForecasts: "Analyse IA prévisions",
+          aiAlerts: "Analyse IA alertes",
+          localForecasts: "Prévisions locales",
+          nationalForecasts: "Prévisions nationales",
+          alertsLocal: "Alertes locales",
+          alertsNational: "Alertes nationales",
+          alertsContinental: "Alertes continentales",
+          alertsWorld: "Assemblage alertes mondiales",
+          openData: "Open Data non couvertes",
+          users: "Utilisateurs par zone",
+          engineStatus: "Moteur opérationnel"
+        };
+        for (const [key,label] of Object.entries(items)) {
+          const val = state[key] || "PENDING";
+          let color = "orange";
+          if (val === "OK") color = "green";
+          if (val === "FAIL") color = "red";
+          container.innerHTML += `
+            <div class="status-item">
+              <div class="status-indicator ${color}"></div>
+              ${label} : ${val}
+            </div>`;
+        }
+      } catch (err) {
+        addLog("❌ Erreur refresh checkup : " + err.message);
+      }
+    }
+
+    async function refreshSources() {
+      try {
+        const res = await fetch("/api/sources");
+        const data = await res.json();
+        const tbody = document.getElementById("sources");
+        tbody.innerHTML = "";
+        (data.sources || []).forEach(src => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${src.name}</td>
+              <td style="color:${src.status==='OK'?'#2ecc71':'#e74c3c'}">${src.status}</td>
+            </tr>`;
+        });
+      } catch (err) {
+        addLog("❌ Erreur refresh sources : " + err.message);
+      }
+    }
+
+    function startAutoRefresh() {
+      refreshLogs();
+      refreshCheckup();
+      refreshSources();
+      setInterval(refreshLogs, 10000);
+      setInterval(refreshCheckup, 10000);
+      setInterval(refreshSources, 30000);
+    }
   </script>
 </body>
 </html>
