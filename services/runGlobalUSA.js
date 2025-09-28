@@ -1,9 +1,9 @@
 // services/runGlobalUSA.js
-// ⚡ RUN GLOBAL USA — Couverture par État (avec sous-régions pour grands États)
-// Découpage fin : Nord/Sud/Est/Ouest + sites stratégiques (NASA, aéroports)
+// ⚡ RUN GLOBAL USA — Zones couvertes par État
+// Division fine : grandes villes, reliefs, côtes, régions stratégiques (NASA, ouragans, etc.)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export actuel
+import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
@@ -40,7 +40,6 @@ const USA_ZONES = {
     { lat: 43.16, lon: -77.61, region: "West - Rochester" },
     { lat: 42.89, lon: -78.88, region: "Buffalo - Great Lakes" }
   ],
-  // ⚡ États moyens → 1 ou 2 points
   Ohio: [{ lat: 39.96, lon: -82.99, region: "Columbus - Central" }],
   Illinois: [
     { lat: 41.88, lon: -87.62, region: "Chicago - North" },
@@ -63,7 +62,6 @@ const USA_ZONES = {
     { lat: 33.45, lon: -112.07, region: "Phoenix - Central" },
     { lat: 35.20, lon: -111.65, region: "Flagstaff - Highlands" }
   ],
-  // ⚡ Petits États → capitale uniquement
   Alabama: [{ lat: 32.36, lon: -86.30, region: "Montgomery" }],
   Arkansas: [{ lat: 34.75, lon: -92.29, region: "Little Rock" }],
   Connecticut: [{ lat: 41.77, lon: -72.67, region: "Hartford" }],
@@ -116,9 +114,14 @@ const USA_ZONES = {
 export async function runGlobalUSA() {
   const state = getEngineState();
   try {
-    addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA (États + sous-zones)…");
+    addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA (zones par État)…");
     state.runTime = new Date().toISOString();
-    state.checkup = { models: "PENDING", localForecasts: "PENDING", nationalForecasts: "PENDING", aiAlerts: "PENDING" };
+    state.checkup = {
+      models: "PENDING",
+      localForecasts: "PENDING",
+      nationalForecasts: "PENDING",
+      aiAlerts: "PENDING"
+    };
     saveEngineState(state);
 
     const byState = {};
@@ -130,38 +133,43 @@ export async function runGlobalUSA() {
       for (const z of zones) {
         try {
           const res = await runSuperForecastGlobal({
-            lat: z.lat, lon: z.lon, country: "USA", region: `${stateName} - ${z.region}`
+            lat: z.lat,
+            lon: z.lon,
+            country: "USA",
+            region: `${stateName} - ${z.region}`
           });
           byState[stateName].regions.push({ ...z, forecast: res?.forecast });
           successCount++;
           totalPoints++;
-          addEngineLog(`✅ USA - ${stateName} — ${z.region}`);
+          addEngineLog(`✅ ${stateName} — ${z.region}`);
         } catch (e) {
-          addEngineError(`❌ USA - ${stateName} — ${z.region}: ${e.message}`);
+          addEngineError(`❌ ${stateName} — ${z.region}: ${e.message}`);
           totalPoints++;
         }
       }
     }
 
     state.zonesCoveredUSA = byState;
-    state.zonesCoveredSummaryUSA = { states: Object.keys(byState).length, points: totalPoints, success: successCount };
+    state.zonesCoveredSummaryUSA = {
+      states: Object.keys(byState).length,
+      points: totalPoints,
+      success: successCount
+    };
     state.checkup.models = "OK";
     state.checkup.localForecasts = successCount > 0 ? "OK" : "FAIL";
-    state.checkup.nationalForecasts = Object.keys(byState).length > 0 ? "OK" : "FAIL";
+    state.checkup.nationalForecasts =
+      Object.keys(byState).length > 0 ? "OK" : "FAIL";
     saveEngineState(state);
 
     const alertsResult = await processAlerts();
-    state.checkup.aiAlerts = alertsResult?.error ? "FAIL" : "OK";
-    state.checkup.engineStatus = "OK";
-    saveEngineState(state);
+    state.checkup.aiAlerts = alertsResult?.status || "OK";
 
-    addEngineLog("✅ RUN GLOBAL USA terminé");
-    return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult || {} };
-  } catch (err) {
-    addEngineError(err.message || "Erreur inconnue RUN GLOBAL USA");
-    state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
-    addEngineLog("❌ RUN GLOBAL USA en échec");
-    return { error: err.message };
+    addEngineLog("✅ RUN GLOBAL USA terminé avec succès.");
+    return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult };
+  } catch (err) {
+    addEngineError("❌ Erreur RUN GLOBAL USA: " + err.message);
+    saveEngineState(state);
+    throw err;
   }
 }
