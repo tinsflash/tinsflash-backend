@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -24,7 +25,8 @@ if (process.env.MONGO_URI) {
 }
 
 // === Services (imports globaux) ===
-import * as runGlobal from "./services/runGlobal.js";
+import * as runGlobalEurope from "./services/runGlobalEurope.js";
+import * as runGlobalUSA from "./services/runGlobalUSA.js";
 import * as runContinental from "./services/runContinental.js";
 import * as superForecast from "./services/superForecast.js";
 import * as forecastService from "./services/forecastService.js";
@@ -49,7 +51,14 @@ app.get("/", (req, res) =>
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
-    res.json({ success: true, result: await safeCall(runGlobal.runGlobal) });
+
+    const europe = await safeCall(runGlobalEurope.runGlobalEurope);
+    const usa = await safeCall(runGlobalUSA.runGlobalUSA);
+
+    res.json({
+      success: true,
+      result: { europe, usa },
+    });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
