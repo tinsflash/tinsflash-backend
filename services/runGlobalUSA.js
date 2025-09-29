@@ -387,6 +387,7 @@ const USA_ZONES = {
 export async function runGlobalUSA() {
   const state = getEngineState();
   try {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA…");
     state.runTime = new Date().toISOString();
 
@@ -425,11 +426,14 @@ export async function runGlobalUSA() {
     const alertsResult = await processAlerts();
     state.checkup.aiAlerts = alertsResult?.status || "OK";
 
+    state.checkup.engineStatus = "OK";   // ✅ ajouté
     saveEngineState(state);
     addEngineLog("✅ RUN GLOBAL USA terminé avec succès.");
     return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult };
   } catch (err) {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineError("❌ Erreur RUN GLOBAL USA: " + err.message);
+    state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
     throw err;
   }
