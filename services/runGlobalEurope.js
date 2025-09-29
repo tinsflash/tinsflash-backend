@@ -315,4 +315,4 @@ async function runGlobalEurope() {
   }
 }
 
-module.exports = { runGlobalEurope };
+export { runGlobalEurope };
