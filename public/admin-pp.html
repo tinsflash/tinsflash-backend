@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <title>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</title>
   <meta name="robots" content="noindex,nofollow">
   <style>
     body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
@@ -11,18 +11,16 @@
     nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
     nav a:hover { text-decoration:underline; }
     .container { padding:20px; }
-    .btn { padding:10px 20px; cursor:pointer; border:none; border-radius:5px; font-weight:bold; }
+    .btn { padding:12px 20px; cursor:pointer; border:none; border-radius:6px; font-weight:bold; }
     .btnRun { background:#0af; color:#fff; }
-    .statusBox { padding:10px; margin:10px 0; border-radius:5px; font-weight:bold; }
-    .ok { background:green; color:#fff; }
-    .fail { background:red; color:#fff; }
-    .running { background:orange; color:#000; }
+    .statusBox { padding:12px; margin:15px 0; border-radius:6px; font-weight:bold; font-size:16px; text-align:center; }
+    .ok { background:#2e7d32; color:#fff; }
+    .fail { background:#c62828; color:#fff; }
+    .running { background:#f9a825; color:#000; }
     .checklist { margin-top:20px; }
-    .checklist div { padding:8px; margin:3px 0; border-radius:4px; }
-    .checklist .ok { background:#2e7d32; }
-    .checklist .fail { background:#c62828; }
-    .checklist .running { background:#f9a825; color:#000; }
-    .logs { background:#000; padding:10px; margin-top:20px; max-height:300px; overflow-y:auto; font-family:monospace; font-size:12px; }
+    .checklist div { padding:12px; margin:5px 0; border-radius:6px; font-weight:bold; }
+    .logs { background:#000; padding:10px; margin-top:20px; max-height:300px; overflow-y:auto; font-family:monospace; font-size:12px; color:#0f0; }
+    .toggleBtn { margin-top:10px; cursor:pointer; background:#333; color:#fff; border:none; padding:5px 10px; border-radius:5px; }
   </style>
 </head>
 <body>
@@ -35,47 +33,54 @@
 </script>
 
 <header>
-  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  <h1>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</h1>
   <nav>
     <a href="admin-pp.html">Console</a>
     <a href="admin-alerts.html">Alertes</a>
     <a href="admin-index.html">Vue Utilisateur</a>
     <a href="admin-chat.html">Chat IA</a>
     <a href="admin-radar.html">Radar + News</a>
+    <a href="admin-users.html">Utilisateurs</a>
   </nav>
 </header>
 
 <div class="container">
   <!-- Bouton RUN -->
-  <button class="btn btnRun" onclick="lancerRun()">🚀 Lancer RUN</button>
+  <button class="btn btnRun" onclick="lancerRun()">🚀 Lancer RUN Global</button>
   <div id="runStatus" class="statusBox">En attente…</div>
 
   <!-- Checklist moteur -->
-  <h2>📋 Checklist Moteur</h2>
+  <h2>📋 Checklist moteur</h2>
   <div class="checklist" id="checklist">
-    <div>1. Extraction modèles</div>
-    <div>2. RUNGLOBAL Europe</div>
-    <div>3. RUNGLOBAL USA</div>
-    <div>4. RUN Continentales</div>
-    <div>5. Mise sous fichier des extractions</div>
-    <div>6. Analyse IA (relief, climat, environnement)</div>
-    <div>7. Prévisions locales zones couvertes</div>
-    <div>8. Prévisions nationales zones couvertes</div>
-    <div>9. Alertes locales zones couvertes</div>
-    <div>10. Alertes nationales zones couvertes</div>
-    <div>11. Alertes continentales (zones non couvertes)</div>
-    <div>12. Assemblage alertes mondiales</div>
-    <div>13. Open Data prévisions zones non couvertes</div>
+    <div id="step1">1. Extraction modèles</div>
+    <div id="step2">2. RUNGLOBAL Europe</div>
+    <div id="step3">3. RUNGLOBAL USA</div>
+    <div id="step4">4. RUN Continentales</div>
+    <div id="step5">5. Mise sous fichier des extractions</div>
+    <div id="step6">6. Analyse IA (relief, climat, environnement)</div>
+    <div id="step7">7. Prévisions locales zones couvertes</div>
+    <div id="step8">8. Prévisions nationales zones couvertes</div>
+    <div id="step9">9. Alertes locales zones couvertes</div>
+    <div id="step10">10. Alertes nationales zones couvertes</div>
+    <div id="step11">11. Alertes continentales (zones non couvertes)</div>
+    <div id="step12">12. Assemblage alertes mondiales</div>
+    <div id="step13">13. Open Data prévisions zones non couvertes</div>
   </div>
 
-  <h3 id="moteurStatus">Moteur opérationnel : ⏳</h3>
+  <h3 id="moteurStatus" class="statusBox">Moteur opérationnel : ⏳</h3>
 
   <!-- Logs -->
   <h2>📜 Logs en direct</h2>
   <div class="logs" id="logs">[Logs en attente…]</div>
+  <button class="toggleBtn" onclick="toggleLogs()">Voir plus/moins</button>
 </div>
 
 <script>
+  function setStep(id, status) {
+    const el = document.getElementById(id);
+    el.className = status;
+  }
+
   async function lancerRun() {
     const statusBox = document.getElementById("runStatus");
     statusBox.innerHTML = "⏳ RUN en cours...";
@@ -100,26 +105,32 @@
         statusBox.innerHTML = "✅ RUN terminé avec succès";
         statusBox.className = "statusBox ok";
         document.getElementById("moteurStatus").innerHTML = "Moteur opérationnel : OK ✅";
+        document.getElementById("moteurStatus").className = "statusBox ok";
       } else {
         statusBox.innerHTML = "❌ RUN échec: " + (data.error || "Erreur inconnue");
         statusBox.className = "statusBox fail";
         document.getElementById("moteurStatus").innerHTML = "Moteur opérationnel : FAIL ❌";
+        document.getElementById("moteurStatus").className = "statusBox fail";
       }
     } catch (err) {
       statusBox.innerHTML = "❌ Erreur RUN: " + err.message;
       statusBox.className = "statusBox fail";
       document.getElementById("moteurStatus").innerHTML = "Moteur opérationnel : FAIL ❌";
+      document.getElementById("moteurStatus").className = "statusBox fail";
     }
   }
 
   // Logs SSE
+  let showAll = false;
+  function toggleLogs() { showAll = !showAll; }
+
   const logsBox = document.getElementById("logs");
   const evtSource = new EventSource("/api/logs/stream");
   evtSource.onmessage = function(event) {
     try {
       const logs = JSON.parse(event.data);
-      logsBox.innerHTML = logs
-        .slice(-50) // garder 50 derniers
+      const recent = showAll ? logs : logs.slice(-20); // garder 20 dernières par défaut
+      logsBox.innerHTML = recent
         .map(l => `[${new Date(l.timestamp).toLocaleTimeString()}] ${l.message}`)
         .join("<br>");
       logsBox.scrollTop = logsBox.scrollHeight;
