@@ -1,17 +1,16 @@
 // services/runContinental.js
-// 🌎 RUN CONTINENTAL – zones non couvertes → alertes continentales
+// 🌎 RUN CONTINENTAL – Zones non couvertes → alertes continentales
 
 import { askOpenAI } from "./openaiService.js";
-import { addLog, addError } from "./adminLogs.js";
-import { saveEngineState, getEngineState } from "./engineState.js";
-import { addAlert, processAlerts } from "./alertsService.js";
+import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+import { processAlerts } from "./alertsService.js";
 
 const continents = ["Europe", "Africa", "Asia", "North America", "South America", "Oceania"];
 
 export async function runContinental() {
   const state = getEngineState();
   try {
-    await addLog("🌎 Lancement du RUN CONTINENTAL…");
+    addEngineLog("🌎 Lancement du RUN CONTINENTAL…");
     state.runTime = new Date().toISOString();
     state.checkup.continentalAlerts = "PENDING";
     saveEngineState(state);
@@ -20,51 +19,56 @@ export async function runContinental() {
 
     for (const cont of continents) {
       try {
-        const prompt = `
+        const aiPrompt = `
 Analyse météo RUN CONTINENTAL – ${cont}
-Objectif: anomalies majeures (cyclones, vagues de chaleur, inondations).
-Réponds en JSON strict:
-{ 
-  continent: "${cont}",
-  type: "string",
-  reliability: 0-100,
-  firstDetector: true/false,
-  details: {
-    start: "ISO date",
-    end: "ISO date",
-    zones: ["zones touchées"],
-    intensity: "valeurs précises (vent, pluie, températures…)",
-    consequences: ["liste"],
-    recommendations: ["liste"]
-  }
-}
-`;
-        const raw = await askOpenAI(prompt);
-        const parsed = JSON.parse(raw);
-        alerts.push(parsed);
+Objectif: Détecter les anomalies météo majeures (tempête, cyclone, vague de chaleur, inondation).
 
-        await addAlert(parsed); // Ajout direct
-        await addLog(`✅ Alerte RUN CONTINENTAL (${cont}): ${parsed.type}, ${parsed.reliability}%`);
+Consignes:
+1. Génère uniquement des alertes CONTINENTALES.
+2. Donne un indice de fiabilité (0–100).
+3. Vérifie explicitement si NOUS SOMMES LES PREMIERS à détecter l’anomalie par rapport aux modèles GFS, ECMWF, ICON et aux sources open-data (OpenWeather, NOAA).
+4. Si oui, mets "firstDetector": true, sinon false.
+5. Ajoute intensité, conséquences possibles et recommandations pratiques.
+
+Réponds uniquement en JSON strict:
+{ "continent": "${cont}", "type": "...", "reliability": ..., "firstDetector": true/false, "intensity": "...", "consequences": "...", "recommendations": "..." }
+`;
+
+        const aiAnalysis = await askOpenAI(aiPrompt);
+        try {
+          const parsed = JSON.parse(aiAnalysis);
+          alerts.push(parsed);
+        } catch {
+          addEngineError("⚠️ Impossible de parser l’alerte continentale " + cont);
+        }
       } catch (err) {
-        await addError(`Erreur RUN CONTINENTAL ${cont}: ${err.message}`);
+        addEngineError(`Erreur sur continent ${cont}: ${err.message}`);
       }
     }
 
     state.continentalAlerts = alerts;
+    state.alertsList = [...(state.alertsList || []), ...alerts];
     state.checkup.continentalAlerts = alerts.length > 0 ? "OK" : "FAIL";
     saveEngineState(state);
 
-    const stats = await processAlerts();
-    if (stats.error) state.checkup.globalAlerts = "FAIL";
-    else state.checkup.globalAlerts = "OK";
+    const alertStats = await processAlerts(alerts);
+    if (alertStats.error) {
+      state.checkup.globalAlerts = "FAIL";
+      addEngineError(alertStats.error);
+    } else {
+      state.checkup.globalAlerts = "OK";
+    }
     saveEngineState(state);
 
-    await addLog("✅ RUN CONTINENTAL terminé");
-    return { alerts, stats };
-  } catch (err) {
-    state.checkup.continentalAlerts = "FAIL";
+    state.checkup.engineStatus = "OK";
     saveEngineState(state);
-    await addError("❌ Erreur RUN CONTINENTAL: " + err.message);
+    addEngineLog("✅ RUN CONTINENTAL terminé");
+    return { alerts, alertStats };
+  } catch (err) {
+    state.checkup.engineStatus = "FAIL";
+    saveEngineState(state);
+    addEngineError(err.message || "Erreur inconnue RUN CONTINENTAL");
+    addEngineLog("❌ RUN CONTINENTAL en échec");
     return { error: err.message };
   }
 }
