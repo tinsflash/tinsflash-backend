@@ -1,34 +1,23 @@
 // services/engineState.js
+// ⚙️ Gestion de l’état du moteur météo
 
 let engineState = {
   runTime: null,
-  zonesCovered: {},
-  sources: [],
-  alertsList: [],
-  errors: [],
-  logs: [],
+  status: "IDLE", // IDLE | RUNNING | OK | FAIL
   checkup: {
-    models: "PENDING",             // 🟠 en attente
-    sources: "PENDING",
-    aiForecast: "PENDING",
-    aiAlerts: "PENDING",
-    localForecasts: "PENDING",
-    nationalForecasts: "PENDING",
-    localAlerts: "PENDING",
-    nationalAlerts: "PENDING",
-    continentalAlerts: "PENDING",
+    models: "PENDING",
+    europe: "PENDING",
+    usa: "PENDING",
     globalAlerts: "PENDING",
-    openDataFallback: "PENDING",
-    engineStatus: "PENDING"
+    continentalAlerts: "PENDING",
+    engineStatus: "PENDING",
   }
 };
 
-// === Exports (inchangés) ===
-export function getEngineState() { return engineState; }
-export function saveEngineState(newState) { engineState = newState; }
-export function addEngineLog(msg) {
-  engineState.logs.push({ ts: new Date().toISOString(), msg });
+export async function getEngineState() {
+  return engineState;
 }
-export function addEngineError(err) {
-  engineState.errors.push({ ts: new Date().toISOString(), error: err });
+
+export async function saveEngineState(newState) {
+  engineState = { ...engineState, ...newState };
 }
