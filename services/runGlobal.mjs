@@ -1,8 +1,8 @@
-// services/runGlobal.js
+// services/runGlobal.mjs
 // ⚡ Centrale nucléaire météo — Coordination globale (Europe / USA / All)
 
-import { runGlobalEurope } from "./runGlobalEurope.js";
-import { runGlobalUSA } from "./runGlobalUSA.js";
+import { runGlobalEurope } from "./runGlobalEurope.mjs";
+import { runGlobalUSA } from "./runGlobalUSA.mjs";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
 async function runGlobal(zone = "Europe") {
