@@ -3,185 +3,189 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tinsflash - Les prévisions et alertes les plus fiables</title>
+  <title>Tinsflash – Prévisions et alertes météo</title>
+  <meta name="description" content="Tinsflash, la centrale nucléaire météorologique. Les prévisions et alertes les plus fiables au monde." />
   <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="robots" content="index, follow" />
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8204947691352732"
-    crossorigin="anonymous"></script>
+     crossorigin="anonymous"></script>
 </head>
-<body class="bg-gray-900 text-white font-sans">
+<body class="bg-gray-100 text-gray-900">
 
-  <!-- HEADER avec vidéo -->
-  <header class="relative w-full h-[300px] md:h-[450px] overflow-hidden">
-    <video id="introVideo" class="w-full h-full object-cover" autoplay muted loop>
+  <!-- Intro vidéo -->
+  <section class="relative">
+    <video autoplay muted loop playsinline id="introVideo" class="w-full h-[300px] object-cover">
       <source src="intro.mp4" type="video/mp4" />
-      Votre navigateur ne supporte pas la vidéo.
     </video>
-    <button id="toggleSound" class="absolute bottom-4 right-4 bg-black/60 px-4 py-2 rounded text-sm">
-      🔇 Son OFF
+    <button id="toggleSound"
+      class="absolute top-4 right-4 bg-black/60 text-white px-4 py-2 rounded">
+      🔇 Son
     </button>
-    <h1 class="absolute top-6 left-6 text-3xl md:text-5xl font-bold drop-shadow-lg">
-      Tinsflash<br><span class="text-blue-400">Les prévisions et alertes les plus fiables</span>
-    </h1>
-  </header>
+    <div class="absolute bottom-4 left-4 text-white text-2xl font-bold drop-shadow-lg">
+      Tinsflash, les prévisions et alertes les plus fiables
+    </div>
+  </section>
 
-  <!-- Bandeau pub -->
-  <div class="w-full bg-gray-800 text-center py-2">
+  <!-- Publicité -->
+  <section class="p-4 text-center">
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-client="ca-pub-8204947691352732"
          data-ad-slot="1234567890"
          data-ad-format="auto"></ins>
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-  </div>
-
-  <!-- Local Forecast -->
-  <section class="p-6">
-    <h2 class="text-2xl font-bold mb-4">Prévisions locales</h2>
-    <div id="localForecast" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-    <p id="localForecastText" class="mt-4 text-gray-300"></p>
   </section>
 
-  <!-- National Forecast -->
-  <section class="p-6 bg-gray-800">
-    <h2 class="text-2xl font-bold mb-4">Prévisions nationales / État</h2>
+  <!-- Prévisions locales -->
+  <section class="p-6 bg-white shadow mb-6">
+    <h2 class="text-2xl font-bold mb-4">Prévisions locales</h2>
+    <div id="localForecast" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+    <p id="localForecastText" class="mt-4 text-gray-700 italic"></p>
+  </section>
+
+  <!-- Prévisions nationales -->
+  <section class="p-6 bg-gray-50 shadow mb-6">
+    <h2 class="text-2xl font-bold mb-4">Prévisions nationales</h2>
     <div id="nationalForecast" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-    <p id="nationalForecastText" class="mt-4 text-gray-300"></p>
+    <p id="nationalForecastText" class="mt-4 text-gray-700 italic"></p>
   </section>
 
   <!-- Alertes -->
-  <section class="p-6">
+  <section class="p-6 bg-white shadow mb-6">
     <h2 class="text-2xl font-bold mb-4">Alertes météo</h2>
     <div id="alerts" class="space-y-2"></div>
   </section>
 
   <!-- Radar -->
-  <section class="p-6 bg-gray-800">
-    <h2 class="text-2xl font-bold mb-4">Radar météo</h2>
-    <iframe src="/api/radar/global" class="w-full h-[400px] bg-black rounded"></iframe>
+  <section class="p-6 bg-gray-50 shadow mb-6">
+    <h2 class="text-2xl font-bold mb-4">Radar en direct</h2>
+    <div id="radar" class="w-full h-[500px] bg-black"></div>
   </section>
 
-  <!-- Publicité milieu -->
-  <div class="w-full text-center py-4">
+  <!-- Bandeau pub bas -->
+  <section class="p-4 text-center">
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-client="ca-pub-8204947691352732"
-         data-ad-slot="0987654321"
+         data-ad-slot="9876543210"
          data-ad-format="auto"></ins>
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-  </div>
-
-  <!-- Conversion Premium -->
-  <section class="p-6 text-center">
-    <h2 class="text-2xl font-bold mb-4">Passez à Premium, Pro ou Pro+</h2>
-    <p class="mb-4 text-gray-300">Accédez aux prévisions professionnelles, au radar avancé et aux alertes ultra-précises.</p>
-    <a href="/premium" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold">Découvrir Premium</a>
   </section>
 
   <!-- Footer -->
-  <footer class="bg-black py-4 text-center text-sm text-gray-400">
+  <footer class="bg-black text-white text-center py-4 text-sm">
     © Tinsflash system J.E.A.N. by Pydaris – reproduction interdite
   </footer>
 
   <!-- Scripts -->
   <script>
-    // Gestion vidéo intro
-    const video = document.getElementById('introVideo');
-    const toggleBtn = document.getElementById('toggleSound');
-    toggleBtn.addEventListener('click', () => {
+    // 🎵 Bouton son vidéo
+    const video = document.getElementById("introVideo");
+    const btn = document.getElementById("toggleSound");
+    btn.onclick = () => {
       video.muted = !video.muted;
-      toggleBtn.textContent = video.muted ? "🔇 Son OFF" : "🔊 Son ON";
-    });
+      btn.textContent = video.muted ? "🔇 Son" : "🔊 Muet";
+    };
 
-    // Détection langue utilisateur
-    let userLang = navigator.language.startsWith("fr") ? "fr" : "en";
-
-    // Géolocalisation utilisateur
+    // 🌍 Localisation auto ou saisie manuelle
     function getLocation() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(fetchForecast, askAddress);
-      } else {
-        askAddress();
-      }
-    }
-
-    // Si GPS refusé → encodage adresse
-    function askAddress() {
-      const addr = prompt(userLang === "fr" ? "Entrez votre adresse pour obtenir les prévisions :" : "Enter your address for forecasts:");
-      if (addr) {
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.length > 0) {
-              fetchForecast({ coords: { latitude: data[0].lat, longitude: data[0].lon }});
+      return new Promise((resolve) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+            () => {
+              const addr = prompt("Entrez votre adresse ou ville :");
+              resolve({ address: addr });
             }
-          });
-      }
-    }
-
-    // Fetch Forecast depuis backend
-    function fetchForecast(position) {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-
-      // Local
-      fetch("/api/superforecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat, lon, country: "LOCAL", region: "user" })
-      })
-      .then(res => res.json())
-      .then(data => renderForecast("localForecast", "localForecastText", data));
-
-      // National
-      fetch("/api/superforecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat, lon, country: "NATIONAL", region: "user" })
-      })
-      .then(res => res.json())
-      .then(data => renderForecast("nationalForecast", "nationalForecastText", data));
-
-      // Alertes
-      fetch("/api/alerts")
-        .then(res => res.json())
-        .then(data => renderAlerts(data.alerts || []));
-    }
-
-    // Render forecast cards
-    function renderForecast(containerId, textId, data) {
-      const container = document.getElementById(containerId);
-      const text = document.getElementById(textId);
-      container.innerHTML = "";
-      if (data?.forecast?.days) {
-        data.forecast.days.forEach(day => {
-          const div = document.createElement("div");
-          div.className = "p-4 bg-gray-700 rounded text-center";
-          div.innerHTML = `
-            <div class="text-lg font-bold">${day.date}</div>
-            <div class="text-4xl">${day.icon || "☀️"}</div>
-            <div>${day.temp_min}° / ${day.temp_max}°</div>
-          `;
-          container.appendChild(div);
-        });
-        text.textContent = data.forecast.summary || "";
-      }
-    }
-
-    // Render alerts
-    function renderAlerts(alerts) {
-      const container = document.getElementById("alerts");
-      container.innerHTML = "";
-      alerts.forEach(alert => {
-        const div = document.createElement("div");
-        div.className = `p-3 rounded ${alert.reliability > 80 ? "bg-red-600" : "bg-yellow-500"}`;
-        div.textContent = `${alert.type} (${alert.reliability}%) - ${alert.continent || alert.country || ""}`;
-        container.appendChild(div);
+          );
+        } else {
+          const addr = prompt("Entrez votre adresse ou ville :");
+          resolve({ address: addr });
+        }
       });
     }
 
-    // Lancement au chargement
-    getLocation();
+    // 📡 Charger prévisions
+    async function loadForecasts() {
+      const loc = await getLocation();
+      const body = loc.address ? { address: loc.address } : { lat: loc.lat, lon: loc.lon };
+
+      // Local
+      const localRes = await fetch("/api/superforecast", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, region: "local" })
+      });
+      const localData = await localRes.json();
+      renderForecast(localData, "localForecast", "localForecastText");
+
+      // National
+      const natRes = await fetch("/api/superforecast", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, region: "national" })
+      });
+      const natData = await natRes.json();
+      renderForecast(natData, "nationalForecast", "nationalForecastText");
+    }
+
+    function renderForecast(data, gridId, textId) {
+      const grid = document.getElementById(gridId);
+      grid.innerHTML = "";
+      if (data?.days) {
+        data.days.forEach(day => {
+          const div = document.createElement("div");
+          div.className = "p-3 bg-gray-100 rounded text-center shadow";
+          div.innerHTML = `
+            <div class="text-lg font-bold">${day.date}</div>
+            <div>${day.icon || "☀️"}</div>
+            <div>${day.temp_min}°C / ${day.temp_max}°C</div>
+          `;
+          grid.appendChild(div);
+        });
+      }
+      document.getElementById(textId).textContent = data?.summary || "";
+    }
+
+    // ⚠️ Charger alertes
+    async function loadAlerts() {
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      const box = document.getElementById("alerts");
+      box.innerHTML = "";
+      (data.alerts || []).forEach(alert => {
+        const div = document.createElement("div");
+        div.className = `p-3 rounded ${alert.reliability > 80 ? "bg-red-600 text-white" : "bg-yellow-400"}`;
+        div.textContent = `${alert.type} – ${alert.reliability}% (${alert.country || alert.continent})`;
+        box.appendChild(div);
+      });
+    }
+
+    // 🌦 Charger radar
+    async function loadRadar() {
+      try {
+        const res = await fetch("/api/radar/global");
+        const data = await res.json();
+        if (data.success && data.radar && data.radar.html) {
+          document.getElementById("radar").innerHTML = data.radar.html;
+        } else {
+          document.getElementById("radar").innerHTML = "<p class='text-red-500'>❌ Radar indisponible</p>";
+        }
+      } catch {
+        document.getElementById("radar").innerHTML = "<p class='text-red-500'>⚠️ Erreur de chargement radar</p>";
+      }
+    }
+
+    // 🌐 Multi-langues auto
+    const userLang = navigator.language || navigator.userLanguage;
+    if (userLang.startsWith("en")) document.documentElement.lang = "en";
+    if (userLang.startsWith("de")) document.documentElement.lang = "de";
+    if (userLang.startsWith("es")) document.documentElement.lang = "es";
+
+    // Initial load
+    loadForecasts();
+    loadAlerts();
+    loadRadar();
+    setInterval(loadAlerts, 60000); // refresh toutes les minutes
   </script>
 </body>
 </html>
