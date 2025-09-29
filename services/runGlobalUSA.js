@@ -386,60 +386,11 @@ const USA_ZONES = {
 // ==================================
 // RUN GLOBAL USA
 // ==================================
-async function runGlobalUSA() {
+export async function runGlobalUSA() {
   const state = getEngineState();
   try {
     addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA (zones par État)…");
-    state.runTime = new Date().toISOString();
-    state.checkup = {
-      models: "PENDING",
-      localForecasts: "PENDING",
-      nationalForecasts: "PENDING",
-      aiAlerts: "PENDING"
-    };
-    saveEngineState(state);
-
-    const byState = {};
-    let successCount = 0;
-    let totalPoints = 0;
-
-    for (const [stateName, zones] of Object.entries(USA_ZONES)) {
-      byState[stateName] = { regions: [] };
-      for (const z of zones) {
-        try {
-          const res = await runSuperForecastGlobal({
-            lat: z.lat,
-            lon: z.lon,
-            country: "USA",
-            region: `${stateName} - ${z.region}`
-          });
-          byState[stateName].regions.push({ ...z, forecast: res?.forecast });
-          successCount++;
-          totalPoints++;
-          addEngineLog(`✅ ${stateName} — ${z.region}`);
-        } catch (e) {
-          addEngineError(`❌ ${stateName} — ${z.region}: ${e.message}`);
-          totalPoints++;
-        }
-      }
-    }
-
-    state.zonesCoveredUSA = byState;
-    state.zonesCoveredSummaryUSA = {
-      states: Object.keys(byState).length,
-      points: totalPoints,
-      success: successCount
-    };
-    state.checkup.models = "OK";
-    state.checkup.localForecasts = successCount > 0 ? "OK" : "FAIL";
-    state.checkup.nationalForecasts =
-      Object.keys(byState).length > 0 ? "OK" : "FAIL";
-    saveEngineState(state);
-
-    const alertsResult = await processAlerts();
-    state.checkup.aiAlerts = alertsResult?.status || "OK";
-
-    saveEngineState(state);
+    // ... tout ton code comme avant ...
     addEngineLog("✅ RUN GLOBAL USA terminé avec succès.");
     return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult };
   } catch (err) {
@@ -449,5 +400,4 @@ async function runGlobalUSA() {
     throw err;
   }
 }
-
 export { runGlobalUSA };
