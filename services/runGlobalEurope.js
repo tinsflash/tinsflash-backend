@@ -252,7 +252,11 @@ const EUROPE_ZONES = {
 // ==================================
 // RUN GLOBAL EUROPE
 // ==================================
-export async function runGlobalEurope() {
+async function runGlobalEurope() {
+   ...
+}
+
+module.exports = { runGlobalEurope };
   const state = getEngineState();
   try {
     addEngineLog("🌍 Démarrage du RUN GLOBAL EUROPE (zones couvertes complètes)…");
