@@ -1,4 +1,4 @@
-// services/runGlobalUSA.mjs
+// services/runGlobalUSA.js
 // ⚡ RUN GLOBAL USA — Zones couvertes (USA États par États)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
