@@ -252,14 +252,13 @@ const EUROPE_ZONES = {
 export async function runGlobalEurope() {
   const state = getEngineState();
   try {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineLog("🌍 Démarrage du RUN GLOBAL EUROPE…");
     state.runTime = new Date().toISOString();
-    state.checkup = {
-      models: "PENDING",
-      localForecasts: "PENDING",
-      nationalForecasts: "PENDING",
-      aiAlerts: "PENDING"
-    };
+    state.checkup.models = "PENDING";
+    state.checkup.localForecasts = "PENDING";
+    state.checkup.nationalForecasts = "PENDING";
+    state.checkup.aiAlerts = "PENDING";
     saveEngineState(state);
 
     const byCountry = {};
@@ -304,7 +303,9 @@ export async function runGlobalEurope() {
     addEngineLog("✅ RUN GLOBAL EUROPE terminé avec succès.");
     return { summary: state.zonesCoveredSummaryEurope, alerts: alertsResult };
   } catch (err) {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
+    state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
     throw err;
   }
