@@ -1,55 +1,40 @@
 // services/engineState.js
-import EngineState from "../models/EngineState.js";
+import EngineState from "./EngineState.js"; // ✅ On reste dans /services/
 
+// Récupérer l'état du moteur
 export async function getEngineState() {
-  try {
-    let state = await EngineState.findOne();
-    if (!state) {
-      state = new EngineState({
-        status: "idle",
-        lastRun: null,
-        checkup: {},
-        errors: [],
-      });
-      await state.save();
-    }
-    return state;
-  } catch (err) {
-    console.error("Erreur getEngineState:", err);
-    return null;
-  }
-}
-
-export async function saveEngineState(update) {
-  try {
-    let state = await EngineState.findOne();
-    if (!state) {
-      state = new EngineState(update);
-    } else {
-      Object.assign(state, update, { lastRun: new Date() });
-    }
+  let state = await EngineState.findOne();
+  if (!state) {
+    state = new EngineState({ status: "idle", checkup: {}, errors: [] });
     await state.save();
-    return state;
-  } catch (err) {
-    console.error("Erreur saveEngineState:", err);
-    return null;
   }
+  return state;
 }
 
+// Sauvegarder l'état du moteur
+export async function saveEngineState(newState) {
+  let state = await EngineState.findOne();
+  if (!state) {
+    state = new EngineState(newState);
+  } else {
+    state.set(newState);
+  }
+  await state.save();
+  return state;
+}
+
+// Ajouter un log d'erreur
 export async function addEngineError(message) {
-  try {
-    let state = await EngineState.findOne();
-    if (!state) {
-      state = new EngineState({
-        status: "idle",
-        lastRun: null,
-        checkup: {},
-        errors: [],
-      });
-    }
-    state.errors.push({ message, timestamp: new Date() });
-    await state.save();
-  } catch (err) {
-    console.error("Erreur addEngineError:", err);
-  }
+  const state = await getEngineState();
+  state.errors.push({ message, timestamp: new Date() });
+  state.status = "fail";
+  await state.save();
+}
+
+// Ajouter un log standard
+export async function addEngineLog(message) {
+  const state = await getEngineState();
+  if (!state.logs) state.logs = [];
+  state.logs.push({ message, timestamp: new Date() });
+  await state.save();
 }
