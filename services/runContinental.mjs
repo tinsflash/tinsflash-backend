@@ -7,7 +7,7 @@ import { processAlerts } from "./alertsService.js";
 
 const continents = ["Europe", "Africa", "Asia", "North America", "South America", "Oceania"];
 
-export async function runContinental() {
+async function runContinental() {
   const state = getEngineState();
   try {
     addEngineLog("🌎 Lancement du RUN CONTINENTAL…");
@@ -66,3 +66,5 @@ Réponds en JSON: { continent, type, reliability, firstDetector }
     return { error: err.message };
   }
 }
+
+export { runContinental };
