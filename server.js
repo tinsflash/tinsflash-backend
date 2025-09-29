@@ -25,8 +25,8 @@ if (process.env.MONGO_URI) {
 }
 
 // === Services ===
-import { runGlobal } from "./services/runGlobal.mjs";
-import * as runContinental from "./services/runContinental.mjs";
+import { runGlobal } from "./services/runGlobal.js";
+import * as runContinental from "./services/runContinental.js";
 import * as superForecast from "./services/superForecast.js";
 import * as forecastService from "./services/forecastService.js";
 import * as radarService from "./services/radarService.js";
