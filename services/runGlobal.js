@@ -10,6 +10,7 @@ import { runGlobalUSA } from "./runGlobalUSA.js";
 export async function runGlobal(zone = "Europe") {
   const state = getEngineState();
   try {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineLog(`🌍 Lancement du RUN GLOBAL (${zone})…`);
     state.runTime = new Date().toISOString();
     state.checkup.globalRun = "PENDING";
@@ -87,6 +88,7 @@ Réponds en JSON strict:
     addEngineLog("✅ RUN GLOBAL terminé");
     return { alerts, alertStats };
   } catch (err) {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
     addEngineError(err.message || "Erreur inconnue RUN GLOBAL");
