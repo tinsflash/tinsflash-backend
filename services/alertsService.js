@@ -9,17 +9,17 @@ import { alertThresholds } from "../config/alertThresholds.js";
  * @param {Object} data - infos complémentaires (zone, intensité, conséquences…)
  * @param {Boolean} isFirstDetector - vrai si on est les premiers à l’avoir détectée
  */
-export async function processAlert(type, reliability, data, isFirstDetector = false) {
+export async function processAlerts(type, reliability, data, isFirstDetector = false) {
   const thresholds = alertThresholds[type];
   if (!thresholds) return null;
 
   let category = "ignored";
 
-  // ≥ 90 % → publication automatique (primeur ou non)
+  // ≥ publication threshold → publication automatique (primeur ou non)
   if (reliability >= thresholds.publication) {
     category = "auto-published";
   }
-  // entre 70 et 90 % → à valider
+  // entre primeur et publication → à valider
   else if (reliability >= thresholds.primeur) {
     category = isFirstDetector ? "primeur" : "to-validate";
   }
