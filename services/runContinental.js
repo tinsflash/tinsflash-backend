@@ -10,6 +10,7 @@ const continents = ["Europe", "Africa", "Asia", "North America", "South America"
 export async function runContinental() {
   const state = getEngineState();
   try {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineLog("🌎 Lancement du RUN CONTINENTAL…");
     state.runTime = new Date().toISOString();
     state.checkup.continentalAlerts = "PENDING";
@@ -65,6 +66,7 @@ Réponds uniquement en JSON strict:
     addEngineLog("✅ RUN CONTINENTAL terminé");
     return { alerts, alertStats };
   } catch (err) {
+    state.checkup = state.checkup || {};   // 🔒 Sécurité
     state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
     addEngineError(err.message || "Erreur inconnue RUN CONTINENTAL");
