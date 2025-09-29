@@ -1,98 +1,142 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>⚡ Centrale Nucléaire Météo – Admin</title>
-  <style>
-    body {
-      background: #0a0f1c;
-      color: #e0e6f1;
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
-      padding: 1rem;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #00eaff;
-    }
-    main { padding: 1rem; }
-    button {
-      background: #00eaff;
-      color: #0a0f1c;
-      border: none;
-      padding: 0.7rem 1.2rem;
-      margin: 0.3rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-    button:hover { background: #1b9aaa; color: #fff; }
-    #run-output, #logs {
-      background: #111827;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-      max-height: 400px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      font-size: 0.9rem;
-    }
-    h2 { color: #00eaff; margin-top: 2rem; }
-  </style>
+  <meta charset="UTF-8">
+  <title>🚀 Console Admin - Centrale Nucléaire Météo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-  <header>⚡ Centrale Nucléaire Météo – Cockpit NASA</header>
-  <main>
-    <section>
-      <h2>🌍 Lancer le moteur</h2>
-      <button onclick="runGlobal('Europe')">🌍 Run Europe</button>
-      <button onclick="runGlobal('USA')">🇺🇸 Run USA</button>
-      <button onclick="runGlobal('All')">🌐 Run All</button>
-      <div id="run-output">Résultats des runs affichés ici…</div>
+<body class="bg-gray-900 text-white">
+
+  <!-- HEADER -->
+  <header class="p-6 bg-gradient-to-r from-blue-900 to-purple-800 shadow-xl flex justify-between items-center">
+    <h1 class="text-3xl font-bold">⚡ Centrale Nucléaire Météo — Console Admin</h1>
+    <button onclick="triggerRun('All')" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold shadow">
+      🚀 Lancer RUN GLOBAL
+    </button>
+  </header>
+
+  <!-- NAVIGATION -->
+  <nav class="bg-gray-800 p-4 flex space-x-4 text-sm">
+    <a href="/admin" class="hover:underline">Cockpit</a>
+    <a href="/admin-alerts" class="hover:underline">Alertes</a>
+    <a href="/admin-radar" class="hover:underline">Radar</a>
+    <a href="/admin-chat" class="hover:underline">Chat IA</a>
+    <a href="/admin-index" class="hover:underline">Prévisualisation Index</a>
+    <a href="/admin-infos" class="hover:underline">Actualités météo/climat</a>
+    <a href="/admin-users" class="hover:underline">Utilisateurs</a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="p-6 space-y-8">
+
+    <!-- Cockpit -->
+    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <h2 class="text-2xl font-bold mb-4">🛰️ Cockpit moteur</h2>
+      <div id="engineState" class="text-sm font-mono bg-black p-4 rounded-lg overflow-auto h-64"></div>
+      <div class="mt-4 flex space-x-2">
+        <button onclick="triggerRun('Europe')" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded">Run Europe</button>
+        <button onclick="triggerRun('USA')" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded">Run USA</button>
+        <button onclick="triggerRun('All')" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded">Run Global (All)</button>
+      </div>
     </section>
 
-    <section>
-      <h2>📡 Logs en temps réel</h2>
-      <div id="logs">En attente des logs...</div>
+    <!-- Logs -->
+    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <h2 class="text-2xl font-bold mb-4">📜 Logs en temps réel</h2>
+      <div id="logs" class="text-xs font-mono bg-black p-4 rounded-lg overflow-y-auto h-64"></div>
     </section>
+
+    <!-- Sources -->
+    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <h2 class="text-2xl font-bold mb-4">📡 Sources météo</h2>
+      <pre id="sources" class="text-xs bg-black p-4 rounded-lg overflow-x-auto"></pre>
+    </section>
+
+    <!-- Alertes -->
+    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <h2 class="text-2xl font-bold mb-4">🚨 Alertes actives</h2>
+      <div id="alerts" class="text-sm bg-black p-4 rounded-lg overflow-auto"></div>
+    </section>
+
+    <!-- Graph Checkup -->
+    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <h2 class="text-2xl font-bold mb-4">📊 Checkup moteur</h2>
+      <canvas id="checkupChart" height="100"></canvas>
+    </section>
+
   </main>
 
-  <script>
-    // === Lancer un run global
-    async function runGlobal(zone) {
-      document.getElementById("run-output").textContent = "⏳ Exécution en cours...";
-      try {
-        const res = await fetch("/api/run-global", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ zone })
-        });
-        const data = await res.json();
-        document.getElementById("run-output").textContent =
-          JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("run-output").textContent =
-          "❌ Erreur: " + err.message;
-      }
-    }
+  <!-- FOOTER -->
+  <footer class="p-4 text-center text-xs bg-gray-800">
+    Centrale nucléaire météo © TINSFLASH — Pilotage Admin
+  </footer>
 
-    // === Logs en temps réel via SSE
-    const logBox = document.getElementById("logs");
+  <script>
+    // === LIVE LOGS SSE ===
+    const logsDiv = document.getElementById("logs");
     const evtSource = new EventSource("/api/logs/stream");
     evtSource.onmessage = function(event) {
-      try {
-        const logs = JSON.parse(event.data);
-        logBox.textContent = logs.map(l => `${l.time} | ${l.message}`).join("\n");
-        logBox.scrollTop = logBox.scrollHeight; // auto-scroll
-      } catch (e) {
-        console.error("Erreur parsing logs:", e);
-      }
+      const data = JSON.parse(event.data);
+      logsDiv.innerHTML = data.map(l => "• " + l).join("<br>");
+      logsDiv.scrollTop = logsDiv.scrollHeight;
     };
+
+    // === ENGINE STATE ===
+    async function loadEngineState() {
+      const res = await axios.get("/api/engine-state");
+      document.getElementById("engineState").textContent = JSON.stringify(res.data, null, 2);
+    }
+
+    // === ALERTS ===
+    async function loadAlerts() {
+      const res = await axios.get("/api/alerts");
+      document.getElementById("alerts").textContent = JSON.stringify(res.data.alerts, null, 2);
+    }
+
+    // === SOURCES ===
+    async function loadSources() {
+      const res = await axios.get("/api/sources");
+      document.getElementById("sources").textContent = JSON.stringify(res.data.sources, null, 2);
+    }
+
+    // === CHECKUP CHART ===
+    async function loadCheckup() {
+      const res = await axios.get("/api/checkup");
+      const ctx = document.getElementById("checkupChart").getContext("2d");
+      new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: Object.keys(res.data),
+          datasets: [{
+            data: Object.values(res.data).map(v => v === "OK" ? 1 : 0),
+            backgroundColor: ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"]
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+      });
+    }
+
+    // === RUN GLOBAL ===
+    async function triggerRun(zone) {
+      await axios.post("/api/run-global", { zone });
+      loadEngineState();
+      loadAlerts();
+      loadSources();
+      loadCheckup();
+    }
+
+    // AUTO REFRESH
+    loadEngineState();
+    loadAlerts();
+    loadSources();
+    loadCheckup();
+    setInterval(loadEngineState, 10000);
+    setInterval(loadAlerts, 15000);
+    setInterval(loadSources, 30000);
+    setInterval(loadCheckup, 60000);
   </script>
 </body>
 </html>
