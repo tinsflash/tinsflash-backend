@@ -383,10 +383,10 @@ const USA_ZONES = {
     { lat: 37.08, lon: -84.61, region: "Somerset - South" },
     { lat: 38.20, lon: -83.43, region: "Morehead - Appalachians" }
   ],
-  // ==================================
+// ==================================
 // RUN GLOBAL USA
 // ==================================
-async function runGlobalUSA() {
+export async function runGlobalUSA() {
   const state = getEngineState();
   try {
     addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA (zones par État)…");
@@ -449,5 +449,3 @@ async function runGlobalUSA() {
     throw err;
   }
 }
-
-module.exports = { runGlobalUSA };
