@@ -2,55 +2,65 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>⚡ Admin - Chat IA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <title>💬 Console Admin – Chat IA</title>
+  <meta name="robots" content="noindex,nofollow">
   <style>
-    body{background:#0d1117;color:#e6edf3;font-family:Arial,sans-serif;margin:0;}
-    header{background:#161b22;padding:12px;text-align:center;font-size:20px;color:#00ff9d;font-weight:bold;}
-    nav{display:flex;justify-content:center;gap:15px;background:#1f2937;padding:10px;}
-    nav a{color:#9ca3af;text-decoration:none;padding:6px 12px;border-radius:6px;}
-    nav a:hover{background:#374151;color:#fff;}
-    .container{padding:20px;}
-    .chat-box{background:#161b22;border-radius:8px;padding:10px;height:400px;overflow-y:auto;margin-bottom:10px;}
-    .input-box{display:flex;}
-    input{flex:1;padding:8px;border:none;border-radius:6px;}
-    button{padding:8px 12px;margin-left:5px;border:none;border-radius:6px;background:#2563eb;color:white;cursor:pointer;}
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
+    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:18px; color:#0af; }
+    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
+    nav a:hover { text-decoration:underline; }
+    .container { padding:20px; }
+    .chatbox { background:#222; padding:10px; height:300px; overflow-y:auto; border:1px solid #444; }
+    .msg { margin:5px 0; }
+    input, button { padding:10px; }
   </style>
 </head>
 <body>
-  <header>⚡ Centrale Nucléaire Météo - Chat IA</header>
+<script>
+  const pass = prompt("Mot de passe ?");
+  if (pass !== "202679") {
+    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
+    throw new Error("Accès refusé");
+  }
+</script>
+
+<header>
+  <h1>💬 Chat IA – Console Admin</h1>
   <nav>
-    <a href="admin-pp.html">Cockpit</a>
+    <a href="admin-pp.html">Console</a>
     <a href="admin-alerts.html">Alertes</a>
+    <a href="admin-index.html">Vue Utilisateur</a>
     <a href="admin-chat.html">Chat IA</a>
     <a href="admin-radar.html">Radar</a>
-    <a href="admin-index-preview.html">Index Preview</a>
-    <a href="admin-users.html">Utilisateurs</a>
-    <a href="admin-news.html">Infos Mondiales</a>
   </nav>
+</header>
 
-  <div class="container">
-    <h3>Discuter avec l’IA (mode expert météo / mode technicien moteur)</h3>
-    <div class="chat-box" id="chat"></div>
-    <div class="input-box">
-      <input id="msg" placeholder="Pose ta question…"/>
-      <button onclick="sendMsg()">Envoyer</button>
-    </div>
-  </div>
+<div class="container">
+  <div class="chatbox" id="chat"></div>
+  <input id="question" placeholder="Posez une question météo…">
+  <button onclick="ask()">Envoyer</button>
+</div>
 
-  <script>
-    async function sendMsg(){
-      const chat=document.getElementById("chat");
-      const msg=document.getElementById("msg").value;
-      if(!msg) return;
-      chat.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
-      document.getElementById("msg").value="";
-      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-      const data=await res.json();
-      chat.innerHTML+=`<div><b>IA:</b> ${data.reply||"…"}</div>`;
-      chat.scrollTop=chat.scrollHeight;
+<script>
+  async function ask() {
+    const q = document.getElementById("question").value;
+    const chat = document.getElementById("chat");
+    chat.innerHTML += `<div class="msg">🧑‍💻 ${q}</div>`;
+    document.getElementById("question").value = "";
+
+    try {
+      const res = await fetch("/api/chat/engine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q })
+      });
+      const data = await res.json();
+      chat.innerHTML += `<div class="msg">🤖 ${data.answer || JSON.stringify(data)}</div>`;
+    } catch (err) {
+      chat.innerHTML += `<div class="msg" style="color:red;">Erreur: ${err.message}</div>`;
     }
-  </script>
+  }
+</script>
 </body>
 </html>
