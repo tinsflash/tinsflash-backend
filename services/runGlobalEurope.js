@@ -252,7 +252,7 @@ const EUROPE_ZONES = {
 // ==================================
 // RUN GLOBAL EUROPE
 // ==================================
-async function runGlobalEurope() {
+export async function runGlobalEurope() {
   const state = getEngineState();
   try {
     addEngineLog("🌍 Démarrage du RUN GLOBAL EUROPE (zones couvertes complètes)…");
@@ -310,10 +310,7 @@ async function runGlobalEurope() {
     return { summary: state.zonesCoveredSummaryEurope, alerts: alertsResult };
   } catch (err) {
     addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
-    state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
     throw err;
   }
 }
-
-module.exports = { runGlobalEurope };
