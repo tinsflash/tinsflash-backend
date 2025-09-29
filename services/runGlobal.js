@@ -1,41 +1,54 @@
 // services/runGlobal.js
+// 🌍 RUN GLOBAL – Europe + USA
+
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+import { addLog } from "./adminLogs.js";
+import { getEngineState, saveEngineState } from "./engineState.js";
 
-export async function runGlobal(zone = "Europe") {
-  const state = getEngineState();
+export async function runGlobal(zone = "Europe+USA") {
+  const state = await getEngineState();
+  state.runTime = new Date().toISOString();
+  state.status = "RUNNING";
+  state.checkup.models = "PENDING";
+  state.checkup.europe = "PENDING";
+  state.checkup.usa = "PENDING";
+  state.checkup.globalAlerts = "PENDING";
+  state.checkup.engineStatus = "PENDING";
+  await saveEngineState(state);
+
   try {
-    addEngineLog(`🌍 Lancement du RUN GLOBAL (${zone})`);
-    state.runTime = new Date().toISOString();
-    state.checkup = {
-      models: "PENDING",
-      localForecasts: "PENDING",
-      nationalForecasts: "PENDING",
-      aiAlerts: "PENDING"
-    };
-    saveEngineState(state);
+    await addLog("🌍 Lancement du RUN GLOBAL");
+    await addLog("📡 Chargement des modèles météo (ECMWF, GFS, ICON, …)");
 
-    let result;
-    if (zone === "Europe") result = await runGlobalEurope();
-    else if (zone === "USA") result = await runGlobalUSA();
-    else if (zone === "All") {
-      const europe = await runGlobalEurope();
-      const usa = await runGlobalUSA();
-      result = { Europe: europe, USA: usa };
-    } else {
-      throw new Error(`Zone inconnue: ${zone}`);
-    }
+    // Europe
+    await addLog("➡️ Exécution Europe…");
+    const europe = await runGlobalEurope();
+    state.checkup.europe = europe?.error ? "FAIL" : "OK";
+    await saveEngineState(state);
+    await addLog(europe?.error ? "❌ Europe en échec" : "✅ Prévisions Europe terminées");
 
+    // USA
+    await addLog("➡️ Exécution USA…");
+    const usa = await runGlobalUSA();
+    state.checkup.usa = usa?.error ? "FAIL" : "OK";
+    await saveEngineState(state);
+    await addLog(usa?.error ? "❌ USA en échec" : "✅ Prévisions USA terminées");
+
+    // Fin RUN
+    state.status = "OK";
+    state.checkup.models = "OK";
     state.checkup.engineStatus = "OK";
-    saveEngineState(state);
-    addEngineLog(`✅ RUN GLOBAL terminé (${zone})`);
-    return result;
+    await saveEngineState(state);
+
+    await addLog("🚀 RUN GLOBAL terminé avec succès");
+    return { success: true, europe, usa };
   } catch (err) {
-    addEngineError(err.message || "Erreur inconnue RUN GLOBAL");
+    state.status = "FAIL";
     state.checkup.engineStatus = "FAIL";
-    saveEngineState(state);
-    addEngineLog(`❌ RUN GLOBAL échec (${zone})`);
-    return { error: err.message };
+    await saveEngineState(state);
+
+    await addLog("💥 Erreur RUN GLOBAL: " + err.message);
+    return { success: false, error: err.message };
   }
 }
