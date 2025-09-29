@@ -450,4 +450,4 @@ async function runGlobalUSA() {
   }
 }
 
-module.exports = { runGlobalUSA };
+export { runGlobalUSA };
