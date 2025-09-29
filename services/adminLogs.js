@@ -1,17 +1,32 @@
 // services/adminLogs.js
-// 📡 Gestion des logs en temps réel pour la console admin
+import Log from "../models/Log.js";
 
-let logs = [];
-
-export async function getLogs() {
-  return logs;
+// ✅ Ajout d’un log normal
+export async function addLog(message) {
+  try {
+    const log = new Log({ message, type: "info", timestamp: new Date() });
+    await log.save();
+  } catch (err) {
+    console.error("Erreur addLog:", err);
+  }
 }
 
-export async function addLog(message) {
-  const entry = `[${new Date().toISOString()}] ${message}`;
-  console.log(entry); // log aussi côté serveur
-  logs.push(entry);
+// ✅ Ajout d’un log d’erreur
+export async function addError(message) {
+  try {
+    const log = new Log({ message, type: "error", timestamp: new Date() });
+    await log.save();
+  } catch (err) {
+    console.error("Erreur addError:", err);
+  }
+}
 
-  // On garde uniquement les 200 derniers logs pour éviter les débordements
-  if (logs.length > 200) logs.shift();
+// ✅ Récupération des logs
+export async function getLogs() {
+  try {
+    return await Log.find().sort({ timestamp: -1 }).limit(200);
+  } catch (err) {
+    console.error("Erreur getLogs:", err);
+    return [];
+  }
 }
