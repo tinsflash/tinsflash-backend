@@ -1,4 +1,4 @@
-// services/EngineState.js
+// services/engineState.js
 import mongoose from "mongoose";
 
 const ErrorSchema = new mongoose.Schema({
@@ -18,5 +18,23 @@ const EngineStateSchema = new mongoose.Schema({
   errors: { type: [ErrorSchema], default: [] },
   logs: { type: [LogSchema], default: [] },
 });
+
+// ✅ On force toujours la présence de checkup avec un engineStatus
+EngineStateSchema.pre("save", function (next) {
+  if (!this.checkup) this.checkup = {};
+  if (!this.checkup.engineStatus) this.checkup.engineStatus = "IDLE";
+  next();
+});
+
+// ✅ Helpers centralisés
+EngineStateSchema.methods.addLog = function (msg) {
+  this.logs.unshift({ message: msg, timestamp: new Date() });
+  if (this.logs.length > 200) this.logs.pop(); // limite mémoire
+};
+
+EngineStateSchema.methods.addError = function (msg) {
+  this.errors.unshift({ message: msg, timestamp: new Date() });
+  if (this.errors.length > 200) this.errors.pop();
+};
 
 export default mongoose.model("EngineState", EngineStateSchema);
