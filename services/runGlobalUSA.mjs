@@ -1,9 +1,8 @@
-// services/runGlobalUSA.js
-// ⚡ RUN GLOBAL USA — Zones couvertes par État
-// Division fine : grandes villes, reliefs, côtes, régions stratégiques (NASA, ouragans, etc.)
+// services/runGlobalUSA.mjs
+// ⚡ RUN GLOBAL USA — Zones couvertes (USA États par États)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecastGlobal } from "./superForecast.js"; // ✅ aligné avec export
+import { runSuperForecast } from "./superForecast.js";
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
@@ -383,23 +382,57 @@ const USA_ZONES = {
     { lat: 37.08, lon: -84.61, region: "Somerset - South" },
     { lat: 38.20, lon: -83.43, region: "Morehead - Appalachians" }
   ],
-// ==================================
+// ===========================
 // RUN GLOBAL USA
-// ==================================
-
+// ===========================
 export async function runGlobalUSA() {
   const state = getEngineState();
   try {
-    addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA (zones par État)…");
-    // ... ton code interne inchangé ...
+    addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA…");
+    state.runTime = new Date().toISOString();
+
+    const byState = {};
+    let successCount = 0;
+    let totalPoints = 0;
+
+    for (const [stateName, zones] of Object.entries(USA_ZONES)) {
+      byState[stateName] = { regions: [] };
+      for (const z of zones) {
+        try {
+          const res = await runSuperForecast({
+            lat: z.lat,
+            lon: z.lon,
+            country: "USA",
+            region: z.region
+          });
+          byState[stateName].regions.push({ ...z, forecast: res?.forecast });
+          successCount++;
+          totalPoints++;
+          addEngineLog(`✅ ${stateName} — ${z.region}`);
+        } catch (e) {
+          addEngineError(`❌ ${stateName} — ${z.region}: ${e.message}`);
+          totalPoints++;
+        }
+      }
+    }
+
+    state.zonesCoveredUSA = byState;
+    state.zonesCoveredSummaryUSA = {
+      states: Object.keys(byState).length,
+      points: totalPoints,
+      success: successCount
+    };
+    saveEngineState(state);
+
+    const alertsResult = await processAlerts();
+    state.checkup.aiAlerts = alertsResult?.status || "OK";
+
+    saveEngineState(state);
     addEngineLog("✅ RUN GLOBAL USA terminé avec succès.");
     return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult };
   } catch (err) {
     addEngineError("❌ Erreur RUN GLOBAL USA: " + err.message);
-    state.checkup.engineStatus = "FAIL";
     saveEngineState(state);
     throw err;
   }
 }
-
-export { runGlobalUSA };
