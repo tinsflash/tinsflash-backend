@@ -1,11 +1,9 @@
 // services/runGlobal.js
-// ⚡ Centrale nucléaire météo — Coordination globale (Europe / USA / All)
-
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-async function runGlobal(zone = "Europe") {
+export async function runGlobal(zone = "Europe") {
   const state = getEngineState();
   try {
     addEngineLog(`🌍 Lancement du RUN GLOBAL (${zone})`);
@@ -19,12 +17,9 @@ async function runGlobal(zone = "Europe") {
     saveEngineState(state);
 
     let result;
-
-    if (zone === "Europe") {
-      result = await runGlobalEurope();
-    } else if (zone === "USA") {
-      result = await runGlobalUSA();
-    } else if (zone === "All") {
+    if (zone === "Europe") result = await runGlobalEurope();
+    else if (zone === "USA") result = await runGlobalUSA();
+    else if (zone === "All") {
       const europe = await runGlobalEurope();
       const usa = await runGlobalUSA();
       result = { Europe: europe, USA: usa };
@@ -35,7 +30,6 @@ async function runGlobal(zone = "Europe") {
     state.checkup.engineStatus = "OK";
     saveEngineState(state);
     addEngineLog(`✅ RUN GLOBAL terminé (${zone})`);
-
     return result;
   } catch (err) {
     addEngineError(err.message || "Erreur inconnue RUN GLOBAL");
@@ -45,5 +39,3 @@ async function runGlobal(zone = "Europe") {
     return { error: err.message };
   }
 }
-
-export { runGlobal };
