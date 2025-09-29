@@ -1,10 +1,7 @@
 // services/runGlobalUSA.js
-// ⚡ RUN GLOBAL USA — Zones couvertes (USA États par États)
-
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import { runSuperForecast } from "./superForecast.js";
 import { processAlerts } from "./alertsService.js";
-
 // ===========================
 // Zones détaillées par État
 // ===========================
@@ -385,7 +382,7 @@ const USA_ZONES = {
 // ===========================
 // RUN GLOBAL USA
 // ===========================
-async function runGlobalUSA() {
+export async function runGlobalUSA() {
   const state = getEngineState();
   try {
     addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA…");
@@ -406,8 +403,7 @@ async function runGlobalUSA() {
             region: z.region
           });
           byState[stateName].regions.push({ ...z, forecast: res?.forecast });
-          successCount++;
-          totalPoints++;
+          successCount++; totalPoints++;
           addEngineLog(`✅ ${stateName} — ${z.region}`);
         } catch (e) {
           addEngineError(`❌ ${stateName} — ${z.region}: ${e.message}`);
@@ -436,5 +432,3 @@ async function runGlobalUSA() {
     throw err;
   }
 }
-
-export { runGlobalUSA };
