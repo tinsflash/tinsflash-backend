@@ -1,152 +1,153 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <meta name="robots" content="noindex,nofollow">
   <style>
-    body { background: #111; color: #eee; font-family: Arial, sans-serif; padding: 20px; }
-    h1 { color: gold; }
-    .status { padding: 5px; margin: 10px 0; border-radius: 6px; }
-    .status.ok { background: #1e4620; color: #8f8; }
-    .status.fail { background: #462020; color: #f88; }
-    .status.pending { background: #444; color: orange; }
-    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-    .checklist div { padding: 4px; margin: 2px 0; border-radius: 4px; }
-    .red { background: #400; }
-    .orange { background: #633; }
-    .green { background: #040; }
-    #logs { background: #000; padding: 10px; max-height: 250px; overflow-y: auto; font-family: monospace; }
-    #alerts { background: #111; padding: 10px; margin-top: 10px; border: 1px solid #333; }
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
+    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:18px; color:#fdd835; }
+    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
+    nav a:hover { text-decoration:underline; }
+    .container { padding:20px; }
+    button { padding:10px 15px; border:none; border-radius:5px; cursor:pointer; }
+    .runBtn { background:#2196f3; color:white; font-size:16px; }
+    .runBtn.running { background:#f44336; }
+    .runBtn.done { background:#4caf50; }
+    .statusBox { margin:10px 0; padding:10px; border-radius:5px; }
+    .status-ok { background:#2e7d32; }
+    .status-fail { background:#c62828; }
+    .status-pending { background:#ef6c00; }
+    ul { list-style:none; padding:0; }
+    li { padding:5px; margin:3px 0; border-radius:3px; }
+    .ok { background:#2e7d32; }
+    .fail { background:#c62828; }
+    .pending { background:#ef6c00; }
+    .logs { background:#000; padding:10px; height:250px; overflow-y:scroll; font-family:monospace; font-size:13px; border:1px solid #333; }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  <script>
+    // Protection par mot de passe
+    const pass = prompt("Mot de passe ?");
+    if (pass !== "202679") {
+      document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
+      throw new Error("Accès refusé");
+    }
+  </script>
 
-  <!-- 🚀 RUN -->
-  <section>
+  <header>
+    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+    <nav>
+      <a href="admin-pp.html">Console</a>
+      <a href="admin-alerts.html">Alertes</a>
+      <a href="admin-index.html">Vue Utilisateur</a>
+      <a href="admin-chat.html">Chat IA</a>
+      <a href="admin-radar.html">Radar</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <!-- Bouton RUN -->
     <h2>🚀 Lancer RUN</h2>
-    <button id="runBtn">▶️ Lancer RUN</button>
+    <button id="runBtn" class="runBtn">▶️ Lancer RUN</button>
     <div id="runStatus"></div>
-  </section>
 
-  <!-- 📋 Checklist -->
-  <section>
+    <!-- Checklist moteur -->
     <h2>📋 Checklist Moteur</h2>
-    <div id="checklist" class="checklist"></div>
-  </section>
+    <ul id="checklist">
+      <li id="step1" class="pending">1. Extraction modèles</li>
+      <li id="step2" class="pending">2. RUNGLOBAL Europe</li>
+      <li id="step3" class="pending">3. RUNGLOBAL USA</li>
+      <li id="step4" class="pending">4. RUN Continentales</li>
+      <li id="step5" class="pending">5. Mise sous fichier des extractions</li>
+      <li id="step6" class="pending">6. Analyse IA (relief, climat, environnement)</li>
+      <li id="step7" class="pending">7. Prévisions locales zones couvertes</li>
+      <li id="step8" class="pending">8. Prévisions nationales zones couvertes</li>
+      <li id="step9" class="pending">9. Alertes locales zones couvertes</li>
+      <li id="step10" class="pending">10. Alertes nationales zones couvertes</li>
+      <li id="step11" class="pending">11. Alertes continentales (zones non couvertes)</li>
+      <li id="step12" class="pending">12. Assemblage alertes mondiales</li>
+      <li id="step13" class="pending">13. Open Data prévisions zones non couvertes</li>
+    </ul>
 
-  <!-- 📜 Logs -->
-  <section>
+    <div id="engineStatus" class="statusBox status-pending">Moteur opérationnel : EN ATTENTE</div>
+
+    <!-- Logs -->
     <h2>📜 Logs en direct</h2>
-    <div id="logs"></div>
-  </section>
+    <div id="logs" class="logs"></div>
+  </div>
 
-  <!-- 🚨 Alertes -->
-  <section>
-    <h2>🚨 Alertes</h2>
-    <div id="alerts"></div>
-  </section>
+  <script>
+    const runBtn = document.getElementById("runBtn");
+    const runStatus = document.getElementById("runStatus");
+    const checklist = document.getElementById("checklist");
+    const engineStatus = document.getElementById("engineStatus");
+    const logsDiv = document.getElementById("logs");
 
-<script>
-  const runBtn = document.getElementById("runBtn");
-  const runStatus = document.getElementById("runStatus");
-  const checklistDiv = document.getElementById("checklist");
-  const alertsDiv = document.getElementById("alerts");
-
-  // === Lancer RUN GLOBAL + CONTINENTAL ===
-  runBtn.addEventListener("click", async () => {
-    runStatus.innerHTML = '<div class="status pending">🟠 RUN en cours...</div>';
-    try {
-      const res = await fetch("/api/run-global", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zone: "All" }) });
-      const data = await res.json();
-
-      if (data.success) {
-        if (data.result && data.result.error) {
-          runStatus.innerHTML = `<div class="status fail">⚠️ Erreur RUN: ${data.result.error}</div>`;
-        } else {
-          runStatus.innerHTML = `<div class="status ok">✅ RUN terminé avec succès</div>`;
-          await fetch("/api/run-continental", { method: "POST" }); // déclenche continental
-        }
-      } else {
-        runStatus.innerHTML = `<div class="status fail">❌ RUN échoué: ${data.error}</div>`;
+    function addLog(msg) {
+      const now = new Date();
+      const time = now.toLocaleTimeString();
+      const entry = `[${time}] ${msg}`;
+      const p = document.createElement("div");
+      p.textContent = entry;
+      logsDiv.prepend(p);
+      // Garde max 50 logs
+      while (logsDiv.childNodes.length > 50) {
+        logsDiv.removeChild(logsDiv.lastChild);
       }
-    } catch (err) {
-      runStatus.innerHTML = `<div class="status fail">💥 Erreur: ${err.message}</div>`;
     }
-  });
 
-  // === Checklist dynamique ===
-  async function refreshChecklist() {
-    try {
-      const res = await fetch("/api/engine-state");
-      const data = await res.json();
-      const steps = [
-        "Extraction modèles",
-        "RUNGLOBAL Europe",
-        "RUNGLOBAL USA",
-        "RUN Continentales",
-        "Mise sous fichier des extractions",
-        "Analyse IA (relief, climat, environnement)",
-        "Prévisions locales et nationales",
-        "Alertes locales et nationales",
-        "Alertes continentales (zones non couvertes)",
-        "Vue par pays (zones couvertes)"
-      ];
-      checklistDiv.innerHTML = "";
-      steps.forEach((s, i) => {
-        const status = data.checkup?.[i] || data.checkup?.engineStatus || "FAIL";
-        let cls = "red";
-        if (status === "OK") cls = "green";
-        else if (status === "PENDING") cls = "orange";
-        checklistDiv.innerHTML += `<div class="${cls}">${i+1}. ${s}</div>`;
-      });
-    } catch {
-      checklistDiv.innerHTML = "<div class='red'>❌ Impossible de charger la checklist</div>";
+    async function runGlobal() {
+      runBtn.classList.add("running");
+      runBtn.textContent = "⏳ RUNNING…";
+      runStatus.innerHTML = "";
+
+      try {
+        const res = await fetch("/api/run-global?zone=All");
+        const data = await res.json();
+        addLog("▶️ RUN GLOBAL lancé");
+        if (data.error) throw new Error(data.error);
+
+        const res2 = await fetch("/api/run-continental");
+        const data2 = await res2.json();
+        addLog("▶️ RUN CONTINENTAL lancé");
+        if (data2.error) throw new Error(data2.error);
+
+        runBtn.classList.remove("running");
+        runBtn.classList.add("done");
+        runBtn.textContent = "✅ RUN terminé";
+        runStatus.innerHTML = "<div class='statusBox status-ok'>RUN terminé avec succès</div>";
+
+        engineStatus.className = "statusBox status-ok";
+        engineStatus.textContent = "Moteur opérationnel : OK ✅";
+      } catch (err) {
+        runBtn.classList.remove("running");
+        runBtn.classList.add("fail");
+        runBtn.textContent = "❌ RUN échec";
+        runStatus.innerHTML = "<div class='statusBox status-fail'>Erreur RUN: " + err.message + "</div>";
+        engineStatus.className = "statusBox status-fail";
+        engineStatus.textContent = "Moteur opérationnel : FAIL ❌";
+        addLog("Erreur RUN: " + err.message);
+      }
     }
-  }
-  setInterval(refreshChecklist, 5000);
 
-  // === Logs en direct (SSE) ===
-  const logsDiv = document.getElementById("logs");
-  const evtSource = new EventSource("/api/logs/stream");
-  evtSource.onmessage = function(event) {
-    const logs = JSON.parse(event.data);
-    logsDiv.innerHTML = "";
-    logs
-      .filter(l => l && l.message && !l.message.includes("Cohere") && !l.message.includes("invalid request"))
-      .slice(0, 50) // max 50
-      .forEach(log => {
-        const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "--:--:--";
-        logsDiv.innerHTML += `<div>[${time}] ${log.message}</div>`;
-      });
-  };
+    runBtn.addEventListener("click", runGlobal);
 
-  // === Alertes ===
-  async function refreshAlerts() {
-    try {
-      const res = await fetch("/api/alerts");
-      const data = await res.json();
-      alertsDiv.innerHTML = "";
-      (data.alerts || []).forEach(a => {
-        alertsDiv.innerHTML += `
-          <div style="margin-bottom:10px; border-bottom:1px solid #333;">
-            <b>${a.type || "?"}</b> – Zone: ${a.zone || a.continent || "?"}<br/>
-            Fiabilité: ${a.reliability || "?"}% – Intensité: ${a.intensity || "?"}<br/>
-            Conséquences: ${a.consequences || "?"}<br/>
-            Recommandations: ${a.recommendations || "?"}<br/>
-            Durée: ${a.start || "?"} → ${a.end || "?"}
-          </div>
-        `;
-      });
-    } catch {
-      alertsDiv.innerHTML = "<div class='red'>❌ Impossible de charger les alertes</div>";
-    }
-  }
-  setInterval(refreshAlerts, 15000);
-
-  // Init
-  refreshChecklist();
-  refreshAlerts();
-</script>
+    // Logs SSE
+    const evtSource = new EventSource("/api/logs/stream");
+    evtSource.onmessage = function(e) {
+      if (!e.data) return;
+      try {
+        const obj = JSON.parse(e.data);
+        if (obj.message) {
+          addLog(obj.message);
+        }
+      } catch {
+        addLog(e.data);
+      }
+    };
+  </script>
 </body>
 </html>
