@@ -1,23 +1,49 @@
 // services/engineState.js
-// ⚙️ Gestion de l’état du moteur météo
-
-let engineState = {
-  runTime: null,
-  status: "IDLE", // IDLE | RUNNING | OK | FAIL
-  checkup: {
-    models: "PENDING",
-    europe: "PENDING",
-    usa: "PENDING",
-    globalAlerts: "PENDING",
-    continentalAlerts: "PENDING",
-    engineStatus: "PENDING",
-  }
-};
+import EngineState from "../models/EngineState.js";
 
 export async function getEngineState() {
-  return engineState;
+  try {
+    let state = await EngineState.findOne();
+    if (!state) {
+      state = new EngineState({
+        status: "idle",
+        lastRun: null,
+        checkup: {},
+        errors: [],
+      });
+      await state.save();
+    }
+    return state;
+  } catch (err) {
+    console.error("Erreur getEngineState:", err);
+    return null;
+  }
 }
 
-export async function saveEngineState(newState) {
-  engineState = { ...engineState, ...newState };
+export async function updateEngineState(update) {
+  try {
+    let state = await EngineState.findOne();
+    if (!state) {
+      state = new EngineState({ status: "idle", lastRun: null, checkup: {}, errors: [] });
+    }
+    Object.assign(state, update, { lastRun: new Date() });
+    await state.save();
+    return state;
+  } catch (err) {
+    console.error("Erreur updateEngineState:", err);
+  }
+}
+
+// ✅ Nouveau : gestion des erreurs moteur
+export async function addEngineError(message) {
+  try {
+    let state = await EngineState.findOne();
+    if (!state) {
+      state = new EngineState({ status: "idle", lastRun: null, checkup: {}, errors: [] });
+    }
+    state.errors.push({ message, timestamp: new Date() });
+    await state.save();
+  } catch (err) {
+    console.error("Erreur addEngineError:", err);
+  }
 }
