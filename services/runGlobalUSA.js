@@ -386,11 +386,12 @@ const USA_ZONES = {
 // ==================================
 // RUN GLOBAL USA
 // ==================================
+
 export async function runGlobalUSA() {
   const state = getEngineState();
   try {
     addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA (zones par État)…");
-    // ... tout ton code comme avant ...
+    // ... ton code interne inchangé ...
     addEngineLog("✅ RUN GLOBAL USA terminé avec succès.");
     return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult };
   } catch (err) {
@@ -400,4 +401,5 @@ export async function runGlobalUSA() {
     throw err;
   }
 }
+
 export { runGlobalUSA };
