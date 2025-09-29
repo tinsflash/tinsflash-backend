@@ -1,4 +1,4 @@
-// services/runContinental.mjs
+// services/runContinental.js
 // 🌎 RUN CONTINENTAL – Zones non couvertes → alertes continentales
 
 import { askOpenAI } from "./openaiService.js";
