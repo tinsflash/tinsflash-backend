@@ -386,7 +386,7 @@ const USA_ZONES = {
 // ==================================
 // RUN GLOBAL USA
 // ==================================
-export async function runGlobalUSA() {
+async function runGlobalUSA() {
   const state = getEngineState();
   try {
     addEngineLog("🇺🇸 Démarrage du RUN GLOBAL USA (zones par État)…");
@@ -449,3 +449,5 @@ export async function runGlobalUSA() {
     throw err;
   }
 }
+
+module.exports = { runGlobalUSA };
