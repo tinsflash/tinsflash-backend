@@ -379,7 +379,8 @@ const USA_ZONES = {
     { lat: 38.25, lon: -85.76, region: "Louisville - North" },
     { lat: 37.08, lon: -84.61, region: "Somerset - South" },
     { lat: 38.20, lon: -83.43, region: "Morehead - Appalachians" }
-  ],
+  ]
+    };
 // ===========================
 // RUN GLOBAL USA
 // ===========================
