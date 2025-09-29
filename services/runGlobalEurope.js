@@ -252,7 +252,7 @@ const EUROPE_ZONES = {
 // ==================================
 // RUN GLOBAL EUROPE
 // ==================================
-export async function runGlobalEurope() {
+async function runGlobalEurope() {
   const state = getEngineState();
   try {
     addEngineLog("🌍 Démarrage du RUN GLOBAL EUROPE (zones couvertes complètes)…");
@@ -273,7 +273,7 @@ export async function runGlobalEurope() {
       byCountry[country] = { regions: [] };
       for (const z of zones) {
         try {
-          const res = await runSuperForecastGlobal({
+          const res = await runSuperForecast({
             lat: z.lat,
             lon: z.lon,
             country,
@@ -314,3 +314,5 @@ export async function runGlobalEurope() {
     throw err;
   }
 }
+
+module.exports = { runGlobalEurope };
