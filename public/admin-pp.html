@@ -2,141 +2,189 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🚀 Console Admin - Centrale Nucléaire Météo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Tinsflash – Console Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white">
+<body class="bg-gray-900 text-white font-sans">
+
+  <!-- LOCKSCREEN -->
+  <div id="lockscreen" class="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
+    <h2 class="text-2xl font-bold mb-4">🔒 Accès restreint</h2>
+    <input id="accessCode" type="password" placeholder="Entrez le code"
+           class="p-2 rounded text-black mb-3"/>
+    <button id="unlockBtn" class="px-4 py-2 bg-blue-600 rounded">Valider</button>
+    <p id="errorMsg" class="text-red-500 mt-2 hidden">❌ Code incorrect</p>
+  </div>
 
   <!-- HEADER -->
-  <header class="p-6 bg-gradient-to-r from-blue-900 to-purple-800 shadow-xl flex justify-between items-center">
-    <h1 class="text-3xl font-bold">⚡ Centrale Nucléaire Météo — Console Admin</h1>
-    <button onclick="triggerRun('All')" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold shadow">
-      🚀 Lancer RUN GLOBAL
-    </button>
+  <header class="bg-black text-center py-6 shadow-lg">
+    <h1 class="text-3xl font-bold text-blue-400">Tinsflash – Console Centrale Nucléaire Météo</h1>
+    <p class="text-gray-400">Pilotage du moteur – logs, radar, checklist, IA</p>
   </header>
 
-  <!-- NAVIGATION -->
-  <nav class="bg-gray-800 p-4 flex space-x-4 text-sm">
-    <a href="/admin" class="hover:underline">Cockpit</a>
-    <a href="/admin-alerts" class="hover:underline">Alertes</a>
-    <a href="/admin-radar" class="hover:underline">Radar</a>
-    <a href="/admin-chat" class="hover:underline">Chat IA</a>
-    <a href="/admin-index" class="hover:underline">Prévisualisation Index</a>
-    <a href="/admin-infos" class="hover:underline">Actualités météo/climat</a>
-    <a href="/admin-users" class="hover:underline">Utilisateurs</a>
+  <!-- Bouton RUN -->
+  <section class="p-6 flex flex-col items-center">
+    <button id="runAll" class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg text-lg font-bold mb-4">
+      🚀 Lancer la Centrale (Global + Continental)
+    </button>
+    <div id="runStatus" class="w-full max-w-2xl p-3 rounded text-center font-semibold"></div>
+  </section>
+
+  <!-- Logs -->
+  <section class="p-6">
+    <h2 class="text-xl font-bold mb-2">Logs en direct</h2>
+    <div id="logs" class="bg-black p-4 rounded h-[250px] overflow-y-scroll font-mono text-sm"></div>
+  </section>
+
+  <!-- Checklist connecté -->
+  <section class="p-6 bg-gray-800">
+    <h2 class="text-xl font-bold mb-4">Checklist – État du moteur</h2>
+    <ul id="checklist" class="space-y-2"></ul>
+  </section>
+
+  <!-- Alertes -->
+  <section class="p-6">
+    <h2 class="text-xl font-bold mb-2">Alertes actives</h2>
+    <div id="alerts" class="space-y-2"></div>
+  </section>
+
+  <!-- Radar Global -->
+  <section class="p-6 bg-gray-800">
+    <h2 class="text-xl font-bold mb-2">Radar Global</h2>
+    <iframe src="/api/radar/global" class="w-full h-[400px] bg-black rounded"></iframe>
+  </section>
+
+  <!-- Sources -->
+  <section class="p-6">
+    <h2 class="text-xl font-bold mb-2">Sources & Fraîcheur</h2>
+    <pre id="sources" class="bg-gray-900 p-3 rounded text-gray-300"></pre>
+  </section>
+
+  <!-- Chat IA Moteur -->
+  <section class="p-6 bg-gray-800">
+    <h2 class="text-xl font-bold mb-2">IA Moteur (ChatGPT5)</h2>
+    <div class="flex gap-2">
+      <input id="engineInput" type="text" placeholder="Posez une question au moteur..." class="flex-1 p-2 rounded bg-gray-700 text-white"/>
+      <button id="askEngine" class="px-4 py-2 bg-blue-500 rounded">Envoyer</button>
+    </div>
+    <div id="engineReply" class="mt-3 p-3 bg-gray-900 rounded text-gray-300"></div>
+  </section>
+
+  <!-- Navigation -->
+  <nav class="p-6 text-center bg-black">
+    <a href="/admin-alerts" class="px-3 text-blue-400 hover:underline">📢 Alertes</a> |
+    <a href="/admin-chat" class="px-3 text-blue-400 hover:underline">💬 Chat</a> |
+    <a href="/admin-radar" class="px-3 text-blue-400 hover:underline">🛰️ Radar</a> |
+    <a href="/admin-index" class="px-3 text-blue-400 hover:underline">📊 Index</a> |
+    <a href="/admin-infos" class="px-3 text-blue-400 hover:underline">ℹ️ Infos</a> |
+    <a href="/admin-users" class="px-3 text-blue-400 hover:underline">👤 Utilisateurs</a>
   </nav>
 
-  <!-- MAIN -->
-  <main class="p-6 space-y-8">
-
-    <!-- Cockpit -->
-    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
-      <h2 class="text-2xl font-bold mb-4">🛰️ Cockpit moteur</h2>
-      <div id="engineState" class="text-sm font-mono bg-black p-4 rounded-lg overflow-auto h-64"></div>
-      <div class="mt-4 flex space-x-2">
-        <button onclick="triggerRun('Europe')" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded">Run Europe</button>
-        <button onclick="triggerRun('USA')" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded">Run USA</button>
-        <button onclick="triggerRun('All')" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded">Run Global (All)</button>
-      </div>
-    </section>
-
-    <!-- Logs -->
-    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
-      <h2 class="text-2xl font-bold mb-4">📜 Logs en temps réel</h2>
-      <div id="logs" class="text-xs font-mono bg-black p-4 rounded-lg overflow-y-auto h-64"></div>
-    </section>
-
-    <!-- Sources -->
-    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
-      <h2 class="text-2xl font-bold mb-4">📡 Sources météo</h2>
-      <pre id="sources" class="text-xs bg-black p-4 rounded-lg overflow-x-auto"></pre>
-    </section>
-
-    <!-- Alertes -->
-    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
-      <h2 class="text-2xl font-bold mb-4">🚨 Alertes actives</h2>
-      <div id="alerts" class="text-sm bg-black p-4 rounded-lg overflow-auto"></div>
-    </section>
-
-    <!-- Graph Checkup -->
-    <section class="bg-gray-800 rounded-xl p-6 shadow-lg">
-      <h2 class="text-2xl font-bold mb-4">📊 Checkup moteur</h2>
-      <canvas id="checkupChart" height="100"></canvas>
-    </section>
-
-  </main>
-
-  <!-- FOOTER -->
-  <footer class="p-4 text-center text-xs bg-gray-800">
-    Centrale nucléaire météo © TINSFLASH — Pilotage Admin
+  <!-- Footer -->
+  <footer class="bg-black py-4 text-center text-sm text-gray-400">
+    © Tinsflash system J.E.A.N. by Pydaris – reproduction interdite
   </footer>
 
+  <!-- Scripts -->
   <script>
-    // === LIVE LOGS SSE ===
-    const logsDiv = document.getElementById("logs");
-    const evtSource = new EventSource("/api/logs/stream");
-    evtSource.onmessage = function(event) {
-      const data = JSON.parse(event.data);
-      logsDiv.innerHTML = data.map(l => "• " + l).join("<br>");
-      logsDiv.scrollTop = logsDiv.scrollHeight;
+    // Protection par code
+    document.getElementById("unlockBtn").onclick = () => {
+      const code = document.getElementById("accessCode").value;
+      if (code === "202679") {
+        document.getElementById("lockscreen").style.display = "none";
+      } else {
+        document.getElementById("errorMsg").classList.remove("hidden");
+      }
     };
 
-    // === ENGINE STATE ===
-    async function loadEngineState() {
-      const res = await axios.get("/api/engine-state");
-      document.getElementById("engineState").textContent = JSON.stringify(res.data, null, 2);
-    }
+    // Bouton RUN
+    document.getElementById("runAll").onclick = async () => {
+      const statusBox = document.getElementById("runStatus");
+      statusBox.className = "w-full max-w-2xl p-3 rounded text-center font-semibold bg-yellow-600";
+      statusBox.textContent = "⏳ Lancement en cours...";
 
-    // === ALERTS ===
-    async function loadAlerts() {
-      const res = await axios.get("/api/alerts");
-      document.getElementById("alerts").textContent = JSON.stringify(res.data.alerts, null, 2);
-    }
+      try {
+        // Run Global
+        await fetch("/api/run-global", { method: "POST" }).then(r => r.json());
+        statusBox.textContent = "✅ RUN Global terminé – lancement Continental...";
+        statusBox.className = "w-full max-w-2xl p-3 rounded text-center font-semibold bg-blue-600";
 
-    // === SOURCES ===
-    async function loadSources() {
-      const res = await axios.get("/api/sources");
-      document.getElementById("sources").textContent = JSON.stringify(res.data.sources, null, 2);
-    }
+        // Run Continental
+        await fetch("/api/run-continental", { method: "POST" }).then(r => r.json());
+        statusBox.textContent = "🚀 Centrale terminée : Global + Continental OK ✅";
+        statusBox.className = "w-full max-w-2xl p-3 rounded text-center font-semibold bg-green-600";
+      } catch (err) {
+        statusBox.textContent = "❌ Erreur lors du lancement : " + err.message;
+        statusBox.className = "w-full max-w-2xl p-3 rounded text-center font-semibold bg-red-600";
+      }
+    };
 
-    // === CHECKUP CHART ===
-    async function loadCheckup() {
-      const res = await axios.get("/api/checkup");
-      const ctx = document.getElementById("checkupChart").getContext("2d");
-      new Chart(ctx, {
-        type: "doughnut",
-        data: {
-          labels: Object.keys(res.data),
-          datasets: [{
-            data: Object.values(res.data).map(v => v === "OK" ? 1 : 0),
-            backgroundColor: ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"]
-          }]
-        },
-        options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+    // Logs SSE
+    const logBox = document.getElementById("logs");
+    const evtSource = new EventSource("/api/logs/stream");
+    evtSource.onmessage = function(event) {
+      const logs = JSON.parse(event.data);
+      logBox.innerHTML = logs.map(l => "▶ " + l).join("<br>");
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+
+    // Checklist connecté
+    function refreshChecklist() {
+      fetch("/api/checkup").then(res => res.json()).then(data => {
+        const checklist = document.getElementById("checklist");
+        checklist.innerHTML = "";
+        for (const [key, value] of Object.entries(data)) {
+          let color = "text-gray-400";
+          let icon = "⚪";
+          if (value === "OK") { color = "text-green-400"; icon = "✅"; }
+          else if (value === "PENDING") { color = "text-yellow-400"; icon = "⏳"; }
+          else if (value === "FAIL") { color = "text-red-400"; icon = "❌"; }
+          const li = document.createElement("li");
+          li.className = `flex items-center gap-2 ${color}`;
+          li.innerHTML = `<span>${icon}</span> <span class="font-mono">${key}</span>`;
+          checklist.appendChild(li);
+        }
       });
     }
+    setInterval(refreshChecklist, 5000);
+    refreshChecklist();
 
-    // === RUN GLOBAL ===
-    async function triggerRun(zone) {
-      await axios.post("/api/run-global", { zone });
-      loadEngineState();
-      loadAlerts();
-      loadSources();
-      loadCheckup();
+    // Sources
+    fetch("/api/sources").then(res => res.json()).then(data => {
+      document.getElementById("sources").textContent = JSON.stringify(data.sources, null, 2);
+    });
+
+    // Alertes
+    function refreshAlerts() {
+      fetch("/api/alerts").then(res => res.json()).then(data => {
+        const box = document.getElementById("alerts");
+        box.innerHTML = "";
+        (data.alerts || []).forEach(alert => {
+          const div = document.createElement("div");
+          div.className = `p-3 rounded ${alert.reliability > 80 ? "bg-red-600" : "bg-yellow-500"}`;
+          div.textContent = `${alert.type} (${alert.reliability}%) – ${alert.continent || alert.country || ""}`;
+          box.appendChild(div);
+        });
+      });
     }
+    setInterval(refreshAlerts, 10000);
+    refreshAlerts();
 
-    // AUTO REFRESH
-    loadEngineState();
-    loadAlerts();
-    loadSources();
-    loadCheckup();
-    setInterval(loadEngineState, 10000);
-    setInterval(loadAlerts, 15000);
-    setInterval(loadSources, 30000);
-    setInterval(loadCheckup, 60000);
+    // IA moteur
+    document.getElementById("askEngine").onclick = () => {
+      const msg = document.getElementById("engineInput").value;
+      fetch("/api/chat/engine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("engineReply").textContent = data.reply || "Pas de réponse.";
+      });
+    };
   </script>
 </body>
 </html>
