@@ -4,9 +4,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node --input-type=module server.js",
-    "dev": "nodemon --input-type=module server.js"
-  },
+  "start": "node server.js",
+  "dev": "nodemon server.js"
+},
   "engines": {
     "node": "22.x"
   },
