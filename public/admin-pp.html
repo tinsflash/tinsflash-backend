@@ -19,6 +19,7 @@
     .alert { background: #374151; padding: 10px; border-radius: 8px; margin-bottom: 12px; }
     .auto { border-left: 4px solid #10b981; }
     .manual { border-left: 4px solid #f59e0b; }
+    #logs { max-height: 250px; overflow-y: auto; font-size: 14px; background: #0f172a; padding: 10px; border-radius: 6px; }
     footer { margin-top: 30px; padding: 10px; text-align: center; font-size: 12px; color: #9ca3af; }
   </style>
 </head>
@@ -28,27 +29,27 @@
     <p>Pilotage du moteur météo – run, logs, checklist, alertes</p>
   </header>
 
-  <!-- Bouton Run -->
+  <!-- 1. Bouton Run -->
   <section>
     <button id="runBtn" class="run-btn">🚀 Lancer la Centrale (Global + Continental)</button>
     <div id="runStatus"></div>
   </section>
 
-  <!-- Checklist -->
+  <!-- 2. Checklist -->
   <section>
     <h2>📋 Checklist moteur</h2>
     <ul id="checklist"></ul>
   </section>
 
-  <!-- Logs -->
+  <!-- 3. Logs -->
   <section>
     <h2>📜 Logs en direct</h2>
-    <div id="logs"></div>
+    <div id="logs"><p>⏳ En attente de nouveaux logs...</p></div>
   </section>
 
-  <!-- Alertes -->
+  <!-- 4. Alertes -->
   <section>
-    <h2>🚨 Alertes Primeur</h2>
+    <h2>🚨 Alertes Primeur / À valider / À surveiller</h2>
     <div id="alerts">Chargement...</div>
   </section>
 
@@ -76,7 +77,7 @@
       }
     });
 
-    // === Checklist moteur ===
+    // === Checklist ===
     async function loadChecklist() {
       try {
         const res = await fetch("/api/checkup");
@@ -91,6 +92,30 @@
       } catch {
         document.getElementById("checklist").innerHTML = "<li class='fail'>Erreur chargement checklist</li>";
       }
+    }
+
+    // === Logs SSE ===
+    function connectLogs() {
+      const logDiv = document.getElementById("logs");
+      logDiv.innerHTML = "<p>⏳ En attente de nouveaux logs...</p>";
+
+      const evtSource = new EventSource("/api/logs/stream");
+      evtSource.onmessage = (event) => {
+        const logs = JSON.parse(event.data);
+        if (logDiv.innerHTML.includes("En attente")) logDiv.innerHTML = "";
+
+        logs.forEach(log => {
+          const p = document.createElement("p");
+          const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : "⏳";
+          p.textContent = `[${ts}] ${log.message || "—"}`;
+          logDiv.appendChild(p);
+          logDiv.scrollTop = logDiv.scrollHeight;
+        });
+      };
+      evtSource.onerror = () => {
+        logDiv.innerHTML += "<p style='color:red'>❌ Connexion SSE perdue, reconnexion...</p>";
+        setTimeout(connectLogs, 5000);
+      };
     }
 
     // === Alertes Primeur ===
@@ -119,18 +144,13 @@
               `;
 
               if (reliability >= 90) {
-                const auto = document.createElement("p");
-                auto.className = "ok";
-                auto.textContent = "✅ Publiée automatiquement (fiabilité ≥ 90%)";
-                div.appendChild(auto);
+                div.innerHTML += "<p class='ok'>✅ Publiée automatiquement (fiabilité ≥ 90%)</p>";
               } else {
-                const btns = document.createElement("div");
-                btns.innerHTML = `
+                div.innerHTML += `
                   <button onclick="validateAlert('${alert._id}')">✅ Publier</button>
                   <button onclick="delayAlert('${alert._id}')">⏳ En attente</button>
                   <button onclick="watchAlert('${alert._id}')">👁 Garder à l'œil</button>
                 `;
-                div.appendChild(btns);
               }
               alertsDiv.appendChild(div);
             }
@@ -142,42 +162,15 @@
     }
 
     // Actions alertes
-    async function validateAlert(id) {
-      await fetch(`/api/alerts/${id}/validate`, { method: "POST" });
-      loadAlerts();
-    }
-    async function delayAlert(id) {
-      await fetch(`/api/alerts/${id}/delay`, { method: "POST" });
-      loadAlerts();
-    }
-    async function watchAlert(id) {
-      await fetch(`/api/alerts/${id}/watch`, { method: "POST" });
-      loadAlerts();
-    }
-
-    // === Logs en direct (SSE) ===
-    function connectLogs() {
-      const logDiv = document.getElementById("logs");
-      const evtSource = new EventSource("/api/logs/stream");
-      evtSource.onmessage = (event) => {
-        const logs = JSON.parse(event.data);
-        logDiv.innerHTML = "";
-        logs.forEach(log => {
-          const p = document.createElement("p");
-          p.textContent = `[${new Date(log.timestamp).toLocaleString()}] ${log.message}`;
-          logDiv.appendChild(p);
-        });
-      };
-    }
+    async function validateAlert(id) { await fetch(`/api/alerts/${id}/validate`, { method: "POST" }); loadAlerts(); }
+    async function delayAlert(id) { await fetch(`/api/alerts/${id}/delay`, { method: "POST" }); loadAlerts(); }
+    async function watchAlert(id) { await fetch(`/api/alerts/${id}/watch`, { method: "POST" }); loadAlerts(); }
 
     // Auto-refresh
     loadChecklist();
     loadAlerts();
     connectLogs();
-    setInterval(() => {
-      loadChecklist();
-      loadAlerts();
-    }, 10000);
+    setInterval(() => { loadChecklist(); loadAlerts(); }, 10000);
   </script>
 </body>
 </html>
