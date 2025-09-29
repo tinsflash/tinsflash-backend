@@ -1,11 +1,11 @@
 // services/engineState.js
-import EngineState from "./EngineState.js"; // ✅ On reste dans /services/
+import EngineState from "./EngineState.js"; // ✅ on reste dans /services/
 
 // Récupérer l'état du moteur
 export async function getEngineState() {
   let state = await EngineState.findOne();
   if (!state) {
-    state = new EngineState({ status: "idle", checkup: {}, errors: [] });
+    state = new EngineState({ status: "idle", checkup: {}, errors: [], logs: [] });
     await state.save();
   }
   return state;
@@ -23,7 +23,7 @@ export async function saveEngineState(newState) {
   return state;
 }
 
-// Ajouter un log d'erreur
+// Ajouter une erreur
 export async function addEngineError(message) {
   const state = await getEngineState();
   state.errors.push({ message, timestamp: new Date() });
@@ -34,7 +34,6 @@ export async function addEngineError(message) {
 // Ajouter un log standard
 export async function addEngineLog(message) {
   const state = await getEngineState();
-  if (!state.logs) state.logs = [];
   state.logs.push({ message, timestamp: new Date() });
   await state.save();
 }
