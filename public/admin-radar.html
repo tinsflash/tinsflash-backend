@@ -2,34 +2,40 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>⚡ Admin - Radar</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <title>🛰️ Console Admin – Radar</title>
+  <meta name="robots" content="noindex,nofollow">
   <style>
-    body{background:#0d1117;color:#e6edf3;font-family:Arial,sans-serif;margin:0;}
-    header{background:#161b22;padding:12px;text-align:center;font-size:20px;color:#00ff9d;font-weight:bold;}
-    nav{display:flex;justify-content:center;gap:15px;background:#1f2937;padding:10px;}
-    nav a{color:#9ca3af;text-decoration:none;padding:6px 12px;border-radius:6px;}
-    nav a:hover{background:#374151;color:#fff;}
-    .container{padding:20px;}
-    iframe{width:100%;height:600px;border:none;border-radius:8px;}
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
+    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:18px; color:#fdd835; }
+    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
+    nav a:hover { text-decoration:underline; }
+    .container { padding:0; height:90vh; }
+    iframe { width:100%; height:100%; border:none; }
   </style>
 </head>
 <body>
-  <header>⚡ Centrale Nucléaire Météo - Radar</header>
+<script>
+  const pass = prompt("Mot de passe ?");
+  if (pass !== "202679") {
+    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
+    throw new Error("Accès refusé");
+  }
+</script>
+
+<header>
+  <h1>🛰️ Radar Global – Console Admin</h1>
   <nav>
-    <a href="admin-pp.html">Cockpit</a>
+    <a href="admin-pp.html">Console</a>
     <a href="admin-alerts.html">Alertes</a>
+    <a href="admin-index.html">Vue Utilisateur</a>
     <a href="admin-chat.html">Chat IA</a>
     <a href="admin-radar.html">Radar</a>
-    <a href="admin-index-preview.html">Index Preview</a>
-    <a href="admin-users.html">Utilisateurs</a>
-    <a href="admin-news.html">Infos Mondiales</a>
   </nav>
+</header>
 
-  <div class="container">
-    <h3>Radar météo interactif (Windy)</h3>
-    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&zoom=5&level=surface&overlay=rain&product=ecmwf" allowfullscreen></iframe>
-  </div>
+<div class="container">
+  <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=5&zoom=4&level=surface&overlay=rain&menu=&message=true&marker=&calendar=now&pressure=true&type=map&location=coordinates&detail=&detailLat=50&detailLon=5&metricWind=default&metricTemp=default&radarRange=-1" loading="lazy"></iframe>
+</div>
 </body>
 </html>
