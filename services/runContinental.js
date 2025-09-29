@@ -1,13 +1,11 @@
 // services/runContinental.js
-// 🌎 RUN CONTINENTAL – Zones non couvertes → alertes continentales
-
 import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import { processAlerts } from "./alertsService.js";
 
 const continents = ["Europe", "Africa", "Asia", "North America", "South America", "Oceania"];
 
-async function runContinental() {
+export async function runContinental() {
   const state = getEngineState();
   try {
     addEngineLog("🌎 Lancement du RUN CONTINENTAL…");
@@ -46,12 +44,7 @@ Réponds en JSON: { continent, type, reliability, firstDetector }
     saveEngineState(state);
 
     const alertStats = await processAlerts();
-    if (alertStats.error) {
-      state.checkup.globalAlerts = "FAIL";
-      addEngineError(alertStats.error);
-    } else {
-      state.checkup.globalAlerts = "OK";
-    }
+    state.checkup.globalAlerts = alertStats?.error ? "FAIL" : "OK";
     saveEngineState(state);
 
     state.checkup.engineStatus = "OK";
@@ -66,5 +59,3 @@ Réponds en JSON: { continent, type, reliability, firstDetector }
     return { error: err.message };
   }
 }
-
-export { runContinental };
