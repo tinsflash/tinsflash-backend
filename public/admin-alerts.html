@@ -2,73 +2,93 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>⚡ Admin - Gestion Alertes</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <title>🚨 Console Admin – Alertes</title>
+  <meta name="robots" content="noindex,nofollow">
   <style>
-    body { background:#0d1117; color:#e6edf3; font-family:Arial,sans-serif; margin:0; }
-    header { background:#161b22; padding:12px; text-align:center; font-size:20px; color:#00ff9d; font-weight:bold; }
-    nav { display:flex; justify-content:center; gap:15px; background:#1f2937; padding:10px; }
-    nav a { color:#9ca3af; text-decoration:none; padding:6px 12px; border-radius:6px; }
-    nav a:hover { background:#374151; color:#fff; }
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
+    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:18px; color:#f44336; }
+    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
+    nav a:hover { text-decoration:underline; }
     .container { padding:20px; }
-    .card { background:#161b22; border-radius:8px; padding:15px; margin-bottom:20px; }
-    table { width:100%; border-collapse:collapse; }
-    th,td { padding:8px; border-bottom:1px solid #374151; }
-    th { text-align:left; color:#9ca3af; }
-    button { padding:6px 12px; margin:2px; border:none; border-radius:5px; cursor:pointer; }
-    .ok{color:#10b981;} .pending{color:orange;} .error{color:red;}
+    .alertBox { margin:10px 0; padding:10px; border-radius:5px; background:#222; border:1px solid #444; }
+    .primeur { border-left:5px solid #4caf50; }
+    .avalider { border-left:5px solid #ff9800; }
+    .auto { border-left:5px solid #2196f3; }
+    h2 { color:#fdd835; }
   </style>
 </head>
 <body>
-  <header>⚡ Centrale Nucléaire Météo - Gestion Alertes</header>
+<script>
+  const pass = prompt("Mot de passe ?");
+  if (pass !== "202679") {
+    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
+    throw new Error("Accès refusé");
+  }
+</script>
+
+<header>
+  <h1>🚨 Alertes – Console Admin</h1>
   <nav>
-    <a href="admin-pp.html">Cockpit</a>
+    <a href="admin-pp.html">Console</a>
     <a href="admin-alerts.html">Alertes</a>
+    <a href="admin-index.html">Vue Utilisateur</a>
     <a href="admin-chat.html">Chat IA</a>
     <a href="admin-radar.html">Radar</a>
-    <a href="admin-index-preview.html">Index Preview</a>
-    <a href="admin-users.html">Utilisateurs</a>
-    <a href="admin-news.html">Infos Mondiales</a>
   </nav>
+</header>
 
-  <div class="container">
-    <div class="card">
-      <h3>Alertes en attente</h3>
-      <table id="alertsTable">
-        <thead>
-          <tr><th>Date</th><th>Zone</th><th>Type</th><th>Confiance</th><th>Action</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
+<div class="container">
+  <h2>⚡ Alertes Autovalidées ≥90%</h2>
+  <div id="auto"></div>
 
-  <script>
-    async function loadAlerts(){
-      const res = await fetch("/api/alerts/pending");
+  <h2>🟠 Alertes à valider (70–90%)</h2>
+  <div id="avalider"></div>
+
+  <h2>📊 Comparaison</h2>
+  <h3>A. Nos alertes uniques (primeur)</h3>
+  <div id="primeur"></div>
+  <h3>B. Alertes vues ailleurs (comparatif)</h3>
+  <div id="comparatif"></div>
+</div>
+
+<script>
+  async function loadAlerts() {
+    try {
+      const res = await fetch("/api/alerts");
       const data = await res.json();
-      const tbody=document.querySelector("#alertsTable tbody");
-      tbody.innerHTML="";
-      (data.alerts||[]).forEach(a=>{
-        tbody.innerHTML+=`
-          <tr>
-            <td>${a.date}</td>
-            <td>${a.zone}</td>
-            <td>${a.type}</td>
-            <td>${a.confidence}%</td>
-            <td>
-              <button onclick="validate('${a.id}')">✅ Valider</button>
-              <button onclick="wait('${a.id}')">⏳ Attente</button>
-              <button onclick="reject('${a.id}')">❌ Rejeter</button>
-            </td>
-          </tr>`;
+      if (!Array.isArray(data)) return;
+
+      data.forEach(alert => {
+        const box = document.createElement("div");
+        box.className = "alertBox";
+        if (alert.reliability >= 90) box.classList.add("auto");
+        else if (alert.reliability >= 70) box.classList.add("avalider");
+        else box.classList.add("primeur");
+
+        box.innerHTML = `
+          <b>Type:</b> ${alert.type || "?"} |
+          <b>Zone:</b> ${alert.zone || alert.continent || "?"} |
+          <b>Fiabilité:</b> ${alert.reliability || "?"}%<br>
+          <b>Intensité:</b> ${alert.intensity || "-"}<br>
+          <b>Conséquences:</b> ${alert.consequences || "-"}<br>
+          <b>Recommandations:</b> ${alert.recommendations || "-"}<br>
+          <b>Durée:</b> ${alert.start || "?"} → ${alert.end || "?"}<br>
+          <b>FirstDetector:</b> ${alert.firstDetector ? "✅" : "❌"}
+        `;
+
+        if (alert.reliability >= 90) document.getElementById("auto").appendChild(box);
+        else if (alert.reliability >= 70) document.getElementById("avalider").appendChild(box);
+        else document.getElementById("primeur").appendChild(box);
+
+        if (alert.comparison === "ours") document.getElementById("primeur").appendChild(box.cloneNode(true));
+        if (alert.comparison === "others") document.getElementById("comparatif").appendChild(box.cloneNode(true));
       });
+    } catch (err) {
+      document.body.innerHTML += `<div style="color:red;">Erreur chargement alertes: ${err.message}</div>`;
     }
-    async function validate(id){ await fetch("/api/alerts/validate/"+id,{method:"POST"}); loadAlerts(); }
-    async function wait(id){ await fetch("/api/alerts/wait/"+id,{method:"POST"}); loadAlerts(); }
-    async function reject(id){ await fetch("/api/alerts/reject/"+id,{method:"POST"}); loadAlerts(); }
-    loadAlerts();
-  </script>
+  }
+  loadAlerts();
+</script>
 </body>
 </html>
