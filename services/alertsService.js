@@ -3,29 +3,30 @@
 
 import { addLog } from "./adminLogs.js";
 
-// Mémoire interne des alertes
 let alerts = [];
 
 /**
- * Récupère les alertes actives
+ * Récupère toutes les alertes actives (sauf ignorées)
  */
 export async function getActiveAlerts() {
   return alerts.filter(a => a.status !== "ignored");
 }
 
 /**
- * Ajoute une nouvelle alerte
- * @param {*} alert { continent, country?, region?, type, reliability, firstDetector }
+ * Ajoute une alerte avec détails complets
  */
 export async function addAlert(alert) {
   const entry = {
     id: Date.now().toString(36) + Math.random().toString(36).substring(2),
     ...alert,
+    details: alert.details || {},
     status: "new",
     createdAt: new Date().toISOString(),
   };
   alerts.push(entry);
-  await addLog(`🚨 Nouvelle alerte: ${alert.type} (${alert.reliability}%) ${alert.continent || alert.country}`);
+  await addLog(
+    `🚨 Nouvelle alerte: ${alert.type} (${alert.reliability}%) ${alert.continent || alert.country}`
+  );
   return entry;
 }
 
@@ -52,18 +53,17 @@ export async function updateAlertStatus(id, action) {
 }
 
 /**
- * Traitement global (ex. après runGlobal ou runContinental)
+ * Récapitulatif global des alertes
  */
 export async function processAlerts() {
   try {
-    // Pour l’instant simple récap
     const stats = {
       total: alerts.length,
       validated: alerts.filter(a => a.status === "validated").length,
       new: alerts.filter(a => a.status === "new").length,
       ignored: alerts.filter(a => a.status === "ignored").length,
     };
-    await addLog(`📊 Traitement des alertes terminé: ${stats.total} total (${stats.validated} validées)`);
+    await addLog(`📊 Traitement des alertes: ${stats.total} total (${stats.validated} validées)`);
     return stats;
   } catch (err) {
     await addLog("💥 Erreur processAlerts: " + err.message);
