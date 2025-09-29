@@ -1,21 +1,26 @@
 // services/runContinental.js
+// 🌎 RUN CONTINENTAL – Détection d’anomalies majeures par continent
+
 import { askOpenAI } from "./openaiService.js";
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+import { addLog } from "./adminLogs.js";
+import { getEngineState, saveEngineState } from "./engineState.js";
 import { processAlerts } from "./alertsService.js";
 
 const continents = ["Europe", "Africa", "Asia", "North America", "South America", "Oceania"];
 
 export async function runContinental() {
-  const state = getEngineState();
-  try {
-    addEngineLog("🌎 Lancement du RUN CONTINENTAL…");
-    state.runTime = new Date().toISOString();
-    state.checkup.continentalAlerts = "PENDING";
-    saveEngineState(state);
+  const state = await getEngineState();
+  state.runTime = new Date().toISOString();
+  state.status = "RUNNING";
+  state.checkup.continentalAlerts = "PENDING";
+  await saveEngineState(state);
 
+  try {
+    await addLog("🌎 Lancement du RUN CONTINENTAL…");
     const alerts = [];
 
     for (const cont of continents) {
+      await addLog(`🔎 Analyse continentale en cours: ${cont}`);
       try {
         const aiPrompt = `
 Analyse météo RUN CONTINENTAL – ${cont}
@@ -27,35 +32,46 @@ Consignes:
 Réponds en JSON: { continent, type, reliability, firstDetector }
 `;
         const aiAnalysis = await askOpenAI(aiPrompt);
+
         try {
           const parsed = JSON.parse(aiAnalysis);
           alerts.push(parsed);
+          await addLog(`✅ Alerte détectée pour ${cont}: ${parsed.type} (${parsed.reliability}%)`);
         } catch {
-          addEngineError("⚠️ Impossible de parser l’alerte continentale " + cont);
+          await addLog(`⚠️ Impossible de parser la réponse AI pour ${cont}`);
         }
       } catch (err) {
-        addEngineError(`Erreur sur continent ${cont}: ${err.message}`);
+        await addLog(`❌ Erreur analyse ${cont}: ${err.message}`);
       }
     }
 
     state.continentalAlerts = alerts;
-    state.alertsList = [...(state.alertsList || []), ...alerts];
     state.checkup.continentalAlerts = alerts.length > 0 ? "OK" : "FAIL";
-    saveEngineState(state);
+    await saveEngineState(state);
 
+    // Traitement global des alertes
     const alertStats = await processAlerts();
-    state.checkup.globalAlerts = alertStats?.error ? "FAIL" : "OK";
-    saveEngineState(state);
+    if (alertStats.error) {
+      state.checkup.globalAlerts = "FAIL";
+      await addLog(`💥 Erreur traitement alertes globales: ${alertStats.error}`);
+    } else {
+      state.checkup.globalAlerts = "OK";
+      await addLog("🌐 Alertes globales traitées avec succès");
+    }
+    await saveEngineState(state);
 
+    state.status = "OK";
     state.checkup.engineStatus = "OK";
-    saveEngineState(state);
-    addEngineLog("✅ RUN CONTINENTAL terminé");
-    return { alerts, alertStats };
+    await saveEngineState(state);
+
+    await addLog("🚀 RUN CONTINENTAL terminé");
+    return { success: true, alerts, alertStats };
   } catch (err) {
+    state.status = "FAIL";
     state.checkup.engineStatus = "FAIL";
-    saveEngineState(state);
-    addEngineError(err.message || "Erreur inconnue RUN CONTINENTAL");
-    addEngineLog("❌ RUN CONTINENTAL en échec");
-    return { error: err.message };
+    await saveEngineState(state);
+
+    await addLog("💥 Erreur RUN CONTINENTAL: " + err.message);
+    return { success: false, error: err.message };
   }
 }
