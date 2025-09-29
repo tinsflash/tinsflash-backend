@@ -1,72 +1,114 @@
 // services/alertsService.js
-// 🚨 Gestion centralisée des alertes météo
+import Alert from "../models/Alerts.js";
+import { addEngineLog, addEngineError } from "./engineState.js";
 
-import { addLog } from "./adminLogs.js";
-
-let alerts = [];
-
-/**
- * Récupère toutes les alertes actives (sauf ignorées)
- */
+// 📌 Récupérer toutes les alertes actives
 export async function getActiveAlerts() {
-  return alerts.filter(a => a.status !== "ignored");
-}
-
-/**
- * Ajoute une alerte avec détails complets
- */
-export async function addAlert(alert) {
-  const entry = {
-    id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-    ...alert,
-    details: alert.details || {},
-    status: "new",
-    createdAt: new Date().toISOString(),
-  };
-  alerts.push(entry);
-  await addLog(
-    `🚨 Nouvelle alerte: ${alert.type} (${alert.reliability}%) ${alert.continent || alert.country}`
-  );
-  return entry;
-}
-
-/**
- * Met à jour le statut d’une alerte
- */
-export async function updateAlertStatus(id, action) {
-  const alert = alerts.find(a => a.id === id);
-  if (!alert) return null;
-
-  switch (action) {
-    case "validate":
-      alert.status = "validated";
-      await addLog(`✅ Alerte validée: ${alert.type} (${alert.continent || alert.country})`);
-      break;
-    case "ignore":
-      alert.status = "ignored";
-      await addLog(`❌ Alerte ignorée: ${alert.type} (${alert.continent || alert.country})`);
-      break;
-    default:
-      await addLog(`⚠️ Action inconnue sur alerte ${id}: ${action}`);
-  }
-  return alert;
-}
-
-/**
- * Récapitulatif global des alertes
- */
-export async function processAlerts() {
   try {
-    const stats = {
-      total: alerts.length,
-      validated: alerts.filter(a => a.status === "validated").length,
-      new: alerts.filter(a => a.status === "new").length,
-      ignored: alerts.filter(a => a.status === "ignored").length,
-    };
-    await addLog(`📊 Traitement des alertes: ${stats.total} total (${stats.validated} validées)`);
-    return stats;
+    const alerts = await Alert.find({ status: "active" }).lean();
+
+    // Normalisation + enrichissement
+    return alerts.map(alert => {
+      const reliability = alert.reliability || 0;
+      const firstDetector = alert.firstDetector === true;
+
+      // Catégorisation automatique
+      let category = "ignored";
+      if (firstDetector && reliability >= 90) {
+        category = "primeur-auto"; // auto-publiée
+      } else if (firstDetector && reliability >= 70) {
+        category = "primeur"; // à valider
+      } else if (reliability >= 90) {
+        category = "auto"; // publiée automatiquement
+      } else if (reliability >= 70) {
+        category = "pending"; // en attente
+      }
+
+      return {
+        id: alert._id,
+        type: alert.type || "Indéterminé",
+        zone: alert.zone || alert.continent || "Zone inconnue",
+        intensity: alert.intensity || "Non précisée",
+        start: alert.start || null,
+        end: alert.end || null,
+        reliability,
+        firstDetector,
+        category,
+        description: alert.description || "",
+        consequences: alert.consequences || "",
+        recommendations: alert.recommendations || "",
+        status: alert.status,
+        createdAt: alert.createdAt,
+      };
+    });
   } catch (err) {
-    await addLog("💥 Erreur processAlerts: " + err.message);
+    addEngineError("Erreur getActiveAlerts: " + err.message);
+    return [];
+  }
+}
+
+// 📌 Mettre à jour le statut d'une alerte (valider / ignorer / attente)
+export async function updateAlertStatus(id, action) {
+  try {
+    let status = "pending";
+    if (action === "validate") status = "validated";
+    else if (action === "ignore") status = "ignored";
+
+    const alert = await Alert.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    ).lean();
+
+    if (alert) {
+      addEngineLog(`Alerte ${id} mise à jour en ${status}`);
+    }
+
+    return alert;
+  } catch (err) {
+    addEngineError("Erreur updateAlertStatus: " + err.message);
+    return null;
+  }
+}
+
+// 📌 Créer et sauvegarder une nouvelle alerte
+export async function createAlert(data) {
+  try {
+    const alert = new Alert({
+      type: data.type,
+      zone: data.zone || data.continent || "Zone inconnue",
+      intensity: data.intensity || "Non précisée",
+      start: data.start,
+      end: data.end,
+      reliability: data.reliability || 0,
+      firstDetector: data.firstDetector || false,
+      description: data.description || "",
+      consequences: data.consequences || "",
+      recommendations: data.recommendations || "",
+      status: "active",
+    });
+
+    await alert.save();
+    addEngineLog(`Nouvelle alerte créée: ${alert.type} (${alert.zone})`);
+
+    return alert;
+  } catch (err) {
+    addEngineError("Erreur createAlert: " + err.message);
+    return null;
+  }
+}
+
+// 📌 Traiter et enregistrer une liste d’alertes
+export async function processAlerts(alerts = []) {
+  try {
+    const results = [];
+    for (const a of alerts) {
+      const alert = await createAlert(a);
+      if (alert) results.push(alert);
+    }
+    return { count: results.length, alerts: results };
+  } catch (err) {
+    addEngineError("Erreur processAlerts: " + err.message);
     return { error: err.message };
   }
 }
