@@ -1,9 +1,9 @@
 // services/runGlobalEurope.js
-// ⚡ RUN GLOBAL EUROPE — Zones couvertes (UE27 + UK + Norvège + Suisse + Ukraine)
-// Découpage fin : capitales, reliefs, côtes, régions climatiques
+// ⚡ RUN GLOBAL EUROPE — Zones couvertes (UE27 + UK + Norvège + Suisse + Ukraine + Balkans + Islande)
+// Bloc 1 : Europe de l’Ouest & Centrale (France → Autriche)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecast } from "./superForecast.js"; // ✅ correct
+import { runSuperForecast } from "./superForecast.js"; // ✅ conforme export
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
@@ -25,7 +25,8 @@ const EUROPE_ZONES = {
     { lat: 42.70, lon: 2.90, region: "Pyrénées" },
     { lat: 45.90, lon: 6.12, region: "Alpes" },
     { lat: 45.04, lon: 3.88, region: "Massif-Central" },
-    { lat: 48.11, lon: -1.68, region: "Bretagne" }
+    { lat: 48.11, lon: -1.68, region: "Bretagne" },
+    { lat: 49.50, lon: 0.10, region: "Normandie" }
   ],
   Germany: [
     { lat: 52.52, lon: 13.40, region: "Berlin - East" },
@@ -36,24 +37,15 @@ const EUROPE_ZONES = {
     { lat: 47.57, lon: 10.70, region: "Alpes-Bavaroises" },
     { lat: 48.00, lon: 8.23, region: "Forêt-Noire" }
   ],
-  Spain: [
-    { lat: 40.41, lon: -3.70, region: "Madrid - Central Meseta" },
-    { lat: 41.38, lon: 2.17, region: "Barcelona - Catalonia" },
-    { lat: 36.72, lon: -4.42, region: "Andalusia - Malaga" },
-    { lat: 43.26, lon: -2.93, region: "North - Basque Country" },
-    { lat: 42.81, lon: -1.65, region: "Pyrenees" },
-    { lat: 39.57, lon: 2.65, region: "Balearic Islands" },
-    { lat: 28.12, lon: -15.43, region: "Canary Islands" }
+  Netherlands: [
+    { lat: 52.37, lon: 4.90, region: "West - Amsterdam" },
+    { lat: 51.92, lon: 4.48, region: "Southwest - Rotterdam" },
+    { lat: 53.22, lon: 6.57, region: "North - Groningen" },
+    { lat: 52.08, lon: 5.12, region: "Central - Utrecht" }
   ],
-  Italy: [
-    { lat: 45.46, lon: 9.19, region: "North - Milan" },
-    { lat: 41.90, lon: 12.50, region: "Central - Rome" },
-    { lat: 40.85, lon: 14.27, region: "South - Naples" },
-    { lat: 44.49, lon: 11.34, region: "North-East - Bologna" },
-    { lat: 43.71, lon: 10.40, region: "Tuscany - Florence" },
-    { lat: 46.50, lon: 11.35, region: "Dolomites" },
-    { lat: 37.60, lon: 14.02, region: "Sicily - Etna" },
-    { lat: 40.12, lon: 9.01, region: "Sardinia" }
+  Luxembourg: [
+    { lat: 49.61, lon: 6.13, region: "Central - Luxembourg City" },
+    { lat: 49.76, lon: 6.10, region: "North - Ardennes" }
   ],
   Switzerland: [
     { lat: 46.95, lon: 7.44, region: "Central - Bern" },
@@ -67,6 +59,12 @@ const EUROPE_ZONES = {
     { lat: 47.80, lon: 13.04, region: "Salzburg - Alps" },
     { lat: 47.07, lon: 15.44, region: "Graz - South" },
     { lat: 47.27, lon: 11.40, region: "Tyrol - Innsbruck" }
+  ],
+// --- Scandinavie ---
+  Denmark: [
+    { lat: 55.68, lon: 12.57, region: "East - Copenhagen" },
+    { lat: 57.05, lon: 9.92, region: "North - Aalborg" },
+    { lat: 55.40, lon: 10.39, region: "Central - Odense" }
   ],
   Norway: [
     { lat: 59.91, lon: 10.75, region: "Oslo - South" },
@@ -86,46 +84,12 @@ const EUROPE_ZONES = {
     { lat: 65.01, lon: 25.47, region: "Oulu - North" },
     { lat: 66.50, lon: 25.72, region: "Lapland - Rovaniemi" }
   ],
-  Ukraine: [
-    { lat: 50.45, lon: 30.52, region: "Kyiv - Central" },
-    { lat: 48.62, lon: 22.30, region: "West - Uzhhorod" },
-    { lat: 46.48, lon: 30.73, region: "South - Odessa" },
-    { lat: 49.99, lon: 36.23, region: "East - Kharkiv" },
-    { lat: 47.90, lon: 33.38, region: "Dnipropetrovsk" }
+  Iceland: [
+    { lat: 64.13, lon: -21.90, region: "Southwest - Reykjavik" },
+    { lat: 65.68, lon: -18.10, region: "North - Akureyri" }
   ],
-  UnitedKingdom: [
-    { lat: 51.50, lon: -0.12, region: "South - London" },
-    { lat: 55.95, lon: -3.18, region: "North - Edinburgh" },
-    { lat: 53.48, lon: -2.24, region: "West - Manchester" },
-    { lat: 51.48, lon: -3.18, region: "Wales - Cardiff" },
-    { lat: 54.60, lon: -5.93, region: "Northern Ireland - Belfast" }
-  ],
-  Ireland: [
-    { lat: 53.34, lon: -6.26, region: "East - Dublin" },
-    { lat: 52.66, lon: -8.62, region: "West - Limerick" },
-    { lat: 51.90, lon: -8.47, region: "South - Cork" }
-  ],
-  Portugal: [
-    { lat: 38.72, lon: -9.13, region: "Lisbon - West" },
-    { lat: 41.15, lon: -8.61, region: "North - Porto" },
-    { lat: 37.01, lon: -7.93, region: "South - Algarve" },
-    { lat: 32.65, lon: -16.91, region: "Madeira" },
-    { lat: 37.74, lon: -25.67, region: "Azores" }
-  ],
-  Netherlands: [
-    { lat: 52.37, lon: 4.90, region: "West - Amsterdam" },
-    { lat: 51.92, lon: 4.48, region: "Southwest - Rotterdam" },
-    { lat: 53.22, lon: 6.57, region: "North - Groningen" }
-  ],
-  Luxembourg: [
-    { lat: 49.61, lon: 6.13, region: "Central - Luxembourg City" },
-    { lat: 49.76, lon: 6.10, region: "North - Ardennes" }
-  ],
-  Denmark: [
-    { lat: 55.68, lon: 12.57, region: "East - Copenhagen" },
-    { lat: 57.05, lon: 9.92, region: "North - Aalborg" },
-    { lat: 55.40, lon: 10.39, region: "Central - Odense" }
-  ],
+
+  // --- Europe Centrale & Est ---
   Poland: [
     { lat: 52.23, lon: 21.01, region: "Central - Warsaw" },
     { lat: 50.06, lon: 19.94, region: "South - Krakow" },
@@ -156,34 +120,20 @@ const EUROPE_ZONES = {
     { lat: 45.52, lon: 25.58, region: "Central - Carpathians - Brașov" },
     { lat: 44.16, lon: 28.64, region: "Southeast - Constanța (Black Sea)" }
   ],
-  Bulgaria: [
-    { lat: 42.70, lon: 23.32, region: "West - Sofia" },
-    { lat: 42.15, lon: 24.75, region: "Central - Plovdiv" },
-    { lat: 43.21, lon: 27.91, region: "East - Varna (Black Sea)" }
+  Moldova: [
+    { lat: 47.01, lon: 28.86, region: "Central - Chișinău" },
+    { lat: 46.83, lon: 29.64, region: "South - Tighina" }
   ],
-  Croatia: [
-    { lat: 45.81, lon: 15.98, region: "Inland - Zagreb" },
-    { lat: 43.51, lon: 16.44, region: "Dalmatian Coast - Split" },
-    { lat: 42.65, lon: 18.09, region: "South Coast - Dubrovnik" },
-    { lat: 46.16, lon: 16.83, region: "North - Varaždin" }
+  Ukraine: [
+    { lat: 50.45, lon: 30.52, region: "Kyiv - Central" },
+    { lat: 48.62, lon: 22.30, region: "West - Uzhhorod" },
+    { lat: 46.48, lon: 30.73, region: "South - Odessa" },
+    { lat: 49.99, lon: 36.23, region: "East - Kharkiv" },
+    { lat: 47.90, lon: 33.38, region: "Dnipropetrovsk" },
+    { lat: 47.10, lon: 37.55, region: "Donbass - Mariupol" }
   ],
-  Slovenia: [
-    { lat: 46.06, lon: 14.51, region: "Central - Ljubljana" },
-    { lat: 46.55, lon: 15.65, region: "East - Maribor" },
-    { lat: 46.38, lon: 13.82, region: "West - Julian Alps" }
-  ],
-  Greece: [
-    { lat: 37.98, lon: 23.72, region: "Central - Athens" },
-    { lat: 40.64, lon: 22.94, region: "North - Thessaloniki" },
-    { lat: 35.34, lon: 25.13, region: "South - Crete - Heraklion" },
-    { lat: 39.62, lon: 19.92, region: "Ionian Islands - Corfu" },
-    { lat: 36.44, lon: 28.23, region: "Dodecanese - Rhodes" }
-  ],
-  Cyprus: [
-    { lat: 35.17, lon: 33.36, region: "Central - Nicosia" },
-    { lat: 34.68, lon: 33.04, region: "South - Limassol" },
-    { lat: 34.77, lon: 32.42, region: "West - Paphos" }
-  ],
+
+  // --- Pays Baltes ---
   Estonia: [
     { lat: 59.44, lon: 24.75, region: "North - Tallinn" },
     { lat: 58.38, lon: 26.73, region: "South - Tartu" },
@@ -199,9 +149,103 @@ const EUROPE_ZONES = {
     { lat: 55.70, lon: 21.14, region: "West - Klaipėda (Baltic Sea)" },
     { lat: 54.90, lon: 23.89, region: "South - Kaunas" }
   ],
+  // --- Péninsule Ibérique ---
+  Spain: [
+    { lat: 40.41, lon: -3.70, region: "Madrid - Central Meseta" },
+    { lat: 41.38, lon: 2.17, region: "Barcelona - Catalonia" },
+    { lat: 36.72, lon: -4.42, region: "Andalusia - Malaga" },
+    { lat: 43.26, lon: -2.93, region: "North - Basque Country" },
+    { lat: 42.81, lon: -1.65, region: "Pyrenees" },
+    { lat: 39.57, lon: 2.65, region: "Balearic Islands" },
+    { lat: 28.12, lon: -15.43, region: "Canary Islands" }
+  ],
+  Portugal: [
+    { lat: 38.72, lon: -9.13, region: "Lisbon - West" },
+    { lat: 41.15, lon: -8.61, region: "North - Porto" },
+    { lat: 37.01, lon: -7.93, region: "South - Algarve" },
+    { lat: 32.65, lon: -16.91, region: "Madeira" },
+    { lat: 37.74, lon: -25.67, region: "Azores" }
+  ],
+
+  // --- Italie & Méditerranée ---
+  Italy: [
+    { lat: 45.46, lon: 9.19, region: "North - Milan" },
+    { lat: 41.90, lon: 12.50, region: "Central - Rome" },
+    { lat: 40.85, lon: 14.27, region: "South - Naples" },
+    { lat: 44.49, lon: 11.34, region: "North-East - Bologna" },
+    { lat: 43.71, lon: 10.40, region: "Tuscany - Florence" },
+    { lat: 46.50, lon: 11.35, region: "Dolomites" },
+    { lat: 37.60, lon: 14.02, region: "Sicily - Etna" },
+    { lat: 40.12, lon: 9.01, region: "Sardinia" }
+  ],
   Malta: [
     { lat: 35.90, lon: 14.51, region: "Malta - Valletta" },
     { lat: 36.04, lon: 14.24, region: "Gozo Island" }
+  ],
+  Greece: [
+    { lat: 37.98, lon: 23.72, region: "Central - Athens" },
+    { lat: 40.64, lon: 22.94, region: "North - Thessaloniki" },
+    { lat: 35.34, lon: 25.13, region: "South - Crete - Heraklion" },
+    { lat: 39.62, lon: 19.92, region: "Ionian Islands - Corfu" },
+    { lat: 36.44, lon: 28.23, region: "Dodecanese - Rhodes" }
+  ],
+  Cyprus: [
+    { lat: 35.17, lon: 33.36, region: "Central - Nicosia" },
+    { lat: 34.68, lon: 33.04, region: "South - Limassol" },
+    { lat: 34.77, lon: 32.42, region: "West - Paphos" }
+  ],
+
+  // --- Balkans ---
+  Croatia: [
+    { lat: 45.81, lon: 15.98, region: "Inland - Zagreb" },
+    { lat: 43.51, lon: 16.44, region: "Dalmatian Coast - Split" },
+    { lat: 42.65, lon: 18.09, region: "South Coast - Dubrovnik" },
+    { lat: 46.16, lon: 16.83, region: "North - Varaždin" }
+  ],
+  Slovenia: [
+    { lat: 46.06, lon: 14.51, region: "Central - Ljubljana" },
+    { lat: 46.55, lon: 15.65, region: "East - Maribor" },
+    { lat: 46.38, lon: 13.82, region: "West - Julian Alps" }
+  ],
+  BosniaHerzegovina: [
+    { lat: 43.85, lon: 18.41, region: "Central - Sarajevo" },
+    { lat: 44.77, lon: 17.19, region: "North - Banja Luka" },
+    { lat: 43.26, lon: 17.68, region: "South - Mostar" }
+  ],
+  Serbia: [
+    { lat: 44.82, lon: 20.45, region: "Central - Belgrade" },
+    { lat: 43.32, lon: 21.90, region: "South - Niš" },
+    { lat: 45.26, lon: 19.83, region: "North - Novi Sad" }
+  ],
+  Montenegro: [
+    { lat: 42.44, lon: 19.26, region: "Coast - Bar" },
+    { lat: 42.78, lon: 19.48, region: "North - Podgorica" }
+  ],
+  Kosovo: [
+    { lat: 42.66, lon: 21.16, region: "Central - Pristina" },
+    { lat: 42.87, lon: 20.87, region: "West - Peja" }
+  ],
+  NorthMacedonia: [
+    { lat: 41.99, lon: 21.43, region: "Central - Skopje" },
+    { lat: 41.12, lon: 20.80, region: "Southwest - Ohrid" }
+  ],
+  Albania: [
+    { lat: 41.33, lon: 19.82, region: "Central - Tirana" },
+    { lat: 40.73, lon: 19.57, region: "South - Vlore" },
+    { lat: 42.07, lon: 19.52, region: "North - Shkodër" }
+  ],
+  // --- Iles Britanniques ---
+  UnitedKingdom: [
+    { lat: 51.50, lon: -0.12, region: "South - London" },
+    { lat: 55.95, lon: -3.18, region: "North - Edinburgh" },
+    { lat: 53.48, lon: -2.24, region: "West - Manchester" },
+    { lat: 51.48, lon: -3.18, region: "Wales - Cardiff" },
+    { lat: 54.60, lon: -5.93, region: "Northern Ireland - Belfast" }
+  ],
+  Ireland: [
+    { lat: 53.34, lon: -6.26, region: "East - Dublin" },
+    { lat: 52.66, lon: -8.62, region: "West - Limerick" },
+    { lat: 51.90, lon: -8.47, region: "South - Cork" }
   ]
 };
 
