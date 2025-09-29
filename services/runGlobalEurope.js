@@ -1,4 +1,4 @@
-// services/runGlobalEurope.mjs
+// services/runGlobalEurope.js
 // ⚡ RUN GLOBAL EUROPE — Zones couvertes (UE27 + UK + Norvège + Suisse + Ukraine + Balkans + Islande)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
