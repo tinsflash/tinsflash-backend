@@ -1,6 +1,4 @@
 // services/runGlobalEurope.js
-// ⚡ RUN GLOBAL EUROPE — Zones couvertes (UE27 + UK + Norvège + Suisse + Ukraine + Balkans + Islande)
-
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import { runSuperForecast } from "./superForecast.js";
 import { processAlerts } from "./alertsService.js";
@@ -251,10 +249,10 @@ const EUROPE_ZONES = {
 // ==================================
 // RUN GLOBAL EUROPE
 // ==================================
-async function runGlobalEurope() {
+export async function runGlobalEurope() {
   const state = getEngineState();
   try {
-    addEngineLog("🌍 Démarrage du RUN GLOBAL EUROPE (zones couvertes complètes)…");
+    addEngineLog("🌍 Démarrage du RUN GLOBAL EUROPE…");
     state.runTime = new Date().toISOString();
     state.checkup = {
       models: "PENDING",
@@ -279,8 +277,7 @@ async function runGlobalEurope() {
             region: z.region
           });
           byCountry[country].regions.push({ ...z, forecast: res?.forecast });
-          successCount++;
-          totalPoints++;
+          successCount++; totalPoints++;
           addEngineLog(`✅ ${country} — ${z.region}`);
         } catch (e) {
           addEngineError(`❌ ${country} — ${z.region}: ${e.message}`);
@@ -297,8 +294,7 @@ async function runGlobalEurope() {
     };
     state.checkup.models = "OK";
     state.checkup.localForecasts = successCount > 0 ? "OK" : "FAIL";
-    state.checkup.nationalForecasts =
-      Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
+    state.checkup.nationalForecasts = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
     saveEngineState(state);
 
     const alertsResult = await processAlerts();
@@ -313,5 +309,3 @@ async function runGlobalEurope() {
     throw err;
   }
 }
-
-export { runGlobalEurope };
