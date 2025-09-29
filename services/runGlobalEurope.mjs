@@ -1,9 +1,8 @@
-// services/runGlobalEurope.js
+// services/runGlobalEurope.mjs
 // ⚡ RUN GLOBAL EUROPE — Zones couvertes (UE27 + UK + Norvège + Suisse + Ukraine + Balkans + Islande)
-// Bloc 1 : Europe de l’Ouest & Centrale (France → Autriche)
 
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecast } from "./superForecast.js"; // ✅ conforme export
+import { runSuperForecast } from "./superForecast.js";
 import { processAlerts } from "./alertsService.js";
 
 // ===========================
