@@ -39,30 +39,16 @@
       background: gray;
       cursor: not-allowed;
     }
-    .success {
-      background: #238636;
-      padding: 8px;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-    .logs {
-      max-height: 250px;
-      overflow-y: auto;
-      background: #0d1117;
-      padding: 10px;
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 14px;
-    }
+    .success { background: #238636; padding: 8px; border-radius: 6px; margin-top: 10px; }
+    .logs { max-height: 250px; overflow-y: auto; background: #0d1117; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 14px; }
     .log-entry { margin-bottom: 6px; }
-    .alert {
-      padding: 8px;
-      margin: 5px 0;
-      border-radius: 6px;
-    }
+    .alert { padding: 8px; margin: 5px 0; border-radius: 6px; }
     .primeur { background: #9e6ffe33; }
     .tovalidate { background: #f39c1233; }
     .auto { background: #2ecc7133; }
+    .status-red { color: #ff4d4d; }
+    .status-orange { color: #ffae42; }
+    .status-green { color: #4caf50; }
   </style>
 </head>
 <body>
@@ -79,16 +65,16 @@
   <div class="section">
     <h2>📋 Checklist moteur</h2>
     <ul id="checklist">
-      <li>Extraction des modèles...</li>
-      <li>RUNGLOBAL Europe...</li>
-      <li>RUNGLOBAL USA...</li>
-      <li>RUN Continentales...</li>
-      <li>Mise sous fichier...</li>
-      <li>Analyse IA (relief, climat, environnement)...</li>
-      <li>Prévisions locales/nationales...</li>
-      <li>Alertes locales/nationales IA...</li>
-      <li>Alertes continentales zones non couvertes...</li>
-      <li>Vue par pays (zones couvertes)...</li>
+      <li id="step-models">Extraction des modèles...</li>
+      <li id="step-europe">RUNGLOBAL Europe...</li>
+      <li id="step-usa">RUNGLOBAL USA...</li>
+      <li id="step-continental">RUN Continentales...</li>
+      <li id="step-files">Mise sous fichier...</li>
+      <li id="step-analysis">Analyse IA (relief, climat, environnement)...</li>
+      <li id="step-forecasts">Prévisions locales/nationales...</li>
+      <li id="step-local-alerts">Alertes locales/nationales IA...</li>
+      <li id="step-continental-alerts">Alertes continentales zones non couvertes...</li>
+      <li id="step-country-view">Vue par pays (zones couvertes)...</li>
     </ul>
   </div>
 
@@ -115,13 +101,49 @@
     runBtn.addEventListener("click", () => {
       fetch("/api/run/global")
         .then(res => res.json())
-        .then(data => {
+        .then(() => {
           runStatus.innerHTML = '<div class="success">✅ Centrale lancée avec succès</div>';
         })
         .catch(err => {
           runStatus.innerHTML = '<div class="error">❌ Erreur: ' + err.message + '</div>';
         });
     });
+
+    // 📋 Checklist dynamique
+    function updateChecklist(state) {
+      const steps = {
+        models: "step-models",
+        europe: "step-europe",
+        usa: "step-usa",
+        continental: "step-continental",
+        files: "step-files",
+        analysis: "step-analysis",
+        forecasts: "step-forecasts",
+        localAlerts: "step-local-alerts",
+        continentalAlerts: "step-continental-alerts",
+        countryView: "step-country-view"
+      };
+
+      for (const [key, id] of Object.entries(steps)) {
+        const li = document.getElementById(id);
+        if (!li) continue;
+
+        if (state[key] === "pending") li.className = "status-red";
+        else if (state[key] === "running") li.className = "status-orange";
+        else if (state[key] === "done") li.className = "status-green";
+      }
+    }
+
+    async function fetchEngineState() {
+      try {
+        const res = await fetch("/api/engine/state");
+        const state = await res.json();
+        updateChecklist(state);
+      } catch (err) {
+        console.warn("⚠️ Erreur état moteur:", err.message);
+      }
+    }
+    setInterval(fetchEngineState, 5000);
 
     // 📜 Logs en direct
     const logsDiv = document.getElementById("logs");
@@ -135,35 +157,38 @@
     // 🚨 Alertes
     const alertsDiv = document.getElementById("alerts");
     async function fetchAlerts() {
-      const res = await fetch("/api/alerts");
-      const alerts = await res.json();
-      alertsDiv.innerHTML = "";
+      try {
+        const res = await fetch("/api/alerts");
+        const alerts = await res.json();
+        alertsDiv.innerHTML = "";
 
-      if (!alerts.length) {
-        alertsDiv.innerHTML = "<p>Aucune alerte détectée.</p>";
-        return;
+        if (!alerts.length) {
+          alertsDiv.innerHTML = "<p>Aucune alerte détectée.</p>";
+          return;
+        }
+
+        alerts.forEach(alert => {
+          const div = document.createElement("div");
+          div.classList.add("alert");
+          if (alert.category === "primeur") div.classList.add("primeur");
+          else if (alert.category === "to-validate") div.classList.add("tovalidate");
+          else div.classList.add("auto");
+
+          div.innerHTML = `
+            <strong>${alert.type.toUpperCase()}</strong> – Zone: ${alert.zone}<br/>
+            Fiabilité: ${alert.reliability}%<br/>
+            Intensité: ${alert.intensity || "n/a"}<br/>
+            Conséquences: ${alert.consequences || "n/a"}<br/>
+            Recommandations: ${alert.recommendations || "n/a"}<br/>
+            ⏳ ${alert.start || "?"} → ${alert.end || "?"}
+          `;
+          alertsDiv.appendChild(div);
+        });
+      } catch (err) {
+        console.warn("⚠️ Erreur fetch alertes:", err.message);
       }
-
-      alerts.forEach(alert => {
-        const div = document.createElement("div");
-        div.classList.add("alert");
-        if (alert.category === "primeur") div.classList.add("primeur");
-        else if (alert.category === "to-validate") div.classList.add("tovalidate");
-        else div.classList.add("auto");
-
-        div.innerHTML = `
-          <strong>${alert.type.toUpperCase()}</strong> – Zone: ${alert.zone}<br/>
-          Fiabilité: ${alert.reliability}%<br/>
-          Intensité: ${alert.intensity || "n/a"}<br/>
-          Conséquences: ${alert.consequences || "n/a"}<br/>
-          Recommandations: ${alert.recommendations || "n/a"}<br/>
-          ⏳ ${alert.start || "?"} → ${alert.end || "?"}
-        `;
-        alertsDiv.appendChild(div);
-      });
     }
-
-    setInterval(fetchAlerts, 5000); // refresh auto toutes les 5s
+    setInterval(fetchAlerts, 5000);
   </script>
 
   <footer style="text-align:center; margin:20px 0; font-size:12px; opacity:0.7;">
