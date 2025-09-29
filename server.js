@@ -101,7 +101,10 @@ app.get("/api/forecast/:country", async (req, res) => {
 // Alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    res.json({ success: true, alerts: (await safeCall(alertsService.getActiveAlerts)) || [] });
+    res.json({
+      success: true,
+      alerts: (await safeCall(alertsService.getActiveAlerts)) || [],
+    });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -111,7 +114,11 @@ app.post("/api/alerts/:id/:action", async (req, res) => {
   try {
     res.json({
       success: true,
-      result: await safeCall(alertsService.updateAlertStatus, req.params.id, req.params.action),
+      result: await safeCall(
+        alertsService.updateAlertStatus,
+        req.params.id,
+        req.params.action
+      ),
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -144,7 +151,10 @@ app.get("/api/podcast/:country", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    res.json({ success: true, reply: await safeCall(chatService.askAI, message || "") });
+    res.json({
+      success: true,
+      reply: await safeCall(chatService.askAI, message || ""),
+    });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -154,7 +164,10 @@ app.post("/api/chat", async (req, res) => {
 app.post("/api/chat/engine", async (req, res) => {
   try {
     const { message } = req.body;
-    res.json({ success: true, reply: await safeCall(chatService.askAIEngine, message || "") });
+    res.json({
+      success: true,
+      reply: await safeCall(chatService.askAIEngine, message || ""),
+    });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -165,7 +178,9 @@ app.post("/api/textgen", async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) {
-      return res.status(400).json({ success: false, error: "Prompt manquant" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Prompt manquant" });
     }
     const result = await safeCall(textGenService.generateText, prompt);
     res.json({ success: true, reply: result });
