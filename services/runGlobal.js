@@ -1,11 +1,11 @@
 // services/runGlobal.js
 // ⚡ Centrale nucléaire météo — Coordination globale (Europe / USA / All)
 
-import { runGlobalEurope } from "./runGlobalEurope.js";
-import { runGlobalUSA } from "./runGlobalUSA.js";
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+const { runGlobalEurope } = require("./runGlobalEurope.js");
+const { runGlobalUSA } = require("./runGlobalUSA.js");
+const { addEngineLog, addEngineError, saveEngineState, getEngineState } = require("./engineState.js");
 
-export async function runGlobal(zone = "Europe") {
+async function runGlobal(zone = "Europe") {
   const state = getEngineState();
   try {
     addEngineLog(`🌍 Lancement du RUN GLOBAL (${zone})`);
@@ -45,3 +45,5 @@ export async function runGlobal(zone = "Europe") {
     return { error: err.message };
   }
 }
+
+module.exports = { runGlobal };
