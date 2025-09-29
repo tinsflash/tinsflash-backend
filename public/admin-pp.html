@@ -2,175 +2,191 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Console Admin – Centrale Nucléaire Météo</title>
   <style>
-    body { background: #0d1117; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 0; }
-    header { background: #111827; padding: 15px; text-align: center; }
-    h1 { color: #3b82f6; margin: 0; }
-    section { margin: 20px; padding: 15px; background: #1f2937; border-radius: 10px; }
-    h2 { margin-top: 0; }
-    button { padding: 8px 16px; margin: 5px; border: none; border-radius: 6px; cursor: pointer; }
-    .run-btn { background: #ef4444; color: white; font-size: 16px; margin-bottom: 10px; }
-    .run-btn.running { background: #f59e0b; }
-    .ok { color: #10b981; font-weight: bold; }
-    .fail { color: #ef4444; font-weight: bold; }
-    .alert { background: #374151; padding: 10px; border-radius: 8px; margin-bottom: 12px; }
-    .auto { border-left: 4px solid #10b981; }
-    .manual { border-left: 4px solid #f59e0b; }
-    #logs { max-height: 250px; overflow-y: auto; font-size: 14px; background: #0f172a; padding: 10px; border-radius: 6px; }
-    footer { margin-top: 30px; padding: 10px; text-align: center; font-size: 12px; color: #9ca3af; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0f1a;
+      color: #e6e6e6;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #111827;
+      padding: 15px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #00d4ff;
+    }
+    main { padding: 20px; }
+    section { margin-bottom: 25px; }
+    h2 {
+      border-bottom: 2px solid #00d4ff;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+    button {
+      background: #00d4ff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover { background: #00aacc; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 6px 0; }
+    .status { font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+    .ok { background: #065f46; color: #10b981; }
+    .fail { background: #7f1d1d; color: #ef4444; }
+    .pending { background: #78350f; color: #f59e0b; }
+    #logs {
+      background: #1f2937;
+      padding: 10px;
+      border-radius: 6px;
+      height: 250px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .alert {
+      border: 1px solid #374151;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .alert strong { display: block; margin-bottom: 5px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
-    <p>Pilotage du moteur météo – run, logs, checklist, alertes</p>
-  </header>
+  <header>⚡ Console Admin – TINSFLASH</header>
+  <main>
+    <!-- Section 1 : Run -->
+    <section>
+      <h2>🚀 Lancer la Centrale</h2>
+      <button onclick="launchRun()">Lancer RUN Global + Continental</button>
+      <p id="runStatus"></p>
+    </section>
 
-  <!-- 1. Bouton Run -->
-  <section>
-    <button id="runBtn" class="run-btn">🚀 Lancer la Centrale (Global + Continental)</button>
-    <div id="runStatus"></div>
-  </section>
+    <!-- Section 2 : Checklist moteur -->
+    <section>
+      <h2>📋 Checklist moteur</h2>
+      <ul id="checklist">
+        <li>1A. Extraction des modèles → <span class="status pending">⏳ Pending</span></li>
+        <li>1B. Run Global Europe → <span class="status pending">⏳ Pending</span></li>
+        <li>1C. Run Global USA → <span class="status pending">⏳ Pending</span></li>
+        <li>1D. Runs Continentaux → <span class="status pending">⏳ Pending</span></li>
+        <li>2. Mise sous fichier des extractions → <span class="status pending">⏳ Pending</span></li>
+        <li>3. Analyse IA (relief, climat, env., satellites) → <span class="status pending">⏳ Pending</span></li>
+        <li>4. Prévisions locales & nationales (zones couvertes) → <span class="status pending">⏳ Pending</span></li>
+        <li>5. Alertes locales & nationales (zones couvertes) → <span class="status pending">⏳ Pending</span></li>
+        <li>6. Alertes continentales (zones non couvertes) → <span class="status pending">⏳ Pending</span></li>
+        <li>7. Vue par pays (zones couvertes : prévisions + alertes) → <span class="status pending">⏳ Pending</span></li>
+      </ul>
+    </section>
 
-  <!-- 2. Checklist -->
-  <section>
-    <h2>📋 Checklist moteur</h2>
-    <ul id="checklist"></ul>
-  </section>
+    <!-- Section 3 : Logs -->
+    <section>
+      <h2>📜 Logs en direct</h2>
+      <div id="logs">⏳ En attente de nouveaux logs...</div>
+    </section>
 
-  <!-- 3. Logs -->
-  <section>
-    <h2>📜 Logs en direct</h2>
-    <div id="logs"><p>⏳ En attente de nouveaux logs...</p></div>
-  </section>
-
-  <!-- 4. Alertes -->
-  <section>
-    <h2>🚨 Alertes Primeur / À valider / À surveiller</h2>
-    <div id="alerts">Chargement...</div>
-  </section>
-
-  <footer>
-    © Tinsflash – Système J.E.A.N. by Pydaris – Reproduction interdite
-  </footer>
+    <!-- Section 4 : Alertes -->
+    <section>
+      <h2>🚨 Alertes Primeur / À valider / À surveiller</h2>
+      <div id="alerts"></div>
+    </section>
+  </main>
 
   <script>
-    // === Bouton Run ===
-    document.getElementById("runBtn").addEventListener("click", async () => {
-      const btn = document.getElementById("runBtn");
-      btn.classList.add("running");
-      btn.innerText = "⏳ Lancement en cours...";
-      document.getElementById("runStatus").innerText = "";
-
+    // Lancer RUN Global + Continental
+    async function launchRun() {
+      document.getElementById("runStatus").textContent = "⏳ Lancement en cours...";
       try {
-        const res = await fetch("/api/run-global", { method: "POST" });
-        const data = await res.json();
-        document.getElementById("runStatus").innerText = "✅ Centrale lancée avec succès";
+        const globalRes = await fetch("/api/run-global", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        const contRes = await fetch("/api/run-continental", { method: "POST" });
+        document.getElementById("runStatus").textContent = "✅ Runs lancés avec succès";
       } catch (err) {
-        document.getElementById("runStatus").innerText = "❌ Erreur de lancement : " + err.message;
-      } finally {
-        btn.classList.remove("running");
-        btn.innerText = "🚀 Lancer la Centrale (Global + Continental)";
+        document.getElementById("runStatus").textContent = "❌ Erreur lors du lancement : " + err.message;
       }
-    });
+    }
 
-    // === Checklist ===
-    async function loadChecklist() {
+    // Checklist moteur → refresh auto
+    async function refreshChecklist() {
       try {
         const res = await fetch("/api/checkup");
         const data = await res.json();
-        const list = document.getElementById("checklist");
-        list.innerHTML = "";
-        Object.entries(data).forEach(([key, value]) => {
-          const li = document.createElement("li");
-          li.innerHTML = `${key}: <span class="${value === 'OK' ? 'ok' : 'fail'}">${value}</span>`;
-          list.appendChild(li);
+        const items = document.querySelectorAll("#checklist li span");
+
+        const keys = [
+          "models", "runEurope", "runUSA", "runContinental",
+          "saveFiles", "analysisAI", "forecastCovered",
+          "alertsCovered", "alertsContinental", "perCountryView"
+        ];
+
+        keys.forEach((key, i) => {
+          if (data[key] === "OK") {
+            items[i].textContent = "🟢 OK";
+            items[i].className = "status ok";
+          } else if (data[key] === "FAIL") {
+            items[i].textContent = "❌ FAIL";
+            items[i].className = "status fail";
+          } else {
+            items[i].textContent = "⏳ Pending";
+            items[i].className = "status pending";
+          }
         });
-      } catch {
-        document.getElementById("checklist").innerHTML = "<li class='fail'>Erreur chargement checklist</li>";
+      } catch (err) {
+        console.error("Checklist error:", err);
       }
     }
+    setInterval(refreshChecklist, 10000);
+    refreshChecklist();
 
-    // === Logs SSE ===
+    // Logs SSE
     function connectLogs() {
       const logDiv = document.getElementById("logs");
-      logDiv.innerHTML = "<p>⏳ En attente de nouveaux logs...</p>";
-
+      logDiv.textContent = "";
       const evtSource = new EventSource("/api/logs/stream");
       evtSource.onmessage = (event) => {
         const logs = JSON.parse(event.data);
-        if (logDiv.innerHTML.includes("En attente")) logDiv.innerHTML = "";
-
+        logDiv.textContent = "";
         logs.forEach(log => {
           const p = document.createElement("p");
-          const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : "⏳";
-          p.textContent = `[${ts}] ${log.message || "—"}`;
+          p.textContent = `[${log.timestamp}] ${log.message}`;
           logDiv.appendChild(p);
-          logDiv.scrollTop = logDiv.scrollHeight;
         });
-      };
-      evtSource.onerror = () => {
-        logDiv.innerHTML += "<p style='color:red'>❌ Connexion SSE perdue, reconnexion...</p>";
-        setTimeout(connectLogs, 5000);
+        logDiv.scrollTop = logDiv.scrollHeight;
       };
     }
+    connectLogs();
 
-    // === Alertes Primeur ===
-    async function loadAlerts() {
+    // Alertes
+    async function refreshAlerts() {
       try {
         const res = await fetch("/api/alerts");
         const data = await res.json();
-        const alertsDiv = document.getElementById("alerts");
-        alertsDiv.innerHTML = "";
-
-        if (!data.alerts || data.alerts.length === 0) {
-          alertsDiv.innerHTML = "<p>Aucune alerte détectée.</p>";
-        } else {
-          data.alerts.forEach(alert => {
-            const reliability = alert.reliability || 0;
-            if (reliability >= 70) {
-              const div = document.createElement("div");
-              div.className = "alert " + (reliability >= 90 ? "auto" : "manual");
-              div.innerHTML = `
-                <strong>${alert.zone || "Zone inconnue"}</strong><br>
-                Type: ${alert.type || "N/A"}<br>
-                Fiabilité: ${reliability}%<br>
-                Début: ${alert.start || "?"} – Fin: ${alert.end || "?"}<br>
-                Conséquences: ${alert.consequences || "?"}<br>
-                Recommandations: ${alert.recommendations || "?"}<br>
-              `;
-
-              if (reliability >= 90) {
-                div.innerHTML += "<p class='ok'>✅ Publiée automatiquement (fiabilité ≥ 90%)</p>";
-              } else {
-                div.innerHTML += `
-                  <button onclick="validateAlert('${alert._id}')">✅ Publier</button>
-                  <button onclick="delayAlert('${alert._id}')">⏳ En attente</button>
-                  <button onclick="watchAlert('${alert._id}')">👁 Garder à l'œil</button>
-                `;
-              }
-              alertsDiv.appendChild(div);
-            }
-          });
-        }
-      } catch {
-        document.getElementById("alerts").innerHTML = "<p class='fail'>Erreur chargement alertes</p>";
+        const container = document.getElementById("alerts");
+        container.innerHTML = "";
+        (data.alerts || []).forEach(alert => {
+          const div = document.createElement("div");
+          div.className = "alert";
+          div.innerHTML = `
+            <strong>${alert.type} (${alert.reliability}%)</strong>
+            ${alert.description || ""}<br/>
+            ${alert.firstDetector ? "🌍 Primeur (nous les 1ers)" : ""}
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        console.error("Alerts error:", err);
       }
     }
-
-    // Actions alertes
-    async function validateAlert(id) { await fetch(`/api/alerts/${id}/validate`, { method: "POST" }); loadAlerts(); }
-    async function delayAlert(id) { await fetch(`/api/alerts/${id}/delay`, { method: "POST" }); loadAlerts(); }
-    async function watchAlert(id) { await fetch(`/api/alerts/${id}/watch`, { method: "POST" }); loadAlerts(); }
-
-    // Auto-refresh
-    loadChecklist();
-    loadAlerts();
-    connectLogs();
-    setInterval(() => { loadChecklist(); loadAlerts(); }, 10000);
+    setInterval(refreshAlerts, 15000);
+    refreshAlerts();
   </script>
 </body>
 </html>
