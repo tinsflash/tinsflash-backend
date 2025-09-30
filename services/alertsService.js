@@ -10,15 +10,16 @@ import { analyzeWind } from "./windService.js";
 import { fetchStationData } from "./stationsService.js";
 import { askOpenAI } from "./openaiService.js";
 
+// ⚡ Mémoire des alertes actives
 let activeAlerts = [];
 
-/** 🔎 Génération des alertes (zones couvertes + continentales) */
+/** 🔎 Génération d’une alerte brute pour une zone */
 export async function generateAlerts(lat, lon, country, region, continent = "Europe") {
   const state = getEngineState();
   try {
     addEngineLog(`🚨 Analyse alertes pour ${country}${region ? " - " + region : ""}`);
 
-    // Collecte brute
+    // Collecte brute (multi-sources)
     const [snow, rain, wind, stations] = await Promise.all([
       analyzeSnow(lat, lon, country, region),
       analyzeRain(lat, lon, country, region),
@@ -45,7 +46,7 @@ Consignes:
 
     const aiResult = await askOpenAI("Tu es un moteur d’alerte météo nucléaire", prompt);
 
-    let parsed = null;
+    let parsed;
     try {
       parsed = JSON.parse(aiResult);
     } catch {
@@ -59,10 +60,19 @@ Consignes:
       continent,
       data: parsed,
       timestamp: new Date().toISOString(),
+      status: "active",
     };
 
+    // 🔹 Push + limitation mémoire (10 000 max, FIFO)
     activeAlerts.push(alert);
-    if (activeAlerts.length > 200) activeAlerts.shift();
+    if (activeAlerts.length > 10000) activeAlerts.shift();
+
+    // 🔹 Nettoyage des alertes expirées (si champ fin dispo)
+    const now = Date.now();
+    activeAlerts = activeAlerts.filter((a) => {
+      const fin = a?.data?.fin ? new Date(a.data.fin).getTime() : null;
+      return !fin || fin > now;
+    });
 
     state.alerts = activeAlerts;
     saveEngineState(state);
@@ -80,7 +90,7 @@ export async function getActiveAlerts() {
   return activeAlerts;
 }
 
-/** 🔧 Mise à jour statut (admin) */
+/** 🔧 Mise à jour statut (admin console) */
 export async function updateAlertStatus(id, action) {
   const alert = activeAlerts.find((a) => a.id === id);
   if (!alert) return { error: "Alerte introuvable" };
