@@ -384,6 +384,7 @@ const USA_ZONES = {
 // ===========================
 // RUN GLOBAL USA
 // ===========================
+// ✅ Fonction de run USA
 export async function runGlobalUSA() {
   const state = getEngineState();
   try {
@@ -406,7 +407,8 @@ export async function runGlobalUSA() {
             region: z.region
           });
           byState[stateName].regions.push({ ...z, forecast: res?.forecast });
-          successCount++; totalPoints++;
+          successCount++; 
+          totalPoints++;
           addEngineLog(`✅ ${stateName} — ${z.region}`);
         } catch (e) {
           addEngineError(`❌ ${stateName} — ${z.region}: ${e.message}`);
@@ -426,7 +428,7 @@ export async function runGlobalUSA() {
     const alertsResult = await processAlerts();
     state.checkup.aiAlerts = alertsResult?.status || "OK";
 
-    state.checkup.engineStatus = "OK";   // ✅ ajouté
+    state.checkup.engineStatus = "OK";   // ✅ statut moteur
     saveEngineState(state);
     addEngineLog("✅ RUN GLOBAL USA terminé avec succès.");
     return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult };
@@ -438,3 +440,6 @@ export async function runGlobalUSA() {
     throw err;
   }
 }
+
+// ✅ Export des zones pour runGlobal.js
+export { USA_ZONES };
