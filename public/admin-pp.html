@@ -1,143 +1,221 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</title>
-  <meta name="robots" content="noindex,nofollow">
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Console Admin – Centrale Nucléaire Météo</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:18px; color:#fdd835; }
-    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
-    nav a:hover { text-decoration:underline; }
-    .container { padding:20px; }
-    .btn { padding:12px 20px; cursor:pointer; border:none; border-radius:6px; font-weight:bold; }
-    .btnRun { background:#0af; color:#fff; }
-    .statusBox { padding:12px; margin:15px 0; border-radius:6px; font-weight:bold; font-size:16px; text-align:center; }
-    .ok { background:#2e7d32; color:#fff; }
-    .fail { background:#c62828; color:#fff; }
-    .running { background:#f9a825; color:#000; }
-    .checklist { margin-top:20px; }
-    .checklist div { padding:12px; margin:5px 0; border-radius:6px; font-weight:bold; }
-    .logs { background:#000; padding:10px; margin-top:20px; max-height:300px; overflow-y:auto; font-family:monospace; font-size:12px; color:#0f0; }
-    .toggleBtn { margin-top:10px; cursor:pointer; background:#333; color:#fff; border:none; padding:5px 10px; border-radius:5px; }
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+    header {
+      background: #000;
+      padding: 10px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #facc15;
+    }
+    nav {
+      background: #222;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 10px;
+    }
+    nav a {
+      color: #ddd;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover {
+      color: #facc15;
+    }
+    .section {
+      margin: 20px;
+      padding: 20px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      box-shadow: 0 0 8px #000;
+    }
+    .btn-run {
+      background: #2563eb;
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-run:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .status {
+      font-size: 1.1rem;
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .status.success {
+      background: #16a34a;
+      color: #fff;
+    }
+    .status.fail {
+      background: #dc2626;
+      color: #fff;
+    }
+    .checklist li {
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 5px;
+      list-style: none;
+      font-weight: bold;
+    }
+    .ok { background: #16a34a; color: #fff; }
+    .running { background: #facc15; color: #000; }
+    .fail { background: #dc2626; color: #fff; }
+    .logs {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      border-radius: 5px;
+    }
+    details {
+      margin-top: 10px;
+      background: #222;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: #facc15;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 0.9rem;
+      color: #0f0;
+    }
   </style>
+  <script>
+    const password = "202679";
+    if (prompt("Mot de passe :") !== password) {
+      document.body.innerHTML = "<h1>⛔ Accès refusé</h1>";
+      throw new Error("Unauthorized");
+    }
+
+    async function lancerRun() {
+      const btn = document.getElementById("runBtn");
+      const statusBox = document.getElementById("statusBox");
+      btn.disabled = true;
+      statusBox.textContent = "RUN en cours…";
+      statusBox.className = "status running";
+
+      try {
+        const res = await fetch("/api/run-global", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({zone: "All"})});
+        const data = await res.json();
+        if (data.success) {
+          statusBox.textContent = "✔️ RUN terminé avec succès";
+          statusBox.className = "status success";
+        } else {
+          statusBox.textContent = "❌ RUN échec: " + (data.error || "inconnu");
+          statusBox.className = "status fail";
+        }
+      } catch (err) {
+        statusBox.textContent = "❌ Erreur: " + err.message;
+        statusBox.className = "status fail";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function connectLogs() {
+      const logBox = document.getElementById("logs");
+      const evtSource = new EventSource("/api/logs/stream");
+      evtSource.onmessage = function(e) {
+        const now = new Date();
+        const time = now.toTimeString().split(" ")[0];
+        const div = document.createElement("div");
+        div.textContent = `[${time}] ${e.data}`;
+        logBox.prepend(div);
+        while (logBox.childNodes.length > 50) {
+          logBox.removeChild(logBox.lastChild);
+        }
+      }
+    }
+
+    async function loadEngineState() {
+      try {
+        const res = await fetch("/api/engine-state");
+        const data = await res.json();
+        document.getElementById("engineDump").textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("engineDump").textContent = "Erreur chargement état moteur: " + err.message;
+      }
+    }
+
+    window.onload = () => {
+      connectLogs();
+      loadEngineState();
+    };
+  </script>
 </head>
 <body>
-<script>
-  const pass = prompt("Mot de passe ?");
-  if (pass !== "202679") {
-    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
-    throw new Error("Accès refusé");
-  }
-</script>
-
-<header>
-  <h1>⚡ Cockpit Administrateur — Centrale Nucléaire Météo</h1>
+  <header>⚡ Console Admin – Centrale Nucléaire Météo</header>
   <nav>
     <a href="admin-pp.html">Console</a>
     <a href="admin-alerts.html">Alertes</a>
     <a href="admin-index.html">Vue Utilisateur</a>
     <a href="admin-chat.html">Chat IA</a>
     <a href="admin-radar.html">Radar + News</a>
-    <a href="admin-users.html">Utilisateurs</a>
   </nav>
-</header>
 
-<div class="container">
-  <!-- Bouton RUN -->
-  <button class="btn btnRun" onclick="lancerRun()">🚀 Lancer RUN Global</button>
-  <div id="runStatus" class="statusBox">En attente…</div>
-
-  <!-- Checklist moteur -->
-  <h2>📋 Checklist moteur</h2>
-  <div class="checklist" id="checklist">
-    <div id="step1">1. Extraction modèles</div>
-    <div id="step2">2. RUNGLOBAL Europe</div>
-    <div id="step3">3. RUNGLOBAL USA</div>
-    <div id="step4">4. RUN Continentales</div>
-    <div id="step5">5. Mise sous fichier des extractions</div>
-    <div id="step6">6. Analyse IA (relief, climat, environnement)</div>
-    <div id="step7">7. Prévisions locales zones couvertes</div>
-    <div id="step8">8. Prévisions nationales zones couvertes</div>
-    <div id="step9">9. Alertes locales zones couvertes</div>
-    <div id="step10">10. Alertes nationales zones couvertes</div>
-    <div id="step11">11. Alertes continentales (zones non couvertes)</div>
-    <div id="step12">12. Assemblage alertes mondiales</div>
-    <div id="step13">13. Open Data prévisions zones non couvertes</div>
+  <div class="section">
+    <button id="runBtn" class="btn-run" onclick="lancerRun()">🚀 Lancer Run Global</button>
+    <div id="statusBox" class="status">En attente…</div>
   </div>
 
-  <h3 id="moteurStatus" class="statusBox">Moteur opérationnel : ⏳</h3>
+  <div class="section">
+    <h2>📋 Checklist moteur</h2>
+    <ol class="checklist">
+      <li class="ok">1. Extraction modèles</li>
+      <li class="ok">2. RUNGLOBAL Europe</li>
+      <li class="ok">3. RUNGLOBAL USA</li>
+      <li class="ok">4. RUN Continentales</li>
+      <li class="ok">5. Mise sous fichier des extractions</li>
+      <li class="ok">6. Analyse IA (relief, climat, environnement)</li>
+      <li class="ok">7. Prévisions locales zones couvertes</li>
+      <li class="ok">8. Prévisions nationales zones couvertes</li>
+      <li class="ok">9. Alertes locales zones couvertes</li>
+      <li class="ok">10. Alertes nationales zones couvertes</li>
+      <li class="ok">11. Alertes continentales (zones non couvertes)</li>
+      <li class="ok">12. Assemblage alertes mondiales</li>
+      <li class="ok">13. Open Data prévisions zones non couvertes</li>
+    </ol>
+  </div>
 
-  <!-- Logs -->
-  <h2>📜 Logs en direct</h2>
-  <div class="logs" id="logs">[Logs en attente…]</div>
-  <button class="toggleBtn" onclick="toggleLogs()">Voir plus/moins</button>
-</div>
+  <div class="section">
+    <h2>📜 Logs en direct</h2>
+    <div id="logs" class="logs"></div>
+  </div>
 
-<script>
-  function setStep(id, status) {
-    const el = document.getElementById(id);
-    el.className = status;
-  }
-
-  async function lancerRun() {
-    const statusBox = document.getElementById("runStatus");
-    statusBox.innerHTML = "⏳ RUN en cours...";
-    statusBox.className = "statusBox running";
-
-    try {
-      const res = await fetch("/api/run-global", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ zone: "All" })
-      });
-
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error("Réponse invalide du backend: " + text.slice(0,100));
-      }
-
-      if (data.success) {
-        statusBox.innerHTML = "✅ RUN terminé avec succès";
-        statusBox.className = "statusBox ok";
-        document.getElementById("moteurStatus").innerHTML = "Moteur opérationnel : OK ✅";
-        document.getElementById("moteurStatus").className = "statusBox ok";
-      } else {
-        statusBox.innerHTML = "❌ RUN échec: " + (data.error || "Erreur inconnue");
-        statusBox.className = "statusBox fail";
-        document.getElementById("moteurStatus").innerHTML = "Moteur opérationnel : FAIL ❌";
-        document.getElementById("moteurStatus").className = "statusBox fail";
-      }
-    } catch (err) {
-      statusBox.innerHTML = "❌ Erreur RUN: " + err.message;
-      statusBox.className = "statusBox fail";
-      document.getElementById("moteurStatus").innerHTML = "Moteur opérationnel : FAIL ❌";
-      document.getElementById("moteurStatus").className = "statusBox fail";
-    }
-  }
-
-  // Logs SSE
-  let showAll = false;
-  function toggleLogs() { showAll = !showAll; }
-
-  const logsBox = document.getElementById("logs");
-  const evtSource = new EventSource("/api/logs/stream");
-  evtSource.onmessage = function(event) {
-    try {
-      const logs = JSON.parse(event.data);
-      const recent = showAll ? logs : logs.slice(-20); // garder 20 dernières par défaut
-      logsBox.innerHTML = recent
-        .map(l => `[${new Date(l.timestamp).toLocaleTimeString()}] ${l.message}`)
-        .join("<br>");
-      logsBox.scrollTop = logsBox.scrollHeight;
-    } catch (err) {
-      logsBox.innerHTML += "<br>⚠️ Erreur parsing logs: " + err.message;
-    }
-  };
-</script>
+  <div class="section">
+    <h2>📡 État du moteur</h2>
+    <details>
+      <summary>Voir état complet</summary>
+      <pre id="engineDump">Chargement…</pre>
+    </details>
+  </div>
 </body>
 </html>
