@@ -10,9 +10,9 @@ import { analyzeSnow } from "./snowService.js";
 import { analyzeRain } from "./rainService.js";
 import { analyzeWind } from "./windService.js";
 import { fetchStationData } from "./stationsService.js";
-import { detectAlerts } from "./alertDetector.js";      // ✅ Pré-détection brute
-import { classifyAlerts } from "./alertsEngine.js";     // ✅ Classement final
-import geoFactors from "./geoFactors.js";               // relief/altitude
+import { detectAlerts } from "./alertDetector.js";      // Pré-détection brute
+import { classifyAlerts } from "./alertsEngine.js";     // Classement final
+import { applyGeoFactors } from "./geoFactors.js";      // ✅ export nommé
 import adjustWithLocalFactors from "./localFactors.js"; // saison/spatial
 import forecastVision from "./forecastVision.js";       // anomalies saisonnières
 
@@ -24,7 +24,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
   try {
     addEngineLog(`🚨 Analyse alertes pour ${country}${region ? " - " + region : ""}`);
 
-    // 1️⃣ Pré-détection brute (rapide, seuils standards multi-modèles)
+    // 1️⃣ Pré-détection brute
     const detectorResults = await detectAlerts(lat, lon, country);
 
     // 2️⃣ Collecte brute spécialisée
@@ -37,8 +37,9 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
 
     // 3️⃣ Enrichissements relief/saison/anomalies
     let enriched = { snow, rain, wind, stations, detectorResults };
-    enriched = await geoFactors.applyGeoFactors(enriched, lat, lon);
+    enriched = await applyGeoFactors(enriched, lat, lon, country);
     enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
+
     const anomaly = forecastVision.detectSeasonalAnomaly(
       enriched?.rain || enriched?.snow || null
     );
@@ -52,7 +53,7 @@ ${JSON.stringify(enriched, null, 2)}
 
 Consignes :
 - Croiser toutes les données (neige, pluie, vent, stations, détecteur multi-modèles).
-- Ajuster selon relief, climat, altitude et saison (avalanches si montagne, crues si vallée, tempêtes en plaine, etc.).
+- Ajuster selon relief, climat, altitude et saison.
 - Tenir compte des anomalies saisonnières détectées (${JSON.stringify(anomaly)}).
 - Déterminer si une alerte doit être générée.
 - Classer: type, zone, fiabilité (0–100), intensité, conséquences, recommandations, durée.
@@ -68,10 +69,10 @@ Consignes :
       parsed = { raw: aiResult };
     }
 
-    // 5️⃣ Classement final auto (published / toValidate / ignored)
+    // 5️⃣ Classement final auto
     const classified = classifyAlerts(parsed);
 
-    // 6️⃣ Stockage et mise à jour
+    // 6️⃣ Stockage
     const alert = {
       id: Date.now().toString(),
       country,
@@ -82,7 +83,7 @@ Consignes :
     };
 
     activeAlerts.push(alert);
-    if (activeAlerts.length > 500) activeAlerts.shift(); // mémoire circulaire
+    if (activeAlerts.length > 500) activeAlerts.shift();
 
     state.alerts = activeAlerts;
     await saveEngineState(state);
