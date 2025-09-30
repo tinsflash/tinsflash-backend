@@ -1,10 +1,11 @@
 // services/runGlobal.js
 // ⚡ Centrale nucléaire météo – Moteur atomique orchestral
-// Étapes : Prévisions → Alertes → IA Chef d’orchestre final
+// Étapes : Prévisions → Alertes brutes → Consolidation IA → IA Chef d’orchestre final
 
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
 import { generateAlerts, getActiveAlerts } from "./alertsService.js";
+import { consolidateAlerts } from "./consolidateAlerts.js";
 import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
@@ -56,23 +57,24 @@ export async function runGlobal(zone = "All") {
     saveEngineState(state);
 
     // =============================
-    // 🔹 PHASE 2 : ALERTES
+    // 🔹 PHASE 2 : ALERTES BRUTES
     // =============================
     addEngineLog("🚨 Phase 2 – Génération alertes zones couvertes + continentales…");
-
-    const zonesToCheck =
-      zone === "Europe" ? EUROPE_ZONES :
-      zone === "USA" ? USA_ZONES :
-      ALL_ZONES;
-
-    for (const [country, zones] of Object.entries(zonesToCheck)) {
+    for (const [country, zones] of Object.entries(ALL_ZONES)) {
       for (const z of zones) {
         await generateAlerts(z.lat, z.lon, country, z.region, zone);
       }
     }
 
-    const alerts = await getActiveAlerts();
-    state.checkup.aiAlerts = alerts?.length > 0 ? "OK" : "FAIL";
+    const rawAlerts = await getActiveAlerts();
+
+    // =============================
+    // 🔹 PHASE 2bis : CONSOLIDATION
+    // =============================
+    addEngineLog("📊 Phase 2bis – Consolidation des alertes brutes…");
+    const consolidatedAlerts = await consolidateAlerts(rawAlerts);
+
+    state.checkup.aiAlerts = consolidatedAlerts?.length > 0 ? "OK" : "FAIL";
     saveEngineState(state);
 
     // =============================
@@ -85,7 +87,7 @@ Tu es l'intelligence artificielle nucléaire météo.
 Objectif : produire un état final unique cohérent.
 Tu reçois :
 - Prévisions enrichies (locales et nationales)
-- Alertes générées (locales, nationales, continentales)
+- Alertes consolidées (locales, nationales, continentales)
 - Facteurs externes (relief, climat, altitude intégrés en amont)
 
 Consignes :
@@ -103,8 +105,8 @@ Consignes :
     `;
 
     const aiFusion = await askOpenAI(
-      prompt,
-      JSON.stringify({ forecasts, alerts })
+      "Tu es l’IA chef d’orchestre de la centrale nucléaire météo.",
+      JSON.stringify({ forecasts, alerts: consolidatedAlerts })
     );
 
     let finalOutput;
@@ -119,7 +121,7 @@ Consignes :
     saveEngineState(state);
 
     addEngineLog("✅ RUN GLOBAL terminé avec succès (Prévisions + Alertes + IA Finales)");
-    return { forecasts, alerts, final: finalOutput };
+    return { forecasts, alerts: consolidatedAlerts, final: finalOutput };
   } catch (err) {
     addEngineError(err.message || "Erreur RUN GLOBAL");
     state.checkup.engineStatus = "FAIL";
