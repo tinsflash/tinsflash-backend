@@ -16,36 +16,43 @@ export async function getEngineState() {
   return state;
 }
 
-// 💾 Sauvegarder l'état du moteur
+// 💾 Sauvegarder l'état du moteur (fusion sécurisée)
 export async function saveEngineState(newState) {
-  let state = await EngineState.findOne();
-  if (!state) {
-    state = new EngineState(newState);
-  } else {
-    state.set(newState);
-  }
-  await state.save();
-  return state;
+  return await EngineState.findOneAndUpdate(
+    {},
+    { $set: newState },
+    { new: true, upsert: true }
+  );
 }
 
-// ❌ Ajouter une erreur
+// ❌ Ajouter une erreur (sécurisé)
 export async function addEngineError(message) {
-  const state = await getEngineState();
   const log = { message, timestamp: new Date(), level: "ERROR" };
-  state.errors.push(log);
-  state.logs.push(log);
-  state.status = "fail";
-  state.checkup.engineStatus = "FAIL";
-  await state.save();
+
+  await EngineState.findOneAndUpdate(
+    {},
+    {
+      $push: { errors: log, logs: log },
+      $set: { status: "fail", "checkup.engineStatus": "FAIL" }
+    },
+    { new: true, upsert: true }
+  );
+
   return log;
 }
 
-// ✅ Ajouter un log standard
+// ✅ Ajouter un log standard (sécurisé)
 export async function addEngineLog(message) {
-  const state = await getEngineState();
   const log = { message, timestamp: new Date(), level: "INFO" };
-  state.logs.push(log);
-  state.checkup.engineStatus = "RUNNING";
-  await state.save();
+
+  await EngineState.findOneAndUpdate(
+    {},
+    {
+      $push: { logs: log },
+      $set: { status: "running", "checkup.engineStatus": "RUNNING" }
+    },
+    { new: true, upsert: true }
+  );
+
   return log;
 }
