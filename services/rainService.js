@@ -1,42 +1,48 @@
 // services/rainService.js
-// 🌧️ Détection pluie / crues / inondations
-// Sources : Copernicus ERA5 (total precipitation) + stations locales
+// 🌧️ Détection pluie / inondations
+// Sources : OpenWeather, Copernicus ERA5, relief local
 
+import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
-import copernicus from "./copernicusService.js";
+import { applyGeoFactors } from "./geoFactors.js";  // ✅ intégré
 
 export async function analyzeRain(lat, lon, country, region) {
   try {
     addEngineLog(`🌧️ Analyse pluie pour ${country}${region ? " - " + region : ""}`);
 
-    let copernicusData = null;
+    // OpenWeather (fallback pluie brute)
+    let ow = null;
     try {
-      copernicusData = await copernicus("reanalysis-era5-land", {
-        variable: ["total_precipitation"],
-        product_type: "reanalysis",
-        year: new Date().getUTCFullYear(),
-        month: String(new Date().getUTCMonth() + 1).padStart(2, "0"),
-        day: String(new Date().getUTCDate()).padStart(2, "0"),
-        time: ["00:00", "06:00", "12:00", "18:00"],
-        area: [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25],
-        format: "json",
-      });
-    } catch (e) {
-      addEngineLog("⚠️ Copernicus précipitations non disponible");
+      const res = await axios.get(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation`
+      );
+      ow = res.data;
+    } catch {
+      addEngineLog("⚠️ OpenMeteo pluie non disponible");
     }
 
-    const riskLevel =
-      copernicusData?.precipitation && copernicusData.precipitation > 50
-        ? "high"
-        : "low";
+    // Copernicus ERA5 (reanalysis précipitation)
+    let copernicus = null;
+    try {
+      const res = await axios.get(
+        `https://cds.climate.copernicus.eu/api/v2/resources/reanalysis-era5-land?lat=${lat}&lon=${lon}`
+      );
+      copernicus = res.data;
+    } catch {
+      addEngineLog("⚠️ Copernicus pluie non disponible");
+    }
+
+    // Ajustements relief / altitude
+    const adj = await applyGeoFactors({}, lat, lon, country);
 
     return {
       type: "pluie",
-      data: copernicusData,
-      risk: riskLevel,
+      data: { ow, copernicus },
+      risk: (ow || copernicus) ? "possible" : "low",
+      factors: adj,
     };
   } catch (err) {
-    addEngineError(`Erreur analyse pluie: ${err.message}`);
+    await addEngineError(`Erreur analyse pluie: ${err.message}`);
     return { type: "pluie", error: err.message };
   }
 }
