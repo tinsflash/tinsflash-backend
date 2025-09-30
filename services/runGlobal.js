@@ -59,7 +59,13 @@ export async function runGlobal(zone = "All") {
     // 🔹 PHASE 2 : ALERTES
     // =============================
     addEngineLog("🚨 Phase 2 – Génération alertes zones couvertes + continentales…");
-    for (const [country, zones] of Object.entries(ALL_ZONES)) {
+
+    const zonesToCheck =
+      zone === "Europe" ? EUROPE_ZONES :
+      zone === "USA" ? USA_ZONES :
+      ALL_ZONES;
+
+    for (const [country, zones] of Object.entries(zonesToCheck)) {
       for (const z of zones) {
         await generateAlerts(z.lat, z.lon, country, z.region, zone);
       }
@@ -97,7 +103,7 @@ Consignes :
     `;
 
     const aiFusion = await askOpenAI(
-      "Tu es l’IA chef d’orchestre de la centrale nucléaire météo.",
+      prompt,
       JSON.stringify({ forecasts, alerts })
     );
 
