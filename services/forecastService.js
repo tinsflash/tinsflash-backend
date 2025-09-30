@@ -29,8 +29,7 @@ async function getNationalForecast(country) {
         country,
         forecast: sf.forecast || "⚠️ Pas de données",
         sources: sf.sources || null,
-        enriched: sf.enriched || null, // ✅ contient ajustements + fiabilité
-        anomaly: sf.enriched?.anomaly || null, // 🔎 anomalie saisonnière directe
+        enriched: sf.enriched || null, // ✅ ajustements + anomalies
       };
     }
 
@@ -54,23 +53,16 @@ async function getLocalForecast(lat, lon, country) {
         forecast: sf.forecast,
         sources: sf.sources,
         enriched: sf.enriched || null,
-        anomaly: sf.enriched?.anomaly || null, // 🔎 direct pour affichage
       };
     }
-    // Fallback si hors zones couvertes
+    // ⚠️ Fallback si hors zones couvertes
     const ow = await openweather(lat, lon);
-    return {
-      lat,
-      lon,
-      country,
-      forecast: ow,
-      source: "OpenWeather (fallback)",
-    };
+    return { lat, lon, country, forecast: ow, source: "OpenWeather (fallback)" };
   } catch (err) {
     console.error("❌ getLocalForecast error:", err.message);
     return { lat, lon, country, error: err.message };
   }
 }
 
-// ✅ Export par défaut (inchangé pour Render)
+// ✅ Export par défaut
 export default { getNationalForecast, getLocalForecast };
