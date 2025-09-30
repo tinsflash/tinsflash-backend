@@ -310,3 +310,6 @@ export async function runGlobalEurope() {
     throw err;
   }
 }
+// ✅ Export des zones pour runGlobal.js
+export { EUROPE_ZONES };
+
