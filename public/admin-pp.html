@@ -18,6 +18,7 @@
     .ok { background:#2ecc71; }
     .fail { background:#e74c3c; }
     .pending { background:#f39c12; }
+    .running { background:#3498db; }
     .section { padding:15px; }
     .logs { max-height:250px; overflow-y:auto; background:#111; padding:10px; border-radius:8px; font-family: monospace; }
     pre { background:#111; padding:10px; border-radius:8px; max-height:300px; overflow-y:auto; }
@@ -28,7 +29,10 @@
 <body>
 <script>
   const pass = prompt("Code d'accès ?");
-  if(pass !== "202679"){ document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>"; throw new Error("Accès refusé"); }
+  if(pass !== "202679"){ 
+    document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>"; 
+    throw new Error("Accès refusé"); 
+  }
 </script>
 
 <header>
@@ -73,13 +77,82 @@
 </div>
 
 <script>
-async function runGlobal(){ await fetch("/api/run-global?zone=All",{method:"POST"}); }
-function updateStatus(checkup){ ["models","localForecasts","nationalForecasts","aiAlerts","engine"].forEach(k=>{const el=document.getElementById(k); if(!el) return; el.className=(checkup[k]||"PENDING").toLowerCase(); }); }
+async function runGlobal(){ 
+  addMsgToLogs("⚡ Déclenchement RUN GLOBAL...");
+  await fetch("/api/run-global?zone=All",{method:"POST"}); 
+}
+
+function updateStatus(checkup){ 
+  ["models","localForecasts","nationalForecasts","aiAlerts","engine"].forEach(k=>{
+    const el=document.getElementById(k); 
+    if(!el) return; 
+    const st=(checkup[k]||"PENDING").toUpperCase();
+    el.className=st==="OK"?"ok":st==="FAIL"?"fail":st==="RUNNING"?"running":"pending"; 
+    el.textContent=k+" : "+st;
+  }); 
+}
+
 const logBox=document.getElementById("logs");
 const evtSource=new EventSource("/api/logs/stream");
-evtSource.onmessage=function(e){ const log=JSON.parse(e.data); const line=document.createElement("div"); line.textContent=`[${log.timestamp}] ${log.message}`; logBox.appendChild(line); if(logBox.children.length>50) logBox.removeChild(logBox.firstChild); logBox.scrollTop=logBox.scrollHeight; };
-async function refreshData(){ const res=await fetch("/api/engine-state"); const data=await res.json(); updateStatus(data.checkup||{}); document.getElementById("finalReport").textContent=JSON.stringify(data.finalReport||{},null,2); const res2=await fetch("/api/alerts"); const alerts=await res2.json(); const box=document.getElementById("alerts"); box.innerHTML=""; alerts.forEach(a=>{const fiab=parseInt(a.data?.fiabilite||0); const div=document.createElement("div"); div.style=`padding:10px;margin:5px;border:2px solid ${fiab>=90?"green":fiab>=70?"yellow":"orange"}`; div.innerHTML=`<b>${a.data?.type||"Alerte"}</b> – ${a.country} ${a.region||""}<br/>Fiabilité: ${fiab||"?"}%`; box.appendChild(div);}); const res3=await fetch("/api/users"); const users=await res3.json(); const ubox=document.getElementById("users"); ubox.innerHTML=""; users.forEach(u=>{const div=document.createElement("div"); div.className="usercard"; div.innerHTML=`<b>${u.name}</b><br/>Zone: ${u.zone||"?"}<br/>Pays: ${u.country||"?"}`; ubox.appendChild(div);}); }
-setInterval(refreshData,6000); refreshData();
+evtSource.onmessage=function(e){ 
+  const log=JSON.parse(e.data); 
+  const line=document.createElement("div"); 
+  line.textContent=`[${log.timestamp}] ${log.level||"INFO"}: ${log.message}`; 
+  logBox.appendChild(line); 
+  if(logBox.children.length>100) logBox.removeChild(logBox.firstChild); 
+  logBox.scrollTop=logBox.scrollHeight; 
+};
+
+function addMsgToLogs(msg){
+  const line=document.createElement("div");
+  line.textContent=`[SYSTEM] ${msg}`;
+  logBox.appendChild(line);
+}
+
+async function refreshData(){ 
+  const res=await fetch("/api/engine-state"); 
+  const data=await res.json(); 
+  updateStatus(data.checkup||{}); 
+
+  document.getElementById("finalReport").textContent=JSON.stringify(data.finalReport||{},null,2); 
+
+  // Confirmation RUN
+  if(data.checkup?.engineStatus==="RUNNING"){
+    addMsgToLogs("Moteur en cours d’exécution...");
+  } else if(data.checkup?.engineStatus==="OK"){
+    addMsgToLogs("Moteur terminé avec succès ✅");
+  } else if(data.checkup?.engineStatus==="FAIL"){
+    addMsgToLogs("Moteur en erreur ❌");
+  }
+
+  // Alertes
+  const res2=await fetch("/api/alerts"); 
+  const alerts=await res2.json(); 
+  const box=document.getElementById("alerts"); 
+  box.innerHTML=""; 
+  alerts.forEach(a=>{
+    const fiab=parseInt(a.data?.fiabilite||0); 
+    const div=document.createElement("div"); 
+    div.style=`padding:10px;margin:5px;border:2px solid ${fiab>=90?"green":fiab>=70?"yellow":"orange"}`;
+    div.innerHTML=`<b>${a.data?.type||"Alerte"}</b> – ${a.country} ${a.region||""}<br/>Fiabilité:${fiab||"?"}%`; 
+    box.appendChild(div);
+  });
+
+  // Utilisateurs
+  const res3=await fetch("/api/users"); 
+  const users=await res3.json(); 
+  const ubox=document.getElementById("users"); 
+  ubox.innerHTML=""; 
+  users.forEach(u=>{
+    const div=document.createElement("div"); 
+    div.className="usercard"; 
+    div.innerHTML=`<b>${u.name}</b><br/>Zone: ${u.zone||"?"}<br/>Pays: ${u.country||"?"}`; 
+    ubox.appendChild(div);
+  });
+}
+
+setInterval(refreshData,6000); 
+refreshData();
 </script>
 </body>
 </html>
