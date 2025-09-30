@@ -1,60 +1,172 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="robots" content="noindex,nofollow">
-  <title>Admin – Alertes</title>
+  <meta charset="UTF-8" />
+  <title>🚨 Admin Alertes – Centrale Nucléaire Météo</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial,sans-serif; background:#0b0e12; color:#eee; margin:0; }
-    header { background:#1c1f26; padding:15px; text-align:center; }
-    h1 { margin:0; color:#e74c3c; }
-    nav { background:#1c1f26; padding:10px; display:flex; justify-content:center; gap:20px; }
-    nav a { color:#00d8ff; text-decoration:none; font-weight:bold; padding:6px 12px; border-radius:6px; }
-    nav a:hover { background:#00d8ff; color:#000; }
-    .alert { padding:10px; margin:10px; border-radius:8px; }
-    .high { border:2px solid green; }
-    .medium { border:2px solid yellow; }
-    .low { border:2px solid orange; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0f19;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #111831;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      color: #ff5252;
+    }
+    nav {
+      background: #1a2238;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    nav a {
+      color: #ccc;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover { color: #ff5252; }
+    .container { padding: 20px; }
+    h3 { color: #ff5252; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    th, td {
+      border: 1px solid #555;
+      padding: 6px;
+      text-align: center;
+      font-size: 14px;
+    }
+    th { background: #1a2238; }
+    tr.ok { background: #1b5e20; }
+    tr.pending { background: #f9a825; color: #000; }
+    tr.fail { background: #b71c1c; }
+    button {
+      margin: 2px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .validate { background: #2e7d32; color: #fff; }
+    .wait { background: #f9a825; color: #000; }
+    .reject { background: #c62828; color: #fff; }
   </style>
 </head>
 <body>
-<script>
-  const pass=prompt("Code d'accès ?"); 
-  if(pass!=="202679"){document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";throw new Error("Accès refusé");}
-</script>
+  <header>🚨 Admin – Gestion des Alertes</header>
+  <nav>
+    <a href="/admin">Console</a>
+    <a href="/admin-alerts">Alertes</a>
+    <a href="/admin-chat">Chat</a>
+    <a href="/admin-index">Vue Index</a>
+    <a href="/admin-radar">Radar & News</a>
+    <a href="/admin-users">Utilisateurs</a>
+  </nav>
+  <div class="container">
+    <h3>Auto-publiées (≥90%)</h3>
+    <div id="auto"></div>
 
-<header><h1>🚨 Gestion des Alertes</h1></header>
+    <h3>À valider (70–90%)</h3>
+    <div id="pending"></div>
 
-<nav>
-  <a href="/admin-pp.html">🏠 Console</a>
-  <a href="/admin-chat.html">🤖 Chat IA</a>
-  <a href="/admin-alerts.html">🚨 Alertes</a>
-  <a href="/admin-index.html">👁️ Vue Index</a>
-  <a href="/admin-radar.html">🛰️ Radar & News</a>
-</nav>
+    <h3>Primeur / Premières (<70%)</h3>
+    <div id="primeur"></div>
+  </div>
 
-<div id="alerts"></div>
+  <script>
+    // 🔐 Sécurité PIN
+    const pin = prompt("Code d'accès admin ?");
+    if (pin !== "202679") {
+      alert("Accès refusé");
+      window.location.href = "/";
+    }
 
-<script>
-async function loadAlerts(){
-  const res=await fetch("/api/alerts"); 
-  const alerts=await res.json(); 
-  const box=document.getElementById("alerts"); 
-  box.innerHTML="";
-  alerts.forEach(a=>{
-    const fiab=parseInt(a.data?.fiabilite||0);
-    const div=document.createElement("div"); 
-    div.className="alert "+(fiab>=90?"high":fiab>=70?"medium":"low");
-    div.innerHTML=`<b>${a.data?.type||"?"}</b> – ${a.country} ${a.region||""}<br/>Fiabilité:${fiab}%<br/>Conséquences:${a.data?.consequences||"?"}<br/>Recommandations:${a.data?.recommandations||"?"}<br/>`;
-    if(fiab<90){div.innerHTML+=`<button onclick="update('${a.id}','VALIDER')">Valider</button><button onclick="update('${a.id}','REFUSER')">Refuser</button>`;}
-    box.appendChild(div);
-  });
-}
-async function update(id,action){
-  await fetch("/api/alerts/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action})});
-  loadAlerts();
-}
-setInterval(loadAlerts,10000); loadAlerts();
-</script>
-</body>
-</html>
+    async function fetchAlerts() {
+      try {
+        const res = await fetch("/api/alerts");
+        const data = await res.json();
+        if (!data.success || !data.alerts) return;
+
+        const auto = [];
+        const pending = [];
+        const primeur = [];
+
+        data.alerts.forEach(alert => {
+          const reliability = alert.data?.fiabilite || alert.data?.reliability || 0;
+          const row = `
+            <tr>
+              <td>${alert.country || "-"}</td>
+              <td>${alert.region || alert.continent || "-"}</td>
+              <td>${alert.data?.type || "-"}</td>
+              <td>${reliability}%</td>
+              <td>${alert.data?.intensite || "-"}</td>
+              <td>${alert.data?.consequences || "-"}</td>
+              <td>${alert.data?.recommandations || "-"}</td>
+              <td>${alert.data?.duree || "-"}</td>
+              <td>
+                <button class="validate" onclick="updateStatus('${alert.id}','VALIDATED')">Valider</button>
+                <button class="wait" onclick="updateStatus('${alert.id}','WAIT')">Attente</button>
+                <button class="reject" onclick="updateStatus('${alert.id}','REJECTED')">Refuser</button>
+              </td>
+            </tr>
+          `;
+
+          if (reliability >= 90) auto.push(row);
+          else if (reliability >= 70) pending.push(row);
+          else primeur.push(row);
+        });
+
+        renderTable("auto", auto);
+        renderTable("pending", pending);
+        renderTable("primeur", primeur);
+
+      } catch (err) {
+        console.error("Erreur fetch alerts:", err);
+      }
+    }
+
+    function renderTable(id, rows) {
+      const container = document.getElementById(id);
+      if (!rows.length) {
+        container.innerHTML = "<p>Aucune alerte.</p>";
+        return;
+      }
+      container.innerHTML = `
+        <table>
+          <tr>
+            <th>Pays</th>
+            <th>Zone</th>
+            <th>Type</th>
+            <th>Fiabilité</th>
+            <th>Intensité</th>
+            <th>Conséquences</th>
+            <th>Recommandations</th>
+            <th>Durée</th>
+            <th>Actions</th>
+          </tr>
+          ${rows.join("")}
+        </table>
+      `;
+    }
+
+    async function updateStatus(id, action) {
+      try {
+        const res = await fetch(`/api/alerts/${id}/${action}`, { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          alert("Alerte mise à jour !");
+          fetchAlerts();
+        } else {
+          alert("Erreur mise à jour : " + data.error
