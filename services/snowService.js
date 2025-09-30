@@ -4,20 +4,20 @@
 
 import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
-import geoFactors from "./geoFactors.js";
+import { applyGeoFactors } from "./geoFactors.js";  // ✅ correction
 
 export async function analyzeSnow(lat, lon, country, region) {
   try {
     addEngineLog(`❄️ Analyse neige pour ${country}${region ? " - " + region : ""}`);
 
-    // Skiinfo (bulletins neige)
+    // Skiinfo (stations, neige)
     let skiinfo = null;
     try {
       const res = await axios.get(
         `https://www.skiinfo.fr/json/liftsOpen.php?latitude=${lat}&longitude=${lon}`
       );
       skiinfo = res.data;
-    } catch (e) {
+    } catch {
       addEngineLog("⚠️ Skiinfo non disponible");
     }
 
@@ -28,12 +28,12 @@ export async function analyzeSnow(lat, lon, country, region) {
         `https://www.snow-forecast.com/maps/json/next3d/snow?lat=${lat}&lon=${lon}`
       );
       snowForecast = res.data;
-    } catch (e) {
-      addEngineLog("⚠️ Snow-Forecast non disponible");
+    } catch {
+      addEngineLog("⚠️ Snow-forecast non disponible");
     }
 
-    // Ajustement altitude / relief
-    const adj = await geoFactors.applyGeoFactors({}, lat, lon);
+    // Ajustements relief / altitude
+    const adj = await applyGeoFactors({}, lat, lon, country);
 
     return {
       type: "neige",
@@ -42,7 +42,7 @@ export async function analyzeSnow(lat, lon, country, region) {
       factors: adj,
     };
   } catch (err) {
-    addEngineError(`Erreur analyse neige: ${err.message}`);
+    await addEngineError(`Erreur analyse neige: ${err.message}`);
     return { type: "neige", error: err.message };
   }
 }
