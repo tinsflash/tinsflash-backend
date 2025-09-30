@@ -1,31 +1,56 @@
 // services/geoFactors.js
+// 🌍 Ajustements géographiques + climatiques pour prévisions
+// Relief, altitude, climat régional, environnement
 
-/**
- * Applique des facteurs géographiques (altitude, relief, proximité de la mer)
- * pour affiner les prévisions météo brutes.
- */
-export function applyGeoFactors(forecast, location) {
-  let adjusted = { ...forecast };
+async function applyGeoFactors(forecast, lat, lon, country = "") {
+  if (!forecast) return forecast;
 
-  // Exemple simple : altitude
-  if (location.altitude && forecast.temperature) {
-    // -0.65 °C tous les 100m
-    adjusted.temperature =
-      forecast.temperature - (location.altitude / 100) * 0.65;
+  try {
+    // === Relief & altitude
+    if (forecast && forecast.temperature) {
+      if (forecast.altitude && forecast.altitude > 500) {
+        // -0,65°C / 100m d’altitude
+        forecast.temperature -= (forecast.altitude / 100) * 0.65;
+      }
+    }
+    if (forecast.temperature_min !== undefined && forecast.altitude > 1500) {
+      forecast.temperature_min -= 3;
+      forecast.temperature_max -= 3;
+    }
+
+    // === Proximité mer (plus d’humidité)
+    if (forecast.isCoastal && forecast.precipitation) {
+      forecast.precipitation *= 1.1;
+    }
+
+    // === Zones montagneuses (vent amplifié)
+    if (forecast.isMountain && forecast.wind) {
+      forecast.wind *= 1.2;
+    }
+
+    // === Ajustements climatiques hérités de climateFactors.js
+    if (country) {
+      const c = country.toUpperCase();
+      if (["ES", "IT", "GR"].includes(c)) {
+        forecast.temperature_max = (forecast.temperature_max || 20) + 1;
+      }
+      if (["NO", "SE", "FI"].includes(c)) {
+        forecast.temperature_min = (forecast.temperature_min || 5) - 1;
+      }
+      if (["BE", "NL", "UK", "FR"].includes(c)) {
+        forecast.humidity = (forecast.humidity || 70) + 5;
+      }
+    }
+
+    // === Indice fiabilité global
+    forecast.reliability = (forecast.reliability || 50) + 5;
+
+  } catch (err) {
+    console.warn("⚠️ GeoFactors error:", err.message);
   }
 
-  // Exemple : proximité mer → humidité +10%
-  if (location.isCoastal && forecast.precipitation) {
-    adjusted.precipitation = forecast.precipitation * 1.1;
-  }
-
-  // Exemple : zones montagneuses → vent amplifié
-  if (location.isMountain && forecast.wind) {
-    adjusted.wind = forecast.wind * 1.2;
-  }
-
-  return adjusted;
+  return forecast;
 }
 
-// ✅ Export par défaut pour compatibilité
-export default applyGeoFactors;
+// ✅ Export cohérent pour superForecast.js
+export default { applyGeoFactors };
