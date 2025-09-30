@@ -1,6 +1,6 @@
-// services/superForecast.js
+// PATH: services/superForecast.js
 // SuperForecast — prévisions enrichies multi-sources par point unique
-// ⚡ Centrale nucléaire météo – Moteur atomique
+// ⚡ Centrale nucléaire météo – Moteur atomique orchestral
 
 import gfs from "./gfs.js";
 import ecmwf from "./ecmwf.js";
@@ -10,7 +10,6 @@ import nasaSat from "./nasaSat.js";
 import copernicus from "./copernicusService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
-import geoFactors from "./geoFactors.js"; // ✅ fusion relief + climat + environnement
 import { askOpenAI } from "./openaiService.js";
 import {
   addEngineLog,
@@ -18,6 +17,11 @@ import {
   saveEngineState,
   getEngineState,
 } from "./engineState.js";
+
+// Facteurs d’ajustement
+import geoFactors from "./geoFactors.js";            // relief, climat global, altitude
+import adjustWithLocalFactors from "./localFactors.js"; // saison, cohérence spatiale, return levels
+import forecastVision from "./forecastVision.js";    // anomalies saisonnières
 
 // ✅ Export NOMMÉ uniquement
 export async function runSuperForecast({ lat, lon, country, region }) {
@@ -75,14 +79,22 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     };
     addEngineLog("✅ Sources météo collectées");
 
-    // === Étape 3 : enrichissement géographique + climatique
-    addEngineLog("🌍 Application des facteurs géographiques et climatiques…");
-    let enriched = { ...sources };
-    enriched = await geoFactors.applyGeoFactors(enriched, lat, lon, country);
+    // === Étape 3 : ajustements globaux (relief/climat/altitude)
+    let enriched = await geoFactors.applyGeoFactors(sources, lat, lon);
+
+    // === Étape 3bis : ajustements locaux (saison, spatial, return levels)
+    enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
+
+    // === Étape 3ter : anomalies saisonnières (Copernicus + GFS/ECMWF)
+    const anomaly = forecastVision.detectSeasonalAnomaly(
+      sources.gfs || sources.ecmwf || null
+    );
+    if (anomaly) {
+      enriched.anomaly = anomaly;
+    }
 
     // === Étape 4 : analyse IA
     addEngineLog("🤖 Analyse IA des données multi-sources…");
-
     const prompt = `
 Prévisions météo enrichies pour un point précis.
 Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${
@@ -97,13 +109,18 @@ Sources principales:
 - NASA POWER / Satellites: ${JSON.stringify(sources.nasaSat)}
 - Copernicus ERA5: ${JSON.stringify(sources.copernicus)}
 
-Données comparatives (benchmarks qualité, ne pas copier):
+Données comparatives (ne pas copier mais ajuster fiabilité):
 - Trullemans: ${JSON.stringify(sources.trullemans)}
 - Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
 
+Ajustements appliqués:
+- Facteurs globaux: relief, climat, altitude
+- Facteurs locaux: saison, cohérence spatiale, return levels
+- Anomalies saisonnières: ${JSON.stringify(anomaly)}
+
 Consignes IA:
 - Croiser et fusionner uniquement les données principales.
-- Comparer avec Trullemans/Wetterzentrale uniquement pour ajuster la fiabilité.
+- Comparer avec Trullemans/Wetterzentrale uniquement pour calibrer la fiabilité.
 - Fournir un bulletin détaillé: températures, précipitations, vent, risques météo.
 - Horizon: aujourd'hui + 7 jours.
 - Mentionner incertitudes et fiabilité globale.
@@ -118,7 +135,7 @@ Consignes IA:
     addEngineLog("✅ Analyse IA terminée");
 
     // === Étape 5 : sauvegarde
-    if (!state.superForecasts) state.superForecasts = [];
+    state.superForecasts = state.superForecasts || [];
     state.superForecasts.push({
       lat,
       lon,
@@ -129,7 +146,6 @@ Consignes IA:
       enriched,
     });
     await saveEngineState(state);
-    addEngineLog("💾 SuperForecast sauvegardé");
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
     return { lat, lon, country, region, forecast: analysis, sources, enriched };
