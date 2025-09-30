@@ -1,32 +1,37 @@
 // services/adminLogs.js
-import Log from "../models/Log.js";
+import { addEngineLog as dbAddLog, addEngineError as dbAddErr, getEngineState } from "./engineState.js";
 
-// ✅ Ajout d’un log normal
+let clients = [];
+
+/** 🔌 Ajout d’un client SSE */
+export function registerClient(res) {
+  clients.push(res);
+  res.on("close", () => {
+    clients = clients.filter(c => c !== res);
+  });
+}
+
+/** 📡 Diffuser un log en direct */
+function broadcastLog(log) {
+  clients.forEach(c => c.write(`data: ${JSON.stringify(log)}\n\n`));
+}
+
+/** ✅ Ajout log INFO */
 export async function addLog(message) {
-  try {
-    const log = new Log({ message, type: "info", timestamp: new Date() });
-    await log.save();
-  } catch (err) {
-    console.error("Erreur addLog:", err);
-  }
+  const log = await dbAddLog(message);
+  broadcastLog(log);
+  return log;
 }
 
-// ✅ Ajout d’un log d’erreur
+/** ❌ Ajout log ERROR */
 export async function addError(message) {
-  try {
-    const log = new Log({ message, type: "error", timestamp: new Date() });
-    await log.save();
-  } catch (err) {
-    console.error("Erreur addError:", err);
-  }
+  const log = await dbAddErr(message);
+  broadcastLog(log);
+  return log;
 }
 
-// ✅ Récupération des logs
+/** 🔎 Lire tous les logs (DB) */
 export async function getLogs() {
-  try {
-    return await Log.find().sort({ timestamp: -1 }).limit(200);
-  } catch (err) {
-    console.error("Erreur getLogs:", err);
-    return [];
-  }
+  const state = await getEngineState();
+  return state.logs || [];
 }
