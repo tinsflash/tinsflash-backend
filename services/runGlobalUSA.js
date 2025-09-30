@@ -1,7 +1,8 @@
 // services/runGlobalUSA.js
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+// ⚡ Centrale nucléaire météo – RUN GLOBAL USA
+
 import { runSuperForecast } from "./superForecast.js";
-import { processAlerts } from "./alertsService.js";
+import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
 // ===========================
 // Zones détaillées par État
@@ -407,8 +408,7 @@ export async function runGlobalUSA() {
             region: z.region
           });
           byState[stateName].regions.push({ ...z, forecast: res?.forecast });
-          successCount++; 
-          totalPoints++;
+          successCount++; totalPoints++;
           addEngineLog(`✅ ${stateName} — ${z.region}`);
         } catch (e) {
           addEngineError(`❌ ${stateName} — ${z.region}: ${e.message}`);
@@ -423,15 +423,11 @@ export async function runGlobalUSA() {
       points: totalPoints,
       success: successCount
     };
+    state.checkup.engineStatus = "OK";
     saveEngineState(state);
 
-    const alertsResult = await processAlerts();
-    state.checkup.aiAlerts = alertsResult?.status || "OK";
-
-    state.checkup.engineStatus = "OK";   // ✅ statut moteur
-    saveEngineState(state);
     addEngineLog("✅ RUN GLOBAL USA terminé avec succès.");
-    return { summary: state.zonesCoveredSummaryUSA, alerts: alertsResult };
+    return { summary: state.zonesCoveredSummaryUSA };
   } catch (err) {
     state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineError("❌ Erreur RUN GLOBAL USA: " + err.message);
