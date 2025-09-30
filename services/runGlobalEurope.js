@@ -1,7 +1,8 @@
 // services/runGlobalEurope.js
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+// ⚡ Centrale nucléaire météo – RUN GLOBAL Europe
+
 import { runSuperForecast } from "./superForecast.js";
-import { processAlerts } from "./alertsService.js";
+import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
 // ===========================
 // Zones détaillées par pays
@@ -262,7 +263,6 @@ export async function runGlobalEurope() {
     state.checkup.models = "PENDING";
     state.checkup.localForecasts = "PENDING";
     state.checkup.nationalForecasts = "PENDING";
-    state.checkup.aiAlerts = "PENDING";
     saveEngineState(state);
 
     const byCountry = {};
@@ -300,12 +300,8 @@ export async function runGlobalEurope() {
     state.checkup.nationalForecasts = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
     saveEngineState(state);
 
-    const alertsResult = await processAlerts();
-    state.checkup.aiAlerts = alertsResult?.status || "OK";
-
-    saveEngineState(state);
     addEngineLog("✅ RUN GLOBAL EUROPE terminé avec succès.");
-    return { summary: state.zonesCoveredSummaryEurope, alerts: alertsResult };
+    return { summary: state.zonesCoveredSummaryEurope };
   } catch (err) {
     state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
@@ -314,6 +310,3 @@ export async function runGlobalEurope() {
     throw err;
   }
 }
-
-// ✅ Export des zones pour runGlobal.js
-export { EUROPE_ZONES };
