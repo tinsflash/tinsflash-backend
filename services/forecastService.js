@@ -1,6 +1,6 @@
 // services/forecastService.js
 // Bulletin national et local — basé sur SuperForecast et runGlobal
-// ⚡ Centrale nucléaire météo – Vue utilisateur
+// ⚡ Centrale nucléaire météo – Vue utilisateur enrichie
 
 import { runSuperForecast } from "./superForecast.js";
 import openweather from "./openweather.js";
@@ -17,12 +17,14 @@ async function getNationalForecast(country) {
     const forecasts = {};
     for (const z of zones) {
       let sf = await runSuperForecast({ lat: z.lat, lon: z.lon, country, region: z.region });
+
       forecasts[z.region] = {
         lat: z.lat,
         lon: z.lon,
         country,
         forecast: sf.forecast || "⚠️ Pas de données",
         sources: sf.sources || null,
+        enriched: sf.enriched || null, // ✅ contient ajustements + anomalies
       };
     }
 
@@ -39,7 +41,14 @@ async function getLocalForecast(lat, lon, country) {
     const zones = ALL_ZONES[country];
     if (zones) {
       let sf = await runSuperForecast({ lat, lon, country });
-      return sf;
+      return {
+        lat,
+        lon,
+        country,
+        forecast: sf.forecast,
+        sources: sf.sources,
+        enriched: sf.enriched || null,
+      };
     }
     // Fallback si hors zones couvertes
     const ow = await openweather(lat, lon);
