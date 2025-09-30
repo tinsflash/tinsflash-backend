@@ -1,94 +1,50 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>🚨 Console Admin – Alertes</title>
+  <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow">
+  <title>Alertes – TINSFLASH</title>
+  <link rel="stylesheet" href="/style.css" />
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:18px; color:#f44336; }
-    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
-    nav a:hover { text-decoration:underline; }
-    .container { padding:20px; }
-    .alertBox { margin:10px 0; padding:10px; border-radius:5px; background:#222; border:1px solid #444; }
-    .primeur { border-left:5px solid #4caf50; }
-    .avalider { border-left:5px solid #ff9800; }
-    .auto { border-left:5px solid #2196f3; }
-    h2 { color:#fdd835; }
+    body { font-family: Arial, sans-serif; background:#101316; color:#eee; }
+    h1 { text-align:center; margin:15px; }
+    .alert { border:1px solid #444; border-radius:6px; padding:10px; margin:10px; }
+    .primeur { border-left:5px solid orange; }
+    .avalider { border-left:5px solid yellow; }
+    .auto { border-left:5px solid green; }
   </style>
 </head>
 <body>
-<script>
-  const pass = prompt("Mot de passe ?");
-  if (pass !== "202679") {
-    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
-    throw new Error("Accès refusé");
-  }
-</script>
+  <h1>🚨 Alertes actives</h1>
+  <div id="alerts"></div>
 
-<header>
-  <h1>🚨 Alertes – Console Admin</h1>
-  <nav>
-    <a href="admin-pp.html">Console</a>
-    <a href="admin-alerts.html">Alertes</a>
-    <a href="admin-index.html">Vue Utilisateur</a>
-    <a href="admin-chat.html">Chat IA</a>
-    <a href="admin-radar.html">Radar</a>
-  </nav>
-</header>
-
-<div class="container">
-  <h2>⚡ Alertes Autovalidées ≥90%</h2>
-  <div id="auto"></div>
-
-  <h2>🟠 Alertes à valider (70–90%)</h2>
-  <div id="avalider"></div>
-
-  <h2>📊 Comparaison</h2>
-  <h3>A. Nos alertes uniques (primeur)</h3>
-  <div id="primeur"></div>
-  <h3>B. Alertes vues ailleurs (comparatif)</h3>
-  <div id="comparatif"></div>
-</div>
-
-<script>
-  async function loadAlerts() {
-    try {
+  <script>
+    async function loadAlerts(){
       const res = await fetch("/api/alerts");
-      const data = await res.json();
-      if (!Array.isArray(data)) return;
-
-      data.forEach(alert => {
-        const box = document.createElement("div");
-        box.className = "alertBox";
-        if (alert.reliability >= 90) box.classList.add("auto");
-        else if (alert.reliability >= 70) box.classList.add("avalider");
-        else box.classList.add("primeur");
-
-        box.innerHTML = `
-          <b>Type:</b> ${alert.type || "?"} |
-          <b>Zone:</b> ${alert.zone || alert.continent || "?"} |
-          <b>Fiabilité:</b> ${alert.reliability || "?"}%<br>
-          <b>Intensité:</b> ${alert.intensity || "-"}<br>
-          <b>Conséquences:</b> ${alert.consequences || "-"}<br>
-          <b>Recommandations:</b> ${alert.recommendations || "-"}<br>
-          <b>Durée:</b> ${alert.start || "?"} → ${alert.end || "?"}<br>
-          <b>FirstDetector:</b> ${alert.firstDetector ? "✅" : "❌"}
+      const alerts = await res.json();
+      const box = document.getElementById("alerts");
+      box.innerHTML = "";
+      alerts.forEach(a=>{
+        let cls="primeur";
+        const fiab = parseInt(a.data?.fiabilite || 0);
+        if(fiab >= 90) cls="auto";
+        else if(fiab >= 70) cls="avalider";
+        const div=document.createElement("div");
+        div.className="alert "+cls;
+        div.innerHTML=`
+          <h3>${a.data?.type || "Alerte"}</h3>
+          <p><b>Zone :</b> ${a.country} ${a.region||""}</p>
+          <p><b>Fiabilité :</b> ${a.data?.fiabilite || "?"}</p>
+          <p><b>Intensité :</b> ${a.data?.intensite || "?"}</p>
+          <p><b>Conséquences :</b> ${a.data?.consequences || "?"}</p>
+          <p><b>Recommandations :</b> ${a.data?.recommandations || "?"}</p>
+          <p><b>Période :</b> ${a.data?.debut || "?"} → ${a.data?.fin || "?"}</p>
         `;
-
-        if (alert.reliability >= 90) document.getElementById("auto").appendChild(box);
-        else if (alert.reliability >= 70) document.getElementById("avalider").appendChild(box);
-        else document.getElementById("primeur").appendChild(box);
-
-        if (alert.comparison === "ours") document.getElementById("primeur").appendChild(box.cloneNode(true));
-        if (alert.comparison === "others") document.getElementById("comparatif").appendChild(box.cloneNode(true));
+        box.appendChild(div);
       });
-    } catch (err) {
-      document.body.innerHTML += `<div style="color:red;">Erreur chargement alertes: ${err.message}</div>`;
     }
-  }
-  loadAlerts();
-</script>
+    setInterval(loadAlerts, 6000);
+    loadAlerts();
+  </script>
 </body>
 </html>
