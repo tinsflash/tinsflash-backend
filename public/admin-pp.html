@@ -6,107 +6,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>⚡ Console Admin – Centrale Nucléaire Météo</title>
   <style>
-    body {
-      background-color: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-    }
-    header {
-      background: #000;
-      padding: 10px;
-      text-align: center;
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #facc15;
-    }
-    nav {
-      background: #222;
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      padding: 10px;
-    }
-    nav a {
-      color: #ddd;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    nav a:hover {
-      color: #facc15;
-    }
-    .section {
-      margin: 20px;
-      padding: 20px;
-      background: #1a1a1a;
-      border-radius: 8px;
-      box-shadow: 0 0 8px #000;
-    }
-    .btn-run {
-      background: #2563eb;
-      color: #fff;
-      font-size: 1.2rem;
-      font-weight: bold;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .btn-run:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-    .status {
-      font-size: 1.1rem;
-      padding: 10px;
-      margin-top: 15px;
-      border-radius: 5px;
-      text-align: center;
-    }
-    .status.success {
-      background: #16a34a;
-      color: #fff;
-    }
-    .status.fail {
-      background: #dc2626;
-      color: #fff;
-    }
-    .checklist li {
-      margin: 6px 0;
-      padding: 8px;
-      border-radius: 5px;
-      list-style: none;
-      font-weight: bold;
-    }
-    .ok { background: #16a34a; color: #fff; }
-    .running { background: #facc15; color: #000; }
-    .fail { background: #dc2626; color: #fff; }
-    .logs {
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      padding: 10px;
-      height: 200px;
-      overflow-y: auto;
-      border-radius: 5px;
-    }
-    details {
-      margin-top: 10px;
-      background: #222;
-      padding: 10px;
-      border-radius: 5px;
-    }
-    summary {
-      cursor: pointer;
-      font-weight: bold;
-      color: #facc15;
-    }
-    pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      font-size: 0.9rem;
-      color: #0f0;
-    }
+    body { background:#111; color:#fff; font-family:Arial,sans-serif; margin:0; }
+    header { background:#000; padding:10px; text-align:center; font-size:1.2rem; font-weight:bold; color:#facc15; }
+    nav { background:#222; display:flex; justify-content:center; gap:20px; padding:10px; }
+    nav a { color:#ddd; text-decoration:none; font-weight:bold; }
+    nav a:hover { color:#facc15; }
+    .section { margin:20px; padding:20px; background:#1a1a1a; border-radius:8px; box-shadow:0 0 8px #000; }
+    .btn-run { background:#2563eb; color:#fff; font-size:1.2rem; font-weight:bold; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; }
+    .btn-run:disabled { background:#555; cursor:not-allowed; }
+    .status { font-size:1.1rem; padding:10px; margin-top:15px; border-radius:5px; text-align:center; }
+    .status.success { background:#16a34a; color:#fff; }
+    .status.fail { background:#dc2626; color:#fff; }
+    .status.running { background:#facc15; color:#000; }
+    .checklist li { margin:6px 0; padding:8px; border-radius:5px; list-style:none; font-weight:bold; }
+    .ok { background:#16a34a; color:#fff; }
+    .running { background:#facc15; color:#000; }
+    .fail { background:#dc2626; color:#fff; }
+    .pending { background:#f97316; color:#fff; }
+    .logs { font-family:monospace; padding:10px; height:200px; overflow-y:auto; border-radius:5px; background:#000; color:#0f0; }
+    details { margin-top:10px; background:#222; padding:10px; border-radius:5px; }
+    summary { cursor:pointer; font-weight:bold; color:#facc15; }
+    pre { white-space:pre-wrap; word-wrap:break-word; font-size:0.9rem; color:#0f0; }
   </style>
   <script>
     const password = "202679";
@@ -115,22 +35,40 @@
       throw new Error("Unauthorized");
     }
 
+    function setStepStatus(stepIndex, status) {
+      const steps = document.querySelectorAll(".checklist li");
+      if (steps[stepIndex]) steps[stepIndex].className = status;
+    }
+
     async function lancerRun() {
       const btn = document.getElementById("runBtn");
       const statusBox = document.getElementById("statusBox");
+      const logBox = document.getElementById("logs");
+
       btn.disabled = true;
+
+      // Reset checklist
+      document.querySelectorAll(".checklist li").forEach(li => li.className = "pending");
+
       statusBox.textContent = "RUN en cours…";
       statusBox.className = "status running";
 
       try {
-        const res = await fetch("/api/run-global", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({zone: "All"})});
+        const res = await fetch("/api/run-global", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({zone: "All"})
+        });
         const data = await res.json();
+
         if (data.success) {
           statusBox.textContent = "✔️ RUN terminé avec succès";
           statusBox.className = "status success";
+          document.querySelectorAll(".checklist li").forEach(li => li.className = "ok");
         } else {
           statusBox.textContent = "❌ RUN échec: " + (data.error || "inconnu");
           statusBox.className = "status fail";
+          document.querySelectorAll(".checklist li").forEach(li => li.className = "fail");
         }
       } catch (err) {
         statusBox.textContent = "❌ Erreur: " + err.message;
@@ -143,31 +81,37 @@
     function connectLogs() {
       const logBox = document.getElementById("logs");
       const evtSource = new EventSource("/api/logs/stream");
+
       evtSource.onmessage = function(e) {
         const now = new Date();
         const time = now.toTimeString().split(" ")[0];
         const div = document.createElement("div");
         div.textContent = `[${time}] ${e.data}`;
         logBox.prepend(div);
-        while (logBox.childNodes.length > 50) {
-          logBox.removeChild(logBox.lastChild);
-        }
-      }
-    }
 
-    async function loadEngineState() {
-      try {
-        const res = await fetch("/api/engine-state");
-        const data = await res.json();
-        document.getElementById("engineDump").textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("engineDump").textContent = "Erreur chargement état moteur: " + err.message;
-      }
+        // Exemple de mapping log → checklist
+        if (e.data.includes("Extraction des modèles")) setStepStatus(0, "running");
+        if (e.data.includes("RUNGLOBAL Europe")) setStepStatus(1, "running");
+        if (e.data.includes("RUNGLOBAL USA")) setStepStatus(2, "running");
+        if (e.data.includes("RUN Continentales")) setStepStatus(3, "running");
+        if (e.data.includes("Analyse IA")) setStepStatus(5, "running");
+
+        // Succès → on valide étape
+        if (e.data.includes("terminé")) {
+          document.querySelectorAll(".checklist li.running").forEach(li => li.className = "ok");
+        }
+
+        // Fail → on marque l'étape en rouge
+        if (e.data.includes("échec") || e.data.includes("Erreur")) {
+          document.querySelectorAll(".checklist li.running").forEach(li => li.className = "fail");
+        }
+
+        while (logBox.childNodes.length > 50) logBox.removeChild(logBox.lastChild);
+      };
     }
 
     window.onload = () => {
       connectLogs();
-      loadEngineState();
     };
   </script>
 </head>
@@ -189,33 +133,25 @@
   <div class="section">
     <h2>📋 Checklist moteur</h2>
     <ol class="checklist">
-      <li class="ok">1. Extraction modèles</li>
-      <li class="ok">2. RUNGLOBAL Europe</li>
-      <li class="ok">3. RUNGLOBAL USA</li>
-      <li class="ok">4. RUN Continentales</li>
-      <li class="ok">5. Mise sous fichier des extractions</li>
-      <li class="ok">6. Analyse IA (relief, climat, environnement)</li>
-      <li class="ok">7. Prévisions locales zones couvertes</li>
-      <li class="ok">8. Prévisions nationales zones couvertes</li>
-      <li class="ok">9. Alertes locales zones couvertes</li>
-      <li class="ok">10. Alertes nationales zones couvertes</li>
-      <li class="ok">11. Alertes continentales (zones non couvertes)</li>
-      <li class="ok">12. Assemblage alertes mondiales</li>
-      <li class="ok">13. Open Data prévisions zones non couvertes</li>
+      <li class="pending">1. Extraction modèles</li>
+      <li class="pending">2. RUNGLOBAL Europe</li>
+      <li class="pending">3. RUNGLOBAL USA</li>
+      <li class="pending">4. RUN Continentales</li>
+      <li class="pending">5. Mise sous fichier des extractions</li>
+      <li class="pending">6. Analyse IA (relief, climat, environnement)</li>
+      <li class="pending">7. Prévisions locales zones couvertes</li>
+      <li class="pending">8. Prévisions nationales zones couvertes</li>
+      <li class="pending">9. Alertes locales zones couvertes</li>
+      <li class="pending">10. Alertes nationales zones couvertes</li>
+      <li class="pending">11. Alertes continentales (zones non couvertes)</li>
+      <li class="pending">12. Assemblage alertes mondiales</li>
+      <li class="pending">13. Open Data prévisions zones non couvertes</li>
     </ol>
   </div>
 
   <div class="section">
     <h2>📜 Logs en direct</h2>
     <div id="logs" class="logs"></div>
-  </div>
-
-  <div class="section">
-    <h2>📡 État du moteur</h2>
-    <details>
-      <summary>Voir état complet</summary>
-      <pre id="engineDump">Chargement…</pre>
-    </details>
   </div>
 </body>
 </html>
