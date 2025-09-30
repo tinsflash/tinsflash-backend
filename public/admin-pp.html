@@ -2,157 +2,90 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="robots" content="noindex,nofollow">
-  <title>Console Admin – Centrale Nucléaire Météo</title>
+  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#0b0e12; color:#eee; margin:0; }
-    header { background:#1c1f26; padding:15px; text-align:center; }
-    h1 { margin:0; color:#00d8ff; }
-    nav { background:#1c1f26; padding:10px; display:flex; justify-content:center; gap:20px; }
-    nav a { color:#00d8ff; text-decoration:none; font-weight:bold; padding:6px 12px; border-radius:6px; }
-    nav a:hover { background:#00d8ff; color:#000; }
-    .btn { padding:15px 25px; border:none; border-radius:8px; cursor:pointer; font-size:18px; font-weight:bold; }
-    .btn-run { background:#f39c12; color:#000; }
-    .status { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:15px; }
-    .status div { padding:20px; border-radius:10px; text-align:center; font-weight:bold; font-size:14px; }
-    .ok { background:#2ecc71; }
-    .fail { background:#e74c3c; }
-    .pending { background:#f39c12; }
-    .running { background:#3498db; }
-    .section { padding:15px; }
-    .logs { max-height:250px; overflow-y:auto; background:#111; padding:10px; border-radius:8px; font-family: monospace; }
-    pre { background:#111; padding:10px; border-radius:8px; max-height:300px; overflow-y:auto; }
-    .userbox { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
-    .usercard { background:#1c1f26; padding:10px; border-radius:8px; }
+    body { background:#111; color:#eee; font-family:Arial, sans-serif; }
+    h1 { color:#00bfff; text-align:center; }
+    button { background:#ff9800; color:white; padding:10px 20px; border:none; cursor:pointer; border-radius:6px; }
+    button:hover { background:#e68900; }
+    #logs { background:black; padding:10px; font-family:monospace; height:200px; overflow:auto; border:1px solid #333; }
+    .log.green { color:#4caf50; }
+    .log.red { color:#f44336; }
+    .log.orange { color:#ff9800; }
+    .checklist { display:flex; justify-content:center; margin:20px 0; gap:10px; }
+    .check-item { padding:10px; border-radius:8px; font-weight:bold; }
+    .pending { background:#ff9800; color:#111; }
+    .ok { background:#4caf50; color:#fff; }
+    .fail { background:#f44336; color:#fff; }
+    #engine-status { text-align:center; font-size:18px; margin-top:15px; }
   </style>
 </head>
 <body>
-<script>
-  const pass = prompt("Code d'accès ?");
-  if(pass !== "202679"){ 
-    document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>"; 
-    throw new Error("Accès refusé"); 
-  }
-</script>
-
-<header>
   <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
-  <button class="btn btn-run" onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
-</header>
 
-<nav>
-  <a href="/admin-pp.html">🏠 Console</a>
-  <a href="/admin-chat.html">🤖 Chat IA</a>
-  <a href="/admin-alerts.html">🚨 Alertes</a>
-  <a href="/admin-index.html">👁️ Vue Index</a>
-  <a href="/admin-radar.html">🛰️ Radar & News</a>
-</nav>
+  <div style="text-align:center; margin:20px;">
+    <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+  </div>
 
-<div class="status" id="engineStatus">
-  <div id="models" class="pending">Extraction modèles</div>
-  <div id="localForecasts" class="pending">Prévisions locales</div>
-  <div id="nationalForecasts" class="pending">Prévisions nationales</div>
-  <div id="aiAlerts" class="pending">Alertes IA</div>
-  <div id="engine" class="pending">Moteur</div>
-</div>
+  <div class="checklist" id="checklist">
+    <div id="models" class="check-item pending">Extraction modèles</div>
+    <div id="localForecasts" class="check-item pending">Prévisions locales</div>
+    <div id="nationalForecasts" class="check-item pending">Prévisions nationales</div>
+    <div id="aiAlerts" class="check-item pending">Alertes IA</div>
+    <div id="engineStatus" class="check-item pending">Moteur</div>
+  </div>
 
-<div class="section">
-  <h2>📜 Logs moteur (live)</h2>
-  <div class="logs" id="logs"></div>
-</div>
+  <h3>📜 Logs moteur (live)</h3>
+  <div id="logs"></div>
 
-<div class="section">
-  <h2>📊 Rapport final IA</h2>
-  <pre id="finalReport">{}</pre>
-</div>
+  <h3>📊 État moteur</h3>
+  <div id="engine-status">Chargement...</div>
 
-<div class="section">
-  <h2>🚨 Alertes actives</h2>
-  <div id="alerts"></div>
-</div>
+  <script>
+    async function runGlobal() {
+      await fetch('/api/run-global', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zone: "All" })
+      });
+    }
 
-<div class="section">
-  <h2>👥 Utilisateurs par zones</h2>
-  <div class="userbox" id="users"></div>
-</div>
+    // === Logs SSE en direct ===
+    const evtSource = new EventSource('/api/logs/stream');
+    evtSource.onmessage = function(event) {
+      const logs = JSON.parse(event.data);
+      const logsDiv = document.getElementById('logs');
+      logsDiv.innerHTML = "";
+      logs.forEach(l => {
+        let cls = "orange";
+        if (l.message.includes("✅")) cls = "green";
+        else if (l.message.includes("❌")) cls = "red";
+        logsDiv.innerHTML += `<div class="log ${cls}">[${new Date(l.timestamp).toLocaleTimeString()}] ${l.message}</div>`;
+      });
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    };
 
-<script>
-async function runGlobal(){ 
-  addMsgToLogs("⚡ Déclenchement RUN GLOBAL...");
-  await fetch("/api/run-global?zone=All",{method:"POST"}); 
-}
+    // === Checkup + état moteur ===
+    async function refreshState() {
+      const res = await fetch('/api/checkup');
+      const checkup = await res.json();
+      for (const key in checkup) {
+        const el = document.getElementById(key);
+        if (el) {
+          if (checkup[key] === "OK") el.className = "check-item ok";
+          else if (checkup[key] === "FAIL") el.className = "check-item fail";
+          else el.className = "check-item pending";
+        }
+      }
 
-function updateStatus(checkup){ 
-  ["models","localForecasts","nationalForecasts","aiAlerts","engine"].forEach(k=>{
-    const el=document.getElementById(k); 
-    if(!el) return; 
-    const st=(checkup[k]||"PENDING").toUpperCase();
-    el.className=st==="OK"?"ok":st==="FAIL"?"fail":st==="RUNNING"?"running":"pending"; 
-    el.textContent=k+" : "+st;
-  }); 
-}
+      const res2 = await fetch('/api/engine-state');
+      const state = await res2.json();
+      const eng = document.getElementById("engine-status");
+      eng.textContent = `⏱️ ${state.status || "inconnu"} | Dernier run: ${state.runTime || "—"}`;
+    }
 
-const logBox=document.getElementById("logs");
-const evtSource=new EventSource("/api/logs/stream");
-evtSource.onmessage=function(e){ 
-  const log=JSON.parse(e.data); 
-  const line=document.createElement("div"); 
-  line.textContent=`[${log.timestamp}] ${log.level||"INFO"}: ${log.message}`; 
-  logBox.appendChild(line); 
-  if(logBox.children.length>100) logBox.removeChild(logBox.firstChild); 
-  logBox.scrollTop=logBox.scrollHeight; 
-};
-
-function addMsgToLogs(msg){
-  const line=document.createElement("div");
-  line.textContent=`[SYSTEM] ${msg}`;
-  logBox.appendChild(line);
-}
-
-async function refreshData(){ 
-  const res=await fetch("/api/engine-state"); 
-  const data=await res.json(); 
-  updateStatus(data.checkup||{}); 
-
-  document.getElementById("finalReport").textContent=JSON.stringify(data.finalReport||{},null,2); 
-
-  // Confirmation RUN
-  if(data.checkup?.engineStatus==="RUNNING"){
-    addMsgToLogs("Moteur en cours d’exécution...");
-  } else if(data.checkup?.engineStatus==="OK"){
-    addMsgToLogs("Moteur terminé avec succès ✅");
-  } else if(data.checkup?.engineStatus==="FAIL"){
-    addMsgToLogs("Moteur en erreur ❌");
-  }
-
-  // Alertes
-  const res2=await fetch("/api/alerts"); 
-  const alerts=await res2.json(); 
-  const box=document.getElementById("alerts"); 
-  box.innerHTML=""; 
-  alerts.forEach(a=>{
-    const fiab=parseInt(a.data?.fiabilite||0); 
-    const div=document.createElement("div"); 
-    div.style=`padding:10px;margin:5px;border:2px solid ${fiab>=90?"green":fiab>=70?"yellow":"orange"}`;
-    div.innerHTML=`<b>${a.data?.type||"Alerte"}</b> – ${a.country} ${a.region||""}<br/>Fiabilité:${fiab||"?"}%`; 
-    box.appendChild(div);
-  });
-
-  // Utilisateurs
-  const res3=await fetch("/api/users"); 
-  const users=await res3.json(); 
-  const ubox=document.getElementById("users"); 
-  ubox.innerHTML=""; 
-  users.forEach(u=>{
-    const div=document.createElement("div"); 
-    div.className="usercard"; 
-    div.innerHTML=`<b>${u.name}</b><br/>Zone: ${u.zone||"?"}<br/>Pays: ${u.country||"?"}`; 
-    ubox.appendChild(div);
-  });
-}
-
-setInterval(refreshData,6000); 
-refreshData();
-</script>
+    setInterval(refreshState, 3000);
+    refreshState();
+  </script>
 </body>
 </html>
