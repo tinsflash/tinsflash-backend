@@ -4,76 +4,135 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow">
   <title>Console Centrale – TINSFLASH</title>
-  <link rel="stylesheet" href="/style.css" />
   <style>
-    body { font-family: Arial, sans-serif; background:#0b0e12; color:#eee; }
-    .header { padding:15px; text-align:center; background:#1c1f26; }
-    .btn { padding:10px 15px; margin:5px; border:none; cursor:pointer; border-radius:5px; }
-    .btn-run { background:#ffa500; color:#000; font-weight:bold; }
-    .btn-ok { background:#2ecc71; color:#fff; }
-    .btn-fail { background:#e74c3c; color:#fff; }
-    .logs { max-height:300px; overflow-y:auto; background:#111; padding:10px; border-radius:5px; }
-    .log-line { margin:3px 0; font-family: monospace; }
-    .status { display:flex; justify-content:space-around; margin:10px 0; }
-    .status div { padding:10px; border-radius:6px; min-width:120px; text-align:center; }
+    body { font-family: Arial, sans-serif; background:#0b0e12; color:#eee; margin:0; }
+    header { background:#1c1f26; padding:15px; text-align:center; }
+    h1 { margin:0; color:#00d8ff; }
+    .btn { padding:15px 25px; border:none; border-radius:8px; cursor:pointer; font-size:18px; font-weight:bold; }
+    .btn-run { background:#f39c12; color:#000; }
+    .status { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:15px; }
+    .status div { padding:20px; border-radius:10px; text-align:center; font-weight:bold; font-size:14px; }
     .ok { background:#2ecc71; }
     .fail { background:#e74c3c; }
     .pending { background:#f39c12; }
+    .section { padding:15px; }
+    .logs { max-height:250px; overflow-y:auto; background:#111; padding:10px; border-radius:8px; font-family: monospace; }
+    .log-line { margin:3px 0; }
+    pre { background:#111; padding:10px; border-radius:8px; max-height:300px; overflow-y:auto; }
+    h2 { border-bottom:1px solid #333; padding-bottom:5px; color:#00d8ff; }
+    .userbox { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+    .usercard { background:#1c1f26; padding:10px; border-radius:8px; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>⚡ Centrale Nucléaire Météo</h1>
-    <button class="btn btn-run" onclick="runGlobal('All')">Lancer RUN GLOBAL</button>
-    <button class="btn btn-run" onclick="runGlobal('Europe')">RUN Europe</button>
-    <button class="btn btn-run" onclick="runGlobal('USA')">RUN USA</button>
-  </div>
+  <header>
+    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+    <button class="btn btn-run" onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+  </header>
 
   <div class="status" id="engineStatus">
-    <div id="models" class="pending">Modèles</div>
+    <div id="models" class="pending">Extraction modèles</div>
     <div id="localForecasts" class="pending">Prévisions locales</div>
     <div id="nationalForecasts" class="pending">Prévisions nationales</div>
     <div id="aiAlerts" class="pending">Alertes IA</div>
     <div id="engine" class="pending">Moteur</div>
   </div>
 
-  <h2>📜 Logs moteur</h2>
-  <div class="logs" id="logs"></div>
+  <div class="section">
+    <h2>📜 Logs moteur (live)</h2>
+    <div class="logs" id="logs"></div>
+  </div>
 
-  <h2>📊 Rapport final IA</h2>
-  <pre id="finalReport">{}</pre>
+  <div class="section">
+    <h2>📊 Rapport final IA</h2>
+    <pre id="finalReport">{}</pre>
+  </div>
+
+  <div class="section">
+    <h2>🚨 Alertes actives</h2>
+    <div id="alerts"></div>
+  </div>
+
+  <div class="section">
+    <h2>👥 Utilisateurs par zones</h2>
+    <div class="userbox" id="users"></div>
+  </div>
 
   <script>
-    async function runGlobal(zone) {
-      await fetch(`/api/run-global?zone=${zone}`, { method:"POST" });
+    async function runGlobal(){
+      document.querySelector(".btn-run").style.background="#e74c3c"; // RUNNING = rouge
+      await fetch("/api/run-global?zone=All",{method:"POST"});
+      setTimeout(()=>{document.querySelector(".btn-run").style.background="#2ecc71";},2000); // repasse vert si ok
     }
 
     function updateStatus(checkup){
-      document.getElementById("models").className = checkup.models?.toLowerCase() || "pending";
-      document.getElementById("localForecasts").className = checkup.localForecasts?.toLowerCase() || "pending";
-      document.getElementById("nationalForecasts").className = checkup.nationalForecasts?.toLowerCase() || "pending";
-      document.getElementById("aiAlerts").className = checkup.aiAlerts?.toLowerCase() || "pending";
-      document.getElementById("engine").className = checkup.engineStatus?.toLowerCase() || "pending";
+      ["models","localForecasts","nationalForecasts","aiAlerts","engine"].forEach(k=>{
+        const el=document.getElementById(k);
+        if(!el) return;
+        const v=checkup[k]||"PENDING";
+        el.className=v.toLowerCase();
+      });
     }
 
-    const logBox = document.getElementById("logs");
-    const evtSource = new EventSource("/api/logs/stream");
-    evtSource.onmessage = function(e){
-      const log = JSON.parse(e.data);
-      const line = document.createElement("div");
-      line.className = "log-line";
-      line.textContent = `[${log.timestamp}] ${log.message}`;
+    // === Logs SSE ===
+    const logBox=document.getElementById("logs");
+    const evtSource=new EventSource("/api/logs/stream");
+    evtSource.onmessage=function(e){
+      const log=JSON.parse(e.data);
+      const line=document.createElement("div");
+      line.className="log-line";
+      line.textContent=`[${log.timestamp}] ${log.message}`;
       logBox.appendChild(line);
-      logBox.scrollTop = logBox.scrollHeight;
+      if(logBox.children.length>50) logBox.removeChild(logBox.firstChild);
+      logBox.scrollTop=logBox.scrollHeight;
     };
 
-    async function refreshFinal(){
-      const res = await fetch("/api/engine-state");
-      const data = await res.json();
+    async function refreshData(){
+      const res=await fetch("/api/engine-state");
+      const data=await res.json();
       updateStatus(data.checkup || {});
-      document.getElementById("finalReport").textContent = JSON.stringify(data.finalReport || {}, null, 2);
+      document.getElementById("finalReport").textContent=JSON.stringify(data.finalReport||{},null,2);
+
+      // Alertes
+      const res2=await fetch("/api/alerts");
+      const alerts=await res2.json();
+      const box=document.getElementById("alerts");
+      box.innerHTML="";
+      alerts.forEach(a=>{
+        let cls="border:2px solid orange;";
+        const fiab=parseInt(a.data?.fiabilite||0);
+        if(fiab>=90) cls="border:2px solid green;";
+        else if(fiab>=70) cls="border:2px solid yellow;";
+        const div=document.createElement("div");
+        div.style=`padding:10px;margin:5px;${cls}`;
+        div.innerHTML=`
+          <b>${a.data?.type||"Alerte"}</b> – ${a.country} ${a.region||""}<br/>
+          Fiabilité: ${a.data?.fiabilite||"?"}% | Intensité: ${a.data?.intensite||"?"}<br/>
+          Conséquences: ${a.data?.consequences||"?"}<br/>
+          Recommandations: ${a.data?.recommandations||"?"}<br/>
+          Période: ${a.data?.debut||"?"} → ${a.data?.fin||"?"}
+        `;
+        box.appendChild(div);
+      });
+
+      // Utilisateurs
+      const res3=await fetch("/api/users");
+      const users=await res3.json();
+      const ubox=document.getElementById("users");
+      ubox.innerHTML="";
+      users.forEach(u=>{
+        const div=document.createElement("div");
+        div.className="usercard";
+        div.innerHTML=`
+          <b>${u.name}</b><br/>
+          Zone: ${u.zone || "?"}<br/>
+          Pays: ${u.country || "?"}
+        `;
+        ubox.appendChild(div);
+      });
     }
-    setInterval(refreshFinal, 5000);
+    setInterval(refreshData,6000);
+    refreshData();
   </script>
 </body>
 </html>
