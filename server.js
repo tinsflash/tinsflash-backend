@@ -31,13 +31,13 @@ import * as forecastService from "./services/forecastService.js";
 import * as radarService from "./services/radarService.js";
 import * as podcastService from "./services/podcastService.js";
 import * as chatService from "./services/chatService.js";
-import * as logsService from "./services/adminLogs.js";
 import * as engineStateService from "./services/engineState.js";
 import * as alertsService from "./services/alertsService.js";
 import * as textGenService from "./services/textGenService.js";
 import * as newsService from "./services/newsService.js";
 import * as userService from "./services/userService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
+import * as adminLogs from "./services/adminLogs.js";
 
 // ✅ Router vérification
 import verifyRouter from "./services/verifyRouter.js";
@@ -100,9 +100,7 @@ app.get("/api/forecast/:country", async (req, res) => {
 // Alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    res.json(
-      (await safeCall(alertsService.getActiveAlerts)) || []
-    );
+    res.json((await safeCall(alertsService.getActiveAlerts)) || []);
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -189,43 +187,18 @@ app.post("/api/textgen", async (req, res) => {
 
 // Logs & Engine state
 app.get("/api/logs", async (req, res) => {
-  res.json((await safeCall(logsService.getLogs)) || []);
+  res.json(await adminLogs.getLogs());
 });
 
-// ✅ Logs SSE (live stream, un log à la fois)
-let clients = [];
+// ✅ Logs SSE (live stream)
 app.get("/api/logs/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  clients.push(res);
-
-  req.on("close", () => {
-    clients = clients.filter(c => c !== res);
-  });
+  adminLogs.registerClient(res);
 });
-
-// Fonction broadcast pour push logs live
-import { addEngineLog as origAddLog, addEngineError as origAddErr } from "./services/engineState.js";
-
-function broadcastLog(log) {
-  clients.forEach(c => c.write(`data: ${JSON.stringify(log)}\n\n`));
-}
-
-// Patch dynamique pour envoyer aussi SSE
-engineStateService.addEngineLog = async (message) => {
-  const log = await origAddLog(message);
-  broadcastLog(log);
-  return log;
-};
-
-engineStateService.addEngineError = async (message) => {
-  const log = await origAddErr(message);
-  broadcastLog(log);
-  return log;
-};
 
 app.get("/api/engine-state", async (req, res) => {
   res.json((await safeCall(engineStateService.getEngineState)) || {});
