@@ -1,24 +1,25 @@
 // services/forecastService.js
-import { runSuperForecast } from "./superForecast.js";
-import climateFactors from "./climateFactors.js";
-import localFactors from "./localFactors.js";
-import openweather from "./openweather.js";
-import { REGIONS_COORDS } from "./regionsCoords.js";
+// Bulletin national et local — basé sur SuperForecast et runGlobal
+// ⚡ Centrale nucléaire météo – Vue utilisateur
 
-/** Bulletin national (zones couvertes) — conserve forecast + sources numériques */
+import { runSuperForecast } from "./superForecast.js";
+import openweather from "./openweather.js";
+import { ALL_ZONES } from "./runGlobal.js"; // ✅ centralisation zones (Europe, USA, etc.)
+
+/** Bulletin national (zones couvertes) */
 async function getNationalForecast(country) {
   try {
-    const regions = REGIONS_COORDS[country] || {};
+    const zones = ALL_ZONES[country];
+    if (!zones) {
+      return { country, error: "Pays non couvert", forecasts: {} };
+    }
+
     const forecasts = {};
-
-    for (const [region, coords] of Object.entries(regions)) {
-      let sf = await runSuperForecast({ lat: coords.lat, lon: coords.lon, country });
-      sf = climateFactors.applyClimateFactors(sf, coords.lat, coords.lon);
-      sf = localFactors.adjustWithLocalFactors(sf, country);
-
-      forecasts[region] = {
-        lat: coords.lat,
-        lon: coords.lon,
+    for (const z of zones) {
+      let sf = await runSuperForecast({ lat: z.lat, lon: z.lon, country, region: z.region });
+      forecasts[z.region] = {
+        lat: z.lat,
+        lon: z.lon,
         country,
         forecast: sf.forecast || "⚠️ Pas de données",
         sources: sf.sources || null,
@@ -32,15 +33,15 @@ async function getNationalForecast(country) {
   }
 }
 
-/** Prévision locale — moteur pour zones couvertes, OpenWeather sinon */
+/** Prévision locale (point unique) */
 async function getLocalForecast(lat, lon, country) {
   try {
-    if (REGIONS_COORDS[country]) {
+    const zones = ALL_ZONES[country];
+    if (zones) {
       let sf = await runSuperForecast({ lat, lon, country });
-      sf = climateFactors.applyClimateFactors(sf, lat, lon);
-      sf = localFactors.adjustWithLocalFactors(sf, country);
-      return sf; // {forecast, sources}
+      return sf;
     }
+    // Fallback si hors zones couvertes
     const ow = await openweather(lat, lon);
     return { lat, lon, country, forecast: ow, source: "OpenWeather (fallback)" };
   } catch (err) {
@@ -49,5 +50,5 @@ async function getLocalForecast(lat, lon, country) {
   }
 }
 
-// ✅ Export par défaut
+// ✅ Export par défaut (inchangé pour Render)
 export default { getNationalForecast, getLocalForecast };
