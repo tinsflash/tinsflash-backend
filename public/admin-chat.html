@@ -1,57 +1,176 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="robots" content="noindex,nofollow">
-  <title>Admin – Chat IA</title>
+  <meta charset="UTF-8" />
+  <title>💬 Admin Chat – Centrale Nucléaire Météo</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial, sans-serif; background:#0b0e12; color:#eee; margin:0; }
-    header { background:#1c1f26; padding:15px; text-align:center; }
-    h1 { margin:0; color:#00d8ff; }
-    nav { background:#1c1f26; padding:10px; display:flex; justify-content:center; gap:20px; }
-    nav a { color:#00d8ff; text-decoration:none; font-weight:bold; padding:6px 12px; border-radius:6px; }
-    nav a:hover { background:#00d8ff; color:#000; }
-    #chatbox { max-height:400px; overflow-y:auto; padding:10px; background:#111; margin:15px; border-radius:8px; }
-    .msg { margin:8px 0; padding:10px; border-radius:8px; }
-    .user { background:#00d8ff; color:#000; text-align:right; }
-    .ai { background:#1c1f26; color:#fff; }
-    #input { width:80%; padding:10px; }
-    #send { padding:10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0f19;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #111831;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      color: #4fc3f7;
+    }
+    nav {
+      background: #1a2238;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    nav a {
+      color: #ccc;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover { color: #4fc3f7; }
+    .container { padding: 20px; }
+    h3 { margin-top: 30px; color: #4fc3f7; }
+    .chat-box {
+      background: #111;
+      padding: 10px;
+      border-radius: 6px;
+      height: 300px;
+      overflow-y: auto;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .msg {
+      margin: 5px 0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      max-width: 70%;
+    }
+    .user {
+      background: #4fc3f7;
+      color: #000;
+      margin-left: auto;
+      text-align: right;
+    }
+    .bot {
+      background: #333;
+      color: #fff;
+      margin-right: auto;
+      text-align: left;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+    input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #555;
+    }
+    button {
+      background: #4fc3f7;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover { background: #0288d1; }
   </style>
 </head>
 <body>
-<script>
-  const pass=prompt("Code d'accès ?"); 
-  if(pass!=="202679"){document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";throw new Error("Accès refusé");}
-</script>
+  <header>💬 Chat Admin – Centrale Nucléaire Météo</header>
+  <nav>
+    <a href="/admin">Console</a>
+    <a href="/admin-alerts">Alertes</a>
+    <a href="/admin-chat">Chat</a>
+    <a href="/admin-index">Vue Index</a>
+    <a href="/admin-radar">Radar & News</a>
+    <a href="/admin-users">Utilisateurs</a>
+  </nav>
+  <div class="container">
+    <h3>⚙️ Chat Moteur IA</h3>
+    <div class="chat-box" id="engineChat"></div>
+    <div class="input-row">
+      <input type="text" id="engineInput" placeholder="Pose ta question au moteur..." />
+      <button onclick="sendEngine()">Envoyer</button>
+    </div>
 
-<header><h1>🤖 Chat IA – Moteur & Météo/Climat</h1></header>
+    <h3>🌦️ Chat Météo/Climat IA</h3>
+    <div class="chat-box" id="climatChat"></div>
+    <div class="input-row">
+      <input type="text" id="climatInput" placeholder="Pose ta question météo/climat..." />
+      <button onclick="sendClimat()">Envoyer</button>
+    </div>
+  </div>
 
-<nav>
-  <a href="/admin-pp.html">🏠 Console</a>
-  <a href="/admin-chat.html">🤖 Chat IA</a>
-  <a href="/admin-alerts.html">🚨 Alertes</a>
-  <a href="/admin-index.html">👁️ Vue Index</a>
-  <a href="/admin-radar.html">🛰️ Radar & News</a>
-</nav>
+  <script>
+    // 🔐 Sécurité PIN
+    const pin = prompt("Code d'accès admin ?");
+    if (pin !== "202679") {
+      alert("Accès refusé");
+      window.location.href = "/";
+    }
 
-<div id="chatbox"></div>
-<div style="text-align:center;">
-  <input id="input" placeholder="Pose ta question à l’IA…" />
-  <button id="send">Envoyer</button>
-</div>
+    // Affichage messages
+    function addMsg(chatId, text, type="bot") {
+      const div = document.getElementById(chatId);
+      const msg = document.createElement("div");
+      msg.className = "msg " + type;
+      msg.innerText = text;
+      div.appendChild(msg);
+      div.scrollTop = div.scrollHeight;
+    }
 
-<script>
-const chatbox=document.getElementById("chatbox");
-function addMsg(text,cls){const d=document.createElement("div");d.className="msg "+cls;d.innerText=text;chatbox.appendChild(d);chatbox.scrollTop=chatbox.scrollHeight;}
-document.getElementById("send").onclick=async ()=>{
-  const q=document.getElementById("input").value;
-  if(!q) return;
-  addMsg(q,"user"); document.getElementById("input").value="";
-  const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q})});
-  const data=await res.json();
-  addMsg(data.reply||"❌ Erreur IA","ai");
-};
-</script>
+    // Chat moteur
+    async function sendEngine() {
+      const input = document.getElementById("engineInput");
+      const text = input.value.trim();
+      if (!text) return;
+      addMsg("engineChat", text, "user");
+      input.value = "";
+      try {
+        const res = await fetch("/api/chat/engine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        addMsg("engineChat", data.reply || "⚠️ Pas de réponse", "bot");
+      } catch (err) {
+        addMsg("engineChat", "Erreur: " + err.message, "bot");
+      }
+    }
+
+    // Chat météo/climat
+    async function sendClimat() {
+      const input = document.getElementById("climatInput");
+      const text = input.value.trim();
+      if (!text) return;
+      addMsg("climatChat", text, "user");
+      input.value = "";
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        addMsg("climatChat", data.reply || "⚠️ Pas de réponse", "bot");
+      } catch (err) {
+        addMsg("climatChat", "Erreur: " + err.message, "bot");
+      }
+    }
+
+    // Enter = envoyer
+    document.getElementById("engineInput").addEventListener("keypress", e => { if (e.key==="Enter") sendEngine(); });
+    document.getElementById("climatInput").addEventListener("keypress", e => { if (e.key==="Enter") sendClimat(); });
+  </script>
 </body>
 </html>
