@@ -249,6 +249,10 @@ const EUROPE_ZONES = {
 // ==================================
 // RUN GLOBAL EUROPE
 // ==================================
+// ✅ Zones Europe (définies plus haut dans ton fichier)
+// const EUROPE_ZONES = { ... }
+
+// ✅ Fonction de run Europe
 export async function runGlobalEurope() {
   const state = getEngineState();
   try {
@@ -310,3 +314,6 @@ export async function runGlobalEurope() {
     throw err;
   }
 }
+
+// ✅ Export des zones pour runGlobal.js
+export { EUROPE_ZONES };
