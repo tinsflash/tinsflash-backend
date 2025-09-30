@@ -1,50 +1,60 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
-  <title>Alertes – TINSFLASH</title>
-  <link rel="stylesheet" href="/style.css" />
+  <title>Admin – Alertes</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#101316; color:#eee; }
-    h1 { text-align:center; margin:15px; }
-    .alert { border:1px solid #444; border-radius:6px; padding:10px; margin:10px; }
-    .primeur { border-left:5px solid orange; }
-    .avalider { border-left:5px solid yellow; }
-    .auto { border-left:5px solid green; }
+    body { font-family: Arial,sans-serif; background:#0b0e12; color:#eee; margin:0; }
+    header { background:#1c1f26; padding:15px; text-align:center; }
+    h1 { margin:0; color:#e74c3c; }
+    nav { background:#1c1f26; padding:10px; display:flex; justify-content:center; gap:20px; }
+    nav a { color:#00d8ff; text-decoration:none; font-weight:bold; padding:6px 12px; border-radius:6px; }
+    nav a:hover { background:#00d8ff; color:#000; }
+    .alert { padding:10px; margin:10px; border-radius:8px; }
+    .high { border:2px solid green; }
+    .medium { border:2px solid yellow; }
+    .low { border:2px solid orange; }
   </style>
 </head>
 <body>
-  <h1>🚨 Alertes actives</h1>
-  <div id="alerts"></div>
+<script>
+  const pass=prompt("Code d'accès ?"); 
+  if(pass!=="202679"){document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";throw new Error("Accès refusé");}
+</script>
 
-  <script>
-    async function loadAlerts(){
-      const res = await fetch("/api/alerts");
-      const alerts = await res.json();
-      const box = document.getElementById("alerts");
-      box.innerHTML = "";
-      alerts.forEach(a=>{
-        let cls="primeur";
-        const fiab = parseInt(a.data?.fiabilite || 0);
-        if(fiab >= 90) cls="auto";
-        else if(fiab >= 70) cls="avalider";
-        const div=document.createElement("div");
-        div.className="alert "+cls;
-        div.innerHTML=`
-          <h3>${a.data?.type || "Alerte"}</h3>
-          <p><b>Zone :</b> ${a.country} ${a.region||""}</p>
-          <p><b>Fiabilité :</b> ${a.data?.fiabilite || "?"}</p>
-          <p><b>Intensité :</b> ${a.data?.intensite || "?"}</p>
-          <p><b>Conséquences :</b> ${a.data?.consequences || "?"}</p>
-          <p><b>Recommandations :</b> ${a.data?.recommandations || "?"}</p>
-          <p><b>Période :</b> ${a.data?.debut || "?"} → ${a.data?.fin || "?"}</p>
-        `;
-        box.appendChild(div);
-      });
-    }
-    setInterval(loadAlerts, 6000);
-    loadAlerts();
-  </script>
+<header><h1>🚨 Gestion des Alertes</h1></header>
+
+<nav>
+  <a href="/admin-pp.html">🏠 Console</a>
+  <a href="/admin-chat.html">🤖 Chat IA</a>
+  <a href="/admin-alerts.html">🚨 Alertes</a>
+  <a href="/admin-index.html">👁️ Vue Index</a>
+  <a href="/admin-radar.html">🛰️ Radar & News</a>
+</nav>
+
+<div id="alerts"></div>
+
+<script>
+async function loadAlerts(){
+  const res=await fetch("/api/alerts"); 
+  const alerts=await res.json(); 
+  const box=document.getElementById("alerts"); 
+  box.innerHTML="";
+  alerts.forEach(a=>{
+    const fiab=parseInt(a.data?.fiabilite||0);
+    const div=document.createElement("div"); 
+    div.className="alert "+(fiab>=90?"high":fiab>=70?"medium":"low");
+    div.innerHTML=`<b>${a.data?.type||"?"}</b> – ${a.country} ${a.region||""}<br/>Fiabilité:${fiab}%<br/>Conséquences:${a.data?.consequences||"?"}<br/>Recommandations:${a.data?.recommandations||"?"}<br/>`;
+    if(fiab<90){div.innerHTML+=`<button onclick="update('${a.id}','VALIDER')">Valider</button><button onclick="update('${a.id}','REFUSER')">Refuser</button>`;}
+    box.appendChild(div);
+  });
+}
+async function update(id,action){
+  await fetch("/api/alerts/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action})});
+  loadAlerts();
+}
+setInterval(loadAlerts,10000); loadAlerts();
+</script>
 </body>
 </html>
