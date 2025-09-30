@@ -2,114 +2,78 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Console Admin – Centrale Nucléaire Météo</title>
-  <meta name="robots" content="noindex,nofollow" />
+  <meta name="robots" content="noindex,nofollow">
+  <title>Console Centrale – TINSFLASH</title>
+  <link rel="stylesheet" href="/style.css" />
   <style>
-    body { font-family: Arial, sans-serif; background:#0d1117; color:#e6edf3; margin:0; padding:20px; }
-    h1 { color:#58a6ff; }
-    .section { margin:20px 0; padding:15px; border:1px solid #30363d; border-radius:8px; background:#161b22; }
-    .ok { color:#2ecc71; font-weight:bold; }
-    .fail { color:#e74c3c; font-weight:bold; }
-    .pending { color:#f39c12; font-weight:bold; }
-    pre { background:#0d1117; padding:10px; border-radius:5px; max-height:300px; overflow:auto; }
-    button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; font-size:16px; }
-    .run { background:#58a6ff; color:#fff; }
-    .log { font-size:13px; border-bottom:1px solid #30363d; padding:4px; }
-    .green { color:#2ecc71; }
-    .red { color:#e74c3c; }
-    .orange { color:#f39c12; }
+    body { font-family: Arial, sans-serif; background:#0b0e12; color:#eee; }
+    .header { padding:15px; text-align:center; background:#1c1f26; }
+    .btn { padding:10px 15px; margin:5px; border:none; cursor:pointer; border-radius:5px; }
+    .btn-run { background:#ffa500; color:#000; font-weight:bold; }
+    .btn-ok { background:#2ecc71; color:#fff; }
+    .btn-fail { background:#e74c3c; color:#fff; }
+    .logs { max-height:300px; overflow-y:auto; background:#111; padding:10px; border-radius:5px; }
+    .log-line { margin:3px 0; font-family: monospace; }
+    .status { display:flex; justify-content:space-around; margin:10px 0; }
+    .status div { padding:10px; border-radius:6px; min-width:120px; text-align:center; }
+    .ok { background:#2ecc71; }
+    .fail { background:#e74c3c; }
+    .pending { background:#f39c12; }
   </style>
-  <script>
-    async function runGlobal() {
-      const btn = document.getElementById("btnRun");
-      btn.style.background = "#f39c12"; // orange = en cours
-      try {
-        const res = await fetch("/api/run-global", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({zone:"All"}) });
-        const data = await res.json();
-        btn.style.background = data.success ? "#2ecc71" : "#e74c3c"; // vert ou rouge
-        loadCheckup();
-        loadFinalReport();
-      } catch (e) {
-        btn.style.background = "#e74c3c";
-      }
-    }
-
-    async function loadCheckup() {
-      const res = await fetch("/api/checkup");
-      const data = await res.json();
-      const el = document.getElementById("checkup");
-      el.innerHTML = "";
-      for (const [k,v] of Object.entries(data)) {
-        const css = v==="OK" ? "ok" : v==="FAIL" ? "fail" : "pending";
-        el.innerHTML += `<div><b>${k}</b>: <span class="${css}">${v}</span></div>`;
-      }
-    }
-
-    function loadLogs() {
-      const logsEl = document.getElementById("logs");
-      const es = new EventSource("/api/logs/stream");
-      es.onmessage = (event) => {
-        const logs = JSON.parse(event.data);
-        logsEl.innerHTML = "";
-        logs.slice(-50).reverse().forEach(log => {
-          const time = new Date(log.timestamp).toLocaleTimeString();
-          logsEl.innerHTML += `<div class="log">[${time}] ${log.message}</div>`;
-        });
-      };
-    }
-
-    async function loadFinalReport() {
-      const res = await fetch("/api/engine-state");
-      const data = await res.json();
-      const el = document.getElementById("finalReport");
-      if (!data.finalReport) {
-        el.innerHTML = "<i>Aucun rapport IA disponible pour le moment.</i>";
-        return;
-      }
-      const rep = data.finalReport;
-      el.innerHTML = `
-        <h3>Résumé IA</h3>
-        <p>${rep.resume || rep.raw || "⚠️ Pas de résumé"}</p>
-        <h4>Points forts</h4>
-        <ul>${(rep.points_forts||[]).map(p=>`<li>${p}</li>`).join("")}</ul>
-        <h4>Alertes majeures</h4>
-        <ul>${(rep.alertes_majeures||[]).map(a=>`<li>${a}</li>`).join("")}</ul>
-        <p><b>Fiabilité globale:</b> ${rep.fiabilite_globale || "?"}</p>
-        <div style="margin-top:10px;padding:10px;background:#21262d;border-radius:6px;">
-          <b>Message utilisateur:</b><br/>
-          ${rep.message_utilisateur || ""}
-        </div>
-      `;
-    }
-
-    window.onload = () => {
-      loadCheckup();
-      loadLogs();
-      loadFinalReport();
-    };
-  </script>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
-
-  <div class="section">
-    <button id="btnRun" class="run" onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+  <div class="header">
+    <h1>⚡ Centrale Nucléaire Météo</h1>
+    <button class="btn btn-run" onclick="runGlobal('All')">Lancer RUN GLOBAL</button>
+    <button class="btn btn-run" onclick="runGlobal('Europe')">RUN Europe</button>
+    <button class="btn btn-run" onclick="runGlobal('USA')">RUN USA</button>
   </div>
 
-  <div class="section">
-    <h2>📋 Checkup moteur</h2>
-    <div id="checkup"></div>
+  <div class="status" id="engineStatus">
+    <div id="models" class="pending">Modèles</div>
+    <div id="localForecasts" class="pending">Prévisions locales</div>
+    <div id="nationalForecasts" class="pending">Prévisions nationales</div>
+    <div id="aiAlerts" class="pending">Alertes IA</div>
+    <div id="engine" class="pending">Moteur</div>
   </div>
 
-  <div class="section">
-    <h2>📜 Logs (live cockpit)</h2>
-    <div id="logs"></div>
-  </div>
+  <h2>📜 Logs moteur</h2>
+  <div class="logs" id="logs"></div>
 
-  <div class="section">
-    <h2>🤖 Rapport IA final (Prévisions + Alertes fusionnées)</h2>
-    <div id="finalReport"></div>
-  </div>
+  <h2>📊 Rapport final IA</h2>
+  <pre id="finalReport">{}</pre>
 
+  <script>
+    async function runGlobal(zone) {
+      await fetch(`/api/run-global?zone=${zone}`, { method:"POST" });
+    }
+
+    function updateStatus(checkup){
+      document.getElementById("models").className = checkup.models?.toLowerCase() || "pending";
+      document.getElementById("localForecasts").className = checkup.localForecasts?.toLowerCase() || "pending";
+      document.getElementById("nationalForecasts").className = checkup.nationalForecasts?.toLowerCase() || "pending";
+      document.getElementById("aiAlerts").className = checkup.aiAlerts?.toLowerCase() || "pending";
+      document.getElementById("engine").className = checkup.engineStatus?.toLowerCase() || "pending";
+    }
+
+    const logBox = document.getElementById("logs");
+    const evtSource = new EventSource("/api/logs/stream");
+    evtSource.onmessage = function(e){
+      const log = JSON.parse(e.data);
+      const line = document.createElement("div");
+      line.className = "log-line";
+      line.textContent = `[${log.timestamp}] ${log.message}`;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+
+    async function refreshFinal(){
+      const res = await fetch("/api/engine-state");
+      const data = await res.json();
+      updateStatus(data.checkup || {});
+      document.getElementById("finalReport").textContent = JSON.stringify(data.finalReport || {}, null, 2);
+    }
+    setInterval(refreshFinal, 5000);
+  </script>
 </body>
 </html>
