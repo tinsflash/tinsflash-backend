@@ -67,7 +67,7 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       wetterzentrale({ lat, lon, country }),
     ]);
 
-    const sources = {
+    let sources = {
       gfs: gfsData.value ?? { error: gfsData.reason?.message },
       ecmwf: ecmwfData.value ?? { error: ecmwfData.reason?.message },
       icon: iconData.value ?? { error: iconData.reason?.message },
@@ -79,18 +79,32 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     };
     addEngineLog("✅ Sources météo collectées");
 
-    // === Étape 3 : ajustements globaux (relief/climat/altitude)
-    let enriched = await geoFactors.applyGeoFactors(sources, lat, lon);
+    // === Étape 3 : ajustements globaux & locaux (source par source)
+    addEngineLog("🔧 Application des facteurs géographiques et locaux…");
+    let enriched = {};
+    for (const [key, data] of Object.entries(sources)) {
+      let adjusted = await geoFactors.applyGeoFactors(data, lat, lon, country);
+      adjusted = await adjustWithLocalFactors(adjusted, country, lat, lon);
+      enriched[key] = adjusted;
+      addEngineLog(`✅ Ajustements appliqués sur ${key}`);
+    }
 
-    // === Étape 3bis : ajustements locaux (saison, spatial, return levels)
-    enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
-
-    // === Étape 3ter : anomalies saisonnières (Copernicus + GFS/ECMWF)
-    const anomaly = forecastVision.detectSeasonalAnomaly(
-      sources.gfs || sources.ecmwf || null
-    );
+    // === Étape 3bis : anomalies saisonnières (fusion GFS+ECMWF si dispo)
+    let baseForAnomaly = null;
+    if (sources.gfs && sources.ecmwf) {
+      baseForAnomaly = {
+        temperature: [
+          sources.gfs?.temperature ?? null,
+          sources.ecmwf?.temperature ?? null,
+        ].filter(Boolean),
+      };
+    } else {
+      baseForAnomaly = sources.gfs || sources.ecmwf || null;
+    }
+    const anomaly = forecastVision.detectSeasonalAnomaly(baseForAnomaly);
     if (anomaly) {
       enriched.anomaly = anomaly;
+      addEngineLog(`🔎 Anomalie saisonnière détectée: ${JSON.stringify(anomaly)}`);
     }
 
     // === Étape 4 : analyse IA
@@ -102,24 +116,13 @@ Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${
     }
 
 Sources principales:
-- GFS: ${JSON.stringify(sources.gfs)}
-- ECMWF: ${JSON.stringify(sources.ecmwf)}
-- ICON: ${JSON.stringify(sources.icon)}
-- Meteomatics: ${JSON.stringify(sources.meteomatics)}
-- NASA POWER / Satellites: ${JSON.stringify(sources.nasaSat)}
-- Copernicus ERA5: ${JSON.stringify(sources.copernicus)}
-
-Données comparatives (ne pas copier mais ajuster fiabilité):
-- Trullemans: ${JSON.stringify(sources.trullemans)}
-- Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
+${JSON.stringify(sources, null, 2)}
 
 Ajustements appliqués:
-- Facteurs globaux: relief, climat, altitude
-- Facteurs locaux: saison, cohérence spatiale, return levels
-- Anomalies saisonnières: ${JSON.stringify(anomaly)}
+${JSON.stringify(enriched, null, 2)}
 
 Consignes IA:
-- Croiser et fusionner uniquement les données principales.
+- Croiser et fusionner uniquement les données principales (GFS, ECMWF, ICON, Meteomatics, Copernicus, NASA).
 - Comparer avec Trullemans/Wetterzentrale uniquement pour calibrer la fiabilité.
 - Fournir un bulletin détaillé: températures, précipitations, vent, risques météo.
 - Horizon: aujourd'hui + 7 jours.
@@ -145,6 +148,10 @@ Consignes IA:
       sources,
       enriched,
     });
+
+    // Limiter la taille (mémoire circulaire)
+    if (state.superForecasts.length > 100) state.superForecasts.shift();
+
     await saveEngineState(state);
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
