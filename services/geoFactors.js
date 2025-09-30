@@ -7,15 +7,15 @@ async function applyGeoFactors(forecast, lat, lon, country = "") {
 
   try {
     // === Relief & altitude
-    if (forecast && forecast.temperature) {
-      if (forecast.altitude && forecast.altitude > 500) {
+    if (forecast.temperature !== undefined && forecast.altitude) {
+      if (forecast.altitude > 500) {
         // -0,65°C / 100m d’altitude
         forecast.temperature -= (forecast.altitude / 100) * 0.65;
       }
-    }
-    if (forecast.temperature_min !== undefined && forecast.altitude > 1500) {
-      forecast.temperature_min -= 3;
-      forecast.temperature_max -= 3;
+      if (forecast.altitude > 1500) {
+        forecast.temperature_min = (forecast.temperature_min ?? forecast.temperature) - 3;
+        forecast.temperature_max = (forecast.temperature_max ?? forecast.temperature) - 3;
+      }
     }
 
     // === Proximité mer (plus d’humidité)
@@ -32,18 +32,18 @@ async function applyGeoFactors(forecast, lat, lon, country = "") {
     if (country) {
       const c = country.toUpperCase();
       if (["ES", "IT", "GR"].includes(c)) {
-        forecast.temperature_max = (forecast.temperature_max || 20) + 1;
+        forecast.temperature_max = (forecast.temperature_max ?? 20) + 1;
       }
       if (["NO", "SE", "FI"].includes(c)) {
-        forecast.temperature_min = (forecast.temperature_min || 5) - 1;
+        forecast.temperature_min = (forecast.temperature_min ?? 5) - 1;
       }
       if (["BE", "NL", "UK", "FR"].includes(c)) {
-        forecast.humidity = (forecast.humidity || 70) + 5;
+        forecast.humidity = (forecast.humidity ?? 70) + 5;
       }
     }
 
     // === Indice fiabilité global
-    forecast.reliability = (forecast.reliability || 50) + 5;
+    forecast.reliability = (forecast.reliability ?? 50) + 5;
 
   } catch (err) {
     console.warn("⚠️ GeoFactors error:", err.message);
