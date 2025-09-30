@@ -16,7 +16,12 @@ async function getNationalForecast(country) {
 
     const forecasts = {};
     for (const z of zones) {
-      let sf = await runSuperForecast({ lat: z.lat, lon: z.lon, country, region: z.region });
+      let sf = await runSuperForecast({
+        lat: z.lat,
+        lon: z.lon,
+        country,
+        region: z.region,
+      });
 
       forecasts[z.region] = {
         lat: z.lat,
@@ -24,7 +29,8 @@ async function getNationalForecast(country) {
         country,
         forecast: sf.forecast || "⚠️ Pas de données",
         sources: sf.sources || null,
-        enriched: sf.enriched || null, // ✅ contient ajustements + anomalies
+        enriched: sf.enriched || null, // ✅ contient ajustements + fiabilité
+        anomaly: sf.enriched?.anomaly || null, // 🔎 anomalie saisonnière directe
       };
     }
 
@@ -48,11 +54,18 @@ async function getLocalForecast(lat, lon, country) {
         forecast: sf.forecast,
         sources: sf.sources,
         enriched: sf.enriched || null,
+        anomaly: sf.enriched?.anomaly || null, // 🔎 direct pour affichage
       };
     }
     // Fallback si hors zones couvertes
     const ow = await openweather(lat, lon);
-    return { lat, lon, country, forecast: ow, source: "OpenWeather (fallback)" };
+    return {
+      lat,
+      lon,
+      country,
+      forecast: ow,
+      source: "OpenWeather (fallback)",
+    };
   } catch (err) {
     console.error("❌ getLocalForecast error:", err.message);
     return { lat, lon, country, error: err.message };
