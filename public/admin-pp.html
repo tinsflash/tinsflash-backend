@@ -1,91 +1,188 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <meta charset="UTF-8" />
+  <title>⚡ Admin Centrale Nucléaire Météo</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { background:#111; color:#eee; font-family:Arial, sans-serif; }
-    h1 { color:#00bfff; text-align:center; }
-    button { background:#ff9800; color:white; padding:10px 20px; border:none; cursor:pointer; border-radius:6px; }
-    button:hover { background:#e68900; }
-    #logs { background:black; padding:10px; font-family:monospace; height:200px; overflow:auto; border:1px solid #333; }
-    .log.green { color:#4caf50; }
-    .log.red { color:#f44336; }
-    .log.orange { color:#ff9800; }
-    .checklist { display:flex; justify-content:center; margin:20px 0; gap:10px; }
-    .check-item { padding:10px; border-radius:8px; font-weight:bold; }
-    .pending { background:#ff9800; color:#111; }
-    .ok { background:#4caf50; color:#fff; }
-    .fail { background:#f44336; color:#fff; }
-    #engine-status { text-align:center; font-size:18px; margin-top:15px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0f19;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #111831;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      color: #4fc3f7;
+    }
+    nav {
+      background: #1a2238;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    nav a {
+      color: #ccc;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover { color: #4fc3f7; }
+    .container { padding: 20px; }
+    button {
+      background: #4fc3f7;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    button:hover { background: #0288d1; }
+    .status { margin: 20px 0; font-size: 18px; }
+    .checklist { display: flex; flex-wrap: wrap; gap: 10px; }
+    .check-item {
+      flex: 1 1 200px;
+      background: #333;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+      color: #fff;
+    }
+    .ok { background: #2e7d32; }
+    .fail { background: #c62828; }
+    .pending { background: #f9a825; color: #000; }
+    #logs {
+      background: #111;
+      padding: 10px;
+      border-radius: 6px;
+      height: 250px;
+      overflow-y: auto;
+      font-size: 14px;
+      margin-top: 20px;
+    }
+    #users { margin-top: 20px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #555;
+      padding: 6px;
+      text-align: center;
+    }
+    th { background: #1a2238; }
   </style>
 </head>
 <body>
-  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  <header>⚡ Console Admin – Centrale Nucléaire Météo</header>
+  <nav>
+    <a href="/admin">Console</a>
+    <a href="/admin-alerts">Alertes</a>
+    <a href="/admin-chat">Chat</a>
+    <a href="/admin-index">Vue Index</a>
+    <a href="/admin-radar">Radar & News</a>
+    <a href="/admin-users">Utilisateurs</a>
+  </nav>
+  <div class="container">
+    <button id="runBtn">🚀 Lancer RUN GLOBAL</button>
+    <div class="status">État moteur : <span id="engineStatus">IDLE</span></div>
 
-  <div style="text-align:center; margin:20px;">
-    <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+    <h3>Checklist moteur</h3>
+    <div class="checklist" id="checklist"></div>
+
+    <h3>Logs (live)</h3>
+    <div id="logs"></div>
+
+    <h3>👥 Utilisateurs par zones</h3>
+    <div id="users"></div>
   </div>
-
-  <div class="checklist" id="checklist">
-    <div id="models" class="check-item pending">Extraction modèles</div>
-    <div id="localForecasts" class="check-item pending">Prévisions locales</div>
-    <div id="nationalForecasts" class="check-item pending">Prévisions nationales</div>
-    <div id="aiAlerts" class="check-item pending">Alertes IA</div>
-    <div id="engineStatus" class="check-item pending">Moteur</div>
-  </div>
-
-  <h3>📜 Logs moteur (live)</h3>
-  <div id="logs"></div>
-
-  <h3>📊 État moteur</h3>
-  <div id="engine-status">Chargement...</div>
 
   <script>
-    async function runGlobal() {
-      await fetch('/api/run-global', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zone: "All" })
-      });
+    // 🔐 Sécurité PIN
+    const pin = prompt("Code d'accès admin ?");
+    if (pin !== "202679") {
+      alert("Accès refusé");
+      window.location.href = "/";
     }
 
-    // === Logs SSE en direct ===
-    const evtSource = new EventSource('/api/logs/stream');
-    evtSource.onmessage = function(event) {
-      const logs = JSON.parse(event.data);
-      const logsDiv = document.getElementById('logs');
-      logsDiv.innerHTML = "";
-      logs.forEach(l => {
-        let cls = "orange";
-        if (l.message.includes("✅")) cls = "green";
-        else if (l.message.includes("❌")) cls = "red";
-        logsDiv.innerHTML += `<div class="log ${cls}">[${new Date(l.timestamp).toLocaleTimeString()}] ${l.message}</div>`;
-      });
-      logsDiv.scrollTop = logsDiv.scrollHeight;
+    // Lancer RUN
+    document.getElementById("runBtn").addEventListener("click", async () => {
+      document.getElementById("engineStatus").innerText = "RUNNING...";
+      try {
+        const res = await fetch("/api/run-global", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ zone: "All" }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("RUN lancé !");
+        } else {
+          alert("Erreur: " + data.error);
+        }
+      } catch (err) {
+        alert("Erreur lancement: " + err.message);
+      }
+    });
+
+    // Logs live SSE
+    const logsDiv = document.getElementById("logs");
+    const evtSource = new EventSource("/api/logs/stream");
+    evtSource.onmessage = (e) => {
+      const logs = JSON.parse(e.data);
+      logsDiv.innerHTML = logs.slice(-50).reverse()
+        .map(l => `[${new Date(l.timestamp).toLocaleTimeString()}] ${l.level}: ${l.message}`)
+        .join("<br>");
     };
 
-    // === Checkup + état moteur ===
-    async function refreshState() {
-      const res = await fetch('/api/checkup');
+    // Checklist refresh
+    async function refreshChecklist() {
+      const res = await fetch("/api/checkup");
       const checkup = await res.json();
-      for (const key in checkup) {
-        const el = document.getElementById(key);
-        if (el) {
-          if (checkup[key] === "OK") el.className = "check-item ok";
-          else if (checkup[key] === "FAIL") el.className = "check-item fail";
-          else el.className = "check-item pending";
-        }
-      }
-
-      const res2 = await fetch('/api/engine-state');
-      const state = await res2.json();
-      const eng = document.getElementById("engine-status");
-      eng.textContent = `⏱️ ${state.status || "inconnu"} | Dernier run: ${state.runTime || "—"}`;
+      const div = document.getElementById("checklist");
+      div.innerHTML = "";
+      Object.entries(checkup).forEach(([key, val]) => {
+        const item = document.createElement("div");
+        item.className = "check-item " + 
+          (val === "OK" ? "ok" : val === "FAIL" ? "fail" : "pending");
+        item.textContent = key + " : " + val;
+        div.appendChild(item);
+      });
+      document.getElementById("engineStatus").innerText = checkup.engineStatus || "IDLE";
     }
 
-    setInterval(refreshState, 3000);
-    refreshState();
+    // Utilisateurs
+    async function refreshUsers() {
+      const res = await fetch("/api/users");
+      const data = await res.json();
+      const usersDiv = document.getElementById("users");
+      if (!data.success || !data.users) {
+        usersDiv.innerHTML = "❌ Impossible de charger les utilisateurs.";
+        return;
+      }
+      let html = "<table><tr><th>Pays</th><th>Ville</th><th>Nombre</th></tr>";
+      data.users.forEach(u => {
+        html += `<tr><td>${u.country}</td><td>${u.city}</td><td>${u.count}</td></tr>`;
+      });
+      html += "</table>";
+      usersDiv.innerHTML = html;
+    }
+
+    // Rafraîchissements périodiques
+    setInterval(refreshChecklist, 5000);
+    setInterval(refreshUsers, 10000);
+    refreshChecklist();
+    refreshUsers();
   </script>
 </body>
 </html>
