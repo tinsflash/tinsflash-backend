@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -101,10 +100,9 @@ app.get("/api/forecast/:country", async (req, res) => {
 // Alerts
 app.get("/api/alerts", async (req, res) => {
   try {
-    res.json({
-      success: true,
-      alerts: (await safeCall(alertsService.getActiveAlerts)) || [],
-    });
+    res.json(
+      (await safeCall(alertsService.getActiveAlerts)) || []
+    );
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -194,20 +192,40 @@ app.get("/api/logs", async (req, res) => {
   res.json((await safeCall(logsService.getLogs)) || []);
 });
 
-// ✅ Logs SSE (live stream)
+// ✅ Logs SSE (live stream, un log à la fois)
+let clients = [];
 app.get("/api/logs/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const interval = setInterval(async () => {
-    const logs = (await safeCall(logsService.getLogs)) || [];
-    res.write(`data: ${JSON.stringify(logs)}\n\n`);
-  }, 2000);
+  clients.push(res);
 
-  req.on("close", () => clearInterval(interval));
+  req.on("close", () => {
+    clients = clients.filter(c => c !== res);
+  });
 });
+
+// Fonction broadcast pour push logs live
+import { addEngineLog as origAddLog, addEngineError as origAddErr } from "./services/engineState.js";
+
+function broadcastLog(log) {
+  clients.forEach(c => c.write(`data: ${JSON.stringify(log)}\n\n`));
+}
+
+// Patch dynamique pour envoyer aussi SSE
+engineStateService.addEngineLog = async (message) => {
+  const log = await origAddLog(message);
+  broadcastLog(log);
+  return log;
+};
+
+engineStateService.addEngineError = async (message) => {
+  const log = await origAddErr(message);
+  broadcastLog(log);
+  return log;
+};
 
 app.get("/api/engine-state", async (req, res) => {
   res.json((await safeCall(engineStateService.getEngineState)) || {});
