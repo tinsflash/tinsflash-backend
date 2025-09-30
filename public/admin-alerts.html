@@ -1,172 +1,98 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>🚨 Admin Alertes – Centrale Nucléaire Météo</title>
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Console Admin – Alertes</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0b0f19;
-      color: #eee;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #111831;
-      padding: 15px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      color: #ff5252;
-    }
-    nav {
-      background: #1a2238;
-      padding: 10px;
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-    }
-    nav a {
-      color: #ccc;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    nav a:hover { color: #ff5252; }
-    .container { padding: 20px; }
-    h3 { color: #ff5252; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-    }
-    th, td {
-      border: 1px solid #555;
-      padding: 6px;
-      text-align: center;
-      font-size: 14px;
-    }
-    th { background: #1a2238; }
-    tr.ok { background: #1b5e20; }
-    tr.pending { background: #f9a825; color: #000; }
-    tr.fail { background: #b71c1c; }
-    button {
-      margin: 2px;
-      padding: 5px 10px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .validate { background: #2e7d32; color: #fff; }
-    .wait { background: #f9a825; color: #000; }
-    .reject { background: #c62828; color: #fff; }
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
+    header { background:#222; padding:10px; text-align:center; }
+    nav a { color:#0af; margin:0 10px; text-decoration:none; }
+    h2 { margin-top:20px; }
+    .alert-block { padding:15px; margin:10px; border-radius:8px; }
+    .published { background:#163; }
+    .tovalidate { background:#663; }
+    .ignored { background:#633; }
+    pre { white-space:pre-wrap; background:#000; padding:10px; border-radius:6px; }
+    button { margin:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; }
+    button.validate { background:#2a2; color:white; }
+    button.reject { background:#a22; color:white; }
+    button.pending { background:#cc0; color:black; }
   </style>
-</head>
-<body>
-  <header>🚨 Admin – Gestion des Alertes</header>
-  <nav>
-    <a href="/admin">Console</a>
-    <a href="/admin-alerts">Alertes</a>
-    <a href="/admin-chat">Chat</a>
-    <a href="/admin-index">Vue Index</a>
-    <a href="/admin-radar">Radar & News</a>
-    <a href="/admin-users">Utilisateurs</a>
-  </nav>
-  <div class="container">
-    <h3>Auto-publiées (≥90%)</h3>
-    <div id="auto"></div>
-
-    <h3>À valider (70–90%)</h3>
-    <div id="pending"></div>
-
-    <h3>Primeur / Premières (<70%)</h3>
-    <div id="primeur"></div>
-  </div>
-
   <script>
-    // 🔐 Sécurité PIN
-    const pin = prompt("Code d'accès admin ?");
-    if (pin !== "202679") {
-      alert("Accès refusé");
-      window.location.href = "/";
+    // Protection simple par mot de passe
+    const pwd = prompt("Mot de passe ?");
+    if (pwd !== "202679") {
+      document.write("⛔ Accès refusé");
+      throw new Error("Accès refusé");
     }
 
     async function fetchAlerts() {
-      try {
-        const res = await fetch("/api/alerts");
-        const data = await res.json();
-        if (!data.success || !data.alerts) return;
+      const res = await fetch("/api/alerts");
+      const data = await res.json();
+      if (!data.success) return;
 
-        const auto = [];
-        const pending = [];
-        const primeur = [];
+      const publishedDiv = document.getElementById("published");
+      const toValidateDiv = document.getElementById("tovalidate");
+      const ignoredDiv = document.getElementById("ignored");
 
-        data.alerts.forEach(alert => {
-          const reliability = alert.data?.fiabilite || alert.data?.reliability || 0;
-          const row = `
-            <tr>
-              <td>${alert.country || "-"}</td>
-              <td>${alert.region || alert.continent || "-"}</td>
-              <td>${alert.data?.type || "-"}</td>
-              <td>${reliability}%</td>
-              <td>${alert.data?.intensite || "-"}</td>
-              <td>${alert.data?.consequences || "-"}</td>
-              <td>${alert.data?.recommandations || "-"}</td>
-              <td>${alert.data?.duree || "-"}</td>
-              <td>
-                <button class="validate" onclick="updateStatus('${alert.id}','VALIDATED')">Valider</button>
-                <button class="wait" onclick="updateStatus('${alert.id}','WAIT')">Attente</button>
-                <button class="reject" onclick="updateStatus('${alert.id}','REJECTED')">Refuser</button>
-              </td>
-            </tr>
-          `;
+      publishedDiv.innerHTML = "";
+      toValidateDiv.innerHTML = "";
+      ignoredDiv.innerHTML = "";
 
-          if (reliability >= 90) auto.push(row);
-          else if (reliability >= 70) pending.push(row);
-          else primeur.push(row);
-        });
+      data.alerts.forEach(alert => {
+        const fiab = alert?.data?.confidence || alert?.data?.fiabilite || 0;
+        let block;
+        if (fiab >= 90) block = publishedDiv;
+        else if (fiab >= 70) block = toValidateDiv;
+        else block = ignoredDiv;
 
-        renderTable("auto", auto);
-        renderTable("pending", pending);
-        renderTable("primeur", primeur);
-
-      } catch (err) {
-        console.error("Erreur fetch alerts:", err);
-      }
-    }
-
-    function renderTable(id, rows) {
-      const container = document.getElementById(id);
-      if (!rows.length) {
-        container.innerHTML = "<p>Aucune alerte.</p>";
-        return;
-      }
-      container.innerHTML = `
-        <table>
-          <tr>
-            <th>Pays</th>
-            <th>Zone</th>
-            <th>Type</th>
-            <th>Fiabilité</th>
-            <th>Intensité</th>
-            <th>Conséquences</th>
-            <th>Recommandations</th>
-            <th>Durée</th>
-            <th>Actions</th>
-          </tr>
-          ${rows.join("")}
-        </table>
-      `;
+        const el = document.createElement("div");
+        el.className = "alert-block";
+        el.innerHTML = `
+          <strong>${alert.country} ${alert.region || ""}</strong> – ${alert.continent}<br>
+          <em>Confiance : ${fiab}%</em><br>
+          <pre>${JSON.stringify(alert.data, null, 2)}</pre>
+          ${fiab >= 70 && fiab < 90 ? `
+            <button class="validate" onclick="updateStatus('${alert.id}','published')">Valider</button>
+            <button class="reject" onclick="updateStatus('${alert.id}','ignored')">Rejeter</button>
+            <button class="pending" onclick="updateStatus('${alert.id}','pending')">En attente</button>
+          ` : ""}
+        `;
+        block.appendChild(el);
+      });
     }
 
     async function updateStatus(id, action) {
-      try {
-        const res = await fetch(`/api/alerts/${id}/${action}`, { method: "POST" });
-        const data = await res.json();
-        if (data.success) {
-          alert("Alerte mise à jour !");
-          fetchAlerts();
-        } else {
-          alert("Erreur mise à jour : " + data.error
+      await fetch(`/api/alerts/${id}/${action}`, { method:"POST" });
+      fetchAlerts();
+    }
+
+    setInterval(fetchAlerts, 5000);
+    window.onload = fetchAlerts;
+  </script>
+</head>
+<body>
+  <header>
+    <h1>🚨 Console Admin – Alertes</h1>
+    <nav>
+      <a href="/admin">Console</a>
+      <a href="/admin-alerts">Alertes</a>
+      <a href="/admin-chat">Chat</a>
+      <a href="/admin-index">Vue Index</a>
+      <a href="/admin-radar">Radar & News</a>
+      <a href="/admin-users">Utilisateurs</a>
+    </nav>
+  </header>
+
+  <h2>✅ Auto-publiées (&gt;90%)</h2>
+  <div id="published"></div>
+
+  <h2>⏳ À valider (70–90%)</h2>
+  <div id="tovalidate"></div>
+
+  <h2>❌ Ignorées (&lt;70%)</h2>
+  <div id="ignored"></div>
+</body>
+</html>
