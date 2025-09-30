@@ -1,66 +1,91 @@
 // services/alertsService.js
-import Alert from "../models/Alert.js";
-import { alertThresholds } from "../config/alertThresholds.js";
+// 🚨 Génération et orchestration des alertes météo
+// Sources : snowService + rainService + windService + stationsService
+// Analyse IA : ChatGPT-5 → détection anomalies, adaptation relief/altitude
 
-/**
- * Crée une alerte météo en fonction des seuils définis
- * @param {String} type - type de phénomène (vent, pluie, etc.)
- * @param {Number} reliability - fiabilité en %
- * @param {Object} data - infos complémentaires (zone, intensité, conséquences…)
- * @param {Boolean} isFirstDetector - vrai si on est les premiers à l’avoir détectée
- */
-export async function processAlerts(type, reliability, data, isFirstDetector = false) {
-  const thresholds = alertThresholds[type];
-  if (!thresholds) return null;
+import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+import { analyzeSnow } from "./snowService.js";
+import { analyzeRain } from "./rainService.js";
+import { analyzeWind } from "./windService.js";
+import { fetchStationData } from "./stationsService.js";
+import { askOpenAI } from "./openaiService.js";
 
-  let category = "ignored";
+let activeAlerts = [];
 
-  // ≥ publication threshold → publication automatique (primeur ou non)
-  if (reliability >= thresholds.publication) {
-    category = "auto-published";
+/** 🔎 Génération des alertes (zones couvertes + continentales) */
+export async function generateAlerts(lat, lon, country, region, continent = "Europe") {
+  const state = getEngineState();
+  try {
+    addEngineLog(`🚨 Analyse alertes pour ${country}${region ? " - " + region : ""}`);
+
+    // Collecte brute
+    const [snow, rain, wind, stations] = await Promise.all([
+      analyzeSnow(lat, lon, country, region),
+      analyzeRain(lat, lon, country, region),
+      analyzeWind(lat, lon, country, region),
+      fetchStationData(lat, lon, country, region),
+    ]);
+
+    // Prompt IA
+    const prompt = `
+Analyse des risques météo pour ${country}${region ? " - " + region : ""}, continent=${continent}.
+Sources:
+- Neige: ${JSON.stringify(snow)}
+- Pluie: ${JSON.stringify(rain)}
+- Vent: ${JSON.stringify(wind)}
+- Stations locales: ${JSON.stringify(stations)}
+
+Consignes:
+- Croiser toutes les données (modèles, stations).
+- Ajuster selon relief, climat, altitude (avalanche si montagne, crues si vallée, etc.).
+- Déterminer si une alerte doit être générée.
+- Classer: type, zone, fiabilité (0–100), intensité, conséquences, recommandations, durée.
+- Répondre format JSON strict.
+`;
+
+    const aiResult = await askOpenAI("Tu es un moteur d’alerte météo nucléaire", prompt);
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(aiResult);
+    } catch {
+      parsed = { raw: aiResult };
+    }
+
+    const alert = {
+      id: Date.now().toString(),
+      country,
+      region,
+      continent,
+      data: parsed,
+      timestamp: new Date().toISOString(),
+    };
+
+    activeAlerts.push(alert);
+    if (activeAlerts.length > 200) activeAlerts.shift();
+
+    state.alerts = activeAlerts;
+    saveEngineState(state);
+
+    addEngineLog(`✅ Alerte générée pour ${country}${region ? " - " + region : ""}`);
+    return alert;
+  } catch (err) {
+    addEngineError(`Erreur génération alertes: ${err.message}`);
+    return { error: err.message };
   }
-  // entre primeur et publication → à valider
-  else if (reliability >= thresholds.primeur) {
-    category = isFirstDetector ? "primeur" : "to-validate";
-  }
-
-  const alert = new Alert({
-    type,
-    zone: data.zone,
-    reliability,
-    firstDetector: isFirstDetector,
-    intensity: data.intensity,
-    consequences: data.consequences,
-    recommendations: data.recommendations,
-    start: data.start,
-    end: data.end,
-    category,
-    status: category === "ignored" ? "inactive" : "active"
-  });
-
-  await alert.save();
-  return alert;
 }
 
-/**
- * Récupère toutes les alertes actives
- */
+/** 🔎 Liste active */
 export async function getActiveAlerts() {
-  return Alert.find({ status: "active" }).sort({ createdAt: -1 }).lean();
+  return activeAlerts;
 }
 
-/**
- * Met à jour le statut d'une alerte (validée, ignorée, etc.)
- */
+/** 🔧 Mise à jour statut (admin) */
 export async function updateAlertStatus(id, action) {
-  const validActions = ["validated", "ignored"];
-  if (!validActions.includes(action)) {
-    throw new Error("Action invalide");
-  }
+  const alert = activeAlerts.find((a) => a.id === id);
+  if (!alert) return { error: "Alerte introuvable" };
 
-  return Alert.findByIdAndUpdate(
-    id,
-    { category: action, status: action === "ignored" ? "inactive" : "active" },
-    { new: true }
-  ).lean();
+  alert.status = action;
+  addEngineLog(`⚡ Alerte ${id} → ${action}`);
+  return alert;
 }
