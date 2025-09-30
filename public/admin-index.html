@@ -2,77 +2,53 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>🌍 Console Admin – Vue Utilisateur</title>
   <meta name="robots" content="noindex,nofollow">
+  <title>Admin – Vue Index Utilisateur</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:18px; color:#4caf50; }
-    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
-    nav a:hover { text-decoration:underline; }
-    .container { padding:20px; }
-    select { padding:5px; }
-    .forecast, .alerts { margin:10px 0; padding:10px; background:#222; border:1px solid #444; border-radius:5px; }
+    body{font-family:Arial,sans-serif;background:#0b0e12;color:#eee;margin:0;}
+    header{background:#1c1f26;padding:15px;text-align:center;}
+    h1{margin:0;color:#00d8ff;}
+    nav{background:#1c1f26;padding:10px;display:flex;justify-content:center;gap:20px;}
+    nav a{color:#00d8ff;text-decoration:none;font-weight:bold;padding:6px 12px;border-radius:6px;}
+    nav a:hover{background:#00d8ff;color:#000;}
+    iframe{width:100%;height:90vh;border:none;}
   </style>
 </head>
 <body>
 <script>
-  const pass = prompt("Mot de passe ?");
-  if (pass !== "202679") {
-    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
-    throw new Error("Accès refusé");
-  }
+  const pass=prompt("Code d'accès ?"); 
+  if(pass!=="202679"){document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";throw new Error("Accès refusé");}
 </script>
 
-<header>
-  <h1>🌍 Vue Utilisateur – Console Admin</h1>
-  <nav>
-    <a href="admin-pp.html">Console</a>
-    <a href="admin-alerts.html">Alertes</a>
-    <a href="admin-index.html">Vue Utilisateur</a>
-    <a href="admin-chat.html">Chat IA</a>
-    <a href="admin-radar.html">Radar</a>
-  </nav>
-</header>
+<header><h1>👁️ Vue Index Utilisateur</h1></header>
 
-<div class="container">
-  <h2>Choix utilisateur</h2>
-  <select id="country">
-    <option value="Belgium">Belgique</option>
-    <option value="France">France</option>
-    <option value="USA">États-Unis</option>
-  </select>
-  <select id="city">
-    <option value="Brussels">Bruxelles</option>
-    <option value="Paris">Paris</option>
-    <option value="New York">New York</option>
-  </select>
-  <button onclick="loadUserView()">Charger</button>
+<nav>
+  <a href="/admin-pp.html">🏠 Console</a>
+  <a href="/admin-chat.html">🤖 Chat IA</a>
+  <a href="/admin-alerts.html">🚨 Alertes</a>
+  <a href="/admin-index.html">👁️ Vue Index</a>
+  <a href="/admin-radar.html">🛰️ Radar & News</a>
+</nav>
 
-  <div class="forecast" id="forecast">Prévisions utilisateur…</div>
-  <div class="alerts" id="alerts">Alertes utilisateur…</div>
+<div style="text-align:center;margin:10px;">
+  <select id="userSelect"></select>
+  <button onclick="loadUser()">Charger</button>
 </div>
+<iframe id="userFrame"></iframe>
 
 <script>
-  async function loadUserView() {
-    const country = document.getElementById("country").value;
-    const city = document.getElementById("city").value;
-
-    try {
-      const res = await fetch(`/api/forecast?country=${country}&city=${city}`);
-      const forecast = await res.json();
-      document.getElementById("forecast").innerHTML =
-        "<b>Prévisions:</b><br>" + JSON.stringify(forecast);
-
-      const res2 = await fetch(`/api/alerts?country=${country}`);
-      const alerts = await res2.json();
-      document.getElementById("alerts").innerHTML =
-        "<b>Alertes:</b><br>" + JSON.stringify(alerts);
-    } catch (err) {
-      document.getElementById("forecast").innerHTML = "Erreur: " + err.message;
-      document.getElementById("alerts").innerHTML = "";
-    }
-  }
+async function loadUsers(){
+  const res=await fetch("/api/users");
+  const users=await res.json();
+  const sel=document.getElementById("userSelect");
+  sel.innerHTML="";
+  users.forEach(u=>{const o=document.createElement("option");o.value=u.id;o.textContent=`${u.name} – ${u.country}`;sel.appendChild(o);});
+}
+function loadUser(){
+  const id=document.getElementById("userSelect").value;
+  document.getElementById("userFrame").src="/api/user-index?id="+id;
+}
+loadUsers();
 </script>
 </body>
 </html>
