@@ -1,66 +1,46 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>💬 Console Admin – Chat IA</title>
+  <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow">
+  <title>Chat IA – TINSFLASH</title>
+  <link rel="stylesheet" href="/style.css" />
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { background:#222; padding:10px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:18px; color:#0af; }
-    nav a { color:#0af; margin:0 10px; text-decoration:none; font-weight:bold; }
-    nav a:hover { text-decoration:underline; }
-    .container { padding:20px; }
-    .chatbox { background:#222; padding:10px; height:300px; overflow-y:auto; border:1px solid #444; }
-    .msg { margin:5px 0; }
-    input, button { padding:10px; }
+    body { font-family: Arial, sans-serif; background:#0d1117; color:#eee; }
+    .chat { max-width:800px; margin:20px auto; }
+    .msg { border-radius:6px; padding:10px; margin:10px 0; }
+    .user { background:#1f6feb; color:#fff; text-align:right; }
+    .bot { background:#30363d; }
+    input { width:80%; padding:10px; }
+    button { padding:10px; margin-left:5px; }
   </style>
 </head>
 <body>
-<script>
-  const pass = prompt("Mot de passe ?");
-  if (pass !== "202679") {
-    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
-    throw new Error("Accès refusé");
-  }
-</script>
+  <h1 style="text-align:center;">🤖 Chat IA Météo Nucléaire</h1>
+  <div class="chat" id="chatBox"></div>
+  <div style="text-align:center;">
+    <input id="input" placeholder="Pose ta question météo..."/>
+    <button onclick="sendMsg()">Envoyer</button>
+  </div>
 
-<header>
-  <h1>💬 Chat IA – Console Admin</h1>
-  <nav>
-    <a href="admin-pp.html">Console</a>
-    <a href="admin-alerts.html">Alertes</a>
-    <a href="admin-index.html">Vue Utilisateur</a>
-    <a href="admin-chat.html">Chat IA</a>
-    <a href="admin-radar.html">Radar</a>
-  </nav>
-</header>
-
-<div class="container">
-  <div class="chatbox" id="chat"></div>
-  <input id="question" placeholder="Posez une question météo…">
-  <button onclick="ask()">Envoyer</button>
-</div>
-
-<script>
-  async function ask() {
-    const q = document.getElementById("question").value;
-    const chat = document.getElementById("chat");
-    chat.innerHTML += `<div class="msg">🧑‍💻 ${q}</div>`;
-    document.getElementById("question").value = "";
-
-    try {
-      const res = await fetch("/api/chat/engine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q })
-      });
-      const data = await res.json();
-      chat.innerHTML += `<div class="msg">🤖 ${data.answer || JSON.stringify(data)}</div>`;
-    } catch (err) {
-      chat.innerHTML += `<div class="msg" style="color:red;">Erreur: ${err.message}</div>`;
+  <script>
+    const chatBox=document.getElementById("chatBox");
+    function addMsg(txt,cls){ 
+      const div=document.createElement("div");
+      div.className="msg "+cls; 
+      div.textContent=txt; 
+      chatBox.appendChild(div); 
+      chatBox.scrollTop=chatBox.scrollHeight; 
     }
-  }
-</script>
+    async function sendMsg(){
+      const q=document.getElementById("input").value;
+      if(!q) return;
+      addMsg(q,"user");
+      document.getElementById("input").value="";
+      const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q})});
+      const data=await res.json();
+      addMsg(data.reply || JSON.stringify(data),"bot");
+    }
+  </script>
 </body>
 </html>
