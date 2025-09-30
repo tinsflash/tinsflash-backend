@@ -1,5 +1,5 @@
-// PATH: services/superForecast.js
-// SuperForecast — prévisions enrichies multi-sources + analyse IA + relief/climat/local
+// services/superForecast.js
+// SuperForecast — prévisions enrichies multi-sources par point unique
 // ⚡ Centrale nucléaire météo – Moteur atomique
 
 import gfs from "./gfs.js";
@@ -10,12 +10,8 @@ import nasaSat from "./nasaSat.js";
 import copernicus from "./copernicusService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
-
-import geoFactors from "./geoFactors.js";
-import climateFactors from "./climateFactors.js";
-import localFactors from "./localFactors.js";
-
-import { askOpenAI } from "./openaiService.js"; // ✅ IA centrale
+import geoFactors from "./geoFactors.js"; // ✅ fusion relief + climat + environnement
+import { askOpenAI } from "./openaiService.js";
 import {
   addEngineLog,
   addEngineError,
@@ -25,7 +21,7 @@ import {
 
 // ✅ Export NOMMÉ uniquement
 export async function runSuperForecast({ lat, lon, country, region }) {
-  const state = getEngineState();
+  const state = await getEngineState();
   try {
     addEngineLog(
       `⚡ Lancement du SuperForecast pour ${country}${
@@ -79,15 +75,13 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     };
     addEngineLog("✅ Sources météo collectées");
 
-    // === Étape 3 : application facteurs physiques
-    addEngineLog("🌍 Application des facteurs relief / climat / local…");
-    let enriched = { lat, lon, country, region, sources };
-    enriched = await geoFactors.applyGeoFactors(enriched, lat, lon);
-    enriched = climateFactors.applyClimateFactors(enriched, lat, lon);
-    enriched = localFactors.adjustWithLocalFactors(enriched, country);
+    // === Étape 3 : enrichissement géographique + climatique
+    addEngineLog("🌍 Application des facteurs géographiques et climatiques…");
+    let enriched = { ...sources };
+    enriched = await geoFactors.applyGeoFactors(enriched, lat, lon, country);
 
     // === Étape 4 : analyse IA
-    addEngineLog("🤖 Analyse IA des données enrichies…");
+    addEngineLog("🤖 Analyse IA des données multi-sources…");
 
     const prompt = `
 Prévisions météo enrichies pour un point précis.
@@ -107,14 +101,8 @@ Données comparatives (benchmarks qualité, ne pas copier):
 - Trullemans: ${JSON.stringify(sources.trullemans)}
 - Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
 
-Facteurs intégrés:
-- Relief & altitude (Everest ≠ Berck-sur-Mer)
-- Climat et anomalies saisonnières
-- Facteurs environnementaux locaux (océans, forêts, urbanisation)
-
 Consignes IA:
 - Croiser et fusionner uniquement les données principales.
-- Corriger par relief/climat/local.
 - Comparer avec Trullemans/Wetterzentrale uniquement pour ajuster la fiabilité.
 - Fournir un bulletin détaillé: températures, précipitations, vent, risques météo.
 - Horizon: aujourd'hui + 7 jours.
@@ -138,14 +126,15 @@ Consignes IA:
       region,
       forecast: analysis,
       sources,
+      enriched,
     });
-    saveEngineState(state);
+    await saveEngineState(state);
     addEngineLog("💾 SuperForecast sauvegardé");
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
-    return { lat, lon, country, region, forecast: analysis, sources };
+    return { lat, lon, country, region, forecast: analysis, sources, enriched };
   } catch (err) {
-    addEngineError(err.message || "Erreur inconnue SuperForecast");
+    await addEngineError(err.message || "Erreur inconnue SuperForecast");
     addEngineLog("❌ Erreur dans SuperForecast");
     return { error: err.message };
   }
