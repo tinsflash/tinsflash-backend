@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
-  <title>Console Centrale – TINSFLASH</title>
+  <title>Console Admin – Centrale Nucléaire Météo</title>
   <style>
     body { font-family: Arial, sans-serif; background:#0b0e12; color:#eee; margin:0; }
     header { background:#1c1f26; padding:15px; text-align:center; }
     h1 { margin:0; color:#00d8ff; }
+    nav { background:#1c1f26; padding:10px; display:flex; justify-content:center; gap:20px; }
+    nav a { color:#00d8ff; text-decoration:none; font-weight:bold; padding:6px 12px; border-radius:6px; }
+    nav a:hover { background:#00d8ff; color:#000; }
     .btn { padding:15px 25px; border:none; border-radius:8px; cursor:pointer; font-size:18px; font-weight:bold; }
     .btn-run { background:#f39c12; color:#000; }
     .status { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:15px; }
@@ -17,122 +20,66 @@
     .pending { background:#f39c12; }
     .section { padding:15px; }
     .logs { max-height:250px; overflow-y:auto; background:#111; padding:10px; border-radius:8px; font-family: monospace; }
-    .log-line { margin:3px 0; }
     pre { background:#111; padding:10px; border-radius:8px; max-height:300px; overflow-y:auto; }
-    h2 { border-bottom:1px solid #333; padding-bottom:5px; color:#00d8ff; }
     .userbox { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
     .usercard { background:#1c1f26; padding:10px; border-radius:8px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
-    <button class="btn btn-run" onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
-  </header>
+<script>
+  const pass = prompt("Code d'accès ?");
+  if(pass !== "202679"){ document.body.innerHTML="<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>"; throw new Error("Accès refusé"); }
+</script>
 
-  <div class="status" id="engineStatus">
-    <div id="models" class="pending">Extraction modèles</div>
-    <div id="localForecasts" class="pending">Prévisions locales</div>
-    <div id="nationalForecasts" class="pending">Prévisions nationales</div>
-    <div id="aiAlerts" class="pending">Alertes IA</div>
-    <div id="engine" class="pending">Moteur</div>
-  </div>
+<header>
+  <h1>⚡ Centrale Nucléaire Météo – Console Admin</h1>
+  <button class="btn btn-run" onclick="runGlobal()">🚀 Lancer RUN GLOBAL</button>
+</header>
 
-  <div class="section">
-    <h2>📜 Logs moteur (live)</h2>
-    <div class="logs" id="logs"></div>
-  </div>
+<nav>
+  <a href="/admin-pp.html">🏠 Console</a>
+  <a href="/admin-chat.html">🤖 Chat IA</a>
+  <a href="/admin-alerts.html">🚨 Alertes</a>
+  <a href="/admin-index.html">👁️ Vue Index</a>
+  <a href="/admin-radar.html">🛰️ Radar & News</a>
+</nav>
 
-  <div class="section">
-    <h2>📊 Rapport final IA</h2>
-    <pre id="finalReport">{}</pre>
-  </div>
+<div class="status" id="engineStatus">
+  <div id="models" class="pending">Extraction modèles</div>
+  <div id="localForecasts" class="pending">Prévisions locales</div>
+  <div id="nationalForecasts" class="pending">Prévisions nationales</div>
+  <div id="aiAlerts" class="pending">Alertes IA</div>
+  <div id="engine" class="pending">Moteur</div>
+</div>
 
-  <div class="section">
-    <h2>🚨 Alertes actives</h2>
-    <div id="alerts"></div>
-  </div>
+<div class="section">
+  <h2>📜 Logs moteur (live)</h2>
+  <div class="logs" id="logs"></div>
+</div>
 
-  <div class="section">
-    <h2>👥 Utilisateurs par zones</h2>
-    <div class="userbox" id="users"></div>
-  </div>
+<div class="section">
+  <h2>📊 Rapport final IA</h2>
+  <pre id="finalReport">{}</pre>
+</div>
 
-  <script>
-    async function runGlobal(){
-      document.querySelector(".btn-run").style.background="#e74c3c"; // RUNNING = rouge
-      await fetch("/api/run-global?zone=All",{method:"POST"});
-      setTimeout(()=>{document.querySelector(".btn-run").style.background="#2ecc71";},2000); // repasse vert si ok
-    }
+<div class="section">
+  <h2>🚨 Alertes actives</h2>
+  <div id="alerts"></div>
+</div>
 
-    function updateStatus(checkup){
-      ["models","localForecasts","nationalForecasts","aiAlerts","engine"].forEach(k=>{
-        const el=document.getElementById(k);
-        if(!el) return;
-        const v=checkup[k]||"PENDING";
-        el.className=v.toLowerCase();
-      });
-    }
+<div class="section">
+  <h2>👥 Utilisateurs par zones</h2>
+  <div class="userbox" id="users"></div>
+</div>
 
-    // === Logs SSE ===
-    const logBox=document.getElementById("logs");
-    const evtSource=new EventSource("/api/logs/stream");
-    evtSource.onmessage=function(e){
-      const log=JSON.parse(e.data);
-      const line=document.createElement("div");
-      line.className="log-line";
-      line.textContent=`[${log.timestamp}] ${log.message}`;
-      logBox.appendChild(line);
-      if(logBox.children.length>50) logBox.removeChild(logBox.firstChild);
-      logBox.scrollTop=logBox.scrollHeight;
-    };
-
-    async function refreshData(){
-      const res=await fetch("/api/engine-state");
-      const data=await res.json();
-      updateStatus(data.checkup || {});
-      document.getElementById("finalReport").textContent=JSON.stringify(data.finalReport||{},null,2);
-
-      // Alertes
-      const res2=await fetch("/api/alerts");
-      const alerts=await res2.json();
-      const box=document.getElementById("alerts");
-      box.innerHTML="";
-      alerts.forEach(a=>{
-        let cls="border:2px solid orange;";
-        const fiab=parseInt(a.data?.fiabilite||0);
-        if(fiab>=90) cls="border:2px solid green;";
-        else if(fiab>=70) cls="border:2px solid yellow;";
-        const div=document.createElement("div");
-        div.style=`padding:10px;margin:5px;${cls}`;
-        div.innerHTML=`
-          <b>${a.data?.type||"Alerte"}</b> – ${a.country} ${a.region||""}<br/>
-          Fiabilité: ${a.data?.fiabilite||"?"}% | Intensité: ${a.data?.intensite||"?"}<br/>
-          Conséquences: ${a.data?.consequences||"?"}<br/>
-          Recommandations: ${a.data?.recommandations||"?"}<br/>
-          Période: ${a.data?.debut||"?"} → ${a.data?.fin||"?"}
-        `;
-        box.appendChild(div);
-      });
-
-      // Utilisateurs
-      const res3=await fetch("/api/users");
-      const users=await res3.json();
-      const ubox=document.getElementById("users");
-      ubox.innerHTML="";
-      users.forEach(u=>{
-        const div=document.createElement("div");
-        div.className="usercard";
-        div.innerHTML=`
-          <b>${u.name}</b><br/>
-          Zone: ${u.zone || "?"}<br/>
-          Pays: ${u.country || "?"}
-        `;
-        ubox.appendChild(div);
-      });
-    }
-    setInterval(refreshData,6000);
-    refreshData();
-  </script>
+<script>
+async function runGlobal(){ await fetch("/api/run-global?zone=All",{method:"POST"}); }
+function updateStatus(checkup){ ["models","localForecasts","nationalForecasts","aiAlerts","engine"].forEach(k=>{const el=document.getElementById(k); if(!el) return; el.className=(checkup[k]||"PENDING").toLowerCase(); }); }
+const logBox=document.getElementById("logs");
+const evtSource=new EventSource("/api/logs/stream");
+evtSource.onmessage=function(e){ const log=JSON.parse(e.data); const line=document.createElement("div"); line.textContent=`[${log.timestamp}] ${log.message}`; logBox.appendChild(line); if(logBox.children.length>50) logBox.removeChild(logBox.firstChild); logBox.scrollTop=logBox.scrollHeight; };
+async function refreshData(){ const res=await fetch("/api/engine-state"); const data=await res.json(); updateStatus(data.checkup||{}); document.getElementById("finalReport").textContent=JSON.stringify(data.finalReport||{},null,2); const res2=await fetch("/api/alerts"); const alerts=await res2.json(); const box=document.getElementById("alerts"); box.innerHTML=""; alerts.forEach(a=>{const fiab=parseInt(a.data?.fiabilite||0); const div=document.createElement("div"); div.style=`padding:10px;margin:5px;border:2px solid ${fiab>=90?"green":fiab>=70?"yellow":"orange"}`; div.innerHTML=`<b>${a.data?.type||"Alerte"}</b> – ${a.country} ${a.region||""}<br/>Fiabilité: ${fiab||"?"}%`; box.appendChild(div);}); const res3=await fetch("/api/users"); const users=await res3.json(); const ubox=document.getElementById("users"); ubox.innerHTML=""; users.forEach(u=>{const div=document.createElement("div"); div.className="usercard"; div.innerHTML=`<b>${u.name}</b><br/>Zone: ${u.zone||"?"}<br/>Pays: ${u.country||"?"}`; ubox.appendChild(div);}); }
+setInterval(refreshData,6000); refreshData();
+</script>
 </body>
 </html>
