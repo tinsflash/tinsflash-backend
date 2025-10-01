@@ -2,159 +2,133 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – Prévisions météo les plus précises du monde</title>
+  <title>TINSFLASH 🌦️ Prévisions & Alertes IA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-  <script>
-    (adsbygoogle = window.adsbygoogle || []).push({
-      google_ad_client: "ca-pub-8204947691352732",
-      enable_page_level_ads: true
-    });
-  </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8204947691352732"
+     crossorigin="anonymous"></script>
 
+  <!-- Styles -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      color: #222;
+    :root{
+      --bg:#0b1220; --panel:#121a2b; --panel-2:#0f172a; --text:#e5e7eb;
+      --muted:#9ca3af; --accent:#38bdf8; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
     }
-    header {
-      text-align: center;
-      background: #0b0f1a;
-      color: #fff;
-      padding: 1rem;
-    }
-    header h1 { margin: 0; font-size: 1.8rem; color: #38bdf8; }
-    header p { margin: .5rem 0 0; font-size: 1rem; color: #aaa; }
-
-    .video-container { width: 100%; max-height: 400px; overflow: hidden; }
-    video { width: 100%; height: auto; }
-
-    main { padding: 1rem; max-width: 1200px; margin: auto; }
-    section { margin-bottom: 2rem; }
-    h2 { color: #0b0f1a; border-bottom: 2px solid #38bdf8; padding-bottom: .3rem; }
-
-    .forecast-container { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .forecast-card {
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      text-align: center;
-      flex: 1 1 120px;
-    }
-    .forecast-card img { width: 50px; height: 50px; }
-
-    .ads { text-align: center; margin: 20px 0; }
-    iframe { border: none; border-radius: 8px; }
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);}
+    .wrap{max-width:1180px;margin:0 auto;padding:16px;}
+    .section{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0));border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:16px 18px;margin-bottom:16px;}
+    .section h3{margin:0 0 8px 0;font-size:18px;color:var(--accent)}
+    .row{display:grid;gap:12px}
+    @media(min-width:900px){.row{grid-template-columns:1.2fr .8fr}}
+    .hero{position:relative;overflow:hidden;border-radius:16px}
+    .hero video{width:100%;height:320px;object-fit:cover;border-radius:16px;display:block}
+    .hero .overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.45),rgba(0,0,0,.15));display:flex;align-items:flex-end}
+    .hero .title{padding:16px 18px;font-size:22px;font-weight:600}
+    .search{display:flex;gap:8px;align-items:center}
+    .search input{flex:1;background:var(--panel-2);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--text);padding:10px 12px;outline:none}
+    .btn{background:var(--accent);color:#001018;border:0;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
+    .grid{display:grid;gap:12px}
+    @media(min-width:720px){.grid{grid-template-columns:repeat(3,1fr)}}
+    .card{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px}
+    .card h4{margin:0 0 6px 0;font-size:16px}
+    .card .meta{color:var(--muted);font-size:13px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+    .alert{background:var(--panel);border-left:4px solid var(--warn);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+    .alert.high{border-left-color:var(--err)}
+    .alert.low{border-left-color:var(--ok)}
+    /* Radar */
+    #radar{width:100%;height:420px;border-radius:14px;overflow:hidden}
+    /* JEAN */
+    #jean-bubble{position:fixed;right:16px;bottom:16px;width:64px;height:64px;border-radius:50%;background:linear-gradient(145deg,#1d2a45,#0f172a);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9999;box-shadow:0 6px 22px rgba(0,0,0,.35)}
+    #jean-bubble span{font-weight:800;letter-spacing:.5px;color:var(--accent)}
+    #jean-panel{position:fixed;right:16px;bottom:92px;width:320px;max-height:64vh;display:none;flex-direction:column;gap:10px;background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;z-index:9999}
+    #jean-panel header{display:flex;justify-content:space-between;align-items:center}
+    #jean-panel header h5{margin:0;color:var(--accent)}
+    #jean-msgs{overflow:auto;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:8px;max-height:40vh;background:var(--panel-2)}
+    .msg{margin:6px 0;font-size:14px}
+    .msg.you{color:#c3e3ff} .msg.ai{color:#d8ffe1}
   </style>
 </head>
 <body>
-  <header>
-    <h1>🌦️ TINSFLASH</h1>
-    <p>Les prévisions et alertes les plus précises du monde, boostées par IA</p>
-  </header>
+  <div class="wrap">
 
-  <!-- 🎬 Vidéo intro -->
-  <div class="video-container">
-    <video autoplay muted loop playsinline>
-      <source src="intro-jean.mp4" type="video/mp4">
-    </video>
-  </div>
-
-  <main>
-    <!-- Pub -->
-    <div class="ads">
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8204947691352732"
-           data-ad-slot="9437146866"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    <!-- Bandeau vidéo -->
+    <div class="hero section">
+      <video src="/intro-jean.mp4" autoplay muted playsinline loop></video>
+      <div class="overlay"><div class="title">Prévisions & alertes météo — dopées à l’IA</div></div>
     </div>
 
-    <!-- Adresse / géolocalisation -->
-    <section>
-      <h2>📍 Choisir votre localisation</h2>
-      <div style="margin:10px 0; text-align:center;">
-        <input id="addressInput" type="text" placeholder="Entrez votre ville ou adresse"
-               style="padding:8px; width:250px; border-radius:6px; border:1px solid #ccc;">
-        <button onclick="searchAddress()"
-                style="padding:8px 12px; border:none; background:#2563eb; color:white; border-radius:6px; cursor:pointer;">
-          🔍 Rechercher
-        </button>
+    <!-- Pub haut -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8204947691352732" data-ad-slot="9437146866" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+
+    <!-- Recherche -->
+    <div class="section">
+      <h3>📍 Votre position</h3>
+      <div class="search">
+        <input id="addressInput" placeholder="Entrez une adresse, ville ou lieu…">
+        <button id="btnSearch" class="btn">Localiser</button>
       </div>
-    </section>
+    </div>
 
-    <!-- Prévisions locales -->
-    <section>
-      <h2>🌍 Prévisions locales</h2>
-      <div id="localForecast" class="forecast-container"></div>
-    </section>
+    <!-- Prévisions -->
+    <div class="row">
+      <div class="section">
+        <h3>🌡️ Prévisions locales (7 jours)</h3>
+        <div id="localForecast" class="grid"></div>
+        <div class="card" style="margin-top:12px"><h4>Bulletin local</h4><div id="textLocal" class="meta">—</div></div>
+      </div>
 
-    <!-- Prévisions nationales -->
-    <section>
-      <h2>🏳️ Prévisions nationales</h2>
-      <div id="nationalForecast" class="forecast-container"></div>
-    </section>
+      <div class="section">
+        <h3>🏳️ Prévisions nationales</h3>
+        <div id="nationalForecast" class="grid"></div>
+        <div class="card" style="margin-top:12px"><h4>Bulletin national</h4><div id="textNational" class="meta">—</div></div>
+      </div>
+    </div>
 
-    <!-- Alertes actives -->
-    <section>
-      <h2>🚨 Alertes météo actives</h2>
-      <div id="alertsContainer" style="display:grid; gap:1rem;"></div>
-    </section>
+    <!-- Pub milieu -->
+    <ins class="adsbygoogle" style="display:block;margin:20px 0" data-ad-client="ca-pub-8204947691352732" data-ad-slot="1231353788" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+
+    <!-- Alertes -->
+    <div class="section">
+      <h3>🚨 Alertes en cours</h3>
+      <div id="alertsContainer"></div>
+    </div>
 
     <!-- Radar -->
-    <section>
-      <h2>📡 Radar en direct</h2>
-      <iframe src="https://embed.windy.com/embed2.html?lat=50.5&lon=4.5&zoom=5&level=surface&overlay=rain"
-              width="100%" height="500"></iframe>
-    </section>
-
-    <!-- Pub -->
-    <div class="ads">
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8204947691352732"
-           data-ad-slot="9109843802"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    <div class="section">
+      <h3>🌍 Radar en temps réel</h3>
+      <div id="radar">
+        <iframe src="https://embed.windy.com/embed2.html?lat=50.5&lon=4.5&detailLat=50.5&detailLon=4.5&width=650&height=450&zoom=5&level=surface&overlay=rain&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates&detail=true&metricWind=km/h&metricTemp=%C2%B0C&radarRange=-1"
+          width="100%" height="100%" frameborder="0"></iframe>
+      </div>
     </div>
-  </main>
 
-  <!-- Avatar J.E.A.N. (IA Cohere) -->
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-  <div id="avatar-papa" style="position: fixed; bottom: 20px; right: 20px; width: 120px; height: 120px; cursor: pointer; z-index: 9999;">
-    <lottie-player 
-      src="https://assets10.lottiefiles.com/packages/lf20_j1adxtyb.json"
-      background="transparent"
-      speed="1"
-      loop autoplay>
-    </lottie-player>
+    <!-- Pub bas -->
+    <ins class="adsbygoogle" style="display:block;margin-top:20px" data-ad-client="ca-pub-8204947691352732" data-ad-slot="9109843802" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+
   </div>
 
-  <script>
-    document.getElementById("avatar-papa").addEventListener("click", function() {
-      const question = prompt("Posez votre question météo à J.E.A.N 🌦️ :");
-      if (!question) return;
+  <!-- JEAN bulle + panneau -->
+  <div id="jean-bubble"><span>JEAN</span></div>
+  <div id="jean-panel">
+    <header>
+      <h5>J.E.A.N. — Conseiller météo</h5>
+      <button class="btn" style="padding:6px 10px" onclick="document.getElementById('jean-panel').style.display='none'">×</button>
+    </header>
+    <div id="jean-msgs"></div>
+    <div class="search">
+      <input id="jean-input" placeholder="Posez une question météo…">
+      <button id="jean-send" class="btn">Envoyer</button>
+    </div>
+  </div>
 
-      fetch("/api/cohere", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: question })
-      })
-      .then(res => res.json())
-      .then(data => alert("J.E.A.N 🤖 : " + (data.reply || "Pas de réponse")))
-      .catch(err => alert("Erreur: " + err.message));
-    });
-  </script>
-
-  <!-- Script météo -->
-  <script src="forecast.js"></script>
+  <!-- Scripts -->
+  <script src="/forecast.js"></script>
+  <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
 </body>
 </html>
