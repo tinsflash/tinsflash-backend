@@ -2,236 +2,154 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚡ Console Admin – Centrale Nucléaire Météo</title>
-  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Console Admin Centrale Nucléaire Météo</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
   <style>
-    body {
-      background: #0d1117;
-      color: #e6edf3;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
+    body { background: #0d1117; color: #e6edf3; }
+    nav, footer { background: #161b22; }
+    .status-btn { font-size: 1.2rem; padding: 0.5rem 1rem; margin: 0.25rem; }
+    .status-green { background: #198754; }
+    .status-orange { background: #fd7e14; }
+    .status-red { background: #dc3545; }
+    #logs {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      height: 300px;
+      overflow-y: scroll;
+      padding: 1rem;
+      border: 1px solid #444;
     }
-    header {
-      background: #161b22;
-      padding: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    nav a {
-      color: #58a6ff;
-      margin: 0 10px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    nav a:hover { text-decoration: underline; }
-    h1 { color: #58a6ff; margin: 10px 0; text-align: center; }
-    .section {
-      margin: 15px;
-      padding: 15px;
-      border-radius: 8px;
-      background: #161b22;
-    }
-    button {
-      background: #d73a49;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .status-red { color: #ff4d4d; }
-    .status-orange { color: #ffae42; }
-    .status-green { color: #4caf50; }
-    .logs { max-height: 250px; overflow-y: auto; font-family: monospace; background:#0d1117; padding:10px; border-radius:6px;}
-    .log-entry { margin-bottom: 6px; }
-    .alert { padding: 8px; margin: 5px 0; border-radius: 6px; }
-    .primeur { background: #9e6ffe33; }
-    .tovalidate { background: #f39c1233; }
-    .auto { background: #2ecc7133; }
-    footer { text-align:center; margin:20px 0; font-size:12px; opacity:0.7; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .card { background: #21262d; padding: 1rem; border-radius: 8px; }
+    h2, h3 { margin-top: 0; }
   </style>
 </head>
 <body>
-  <!-- ✅ Protection simple -->
-  <script>
-    const code = prompt("Entrez le code d'accès :");
-    if (code !== "202679") {
-      document.body.innerHTML = "<h2 style='color:red;text-align:center;'>⛔ Accès refusé</h2>";
-      throw new Error("Code incorrect");
-    }
-  </script>
 
-  <!-- ✅ Header -->
-  <header>
-    <h2>⚡ Centrale Nucléaire Météo – Admin</h2>
-    <nav>
-      <a href="admin-pp.html">Console</a>
-      <a href="admin-alerts.html">Alertes</a>
-      <a href="admin-chat.html">Chat</a>
-      <a href="admin-radar.html">Radar</a>
-      <a href="admin-index.html">Vue Index</a>
-      <a href="admin-infos.html">Infos</a>
-      <a href="admin-users.html">Utilisateurs</a>
-    </nav>
-  </header>
-
-  <h1>🚀 Console principale</h1>
-
-  <!-- 🚀 Bouton Run -->
-  <div class="section" style="text-align:center;">
-    <button id="runButton">🚀 Lancer la Centrale (Global + Continental)</button>
-    <div id="runStatus"></div>
-  </div>
-
-  <!-- 📋 Checklist -->
-  <div class="section">
-    <h2>📋 Checklist moteur</h2>
-    <ul id="checklist">
-      <li id="step-models">Extraction modèles</li>
-      <li id="step-europe">RUNGLOBAL Europe</li>
-      <li id="step-usa">RUNGLOBAL USA</li>
-      <li id="step-continental">RUN Continentales</li>
-      <li id="step-files">Mise sous fichier</li>
-      <li id="step-analysis">Analyse IA (relief, climat, environnement)</li>
-      <li id="step-forecasts">Prévisions locales/nationales</li>
-      <li id="step-local-alerts">Alertes locales/nationales</li>
-      <li id="step-continental-alerts">Alertes continentales</li>
-      <li id="step-country-view">Vue par pays (zones couvertes)</li>
+  <!-- Navigation -->
+  <nav class="container-fluid">
+    <ul>
+      <li><strong>Admin Centrale Météo</strong></li>
     </ul>
-  </div>
+    <ul>
+      <li><a href="admin-pp.html">Console</a></li>
+      <li><a href="admin-chat.html">Chat</a></li>
+      <li><a href="admin-alertes.html">Alertes</a></li>
+      <li><a href="admin-users.html">Vue Index</a></li>
+      <li><a href="admin-tools.html" role="button">Outils</a></li>
+    </ul>
+  </nav>
 
-  <!-- 📜 Logs -->
-  <div class="section">
-    <h2>📜 Logs en direct</h2>
-    <div id="logs" class="logs"></div>
-  </div>
+  <!-- Main -->
+  <main class="container">
+    <h2>Console de Pilotage</h2>
 
-  <!-- 🚨 Alertes -->
-  <div class="section">
-    <h2>🚨 Alertes</h2>
-    <div id="alerts"><p>Aucune alerte détectée.</p></div>
-  </div>
+    <!-- Bouton lancement Run -->
+    <section class="card">
+      <h3>Lancement du moteur</h3>
+      <button id="btnRun" class="contrast">🚀 Lancer un Run</button>
+      <p id="runStatus">En attente...</p>
+    </section>
 
-  <!-- 👥 Utilisateurs -->
-  <div class="section">
-    <h2>👥 Utilisateurs par zones</h2>
-    <div id="users"><p>Chargement…</p></div>
-  </div>
+    <!-- Checklist moteur -->
+    <section class="card">
+      <h3>État du moteur</h3>
+      <div id="checklist"></div>
+    </section>
 
-  <footer>
-    © Tinsflash – Système J.E.A.N. by Pydaris – Reproduction interdite
+    <!-- Logs -->
+    <section class="card">
+      <h3>Logs en direct</h3>
+      <div id="logs"></div>
+    </section>
+
+    <!-- Double moteur IA -->
+    <section class="grid-2">
+      <div class="card">
+        <h3>IA Prévisions</h3>
+        <p id="iaForecast">Chargement...</p>
+      </div>
+      <div class="card">
+        <h3>IA Alertes</h3>
+        <p id="iaAlerts">Chargement...</p>
+      </div>
+    </section>
+
+    <!-- Utilisateurs -->
+    <section class="card">
+      <h3>Utilisateurs par zones</h3>
+      <ul id="usersZones"></ul>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="container">
+    <small><a href="#">Centrale Météo</a> • <a href="#">Admin</a></small>
   </footer>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const runBtn = document.getElementById("runButton");
-    const runStatus = document.getElementById("runStatus");
-
-    // 🚀 Run
-    runBtn.addEventListener("click", async () => {
-      runBtn.disabled = true;
-      runBtn.textContent = "⏳ Lancement en cours...";
-      runBtn.style.background = "#ffae42";
-      try {
-        await fetch("/api/run-global", { method: "POST" });
-        await fetch("/api/run-continental", { method: "POST" });
-        runBtn.textContent = "RUNNING...";
-        runBtn.style.background = "#d73a49";
-      } catch (err) {
-        runStatus.innerHTML = "<div style='color:red'>❌ Erreur lancement</div>";
-        runBtn.disabled = false;
-      }
+    // Bouton run
+    document.getElementById("btnRun").addEventListener("click", async () => {
+      const res = await fetch("/api/run", { method: "POST" });
+      const data = await res.json();
+      document.getElementById("runStatus").textContent = data.message || "Run lancé.";
     });
 
-    // 📋 Checklist (poll API)
-    async function fetchEngineState() {
-      try {
-        const res = await fetch("/api/engine-state");
-        const state = await res.json();
-        const steps = {
-          models: "step-models",
-          europe: "step-europe",
-          usa: "step-usa",
-          continental: "step-continental",
-          files: "step-files",
-          analysis: "step-analysis",
-          forecasts: "step-forecasts",
-          localAlerts: "step-local-alerts",
-          continentalAlerts: "step-continental-alerts",
-          countryView: "step-country-view"
-        };
-        for (const [key, id] of Object.entries(steps)) {
-          const li = document.getElementById(id);
-          if (!li) continue;
-          if (state[key] === "pending") li.className = "status-red";
-          else if (state[key] === "running") li.className = "status-orange";
-          else if (state[key] === "done") li.className = "status-green";
-        }
-      } catch (e) { console.warn("⚠️ Engine state error", e); }
-    }
-    setInterval(fetchEngineState, 5000);
-
-    // 📜 Logs
+    // Logs temps réel
     const logsDiv = document.getElementById("logs");
-    const socket = io();
-    socket.on("log", msg => {
-      const div = document.createElement("div");
-      div.classList.add("log-entry");
-      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-      logsDiv.prepend(div);
-    });
+    const ws = new WebSocket("wss://" + window.location.host + "/ws/logs");
+    ws.onmessage = (event) => {
+      const line = document.createElement("div");
+      line.textContent = event.data;
+      logsDiv.appendChild(line);
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    };
 
-    // 🚨 Alertes
-    async function fetchAlerts() {
-      try {
-        const res = await fetch("/api/alerts");
-        const data = await res.json();
-        const alertsDiv = document.getElementById("alerts");
-        alertsDiv.innerHTML = "";
-        if (!data.alerts || !data.alerts.length) {
-          alertsDiv.innerHTML = "<p>Aucune alerte détectée.</p>";
-          return;
-        }
-        data.alerts.forEach(a => {
-          const div = document.createElement("div");
-          div.classList.add("alert");
-          if (a.category === "primeur") div.classList.add("primeur");
-          else if (a.category === "to-validate") div.classList.add("tovalidate");
-          else div.classList.add("auto");
-          div.innerHTML = `<strong>${a.type}</strong> – Zone: ${a.zone} – Fiabilité: ${a.reliability}%`;
-          alertsDiv.appendChild(div);
-        });
-      } catch (e) { console.warn("⚠️ Alert error", e); }
+    // Checklist moteur
+    async function loadStatus() {
+      const res = await fetch("/api/status");
+      const status = await res.json();
+      const checklist = document.getElementById("checklist");
+      checklist.innerHTML = "";
+      status.forEach(item => {
+        const btn = document.createElement("button");
+        btn.classList.add("status-btn");
+        btn.textContent = item.name;
+        if (item.state === "ok") btn.classList.add("status-green");
+        if (item.state === "pending") btn.classList.add("status-orange");
+        if (item.state === "error") btn.classList.add("status-red");
+        checklist.appendChild(btn);
+      });
     }
-    setInterval(fetchAlerts, 7000);
+    setInterval(loadStatus, 5000);
+    loadStatus();
 
-    // 👥 Utilisateurs
-    async function fetchUsers() {
-      try {
-        const res = await fetch("/api/users");
-        const data = await res.json();
-        const usersDiv = document.getElementById("users");
-        usersDiv.innerHTML = "";
-        if (!data.users || !data.users.length) {
-          usersDiv.innerHTML = "<p>Aucun utilisateur.</p>";
-          return;
-        }
-        const grouped = {};
-        data.users.forEach(u => {
-          grouped[u.zone] = (grouped[u.zone] || 0) + 1;
-        });
-        for (const [zone, count] of Object.entries(grouped)) {
-          const p = document.createElement("p");
-          p.textContent = `${zone}: ${count} utilisateurs`;
-          usersDiv.appendChild(p);
-        }
-      } catch (e) { console.warn("⚠️ Users error", e); }
+    // IA Prévisions & Alertes
+    async function loadIA() {
+      const resF = await fetch("/api/ia/forecast");
+      const resA = await fetch("/api/ia/alerts");
+      document.getElementById("iaForecast").textContent = (await resF.json()).summary;
+      document.getElementById("iaAlerts").textContent = (await resA.json()).summary;
     }
-    setInterval(fetchUsers, 15000);
+    setInterval(loadIA, 10000);
+    loadIA();
+
+    // Utilisateurs par zones
+    async function loadUsers() {
+      const res = await fetch("/api/users/zones");
+      const users = await res.json();
+      const list = document.getElementById("usersZones");
+      list.innerHTML = "";
+      users.forEach(u => {
+        const li = document.createElement("li");
+        li.textContent = u.zone + ": " + u.count + " utilisateurs";
+        list.appendChild(li);
+      });
+    }
+    setInterval(loadUsers, 15000);
+    loadUsers();
   </script>
 </body>
 </html>
