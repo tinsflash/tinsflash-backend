@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>🌌 Console Administrateur - TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
     body {
       margin: 0;
@@ -12,33 +13,31 @@
       color: #e0e0e0;
     }
     header {
-      background: #0f172a;
+      background: #111827;
       padding: 1rem;
+      text-align: center;
       border-bottom: 2px solid #1f2937;
     }
     header h1 {
       margin: 0;
       font-size: 1.6rem;
       color: #38bdf8;
-      text-align: center;
       letter-spacing: 2px;
     }
     nav {
-      margin-top: .8rem;
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      background: #1f2937;
+      padding: .5rem;
     }
     nav a {
-      margin: 0 .6rem;
+      color: #38bdf8;
       text-decoration: none;
-      color: #c7d2fe;
       font-weight: bold;
-      padding: .4rem .8rem;
-      border-radius: 6px;
-      transition: 0.2s;
     }
     nav a:hover {
-      background: #1e293b;
-      color: #38bdf8;
+      text-decoration: underline;
     }
     main {
       padding: 1.5rem;
@@ -50,12 +49,12 @@
       background: #1f2937;
       padding: 1rem;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.6);
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
     h2 {
       font-size: 1.2rem;
       color: #38bdf8;
-      margin-bottom: .7rem;
+      margin-bottom: .5rem;
       border-bottom: 1px solid #374151;
       padding-bottom: .3rem;
     }
@@ -63,17 +62,14 @@
       background: #2563eb;
       border: none;
       color: white;
-      padding: .8rem 1.4rem;
+      padding: .7rem 1.2rem;
       border-radius: 6px;
       cursor: pointer;
       font-size: 1rem;
-      font-weight: bold;
       transition: 0.2s;
-      box-shadow: 0 0 10px rgba(37,99,235,.5);
     }
     button:hover {
       background: #1d4ed8;
-      box-shadow: 0 0 15px rgba(56,189,248,.8);
     }
     .logs {
       max-height: 300px;
@@ -84,29 +80,22 @@
       padding: .5rem;
       border-radius: 6px;
     }
-    .log-line {
-      margin: 2px 0;
-    }
-    .green { color: #22c55e; }
-    .orange { color: #f59e0b; }
-    .red { color: #ef4444; }
     .checklist {
-      display: grid;
-      gap: 1rem;
-      padding-top: .5rem;
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
     }
     .check-item {
       display: flex;
       align-items: center;
-      gap: .8rem;
-      font-size: 1rem;
+      gap: .6rem;
     }
     .status-dot {
-      width: 22px;
-      height: 22px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
       background: #f59e0b;
-      box-shadow: 0 0 8px rgba(0,0,0,0.6);
+      box-shadow: 0 0 5px rgba(0,0,0,0.6);
     }
     table {
       width: 100%;
@@ -127,22 +116,23 @@
 <body>
   <header>
     <h1>🌌 Console Admin – TINSFLASH</h1>
-    <nav>
-      <a href="/admin">Console</a>
-      <a href="/admin-alerts">Alertes</a>
-      <a href="/admin-chat">Chat Moteur</a>
-      <a href="/admin-index">Vue Index</a>
-      <a href="/admin-radar">Outils/Radar</a>
-      <a href="/admin-infos">Infos</a>
-      <a href="/admin-users">Utilisateurs</a>
-    </nav>
   </header>
-
+  <nav>
+    <a href="/admin">Dashboard</a>
+    <a href="/admin-alerts">Alertes</a>
+    <a href="/admin-chat">Chat IA</a>
+    <a href="/admin-radar">Radar</a>
+    <a href="/admin-index">Vue Index</a>
+    <a href="/admin-infos">Infos</a>
+    <a href="/admin-users">Utilisateurs</a>
+  </nav>
   <main>
     <section>
       <h2>⚡ Lancement du moteur</h2>
       <button onclick="launchRun()">🚀 Lancer un Run Global</button>
-      <div id="engineState" style="margin-top:1rem;font-size:.9rem;white-space:pre;"></div>
+      <div id="engineState" style="margin-top:1rem;font-size:.9rem;"></div>
+      <p><strong>Dernier run :</strong> <span id="lastRun">-</span></p>
+      <p><strong>Dernières alertes :</strong> <span id="lastAlerts">-</span></p>
     </section>
 
     <section>
@@ -177,8 +167,9 @@
       setStatus("forecast","orange");
       setStatus("alerts","orange");
       setStatus("ia","orange");
+
       try {
-        const res = await fetch("/api/run-global", { 
+        const res = await fetch("/api/run-global", {
           method: "POST",
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ zone: "Europe" })
@@ -206,7 +197,6 @@
     function appendLog(msg) {
       const logsDiv = document.getElementById("logs");
       const line = document.createElement("div");
-      line.className = "log-line";
       line.textContent = new Date().toLocaleTimeString()+" — "+msg;
       logsDiv.appendChild(line);
       logsDiv.scrollTop = logsDiv.scrollHeight;
@@ -217,22 +207,21 @@
         color==="green"?"#22c55e":color==="red"?"#ef4444":"#f59e0b";
     }
 
-    // === SSE Logs ===
     const evtSource = new EventSource("/api/logs/stream");
     evtSource.onmessage = function(e) {
       appendLog(e.data);
     };
 
-    // === Engine state refresh ===
     async function refreshEngine() {
       const res = await fetch("/api/engine-state");
       const state = await res.json();
       document.getElementById("engineState").textContent = JSON.stringify(state,null,2);
+      document.getElementById("lastRun").textContent = state?.lastRunFinished || "-";
+      document.getElementById("lastAlerts").textContent = state?.lastAlertsGenerated || "-";
     }
     setInterval(refreshEngine, 10000);
     refreshEngine();
 
-    // === Users ===
     async function loadUsers() {
       const res = await fetch("/api/users");
       const data = await res.json();
