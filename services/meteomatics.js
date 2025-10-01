@@ -1,50 +1,33 @@
-// utils/meteomatics.js
-import axios from "axios";
+// services/meteomatics.js
+// 🔗 Accès générique Meteomatics — enrichi (7 jours, variables multiples)
 
-const METEO_BASE_URL = "https://api.meteomatics.com";
-const USER = process.env.METEOMATICS_USER;
-const PASS = process.env.METEOMATICS_PASS;
+import fetchMeteomaticsDefault, { fetchMeteomatics as fetchMeteomaticsNamed } from "../utils/meteomatics.js";
+
+// On choisit toujours la bonne fonction
+const fetchMeteomatics = fetchMeteomaticsNamed || fetchMeteomaticsDefault;
 
 /**
- * Appel générique Meteomatics
- * @param {Array} parameters - ex: ["t_2m:C","precip_1h:mm","wind_speed_10m:ms"]
- * @param {number} lat
- * @param {number} lon
- * @param {string} model - "ecmwf", "gfs", "icon"...
- * @returns {Object|null}
+ * Récupère les prévisions enrichies depuis Meteomatics
+ * @param {number} lat - latitude
+ * @param {number} lon - longitude
+ * @param {string} model - modèle Meteomatics ("gfs", "ecmwf-ifs", "icon-eu", etc.)
  */
-async function fetchMeteomatics(parameters = [], lat, lon, model = "gfs") {
-  try {
-    const now = new Date();
-    const start = now.toISOString().split(".")[0] + "Z";
-    const end = new Date(now.getTime() + 7 * 24 * 3600 * 1000) // ✅ horizon 7 jours
-      .toISOString()
-      .split(".")[0] + "Z";
+export default async function meteomatics(lat, lon, model = "gfs") {
+  const data = await fetchMeteomatics([], lat, lon, model);
 
-    const paramStr = parameters.length
-      ? parameters.join(",")
-      : "t_2m:C,precip_1h:mm,wind_speed_10m:ms";
+  if (!data) return { source: `Meteomatics (${model})`, error: "Pas de données" };
 
-    const url = `${METEO_BASE_URL}/${start}--${end}:PT1H/${paramStr}/${lat},${lon}/json?model=${model}`;
-
-    const res = await axios.get(url, {
-      auth: { username: USER, password: PASS },
-      timeout: 20000,
-    });
-
-    return res.data.data.reduce((acc, cur) => {
-      acc[cur.parameter] = cur.coordinates[0].dates.map((d) => ({
-        date: d.date,
-        value: d.value,
-      }));
-      return acc;
-    }, {});
-  } catch (err) {
-    console.error(`❌ Meteomatics ${model} error:`, err.message);
-    return null;
-  }
+  return {
+    source: `Meteomatics (${model})`,
+    temperature: data["t_2m:C"] || [],
+    temperature_max: data["t_max_2m_24h:C"] || [],
+    temperature_min: data["t_min_2m_24h:C"] || [],
+    precipitation: data["precip_1h:mm"] || [],
+    humidity: data["relative_humidity_2m:p"] || [],
+    pressure: data["msl_pressure:hPa"] || [],
+    wind: data["wind_speed_10m:ms"] || [],
+    wind_dir: data["wind_dir_10m:d"] || [],
+    wind_gusts: data["wind_gusts_10m_1h:ms"] || [],
+    snow_depth: data["snow_depth:cm"] || []
+  };
 }
-
-// ✅ Double export : nommé + défaut
-export { fetchMeteomatics };
-export default fetchMeteomatics;
