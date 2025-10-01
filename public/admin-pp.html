@@ -2,80 +2,236 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Console Admin – Centrale Nucléaire Météo</title>
+  <meta name="robots" content="noindex,nofollow" />
   <style>
-    body { font-family: Arial, sans-serif; background: #0b0f17; color: #e0e0e0; }
-    header { background: #111; padding: 15px; text-align: center; font-size: 1.4em; }
-    .btn-run { background: #28a745; border: none; padding: 15px 30px; font-size: 1.2em; cursor: pointer; border-radius: 8px; }
-    .logs { background: #1c1f26; padding: 10px; height: 250px; overflow-y: scroll; font-size: 0.9em; }
-    .status { display: flex; gap: 10px; margin: 15px 0; }
-    .status-item { padding: 10px; border-radius: 6px; flex: 1; text-align: center; }
-    .ok { background: #155724; color: #d4edda; }
-    .fail { background: #721c24; color: #f8d7da; }
-    .running { background: #856404; color: #fff3cd; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #161b22;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    nav a {
+      color: #58a6ff;
+      margin: 0 10px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover { text-decoration: underline; }
+    h1 { color: #58a6ff; margin: 10px 0; text-align: center; }
+    .section {
+      margin: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      background: #161b22;
+    }
+    button {
+      background: #d73a49;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .status-red { color: #ff4d4d; }
+    .status-orange { color: #ffae42; }
+    .status-green { color: #4caf50; }
+    .logs { max-height: 250px; overflow-y: auto; font-family: monospace; background:#0d1117; padding:10px; border-radius:6px;}
+    .log-entry { margin-bottom: 6px; }
+    .alert { padding: 8px; margin: 5px 0; border-radius: 6px; }
+    .primeur { background: #9e6ffe33; }
+    .tovalidate { background: #f39c1233; }
+    .auto { background: #2ecc7133; }
+    footer { text-align:center; margin:20px 0; font-size:12px; opacity:0.7; }
   </style>
 </head>
 <body>
-  <header>⚡ Console Admin – Centrale Nucléaire Météo</header>
-
-  <section>
-    <button class="btn-run" onclick="runGlobal()">🚀 Lancer RUN Global</button>
-  </section>
-
-  <section class="status" id="checklist">
-    <div class="status-item running" id="sources">📡 Sources</div>
-    <div class="status-item running" id="hires">🌍 HRRR/AROME</div>
-    <div class="status-item running" id="alerts">⚡ Alertes</div>
-    <div class="status-item running" id="db">💾 Sauvegarde</div>
-  </section>
-
-  <section>
-    <h3>📋 Logs en direct</h3>
-    <div class="logs" id="logs"></div>
-  </section>
-
-  <section>
-    <h3>🚨 Dernières Alertes</h3>
-    <ul id="alerts-list"></ul>
-  </section>
-
-  <section>
-    <h3>👥 Utilisateurs par zones</h3>
-    <div id="users"></div>
-  </section>
-
+  <!-- ✅ Protection simple -->
   <script>
-    async function runGlobal() {
-      await fetch('/api/run-global', { method: 'POST' });
+    const code = prompt("Entrez le code d'accès :");
+    if (code !== "202679") {
+      document.body.innerHTML = "<h2 style='color:red;text-align:center;'>⛔ Accès refusé</h2>";
+      throw new Error("Code incorrect");
     }
+  </script>
 
-    // 📡 Logs en direct via SSE
-    const logBox = document.getElementById("logs");
-    const evtSource = new EventSource("/api/logs/stream");
-    evtSource.onmessage = function(e) {
-      const logs = JSON.parse(e.data);
-      logBox.innerHTML = logs.map(l => `<div>[${l.timestamp}] ${l.message}</div>`).join("");
-      logBox.scrollTop = logBox.scrollHeight;
-    };
+  <!-- ✅ Header -->
+  <header>
+    <h2>⚡ Centrale Nucléaire Météo – Admin</h2>
+    <nav>
+      <a href="admin-pp.html">Console</a>
+      <a href="admin-alerts.html">Alertes</a>
+      <a href="admin-chat.html">Chat</a>
+      <a href="admin-radar.html">Radar</a>
+      <a href="admin-index.html">Vue Index</a>
+      <a href="admin-infos.html">Infos</a>
+      <a href="admin-users.html">Utilisateurs</a>
+    </nav>
+  </header>
 
-    // ✅ Moteur état + checklist
-    async function refreshEngine() {
-      const res = await fetch("/api/engine-state");
-      const state = await res.json();
+  <h1>🚀 Console principale</h1>
 
-      document.getElementById("sources").className = "status-item " + (state.sourcesOk ? "ok" : "fail");
-      document.getElementById("hires").className = "status-item " + (state.hiresOk ? "ok" : "fail");
-      document.getElementById("alerts").className = "status-item " + (state.alertsOk ? "ok" : "fail");
-      document.getElementById("db").className = "status-item " + (state.dbOk ? "ok" : "fail");
+  <!-- 🚀 Bouton Run -->
+  <div class="section" style="text-align:center;">
+    <button id="runButton">🚀 Lancer la Centrale (Global + Continental)</button>
+    <div id="runStatus"></div>
+  </div>
 
-      // 🚨 Alertes avec note HRRR/AROME/standard
-      const alertsRes = await fetch("/api/alerts");
-      const alertsData = await alertsRes.json();
-      document.getElementById("alerts-list").innerHTML =
-        alertsData.alerts.map(a => `<li>${a.country} ${a.region || ""} → ${a.data?.type || "?"} | Note: ${a.note || "Standard"}</li>`).join("");
+  <!-- 📋 Checklist -->
+  <div class="section">
+    <h2>📋 Checklist moteur</h2>
+    <ul id="checklist">
+      <li id="step-models">Extraction modèles</li>
+      <li id="step-europe">RUNGLOBAL Europe</li>
+      <li id="step-usa">RUNGLOBAL USA</li>
+      <li id="step-continental">RUN Continentales</li>
+      <li id="step-files">Mise sous fichier</li>
+      <li id="step-analysis">Analyse IA (relief, climat, environnement)</li>
+      <li id="step-forecasts">Prévisions locales/nationales</li>
+      <li id="step-local-alerts">Alertes locales/nationales</li>
+      <li id="step-continental-alerts">Alertes continentales</li>
+      <li id="step-country-view">Vue par pays (zones couvertes)</li>
+    </ul>
+  </div>
+
+  <!-- 📜 Logs -->
+  <div class="section">
+    <h2>📜 Logs en direct</h2>
+    <div id="logs" class="logs"></div>
+  </div>
+
+  <!-- 🚨 Alertes -->
+  <div class="section">
+    <h2>🚨 Alertes</h2>
+    <div id="alerts"><p>Aucune alerte détectée.</p></div>
+  </div>
+
+  <!-- 👥 Utilisateurs -->
+  <div class="section">
+    <h2>👥 Utilisateurs par zones</h2>
+    <div id="users"><p>Chargement…</p></div>
+  </div>
+
+  <footer>
+    © Tinsflash – Système J.E.A.N. by Pydaris – Reproduction interdite
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const runBtn = document.getElementById("runButton");
+    const runStatus = document.getElementById("runStatus");
+
+    // 🚀 Run
+    runBtn.addEventListener("click", async () => {
+      runBtn.disabled = true;
+      runBtn.textContent = "⏳ Lancement en cours...";
+      runBtn.style.background = "#ffae42";
+      try {
+        await fetch("/api/run-global", { method: "POST" });
+        await fetch("/api/run-continental", { method: "POST" });
+        runBtn.textContent = "RUNNING...";
+        runBtn.style.background = "#d73a49";
+      } catch (err) {
+        runStatus.innerHTML = "<div style='color:red'>❌ Erreur lancement</div>";
+        runBtn.disabled = false;
+      }
+    });
+
+    // 📋 Checklist (poll API)
+    async function fetchEngineState() {
+      try {
+        const res = await fetch("/api/engine-state");
+        const state = await res.json();
+        const steps = {
+          models: "step-models",
+          europe: "step-europe",
+          usa: "step-usa",
+          continental: "step-continental",
+          files: "step-files",
+          analysis: "step-analysis",
+          forecasts: "step-forecasts",
+          localAlerts: "step-local-alerts",
+          continentalAlerts: "step-continental-alerts",
+          countryView: "step-country-view"
+        };
+        for (const [key, id] of Object.entries(steps)) {
+          const li = document.getElementById(id);
+          if (!li) continue;
+          if (state[key] === "pending") li.className = "status-red";
+          else if (state[key] === "running") li.className = "status-orange";
+          else if (state[key] === "done") li.className = "status-green";
+        }
+      } catch (e) { console.warn("⚠️ Engine state error", e); }
     }
+    setInterval(fetchEngineState, 5000);
 
-    setInterval(refreshEngine, 5000);
+    // 📜 Logs
+    const logsDiv = document.getElementById("logs");
+    const socket = io();
+    socket.on("log", msg => {
+      const div = document.createElement("div");
+      div.classList.add("log-entry");
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logsDiv.prepend(div);
+    });
+
+    // 🚨 Alertes
+    async function fetchAlerts() {
+      try {
+        const res = await fetch("/api/alerts");
+        const data = await res.json();
+        const alertsDiv = document.getElementById("alerts");
+        alertsDiv.innerHTML = "";
+        if (!data.alerts || !data.alerts.length) {
+          alertsDiv.innerHTML = "<p>Aucune alerte détectée.</p>";
+          return;
+        }
+        data.alerts.forEach(a => {
+          const div = document.createElement("div");
+          div.classList.add("alert");
+          if (a.category === "primeur") div.classList.add("primeur");
+          else if (a.category === "to-validate") div.classList.add("tovalidate");
+          else div.classList.add("auto");
+          div.innerHTML = `<strong>${a.type}</strong> – Zone: ${a.zone} – Fiabilité: ${a.reliability}%`;
+          alertsDiv.appendChild(div);
+        });
+      } catch (e) { console.warn("⚠️ Alert error", e); }
+    }
+    setInterval(fetchAlerts, 7000);
+
+    // 👥 Utilisateurs
+    async function fetchUsers() {
+      try {
+        const res = await fetch("/api/users");
+        const data = await res.json();
+        const usersDiv = document.getElementById("users");
+        usersDiv.innerHTML = "";
+        if (!data.users || !data.users.length) {
+          usersDiv.innerHTML = "<p>Aucun utilisateur.</p>";
+          return;
+        }
+        const grouped = {};
+        data.users.forEach(u => {
+          grouped[u.zone] = (grouped[u.zone] || 0) + 1;
+        });
+        for (const [zone, count] of Object.entries(grouped)) {
+          const p = document.createElement("p");
+          p.textContent = `${zone}: ${count} utilisateurs`;
+          usersDiv.appendChild(p);
+        }
+      } catch (e) { console.warn("⚠️ Users error", e); }
+    }
+    setInterval(fetchUsers, 15000);
   </script>
 </body>
 </html>
