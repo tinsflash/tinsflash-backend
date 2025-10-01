@@ -29,7 +29,13 @@ async function getNationalForecast(country) {
         country,
         forecast: sf.forecast || "⚠️ Pas de données",
         sources: sf.sources || null,
-        enriched: sf.enriched || null, // ✅ ajustements + anomalies
+        enriched: sf.enriched || null,
+        note:
+          country === "USA"
+            ? "⚡ HRRR intégré (précision USA)"
+            : ["FR", "BE"].includes(country)
+            ? "⚡ AROME intégré (précision France/Belgique)"
+            : "Sources standards (GFS/ECMWF/ICON/Meteomatics)",
       };
     }
 
@@ -53,6 +59,12 @@ async function getLocalForecast(lat, lon, country) {
         forecast: sf.forecast,
         sources: sf.sources,
         enriched: sf.enriched || null,
+        note:
+          country === "USA"
+            ? "⚡ HRRR intégré (précision USA)"
+            : ["FR", "BE"].includes(country)
+            ? "⚡ AROME intégré (précision France/Belgique)"
+            : "Sources standards (GFS/ECMWF/ICON/Meteomatics)",
       };
     }
     // ⚠️ Fallback si hors zones couvertes
