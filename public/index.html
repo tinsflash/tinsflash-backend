@@ -17,6 +17,9 @@
       font-family: Arial, sans-serif;
       background: #f3f4f6;
       color: #111827;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
     header {
       position: relative;
@@ -37,6 +40,7 @@
       text-shadow: 2px 2px 8px black;
     }
     main {
+      flex: 1;
       padding: 1rem;
       max-width: 1200px;
       margin: auto;
@@ -48,12 +52,17 @@
       font-size: 1.4rem;
       color: #1e3a8a;
     }
-    .forecast, .alerts, .radar {
+    .forecast, .alerts, .radar, .intro {
       background: white;
       padding: 1rem;
       border-radius: 8px;
       margin-top: 1rem;
       box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .intro {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #1f2937;
     }
     .forecast-day {
       display: flex;
@@ -85,6 +94,17 @@
       cursor: pointer;
       z-index: 9999;
     }
+    footer {
+      background: #111827;
+      color: #e5e7eb;
+      text-align: center;
+      padding: 1rem;
+      font-size: .9rem;
+    }
+    footer a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
   </style>
 
   <!-- Lottie Avatar -->
@@ -99,6 +119,24 @@
   </header>
 
   <main>
+    <!-- Bloc d'introduction -->
+    <section class="intro">
+      <p>
+        Bienvenue sur <strong>TINSFLASH</strong>, la première centrale météo mondiale propulsée par 
+        <strong>le système J.E.A.N.</strong>.  
+      </p>
+      <p>
+        Nos prévisions sont uniques car elles croisent <strong>tous les modèles météorologiques mondiaux</strong> 
+        avec des données locales de <strong>relief, climat, rivières et stations</strong>.  
+        Résultat : des prévisions <strong>les plus fiables et les plus précises au monde</strong>, 
+        avec des <strong>alertes anticipées</strong> souvent avant les autres organismes.
+      </p>
+      <p>
+        Grâce à notre moteur IA, nous offrons un niveau de précision qui fait frissonner la NASA 
+        et pleurer les supercalculateurs météorologiques traditionnels 🌩️.
+      </p>
+    </section>
+
     <div class="ads">
       <!-- Bandeau pub haut -->
       <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8204947691352732" data-ad-slot="9437146866" data-ad-format="auto"></ins>
@@ -146,11 +184,16 @@
     </lottie-player>
   </div>
 
+  <footer>
+    © 2025 TINSFLASH – System J.E.A.N by <strong>Pydaris</strong> <br>
+    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 
+    📱 <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77 (WhatsApp)</a>
+  </footer>
+
   <script>
-    // === Local forecast (géoloc + moteur)
     async function loadForecast() {
       try {
-        let lat = 50.85, lon = 4.35, country = "BE"; // défaut Bruxelles
+        let lat = 50.85, lon = 4.35, country = "BE";
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(async (pos) => {
             lat = pos.coords.latitude;
@@ -175,14 +218,12 @@
       document.getElementById("local-forecast").innerText = data.forecast || "Pas de données locales.";
     }
 
-    // === National forecast
     async function loadNational() {
       const res = await fetch("/api/forecast/BE");
       const data = await res.json();
       document.getElementById("national-forecast").innerText = JSON.stringify(data, null, 2);
     }
 
-    // === Alerts
     async function loadAlerts() {
       const res = await fetch("/api/alerts");
       const data = await res.json();
@@ -199,7 +240,6 @@
       }
     }
 
-    // === J.E.A.N. avatar (Cohere)
     document.getElementById("avatar-papa").addEventListener("click", async () => {
       const q = prompt("Pose ta question météo à J.E.A.N 🌦️");
       if (!q) return;
@@ -216,13 +256,11 @@
       }
     });
 
-    // Refresh régulier
     loadForecast();
     loadNational();
     loadAlerts();
     setInterval(loadAlerts, 60000);
 
-    // Service Worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/service-worker.js")
         .then(() => console.log("🔔 Service Worker enregistré"))
