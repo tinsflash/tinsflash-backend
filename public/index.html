@@ -76,7 +76,7 @@
     <div id="alerts"></div>
 
     <h2>🌍 Radar météo (Windy)</h2>
-    <iframe id="radar" src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&width=650&height=400&zoom=5&level=surface&overlay=rain&product=ecmwf&menu=&message=true&marker=true&calendar=&pressure=&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
+    <iframe id="radar" src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=5&overlay=rain&product=ecmwf&marker=true&detail=true"></iframe>
   </main>
 
   <div style="background:#ddd;text-align:center;padding:8px;">[Google Ads Footer]</div>
@@ -94,6 +94,7 @@
   </div>
 
   <script>
+    // Charger prévisions
     async function loadForecast(lat=50.5, lon=4.5){
       const country=document.getElementById("country").value;
       const localDiv=document.getElementById("local-forecast");
@@ -115,12 +116,13 @@
 
         // Mise à jour radar Windy
         document.getElementById("radar").src =
-          `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=650&height=400&zoom=6&level=surface&overlay=rain&product=ecmwf&marker=true&detail=true`;
+          `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=6&overlay=rain&product=ecmwf&marker=true&detail=true`;
       }catch(e){
         localDiv.innerHTML=nationalDiv.innerHTML=alertsDiv.innerHTML="❌ Erreur: "+e.message;
       }
     }
 
+    // Géolocalisation
     function geolocate(){
       if(navigator.geolocation){
         navigator.geolocation.getCurrentPosition(
