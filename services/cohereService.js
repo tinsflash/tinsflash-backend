@@ -6,12 +6,6 @@ import fetch from "node-fetch";
 const COHERE_API_KEY = process.env.COHERE_API_KEY;
 const COHERE_URL = "https://api.cohere.ai/v1/chat";
 
-/**
- * Pose une question météo simple à J.E.A.N. (Cohere)
- * @param {string} question - La question de l'utilisateur
- * @param {string} category - Contexte ("grand public", par défaut)
- * @returns {Promise<string>}
- */
 export async function askCohere(question, category = "grand public") {
   try {
     if (!COHERE_API_KEY) {
@@ -25,11 +19,11 @@ export async function askCohere(question, category = "grand public") {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r",   // modèle rapide cohère
+        model: "command-r-plus", // ⚡ version cohérente et performante
         messages: [
-          { role: "system", content: `Tu es J.E.A.N., assistant météo grand public. Catégorie: ${category}. Sois concis et clair.` },
-          { role: "user", content: question }
-        ]
+          { role: "system", content: "Tu es J.E.A.N., conseiller météo public." },
+          { role: "user", content: `Catégorie: ${category}\nQuestion: ${question}` }
+        ],
       }),
     });
 
@@ -38,10 +32,7 @@ export async function askCohere(question, category = "grand public") {
     }
 
     const data = await response.json();
-
-    // Nouveau format Cohere : data.output.text
-    const reply = data?.text || data?.output?.text || "❌ Pas de réponse de J.E.A.N.";
-    return reply;
+    return data?.text || data?.message?.content || "❌ Pas de réponse de J.E.A.N.";
   } catch (err) {
     console.error("⚠️ Cohere error:", err.message);
     return `Erreur J.E.A.N.: ${err.message}`;
