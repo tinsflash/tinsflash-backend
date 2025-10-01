@@ -10,6 +10,8 @@ import nasaSat from "./nasaSat.js";
 import copernicus from "./copernicusService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
+import hrrr from "./hrrr.js";          // 🇺🇸 HRRR (NOAA, USA only)
+import arome from "./arome.js";        // 🇫🇷🇧🇪 AROME (France/Belgique via Meteomatics)
 import { askOpenAI } from "./openaiService.js";
 import {
   addEngineLog,
@@ -56,6 +58,8 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       copernicusData,
       trullemansData,
       wetterzentraleData,
+      hrrrData,
+      aromeData,
     ] = await Promise.allSettled([
       gfs({ lat, lon, country }),
       ecmwf({ lat, lon, country }),
@@ -65,6 +69,8 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       copernicus("reanalysis-era5-land", copernicusRequest),
       trullemans({ lat, lon, country }),
       wetterzentrale({ lat, lon, country }),
+      hrrr(lat, lon),   // ✅ HRRR pour USA
+      arome(lat, lon),  // ✅ AROME pour FR/BE
     ]);
 
     const sources = {
@@ -76,6 +82,8 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       copernicus: copernicusData.value ?? { error: copernicusData.reason?.message },
       trullemans: trullemansData.value ?? { error: trullemansData.reason?.message },
       wetterzentrale: wetterzentraleData.value ?? { error: wetterzentraleData.reason?.message },
+      hrrr: hrrrData.value ?? { error: hrrrData.reason?.message },
+      arome: aromeData.value ?? { error: aromeData.reason?.message },
     };
     addEngineLog("✅ Sources météo collectées");
 
@@ -109,7 +117,11 @@ Sources principales:
 - NASA POWER / Satellites: ${JSON.stringify(sources.nasaSat)}
 - Copernicus ERA5: ${JSON.stringify(sources.copernicus)}
 
-Données comparatives:
+Données complémentaires (selon zone):
+- HRRR (USA): ${JSON.stringify(sources.hrrr)}
+- AROME (FR/BE): ${JSON.stringify(sources.arome)}
+
+Benchmarks (comparatif fiabilité uniquement):
 - Trullemans: ${JSON.stringify(sources.trullemans)}
 - Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
 
@@ -119,7 +131,7 @@ Ajustements appliqués:
 - Anomalies saisonnières: ${JSON.stringify(anomaly)}
 
 Consignes IA:
-- Croiser et fusionner uniquement les données principales.
+- Croiser et fusionner uniquement les données principales (GFS, ECMWF, ICON, Meteomatics, NASA, Copernicus, HRRR, AROME).
 - Comparer avec Trullemans/Wetterzentrale uniquement pour calibrer la fiabilité.
 - Fournir un bulletin détaillé: températures, précipitations, vent, risques météo.
 - Horizon: aujourd'hui + 7 jours.
