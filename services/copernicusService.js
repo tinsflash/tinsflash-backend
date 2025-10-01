@@ -1,15 +1,18 @@
 // PATH: services/copernicusService.js
-// Copernicus Climate Data Store (ERA5) – enrichi pour cohérence moteur nucléaire météo
+// Copernicus Climate Data Store (ERA5) – hourly enrichi pour cohérence moteur nucléaire météo
 
 import fetch from "node-fetch";
 
 /**
- * Service Copernicus ERA5 enrichi
- * @param {string} dataset - Nom du dataset (par défaut: "reanalysis-era5-land")
+ * Service Copernicus ERA5 (hourly)
+ * @param {string} dataset - Nom du dataset (par défaut: "reanalysis-era5-single-levels")
  * @param {object} requestBody - Corps de la requête JSON (préparé par superForecast.js)
  * @returns {object} Données Copernicus formatées
  */
-export default async function copernicus(dataset = "reanalysis-era5-land", requestBody = {}) {
+export default async function copernicus(
+  dataset = "reanalysis-era5-single-levels",
+  requestBody = {}
+) {
   try {
     if (!process.env.CDS_API_KEY || !process.env.CDS_API_URL) {
       throw new Error("❌ CDS_API_KEY ou CDS_API_URL manquant dans .env");
@@ -18,6 +21,7 @@ export default async function copernicus(dataset = "reanalysis-era5-land", reque
     // Auth Copernicus
     const auth = Buffer.from(process.env.CDS_API_KEY).toString("base64");
 
+    // Appel API Copernicus
     const response = await fetch(`${process.env.CDS_API_URL}/resources/${dataset}`, {
       method: "POST",
       headers: {
@@ -39,7 +43,7 @@ export default async function copernicus(dataset = "reanalysis-era5-land", reque
     const params = raw.properties?.parameter || {};
     const dates = Object.keys(params?.["2m_temperature"] || {});
 
-    // 🔎 Harmonisation des sorties
+    // 🔎 Harmonisation des sorties horaires
     const forecasts = dates.map((date) => ({
       date,
       temperature: params["2m_temperature"]?.[date] ?? null,
@@ -50,7 +54,7 @@ export default async function copernicus(dataset = "reanalysis-era5-land", reque
     }));
 
     return {
-      source: "Copernicus ERA5",
+      source: "Copernicus ERA5 (hourly)",
       dataset,
       forecasts,
     };
