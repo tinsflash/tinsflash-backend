@@ -16,6 +16,10 @@ import { applyGeoFactors } from "./geoFactors.js";      // ✅ export nommé
 import adjustWithLocalFactors from "./localFactors.js"; // saison/spatial
 import forecastVision from "./forecastVision.js";       // anomalies saisonnières
 
+// Nouvelles sources haute résolution
+import hrrr from "./hrrr.js";   // 🇺🇸 HRRR (NOAA, USA only)
+import arome from "./arome.js"; // 🇫🇷🇧🇪 AROME (France/Belgique)
+
 let activeAlerts = [];
 
 /** 🔎 Génération des alertes (zones couvertes + continentales) */
@@ -35,8 +39,16 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       fetchStationData(lat, lon, country, region),
     ]);
 
+    // 2️⃣bis 🔥 Sources haute résolution
+    let hiRes = null;
+    if (country === "USA") {
+      hiRes = await hrrr(lat, lon);
+    } else if (["FR", "BE"].includes(country)) {
+      hiRes = await arome(lat, lon);
+    }
+
     // 3️⃣ Enrichissements relief/saison/anomalies
-    let enriched = { snow, rain, wind, stations, detectorResults };
+    let enriched = { snow, rain, wind, stations, detectorResults, hiRes };
     enriched = await applyGeoFactors(enriched, lat, lon, country);
     enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
 
@@ -53,6 +65,8 @@ ${JSON.stringify(enriched, null, 2)}
 
 Consignes :
 - Croiser toutes les données (neige, pluie, vent, stations, détecteur multi-modèles).
+- Si USA → intégrer HRRR.
+- Si France/Belgique → intégrer AROME.
 - Ajuster selon relief, climat, altitude et saison.
 - Tenir compte des anomalies saisonnières détectées (${JSON.stringify(anomaly)}).
 - Déterminer si une alerte doit être générée.
@@ -80,6 +94,11 @@ Consignes :
       continent,
       data: classified,
       timestamp: new Date().toISOString(),
+      note: country === "USA"
+        ? "⚡ HRRR intégré (alertes haute résolution USA)"
+        : ["FR", "BE"].includes(country)
+        ? "⚡ AROME intégré (alertes haute résolution FR/BE)"
+        : "Sources standard (multi-modèles + stations)",
     };
 
     activeAlerts.push(alert);
