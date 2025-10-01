@@ -1,52 +1,24 @@
 // services/gfs.js
-// 🌍 GFS (NOAA NOMADS) – extraction directe
-// Variables : température 2m, précipitations, vent 10m
+// 🔗 GFS via Meteomatics — enrichi (7 jours, variables multiples)
 
-import fetch from "node-fetch";
+import { fetchMeteomatics } from "../services/meteomatics.js";
 
 export default async function gfs(lat, lon) {
-  try {
-    // Round coords à 2 décimales (NOAA grille = 0.25°)
-    const latRounded = Math.round(lat * 4) / 4;
-    const lonRounded = Math.round(lon * 4) / 4;
+  const data = await fetchMeteomatics([], lat, lon, "gfs");
 
-    // URL NOMADS (dernier run dispo)
-    // Exemple : https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20250930/00/atmos/
-    const now = new Date();
-    const yyyy = now.getUTCFullYear();
-    const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(now.getUTCDate()).padStart(2, "0");
-    const hh = ["00", "06", "12", "18"][Math.floor(now.getUTCHours() / 6)];
-    const baseUrl = `https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${yyyy}${mm}${dd}/${hh}/atmos`;
+  if (!data) return { source: "GFS (Meteomatics)", error: "Pas de données" };
 
-    // On cible les GRIB2 réduits (pgrb2.0p25)
-    const url = `${baseUrl}/gfs.t${hh}z.pgrb2.0p25.f000`;
-
-    // ⚠️ Ici, parsing GRIB2 direct serait lourd → on passe par NOAA API JSON
-    // Alternative NOAA API: https://api.weather.gov/points/{lat},{lon}
-    const pointUrl = `https://api.weather.gov/points/${latRounded},${lonRounded}`;
-
-    const pointRes = await fetch(pointUrl);
-    if (!pointRes.ok) throw new Error(`NOAA point API error: ${pointRes.status}`);
-    const pointData = await pointRes.json();
-
-    const forecastUrl = pointData.properties.forecastGridData;
-    const forecastRes = await fetch(forecastUrl);
-    if (!forecastRes.ok) throw new Error(`NOAA forecast API error: ${forecastRes.status}`);
-    const forecast = await forecastRes.json();
-
-    // Extraction simplifiée
-    const temperature = forecast.properties.temperature?.values || [];
-    const precipitation = forecast.properties.quantitativePrecipitation?.values || [];
-    const wind = forecast.properties.windSpeed?.values || [];
-
-    return {
-      source: "GFS (NOAA NOMADS)",
-      temperature,
-      precipitation,
-      wind,
-    };
-  } catch (err) {
-    return { source: "GFS (NOAA NOMADS)", error: err.message };
-  }
+  return {
+    source: "GFS (Meteomatics)",
+    temperature: data["t_2m:C"] || [],
+    temperature_max: data["t_max_2m_24h:C"] || [],
+    temperature_min: data["t_min_2m_24h:C"] || [],
+    precipitation: data["precip_1h:mm"] || [],
+    humidity: data["relative_humidity_2m:p"] || [],
+    pressure: data["msl_pressure:hPa"] || [],
+    wind: data["wind_speed_10m:ms"] || [],
+    wind_dir: data["wind_dir_10m:d"] || [],
+    wind_gusts: data["wind_gusts_10m_1h:ms"] || [],
+    snow_depth: data["snow_depth:cm"] || []
+  };
 }
