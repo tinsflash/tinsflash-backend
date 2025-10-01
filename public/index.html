@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – Prévisions et alertes météo les plus précises du monde</title>
+  <title>TINSFLASH – Prévisions et alertes météo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google Ads -->
@@ -188,7 +188,7 @@
       const data = await res.json();
       const div = document.getElementById("alerts");
       div.innerHTML = "";
-      if (data.length === 0) {
+      if (!data || data.length === 0) {
         div.innerText = "Aucune alerte active.";
       } else {
         data.forEach(a => {
@@ -221,6 +221,13 @@
     loadNational();
     loadAlerts();
     setInterval(loadAlerts, 60000);
+
+    // Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js")
+        .then(() => console.log("🔔 Service Worker enregistré"))
+        .catch(err => console.error("❌ SW error:", err));
+    }
   </script>
 </body>
 </html>
