@@ -43,6 +43,9 @@ import * as adminLogs from "./services/adminLogs.js";
 import verifyRouter from "./services/verifyRouter.js";  
 app.use("/api/verify", verifyRouter);  
 
+// ✅ Cohere service (J.E.A.N. public)  
+import { askCohere } from "./services/cohereService.js";  
+
 // Helper safeCall  
 const safeCall = async (fn, ...args) =>  
   typeof fn === "function" ? await fn(...args) : null;  
@@ -236,6 +239,20 @@ app.get("/api/news", async (req, res) => {
 app.get("/api/users", async (req, res) => {  
   try {  
     res.json({ success: true, users: await safeCall(userService.getUsers) });  
+  } catch (e) {  
+    res.status(500).json({ success: false, error: e.message });  
+  }  
+});  
+
+// ✅ Chat public J.E.A.N. (Index public via Cohere)  
+app.post("/api/jean", async (req, res) => {  
+  try {  
+    const { message } = req.body;  
+    if (!message) {  
+      return res.status(400).json({ success: false, error: "Message manquant" });  
+    }  
+    const reply = await askCohere(message);  
+    res.json({ success: true, reply });  
   } catch (e) {  
     res.status(500).json({ success: false, error: e.message });  
   }  
