@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assistant météo J.E.A.N.</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f6fa;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #1e40af;
+    }
+    #jean-assistant {
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    input, button {
+      font-size: 16px;
+    }
+    input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: bold;
+    }
+    button.send { background: #2563eb; color: white; }
+    button.mic { background: #059669; color: white; }
+    button.speak { background: #7c3aed; color: white; margin-top: 10px; width: 100%; }
+    #jean-answer {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      min-height: 60px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h1>💬 Assistant météo J.E.A.N.</h1>
+
+  <div id="jean-assistant">
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+      <input id="question" type="text" placeholder="Posez votre question météo..." />
+      <button class="send" onclick="askJean()">Envoyer</button>
+      <button class="mic" onclick="startVoice()">🎤</button>
+    </div>
+
+    <div id="jean-answer">👨‍🔬 J.E.A.N. est prêt à vous aider 🌤️</div>
+
+    <button class="speak" onclick="speakAnswer()">🔊 Faire parler J.E.A.N.</button>
+  </div>
+
+  <script>
+    async function askJean() {
+      const q = document.getElementById("question").value;
+      if (!q) return;
+      document.getElementById("jean-answer").innerText = "⏳ J.E.A.N. réfléchit...";
+      try {
+        const res = await fetch("/api/cohere", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: q, category: "grand public" }),
+        });
+        const data = await res.json();
+        const answer = data.answer || "❌ Pas de réponse de J.E.A.N.";
+        document.getElementById("jean-answer").innerText = "👨‍🔬 J.E.A.N. : " + answer;
+        speakAnswer(answer); // lecture auto après chaque réponse
+      } catch (e) {
+        document.getElementById("jean-answer").innerText = "❌ Erreur : " + e.message;
+      }
+    }
+
+    // 🎤 Reconnaissance vocale (Chrome/Edge)
+    function startVoice() {
+      if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+        alert("Votre navigateur ne supporte pas la reconnaissance vocale.");
+        return;
+      }
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "fr-FR";
+      recognition.start();
+      recognition.onresult = (event) => {
+        document.getElementById("question").value = event.results[0][0].transcript;
+        askJean();
+      };
+    }
+
+    // 🔊 Lecture vocale (voix masculine grave si dispo)
+    function speakAnswer(forcedText) {
+      const text = forcedText || document.getElementById("jean-answer").innerText;
+      if (!text) return;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "fr-FR";
+      // Choisir une voix masculine grave si dispo
+      const voices = speechSynthesis.getVoices();
+      const maleVoice = voices.find(v =>
+        v.lang.startsWith("fr") && /homme|male|Paul|Thomas|Hervé|Loïc/i.test(v.name)
+      );
+      if (maleVoice) {
+        utterance.voice = maleVoice;
+      }
+      utterance.rate = 0.9; // plus posé
+      utterance.pitch = 0.8; // voix plus grave
+
+      speechSynthesis.cancel(); // stop avant de relancer
+      speechSynthesis.speak(utterance);
+    }
+
+    // Précharger les voix
+    speechSynthesis.onvoiceschanged = () => {};
+  </script>
+</body>
+</html>
