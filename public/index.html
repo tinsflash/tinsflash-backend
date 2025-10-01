@@ -2,205 +2,163 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – Prévisions & Alertes météo</title>
+  <title>TINSFLASH – Prévisions et Alertes météo IA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8204947691352732" crossorigin="anonymous"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+  </script>
 
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f8f9fa;
+      background: #f3f4f6;
       color: #111;
     }
     header {
       position: relative;
-      text-align: center;
-      color: white;
+      height: 250px;
+      overflow: hidden;
     }
     header video {
       width: 100%;
-      height: auto;
+      height: 100%;
       object-fit: cover;
-      max-height: 280px;
     }
     header h1 {
       position: absolute;
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 1.8rem;
-      background: rgba(0,0,0,0.5);
-      padding: .5rem 1rem;
-      border-radius: 6px;
-    }
-    #soundBtn {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      background: rgba(30,58,138,0.8);
+      left: 20px;
       color: white;
-      border: none;
-      border-radius: 50%;
-      width: 45px;
-      height: 45px;
-      cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 2rem;
+      text-shadow: 0 0 8px rgba(0,0,0,0.8);
     }
     main {
-      max-width: 1100px;
+      padding: 20px;
+      max-width: 1200px;
       margin: auto;
-      padding: 1rem;
-    }
-    section {
-      background: white;
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,.1);
     }
     h2 {
-      font-size: 1.2rem;
-      border-bottom: 2px solid #e5e7eb;
-      padding-bottom: .4rem;
-      margin-bottom: .8rem;
-      color: #1e3a8a;
+      color: #2563eb;
+      margin-top: 40px;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 5px;
     }
-    .current {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      font-size: 1.2rem;
-    }
-    .forecast-day {
+    .forecast-section {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
-      gap: .8rem;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+    .forecast-card {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
       text-align: center;
     }
-    .forecast-item {
-      background: #f3f4f6;
-      border-radius: 6px;
-      padding: .5rem;
+    .forecast-card img {
+      width: 60px;
+      margin-bottom: 5px;
     }
-    .forecast-item img {
-      width: 40px;
-      height: 40px;
+    .ads {
+      margin: 20px 0;
+      text-align: center;
     }
     iframe {
       border: none;
-      width: 100%;
-      height: 450px;
-      border-radius: 10px;
     }
-    .ads {
-      text-align: center;
-      margin: 1rem 0;
-    }
-    footer {
-      text-align: center;
-      font-size: .8rem;
-      color: #555;
-      padding: 1rem;
-    }
-    /* === Bulle J.E.A.N. === */
-    #jean-bubble {
+    /* Chat J.E.A.N */
+    #avatar-papa {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: #1e3a8a;
-      color: white;
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
+      width: 120px;
+      height: 120px;
       cursor: pointer;
-      box-shadow: 0 0 10px rgba(0,0,0,.4);
-      animation: pulse 2s infinite;
+      z-index: 9999;
     }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 10px #38bdf8; }
-      50% { box-shadow: 0 0 25px #38bdf8; }
-      100% { box-shadow: 0 0 10px #38bdf8; }
-    }
-    #jean-chat {
+    #chat-jean {
       position: fixed;
-      bottom: 90px;
+      bottom: 160px;
       right: 20px;
       width: 320px;
-      max-height: 450px;
-      background: white;
+      height: 400px;
+      background: #0b0f1a;
+      color: #fff;
       border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,.5);
       display: none;
       flex-direction: column;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      font-family: Arial, sans-serif;
+      z-index: 10000;
     }
-    #jean-messages {
+    #chat-jean header {
+      padding: 10px;
+      background: #111827;
+      font-weight: bold;
+      color: #38bdf8;
+      border-bottom: 1px solid #1f2937;
+    }
+    #messages {
       flex: 1;
-      padding: .5rem;
+      padding: 10px;
       overflow-y: auto;
-      font-size: .9rem;
+      font-size: 0.9rem;
     }
-    #jean-input {
-      display: flex;
-      border-top: 1px solid #ddd;
-    }
-    #jean-input input {
+    #chat-jean input {
       flex: 1;
+      padding: 8px;
       border: none;
-      padding: .5rem;
-      font-size: 1rem;
-    }
-    #jean-input button {
-      border: none;
-      background: #1e3a8a;
+      outline: none;
+      background: #1f2937;
       color: white;
-      padding: 0 .8rem;
+    }
+    #chat-jean button {
+      background:#2563eb;
+      border:none;
+      color:white;
+      padding:8px 12px;
+      cursor:pointer;
     }
   </style>
 </head>
 <body>
+  <!-- Bandeau vidéo -->
   <header>
-    <video id="introVideo" autoplay muted loop playsinline>
+    <video autoplay muted loop playsinline>
       <source src="intro-jean.mp4" type="video/mp4">
-      Votre navigateur ne supporte pas la vidéo.
     </video>
-    <h1>🌍 TINSFLASH – Vos prévisions météo les plus précises</h1>
-    <button id="soundBtn">🔊</button>
+    <h1>TINSFLASH – La météo la plus précise du monde</h1>
   </header>
 
   <main>
-    <section>
-      <h2>🌤 Météo actuelle</h2>
-      <div class="current" id="currentWeather">Chargement...</div>
-    </section>
+    <p>
+      Grâce à notre moteur météorologique révolutionnaire, TINSFLASH fournit
+      <strong>les prévisions locales et nationales les plus fiables au monde</strong>,
+      ainsi que des alertes précises et anticipées.
+    </p>
 
-    <section>
-      <h2>📅 Aujourd'hui</h2>
-      <div class="forecast-day" id="todayForecast">Chargement...</div>
-    </section>
+    <!-- Prévisions locales -->
+    <h2>🌍 Prévisions locales</h2>
+    <div id="localForecast" class="forecast-section">
+      <div>Chargement en cours...</div>
+    </div>
 
-    <section>
-      <h2>📆 Prévisions à 7 jours</h2>
-      <div class="forecast-day" id="weekForecast">Chargement...</div>
-    </section>
+    <!-- Prévisions nationales -->
+    <h2>🇫🇷 Prévisions nationales</h2>
+    <div id="nationalForecast" class="forecast-section">
+      <div>Chargement en cours...</div>
+    </div>
 
-    <section>
-      <h2>🌧 Radar en direct</h2>
-      <iframe src="https://embed.windy.com/embed2.html?lat=50.5&lon=4.5&zoom=6&overlay=rain&marker=true"></iframe>
-    </section>
+    <!-- Radar -->
+    <h2>📡 Radar météo</h2>
+    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&width=100%&height=450&zoom=6&level=surface&overlay=rain&product=ecmwf&menu=&message=true&marker=true&calendar=24&pressure=true&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default&radarRange=-1"
+      width="100%" height="450"></iframe>
 
-    <section>
-      <h2>📝 Analyse automatique</h2>
-      <p id="localForecast">Prévisions locales générées...</p>
-      <p id="nationalForecast">Prévisions nationales générées...</p>
-    </section>
-
+    <!-- Publicité -->
     <div class="ads">
       <ins class="adsbygoogle"
            style="display:block"
@@ -208,75 +166,81 @@
            data-ad-slot="9437146866"
            data-ad-format="auto"
            data-full-width-responsive="true"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
     </div>
   </main>
 
-  <footer>
-    © 2025 TINSFLASH – La météo du futur
-  </footer>
+  <!-- Lottie Avatar J.E.A.N -->
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <div id="avatar-papa">
+    <lottie-player 
+      src="https://assets10.lottiefiles.com/packages/lf20_j1adxtyb.json"
+      background="transparent"
+      speed="1"
+      loop
+      autoplay>
+    </lottie-player>
+  </div>
 
-  <!-- Bulle JEAN -->
-  <div id="jean-bubble">J</div>
-  <div id="jean-chat">
-    <div id="jean-messages"></div>
-    <div id="jean-input">
-      <input type="text" id="jeanText" placeholder="Posez votre question...">
-      <button onclick="sendJean()">OK</button>
+  <!-- Chat J.E.A.N -->
+  <div id="chat-jean">
+    <header>🤖 J.E.A.N. – Assistant météo</header>
+    <div id="messages"></div>
+    <div style="display:flex; border-top:1px solid #1f2937;">
+      <input id="userInput" type="text" placeholder="Pose ta question météo...">
+      <button onclick="sendMessage()">Envoyer</button>
     </div>
   </div>
 
   <script>
-    // Activer/désactiver son vidéo
-    const video = document.getElementById("introVideo");
-    const btn = document.getElementById("soundBtn");
-    btn.onclick = () => {
-      if (video.muted) {
-        video.muted = false;
-        btn.textContent = "🔇";
-      } else {
-        video.muted = true;
-        btn.textContent = "🔊";
-      }
-    };
+    const avatar = document.getElementById("avatar-papa");
+    const chat = document.getElementById("chat-jean");
+    const messages = document.getElementById("messages");
+    const userInput = document.getElementById("userInput");
 
-    // Charger météo
-    async function loadWeather() {
+    avatar.addEventListener("click", () => {
+      chat.style.display = chat.style.display === "flex" ? "none" : "flex";
+    });
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+      addMessage("🧑‍💻", text);
+      userInput.value = "";
+
       try {
-        const res = await fetch("/api/forecast/Belgium");
-        const data = await res.json();
-        document.getElementById("currentWeather").textContent =
-          `Température: ${data?.today?.temp||"??"}°C, Vent: ${data?.today?.wind||"??"} km/h`;
-      } catch(e) {
-        document.getElementById("currentWeather").textContent = "⚠️ Erreur chargement météo.";
-      }
-    }
-    loadWeather();
-
-    // === Chat J.E.A.N. ===
-    const bubble = document.getElementById("jean-bubble");
-    const chatBox = document.getElementById("jean-chat");
-    const msgs = document.getElementById("jean-messages");
-    bubble.onclick = ()=> chatBox.style.display = (chatBox.style.display==="flex"?"none":"flex");
-
-    async function sendJean() {
-      const input = document.getElementById("jeanText");
-      const txt = input.value;
-      if (!txt) return;
-      msgs.innerHTML += `<div><b>Vous:</b> ${txt}</div>`;
-      input.value = "";
-      try {
-        const res = await fetch("/api/chat",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ message: txt })
+        const res = await fetch("/api/jean", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
         });
         const data = await res.json();
-        msgs.innerHTML += `<div><b>J.E.A.N.:</b> ${data.reply}</div>`;
-        msgs.scrollTop = msgs.scrollHeight;
-      } catch(e) {
-        msgs.innerHTML += `<div style="color:red">Erreur: ${e.message}</div>`;
+        if (data.success) {
+          addMessage("🤖", data.reply);
+          speak(data.reply);
+        } else {
+          addMessage("❌", "Erreur: " + data.error);
+        }
+      } catch (err) {
+        addMessage("❌", "Problème de connexion avec J.E.A.N.");
       }
+    }
+
+    function addMessage(sender, text) {
+      const div = document.createElement("div");
+      div.style.margin = "5px 0";
+      div.innerHTML = `<b>${sender}</b>: ${text}`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    // Synthèse vocale (voix grave masculine si dispo)
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "fr-FR";
+      utterance.pitch = 0.8;
+      utterance.rate = 1;
+      utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes("Thomas") || v.name.includes("Google français"));
+      speechSynthesis.speak(utterance);
     }
   </script>
 </body>
