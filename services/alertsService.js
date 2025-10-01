@@ -1,37 +1,35 @@
 // services/alertsService.js
 // 🚨 Orchestration nucléaire des alertes météo
-// Pipeline : Detector → Facteurs → IA → Classement
 
+import Alert from "../models/Alerts.js"; // ✅ ton modèle Mongo
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import { askOpenAI } from "./openaiService.js";
 
-// Modules spécialisés
 import { analyzeSnow } from "./snowService.js";
 import { analyzeRain } from "./rainService.js";
 import { analyzeWind } from "./windService.js";
 import { fetchStationData } from "./stationsService.js";
-import { detectAlerts } from "./alertDetector.js";      // Pré-détection brute
-import { classifyAlerts } from "./alertsEngine.js";     // Classement final
-import { applyGeoFactors } from "./geoFactors.js";      // ✅ export nommé
-import adjustWithLocalFactors from "./localFactors.js"; // saison/spatial
-import forecastVision from "./forecastVision.js";       // anomalies saisonnières
+import { detectAlerts } from "./alertDetector.js";
+import { classifyAlerts } from "./alertsEngine.js";
+import { applyGeoFactors } from "./geoFactors.js";
+import adjustWithLocalFactors from "./localFactors.js";
+import forecastVision from "./forecastVision.js";
 
-// Nouvelles sources haute résolution
-import hrrr from "./hrrr.js";   // 🇺🇸 HRRR (NOAA, USA only)
-import arome from "./arome.js"; // 🇫🇷🇧🇪 AROME (France/Belgique)
+import hrrr from "./hrrr.js";
+import arome from "./arome.js";
 
 let activeAlerts = [];
 
-/** 🔎 Génération des alertes (zones couvertes + continentales) */
+/** 🔎 Génération et stockage DB */
 export async function generateAlerts(lat, lon, country, region, continent = "Europe") {
   const state = await getEngineState();
   try {
     addEngineLog(`🚨 Analyse alertes pour ${country}${region ? " - " + region : ""}`);
 
-    // 1️⃣ Pré-détection brute
+    // 1. Détection brute
     const detectorResults = await detectAlerts(lat, lon, country);
 
-    // 2️⃣ Collecte brute spécialisée
+    // 2. Collecte
     const [snow, rain, wind, stations] = await Promise.all([
       analyzeSnow(lat, lon, country, region),
       analyzeRain(lat, lon, country, region),
@@ -39,15 +37,11 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       fetchStationData(lat, lon, country, region),
     ]);
 
-    // 2️⃣bis 🔥 Sources haute résolution
     let hiRes = null;
-    if (country === "USA") {
-      hiRes = await hrrr(lat, lon);
-    } else if (["FR", "BE"].includes(country)) {
-      hiRes = await arome(lat, lon);
-    }
+    if (country === "USA") hiRes = await hrrr(lat, lon);
+    else if (["FR", "BE"].includes(country)) hiRes = await arome(lat, lon);
 
-    // 3️⃣ Enrichissements relief/saison/anomalies
+    // 3. Facteurs enrichis
     let enriched = { snow, rain, wind, stations, detectorResults, hiRes };
     enriched = await applyGeoFactors(enriched, lat, lon, country);
     enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
@@ -57,36 +51,29 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
     );
     if (anomaly) enriched.anomaly = anomaly;
 
-    // 4️⃣ IA nucléaire → synthèse
+    // 4. IA
     const prompt = `
 Analyse des risques météo pour ${country}${region ? " - " + region : ""}, continent=${continent}.
 Sources enrichies :
 ${JSON.stringify(enriched, null, 2)}
 
 Consignes :
-- Croiser toutes les données (neige, pluie, vent, stations, détecteur multi-modèles).
-- Si USA → intégrer HRRR.
-- Si France/Belgique → intégrer AROME.
-- Ajuster selon relief, climat, altitude et saison.
-- Tenir compte des anomalies saisonnières détectées (${JSON.stringify(anomaly)}).
-- Déterminer si une alerte doit être générée.
-- Classer: type, zone, fiabilité (0–100), intensité, conséquences, recommandations, durée.
-- Répondre format JSON strict.
+- Croiser toutes les données.
+- Intégrer HRRR si USA, AROME si FR/BE.
+- Ajuster relief/climat/saison.
+- Détecter anomalies saisonnières (${JSON.stringify(anomaly)}).
+- Classer: type, zone, fiabilité, intensité, conséquences, recommandations, durée.
+- Format JSON strict.
     `;
 
-    const aiResult = await askOpenAI("Tu es un moteur d’alerte météo nucléaire", prompt);
-
+    const aiResult = await askOpenAI("Tu es un moteur nucléaire d’alerte météo", prompt);
     let parsed;
-    try {
-      parsed = JSON.parse(aiResult);
-    } catch {
-      parsed = { raw: aiResult };
-    }
+    try { parsed = JSON.parse(aiResult); } catch { parsed = { raw: aiResult }; }
 
-    // 5️⃣ Classement final auto
+    // 5. Classement
     const classified = classifyAlerts(parsed);
 
-    // 6️⃣ Stockage
+    // 6. Stockage mémoire + DB
     const alert = {
       id: Date.now().toString(),
       country,
@@ -95,10 +82,11 @@ Consignes :
       data: classified,
       timestamp: new Date().toISOString(),
       note: country === "USA"
-        ? "⚡ HRRR intégré (alertes haute résolution USA)"
+        ? "⚡ HRRR intégré (USA haute résolution)"
         : ["FR", "BE"].includes(country)
-        ? "⚡ AROME intégré (alertes haute résolution FR/BE)"
-        : "Sources standard (multi-modèles + stations)",
+        ? "⚡ AROME intégré (FR/BE haute résolution)"
+        : "Sources multi-modèles standard",
+      status: "pending"
     };
 
     activeAlerts.push(alert);
@@ -106,6 +94,9 @@ Consignes :
 
     state.alerts = activeAlerts;
     await saveEngineState(state);
+
+    // ✅ En DB
+    await Alert.create(alert);
 
     addEngineLog(`✅ Alerte générée et classée pour ${country}${region ? " - " + region : ""}`);
     return alert;
@@ -115,17 +106,22 @@ Consignes :
   }
 }
 
-/** 🔎 Liste active */
+/** 🔎 Liste active depuis DB */
 export async function getActiveAlerts() {
-  return activeAlerts;
+  const alerts = await Alert.find().sort({ timestamp: -1 }).limit(50);
+  activeAlerts = alerts;
+  return alerts;
 }
 
 /** 🔧 Mise à jour statut (admin) */
 export async function updateAlertStatus(id, action) {
-  const alert = activeAlerts.find((a) => a.id === id);
+  const alert = await Alert.findOneAndUpdate(
+    { id },
+    { $set: { status: action } },
+    { new: true }
+  );
   if (!alert) return { error: "Alerte introuvable" };
 
-  alert.status = action;
   addEngineLog(`⚡ Alerte ${id} → ${action}`);
   return alert;
 }
