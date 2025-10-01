@@ -1,85 +1,140 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH – La météo nucléaire IA+</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TINSFLASH – Prévisions météo et alertes avec IA</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f3f6fa; color: #111827; }
+    header { position: relative; width: 100%; height: 220px; overflow: hidden; }
+    header video { width: 100%; height: 100%; object-fit: cover; }
+    header .overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 26px; font-weight: bold; text-align: center; padding: 10px; }
+    main { padding: 20px; max-width: 900px; margin: auto; }
+    h2 { color: #1e40af; margin-top: 20px; }
+    .forecast { display: grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+      gap: 12px; margin-top: 15px; }
+    .day { background: white; border-radius: 10px; padding: 10px; text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    /* Widget J.E.A.N. */
+    #jean-bubble { position: fixed; bottom: 20px; right: 20px;
+      background: linear-gradient(135deg,#2563eb,#1e3a8a); color: white;
+      border-radius: 50px; padding: 12px 20px; cursor: pointer; font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999; }
+    #jean-window { display: none; position: fixed; bottom: 80px; right: 20px; width: 320px;
+      height: 420px; background: white; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      z-index: 9999; display: flex; flex-direction: column; overflow: hidden; }
+    @media(max-width:600px){ #jean-window { width: 100%; height: 100%; bottom: 0; right: 0; border-radius: 0; } }
+    #jean-header { background: #2563eb; color: white; padding: 10px; font-weight: bold; text-align: center; }
+    #jean-chat { flex: 1; padding: 10px; overflow-y: auto; font-size: 14px; display: flex; flex-direction: column; }
+    .msg { margin: 6px 0; padding: 8px 12px; border-radius: 12px; max-width: 85%; line-height: 1.4; }
+    .user { background: #e0f2fe; align-self: flex-end; } .jean { background: #f3f4f6; align-self: flex-start; }
+    #jean-input { display: flex; padding: 10px; border-top: 1px solid #eee; gap: 5px; }
+    #jean-input input { flex: 1; border: 1px solid #ccc; border-radius: 8px; padding: 8px; }
+    #jean-input button { border: none; border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 14px; font-weight: bold; }
+    #jean-input .send { background: #2563eb; color: white; } #jean-input .mic { background: #059669; color: white; }
+  </style>
 </head>
 <body>
-  <!-- 🎥 Intro -->
-  <header class="hero">
-    <video autoplay muted loop playsinline>
-      <source src="intro.mp4" type="video/mp4">
+  <!-- Bandeau pub -->
+  <div style="background:#ddd;text-align:center;padding:8px;">[Google Ads Banner]</div>
+
+  <header>
+    <video autoplay muted loop>
+      <source src="intro.mp4" type="video/mp4" />
     </video>
-    <h1>🌍 TINSFLASH – Les prévisions météo les plus précises au monde</h1>
-    <p>Locales, nationales et mondiales – issues de notre moteur nucléaire IA.</p>
+    <div class="overlay">🌍 Les prévisions et alertes météo les plus précises du monde, renforcées par l’IA</div>
   </header>
 
-  <!-- 🔎 Recherche -->
-  <section class="search">
-    <input type="text" id="address" placeholder="Votre ville ou adresse…">
-    <select id="country">
-      <option value="BE">🇧🇪 Belgique</option>
-      <option value="FR">🇫🇷 France</option>
-      <option value="US">🇺🇸 États-Unis</option>
-      <option value="DE">🇩🇪 Allemagne</option>
-      <option value="UK">🇬🇧 Royaume-Uni</option>
-      <option value="WORLD">🌍 Autres zones</option>
-    </select>
-    <button onclick="fetchForecast()">Voir</button>
-  </section>
-
-  <!-- 📊 Météo actuelle -->
-  <section class="current">
-    <h2>Météo actuelle</h2>
-    <div id="current-weather">
-      Température: 16°C – Vent ESE 2 Bft – Pluie: 0 mm
+  <main>
+    <h2>📍 Choisissez votre localisation</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <input id="address" type="text" placeholder="Entrez votre ville ou adresse"
+             style="flex:2;padding:10px;border-radius:8px;border:1px solid #ccc;">
+      <select id="country" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ccc;">
+        <option value="BE">Belgique</option><option value="FR">France</option>
+        <option value="US">États-Unis</option><option value="UK">Royaume-Uni</option>
+        <option value="DE">Allemagne</option><option value="IT">Italie</option>
+      </select>
+      <button onclick="loadForecast()" style="padding:10px 15px;border:none;border-radius:8px;
+              background:#2563eb;color:white;font-weight:bold;">OK</button>
     </div>
-  </section>
 
-  <!-- 📅 Prévisions aujourd'hui -->
-  <section class="today">
-    <h2>Prévisions du jour</h2>
-    <div class="day-forecast">
-      <div>🌅 Matin: 15°C, sec</div>
-      <div>🌞 Après-midi: 20°C, ensoleillé</div>
-      <div>🌙 Soirée: 17°C, sec</div>
+    <h2>🌤️ Prévisions locales</h2>
+    <div id="local-forecast" class="forecast"></div>
+
+    <h2>🏛️ Prévisions nationales</h2>
+    <div id="national-forecast" class="forecast"></div>
+
+    <h2>🚨 Alertes météo</h2>
+    <div id="alerts"></div>
+  </main>
+
+  <div style="background:#ddd;text-align:center;padding:8px;">[Google Ads Footer]</div>
+
+  <!-- Widget J.E.A.N. -->
+  <div id="jean-bubble">🤖 IA J.E.A.N.</div>
+  <div id="jean-window">
+    <div id="jean-header">Assistant météo J.E.A.N.</div>
+    <div id="jean-chat"></div>
+    <div id="jean-input">
+      <input id="jean-question" type="text" placeholder="Posez une question..." />
+      <button class="send" onclick="askJean()">➤</button>
+      <button class="mic" onclick="startVoice()">🎤</button>
     </div>
-  </section>
+  </div>
 
-  <!-- 📆 Prévisions 7 jours -->
-  <section class="week">
-    <h2>Prévisions à 7 jours</h2>
-    <div class="week-grid" id="week-forecast">
-      <!-- rendu dynamique -->
-    </div>
-  </section>
+  <script>
+    async function loadForecast(){
+      const country=document.getElementById("country").value;
+      const localDiv=document.getElementById("local-forecast");
+      const nationalDiv=document.getElementById("national-forecast");
+      const alertsDiv=document.getElementById("alerts");
+      localDiv.innerHTML="⏳ Chargement...";
+      nationalDiv.innerHTML="⏳ Chargement...";
+      alertsDiv.innerHTML="⏳ Chargement...";
+      try{
+        const loc=await fetch(`/api/forecast/local?lat=50.5&lon=4.5&country=${country}`).then(r=>r.json());
+        localDiv.innerHTML=loc.forecast||"Pas de données";
+        const nat=await fetch(`/api/forecast/national?country=${country}`).then(r=>r.json());
+        nationalDiv.innerHTML=JSON.stringify(nat.forecasts,null,2);
+        const al=await fetch("/api/alerts/active").then(r=>r.json());
+        alertsDiv.innerHTML=JSON.stringify(al,null,2);
+      }catch(e){
+        localDiv.innerHTML=nationalDiv.innerHTML=alertsDiv.innerHTML="❌ Erreur: "+e.message;
+      }
+    }
 
-  <!-- ☔ Graphique pluie -->
-  <section class="rain-chart">
-    <h2>Précipitations</h2>
-    <canvas id="rainGraph"></canvas>
-  </section>
-
-  <!-- 📡 Radar -->
-  <section class="radar">
-    <h2>Radar</h2>
-    <iframe src="https://embed.windy.com" style="width:100%;height:400px;border:none;"></iframe>
-  </section>
-
-  <!-- 🤖 Cohere Assistant -->
-  <section class="cohere">
-    <h2>🤖 Votre question météo</h2>
-    <input type="text" id="question" placeholder="Ex: Puis-je promener mon chien cet après-midi ?">
-    <button onclick="askCohere()">Demander</button>
-    <div id="cohere-answer"></div>
-  </section>
-
-  <footer>
-    © 2025 TINSFLASH – Centrale Nucléaire Météo
-  </footer>
-
-  <script src="index.js"></script>
+    // J.E.A.N.
+    const bubble=document.getElementById("jean-bubble");
+    const windowJean=document.getElementById("jean-window");
+    const chatBox=document.getElementById("jean-chat");
+    bubble.onclick=()=>{windowJean.style.display=windowJean.style.display==="none"?"flex":"none";};
+    async function askJean(){
+      const input=document.getElementById("jean-question");
+      const question=input.value.trim(); if(!question) return; input.value="";
+      addMessage(question,"user"); addMessage("⏳ J.E.A.N. réfléchit...","jean");
+      try{
+        const res=await fetch("/api/cohere",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({question,category:"grand public"})});
+        const data=await res.json();
+        const answer=data.answer||"❌ Pas de réponse de J.E.A.N.";
+        updateLastMessage("👨‍🔬 "+answer); speakAnswer(answer);
+      }catch(e){updateLastMessage("❌ Erreur : "+e.message);}
+    }
+    function addMessage(text,type){const msg=document.createElement("div"); msg.className="msg "+type;
+      msg.innerText=text; chatBox.appendChild(msg); chatBox.scrollTop=chatBox.scrollHeight;}
+    function updateLastMessage(text){const msgs=chatBox.getElementsByClassName("msg");
+      if(msgs.length>0){msgs[msgs.length-1].innerText=text;}}
+    function startVoice(){const Rec=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!Rec){alert("Pas de reconnaissance vocale supportée.");return;}
+      const recognition=new Rec(); recognition.lang="fr-FR"; recognition.start();
+      recognition.onresult=(e)=>{document.getElementById("jean-question").value=e.results[0][0].transcript; askJean();};}
+    function speakAnswer(text){if(!text) return; const utter=new SpeechSynthesisUtterance(text); utter.lang="fr-FR";
+      const voices=speechSynthesis.getVoices(); const male=voices.find(v=>v.lang.startsWith("fr")&&/homme|male|Paul|Thomas|Hervé|Loïc/i.test(v.name));
+      if(male) utter.voice=male; utter.rate=0.9; utter.pitch=0.8; speechSynthesis.cancel(); speechSynthesis.speak(utter);}
+    speechSynthesis.onvoiceschanged=()=>{};
+  </script>
 </body>
 </html>
