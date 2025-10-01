@@ -17,6 +17,7 @@
       gap: 12px; margin-top: 15px; }
     .day { background: white; border-radius: 10px; padding: 10px; text-align: center;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    iframe { width: 100%; height: 400px; border: none; border-radius: 10px; margin-top: 15px; }
     /* Widget J.E.A.N. */
     #jean-bubble { position: fixed; bottom: 20px; right: 20px;
       background: linear-gradient(135deg,#2563eb,#1e3a8a); color: white;
@@ -48,7 +49,7 @@
   </header>
 
   <main>
-    <h2>📍 Choisissez votre localisation</h2>
+    <h2>📍 Localisation</h2>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <input id="address" type="text" placeholder="Entrez votre ville ou adresse"
              style="flex:2;padding:10px;border-radius:8px;border:1px solid #ccc;">
@@ -60,6 +61,10 @@
       <button onclick="loadForecast()" style="padding:10px 15px;border:none;border-radius:8px;
               background:#2563eb;color:white;font-weight:bold;">OK</button>
     </div>
+    <button onclick="geolocate()" style="margin-top:10px;padding:8px 12px;border:none;
+            border-radius:8px;background:#059669;color:white;font-weight:bold;">
+      📡 Utiliser ma position
+    </button>
 
     <h2>🌤️ Prévisions locales</h2>
     <div id="local-forecast" class="forecast"></div>
@@ -69,6 +74,9 @@
 
     <h2>🚨 Alertes météo</h2>
     <div id="alerts"></div>
+
+    <h2>🌍 Radar météo (Windy)</h2>
+    <iframe id="radar" src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&width=650&height=400&zoom=5&level=surface&overlay=rain&product=ecmwf&menu=&message=true&marker=true&calendar=&pressure=&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
   </main>
 
   <div style="background:#ddd;text-align:center;padding:8px;">[Google Ads Footer]</div>
@@ -86,7 +94,7 @@
   </div>
 
   <script>
-    async function loadForecast(){
+    async function loadForecast(lat=50.5, lon=4.5){
       const country=document.getElementById("country").value;
       const localDiv=document.getElementById("local-forecast");
       const nationalDiv=document.getElementById("national-forecast");
@@ -94,19 +102,37 @@
       localDiv.innerHTML="⏳ Chargement...";
       nationalDiv.innerHTML="⏳ Chargement...";
       alertsDiv.innerHTML="⏳ Chargement...";
+
       try{
-        const loc=await fetch(`/api/forecast/local?lat=50.5&lon=4.5&country=${country}`).then(r=>r.json());
+        const loc=await fetch(`/api/forecast/local?lat=${lat}&lon=${lon}&country=${country}`).then(r=>r.json());
         localDiv.innerHTML=loc.forecast||"Pas de données";
+
         const nat=await fetch(`/api/forecast/national?country=${country}`).then(r=>r.json());
         nationalDiv.innerHTML=JSON.stringify(nat.forecasts,null,2);
+
         const al=await fetch("/api/alerts/active").then(r=>r.json());
         alertsDiv.innerHTML=JSON.stringify(al,null,2);
+
+        // Mise à jour radar Windy
+        document.getElementById("radar").src =
+          `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=650&height=400&zoom=6&level=surface&overlay=rain&product=ecmwf&marker=true&detail=true`;
       }catch(e){
         localDiv.innerHTML=nationalDiv.innerHTML=alertsDiv.innerHTML="❌ Erreur: "+e.message;
       }
     }
 
-    // J.E.A.N.
+    function geolocate(){
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(
+          pos=>{loadForecast(pos.coords.latitude,pos.coords.longitude);},
+          err=>{alert("Impossible d’obtenir la géolocalisation.");}
+        );
+      }else{
+        alert("La géolocalisation n’est pas supportée par ce navigateur.");
+      }
+    }
+
+    // === J.E.A.N. ===
     const bubble=document.getElementById("jean-bubble");
     const windowJean=document.getElementById("jean-window");
     const chatBox=document.getElementById("jean-chat");
