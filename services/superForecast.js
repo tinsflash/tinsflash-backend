@@ -21,9 +21,9 @@ import {
 } from "./engineState.js";
 
 // Facteurs d’ajustement
-import { applyGeoFactors } from "./geoFactors.js";     // ✅ export nommé
-import adjustWithLocalFactors from "./localFactors.js"; // saison, spatial, return levels
-import forecastVision from "./forecastVision.js";       // anomalies saisonnières
+import { applyGeoFactors } from "./geoFactors.js";     
+import adjustWithLocalFactors from "./localFactors.js"; 
+import forecastVision from "./forecastVision.js";       
 
 // ✅ Export NOMMÉ uniquement
 export async function runSuperForecast({ lat, lon, country, region }) {
@@ -69,8 +69,8 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       copernicus("reanalysis-era5-land", copernicusRequest),
       trullemans({ lat, lon, country }),
       wetterzentrale({ lat, lon, country }),
-      hrrr(lat, lon),   // ✅ HRRR pour USA
-      arome(lat, lon),  // ✅ AROME pour FR/BE
+      hrrr(lat, lon),
+      arome(lat, lon),
     ]);
 
     const sources = {
@@ -87,13 +87,35 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     };
     addEngineLog("✅ Sources météo collectées");
 
-    // === Étape 3 : ajustements globaux (relief/climat/altitude)
-    let enriched = await applyGeoFactors(sources, lat, lon, country);
+    // === Étape 3 : fusion brute (GFS/ECMWF/ICON + Meteomatics si dispo)
+    const baseForecast = {};
+    try {
+      const temps = [];
+      if (sources.gfs?.temperature) temps.push(sources.gfs.temperature);
+      if (sources.ecmwf?.temperature) temps.push(sources.ecmwf.temperature);
+      if (sources.icon?.temperature) temps.push(sources.icon.temperature);
+      if (sources.meteomatics?.temperature) temps.push(sources.meteomatics.temperature);
+      baseForecast.temperature = temps.length
+        ? temps.reduce((a, b) => a + b, 0) / temps.length
+        : null;
 
-    // === Étape 3bis : ajustements locaux (saison, spatial, return levels)
+      const precs = [];
+      if (sources.gfs?.precipitation) precs.push(sources.gfs.precipitation);
+      if (sources.ecmwf?.precipitation) precs.push(sources.ecmwf.precipitation);
+      if (sources.icon?.precipitation) precs.push(sources.icon.precipitation);
+      if (sources.meteomatics?.precipitation) precs.push(sources.meteomatics.precipitation);
+      baseForecast.precipitation = precs.length
+        ? precs.reduce((a, b) => a + b, 0) / precs.length
+        : null;
+    } catch (err) {
+      addEngineError("⚠️ Erreur fusion brute prévisions: " + err.message);
+    }
+
+    // === Étape 4 : ajustements globaux et locaux
+    let enriched = await applyGeoFactors(baseForecast, lat, lon, country);
     enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
 
-    // === Étape 3ter : anomalies saisonnières
+    // === Étape 4bis : anomalies saisonnières
     const anomaly = forecastVision.detectSeasonalAnomaly(
       sources.gfs || sources.ecmwf || null
     );
@@ -101,7 +123,7 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       enriched.anomaly = anomaly;
     }
 
-    // === Étape 4 : analyse IA
+    // === Étape 5 : analyse IA avec retour JSON
     addEngineLog("🤖 Analyse IA des données multi-sources…");
     const prompt = `
 Prévisions météo enrichies pour un point précis.
@@ -109,58 +131,54 @@ Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${
       region ? ", région=" + region : ""
     }
 
-Sources principales:
-- GFS: ${JSON.stringify(sources.gfs)}
-- ECMWF: ${JSON.stringify(sources.ecmwf)}
-- ICON: ${JSON.stringify(sources.icon)}
-- Meteomatics: ${JSON.stringify(sources.meteomatics)}
-- NASA POWER / Satellites: ${JSON.stringify(sources.nasaSat)}
-- Copernicus ERA5: ${JSON.stringify(sources.copernicus)}
-
-Données complémentaires (selon zone):
-- HRRR (USA): ${JSON.stringify(sources.hrrr)}
-- AROME (FR/BE): ${JSON.stringify(sources.arome)}
-
-Benchmarks (comparatif fiabilité uniquement):
-- Trullemans: ${JSON.stringify(sources.trullemans)}
-- Wetterzentrale: ${JSON.stringify(sources.wetterzentrale)}
-
-Ajustements appliqués:
-- Facteurs globaux: relief, climat, altitude
-- Facteurs locaux: saison, cohérence spatiale, return levels
-- Anomalies saisonnières: ${JSON.stringify(anomaly)}
+Fusion principale: ${JSON.stringify(baseForecast)}
+Ajustements: ${JSON.stringify(enriched)}
+Sources principales: GFS, ECMWF, ICON, Meteomatics, NASA, Copernicus
+Compléments: HRRR (USA), AROME (FR/BE)
+Benchmarks: Trullemans, Wetterzentrale
 
 Consignes IA:
-- Croiser et fusionner uniquement les données principales (GFS, ECMWF, ICON, Meteomatics, NASA, Copernicus, HRRR, AROME).
-- Comparer avec Trullemans/Wetterzentrale uniquement pour calibrer la fiabilité.
-- Fournir un bulletin détaillé: températures, précipitations, vent, risques météo.
-- Horizon: aujourd'hui + 7 jours.
-- Mentionner incertitudes et fiabilité globale.
-- Style clair, professionnel, bulletin météo en français.
+1. Fournir un retour en JSON strict uniquement.
+2. Structure attendue :
+{
+  "resume": "...",
+  "temperature": "...",
+  "precipitation": "...",
+  "vent": "...",
+  "risques": ["..."],
+  "fiabilite": "...%",
+  "bulletin": "Texte simplifié grand public"
+}
+3. Ne jamais sortir de texte en dehors du JSON.
 `;
 
-    const analysis = await askOpenAI(
-      "Tu es un moteur météo avancé qui rédige un bulletin météo fiable.",
+    let aiFusion = await askOpenAI(
+      "Tu es un moteur météo avancé qui produit un JSON structuré fiable.",
       prompt
     );
 
-    addEngineLog("✅ Analyse IA terminée");
+    let parsedForecast;
+    try {
+      parsedForecast = JSON.parse(aiFusion);
+    } catch {
+      parsedForecast = { raw: aiFusion }; // fallback
+    }
 
-    // === Étape 5 : sauvegarde
+    // === Étape 6 : sauvegarde
     state.superForecasts = state.superForecasts || [];
     state.superForecasts.push({
       lat,
       lon,
       country,
       region,
-      forecast: analysis,
+      forecast: parsedForecast,
       sources,
       enriched,
     });
     await saveEngineState(state);
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
-    return { lat, lon, country, region, forecast: analysis, sources, enriched };
+    return { lat, lon, country, region, forecast: parsedForecast, sources, enriched };
   } catch (err) {
     await addEngineError(err.message || "Erreur inconnue SuperForecast");
     addEngineLog("❌ Erreur dans SuperForecast");
