@@ -1,133 +1,190 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>⚡ Centrale Nucléaire Météo – Admin</title>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Console Admin – Centrale météo nucléaire</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { background:#0a0f1c; color:#fff; font-family:Arial, sans-serif; margin:0; }
-    header { padding:20px; background:#11172b; text-align:center; font-size:22px; font-weight:bold; }
-    .controls { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; padding:15px; background:#141c33; }
-    .run-btn { padding:10px 15px; border-radius:6px; border:none; cursor:pointer; font-weight:bold; color:#fff; background:#444; }
-    .run-btn.orange { background:orange; }
-    .run-btn.green { background:#2ecc71; }
-    .run-btn.red { background:#e74c3c; }
-    .run-btn.purple { background:#9b59b6; }
-    .progress { width:160px; height:8px; background:#222; border-radius:4px; margin:5px auto; overflow:hidden; }
-    .progress-bar { height:8px; width:0%; background:#2ecc71; transition:width 0.3s; }
-
-    .columns { display:flex; justify-content:space-around; padding:20px; }
-    .col { flex:1; padding:10px; }
-    h2 { font-size:18px; margin-bottom:10px; }
-    .country { display:flex; align-items:center; margin:5px 0; }
-    .bubble { width:14px; height:14px; border-radius:50%; margin-right:8px; background:orange; }
-    .bubble.green { background:#2ecc71; }
-    .bubble.red { background:#e74c3c; }
-    .bubble.purple { background:#9b59b6; }
-
-    .logs { padding:20px; background:#11172b; }
-    .logs-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-weight:bold; }
-    .logs-content { max-height:300px; overflow-y:auto; display:none; background:#0d1324; padding:10px; margin-top:10px; border-radius:6px; font-size:14px; }
-
-    .chat-bubble { position:fixed; bottom:20px; right:20px; background:#2ecc71; color:#fff; border-radius:50%; width:60px; height:60px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:26px; box-shadow:0 0 15px rgba(0,0,0,0.4); }
-    #chat-window { position:fixed; bottom:90px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:10px; display:none; flex-direction:column; }
-    #chat-messages { flex:1; padding:10px; overflow-y:auto; }
-    #chat-input { display:flex; }
-    #chat-input input { flex:1; padding:8px; border:none; border-top:1px solid #ccc; }
-    #chat-input button { padding:8px 12px; border:none; background:#2ecc71; color:#fff; cursor:pointer; }
+    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
+    header { background:#222; padding:10px; text-align:center; }
+    nav a { color:#0af; margin:0 10px; text-decoration:none; }
+    h2 { margin-top:20px; }
+    #alertsSummary { background:#222; padding:12px; margin:12px; border-radius:8px; font-size:0.9em; }
+    .stat { margin:5px 0; }
+    .badge { padding:3px 8px; border-radius:6px; margin-left:6px; }
+    .exclusive { background:#a22; color:#fff; }
+    .confirmed { background:#2a2; color:#fff; }
+    .surveillance { background:#335; color:#fff; }
+    .blinker { animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity:0; } }
+    .button { margin:5px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
+    .orange { background:#cc0; color:#000; }
+    .green { background:#2a2; color:#fff; }
+    .red { background:#a22; color:#fff; }
+    .purple { background:#639; color:#fff; }
+    #chatBubble {
+      position: fixed; bottom:20px; right:20px;
+      background:#222; border:2px solid #0af; border-radius:12px;
+      padding:10px; width:300px; height:400px;
+      display:flex; flex-direction:column; z-index:9999;
+    }
+    #chatBubble header { font-weight:bold; text-align:center; margin-bottom:6px; }
+    #chatLog { flex:1; overflow-y:auto; background:#000; padding:6px; border-radius:6px; }
+    #chatInput { margin-top:6px; display:flex; }
+    #chatInput input { flex:1; padding:4px; }
+    #chatInput button { padding:4px 8px; }
+    #logs { display:none; background:#000; padding:10px; border-radius:6px; margin:10px; max-height:250px; overflow:auto; }
+    #alertsChart { max-width:400px; margin:10px auto; }
   </style>
+  <script>
+    const pwd = prompt("Mot de passe ?");
+    if (pwd !== "202679") {
+      document.write("⛔ Accès refusé");
+      throw new Error("Accès refusé");
+    }
+
+    let lastExclusiveCount = 0;
+    let chart;
+
+    async function fetchAlertsSummary() {
+      try {
+        const res = await fetch("/api/alerts/summary");
+        if (!res.ok) return;
+        const s = await res.json();
+        const exclusiveCount = s.exclusives || 0;
+
+        let exclusiveBadge = `<span class="badge exclusive">${exclusiveCount}</span>`;
+        if (exclusiveCount > lastExclusiveCount) {
+          exclusiveBadge = `<span class="badge exclusive blinker">${exclusiveCount}</span>`;
+        }
+        lastExclusiveCount = exclusiveCount;
+
+        document.getElementById("alertsSummary").innerHTML = `
+          <div class="stat">📊 <strong>Total alertes actives :</strong> ${s.total || 0}</div>
+          <div class="stat">🔵 Sous surveillance : ${s.byStatus?.["under-surveillance"] || 0}</div>
+          <div class="stat">🔴 Exclusives : ${exclusiveBadge}
+              🟢 Confirmées ailleurs : <span class="badge confirmed">${s.confirmedElsewhere || 0}</span></div>
+        `;
+
+        // ✅ Update graphique
+        updateChart(s);
+      } catch (e) {
+        console.error("Erreur résumé alertes:", e);
+      }
+    }
+
+    function updateChart(s) {
+      const ctx = document.getElementById("alertsChart").getContext("2d");
+      const data = {
+        labels: ["Publiées", "À valider", "Sous surveillance", "Ignorées", "Exclusives", "Confirmées"],
+        datasets: [{
+          data: [
+            s.byStatus?.["published"] || 0,
+            s.byStatus?.["toValidate"] || 0,
+            s.byStatus?.["under-surveillance"] || 0,
+            s.byStatus?.["ignored"] || 0,
+            s.exclusives || 0,
+            s.confirmedElsewhere || 0
+          ],
+          backgroundColor: ["#2a2", "#cc0", "#335", "#633", "#a22", "#0af"]
+        }]
+      };
+      if (chart) {
+        chart.data = data;
+        chart.update();
+      } else {
+        chart = new Chart(ctx, { type:"doughnut", data, options:{ plugins:{ legend:{ labels:{ color:"#eee" } } } } });
+      }
+    }
+
+    async function runProcess(endpoint, btnId) {
+      const btn = document.getElementById(btnId);
+      btn.className = "button orange";
+      try {
+        const res = await fetch(endpoint, { method:"POST" });
+        const data = await res.json();
+        if (data.success) {
+          btn.className = "button green";
+        } else {
+          btn.className = "button red";
+        }
+      } catch {
+        btn.className = "button red";
+      }
+    }
+
+    function toggleLogs() {
+      const logs = document.getElementById("logs");
+      logs.style.display = logs.style.display === "none" ? "block" : "none";
+      if (logs.style.display === "block") loadLogs();
+    }
+
+    async function loadLogs() {
+      const res = await fetch("/api/logs?cycle=current");
+      const data = await res.json();
+      document.getElementById("logs").innerText = data.map(l=>l.message).join("\n");
+    }
+
+    async function sendChat() {
+      const input = document.getElementById("chatMsg");
+      const msg = input.value.trim();
+      if (!msg) return;
+      const log = document.getElementById("chatLog");
+      log.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
+      input.value = "";
+      const res = await fetch("/api/chat/engine", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      log.innerHTML += `<div><b>GPT:</b> ${data.reply}</div>`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    setInterval(fetchAlertsSummary, 7000);
+    window.onload = fetchAlertsSummary;
+  </script>
 </head>
 <body>
-  <header>⚡ Centrale Nucléaire Météo – Console Admin</header>
+  <header>
+    <h1>⚡ Centrale nucléaire météo – Console Admin</h1>
+    <nav>
+      <a href="/admin">Console</a>
+      <a href="/admin-alerts">Alertes</a>
+      <a href="/admin-chat">Chat</a>
+      <a href="/admin-index">Vue Index</a>
+      <a href="/admin-radar">Radar & News</a>
+      <a href="/admin-users">Utilisateurs</a>
+    </nav>
+  </header>
 
-  <!-- Boutons + Progress -->
-  <div class="controls">
-    <div><button id="btn-europe-forecast" class="run-btn orange" onclick="triggerRun('europe','forecast')">Prévisions Europe</button><div class="progress"><div id="prog-europe-forecast" class="progress-bar"></div></div></div>
-    <div><button id="btn-europe-alerts" class="run-btn orange" onclick="triggerRun('europe','alerts')">Alertes Europe</button><div class="progress"><div id="prog-europe-alerts" class="progress-bar"></div></div></div>
-    <div><button id="btn-usa-forecast" class="run-btn orange" onclick="triggerRun('usa','forecast')">Prévisions USA</button><div class="progress"><div id="prog-usa-forecast" class="progress-bar"></div></div></div>
-    <div><button id="btn-usa-alerts" class="run-btn orange" onclick="triggerRun('usa','alerts')">Alertes USA</button><div class="progress"><div id="prog-usa-alerts" class="progress-bar"></div></div></div>
-    <div><button id="btn-continental-alerts" class="run-btn orange" onclick="triggerRun('continental','alerts')">Continental Alertes</button><div class="progress"><div id="prog-continental-alerts" class="progress-bar"></div></div></div>
-    <div><button id="btn-fusion-alerts" class="run-btn orange" onclick="triggerRun('fusion','alerts')">Fusion Alertes</button><div class="progress"><div id="prog-fusion-alerts" class="progress-bar"></div></div></div>
-    <div><button id="btn-ia-forecast" class="run-btn orange" onclick="triggerRun('ia','forecast')">IA Analyse Prévisions</button><div class="progress"><div id="prog-ia-forecast" class="progress-bar"></div></div></div>
-    <div><button id="btn-ia-alerts" class="run-btn orange" onclick="triggerRun('ia','alerts')">IA Analyse Alertes</button><div class="progress"><div id="prog-ia-alerts" class="progress-bar"></div></div></div>
-  </div>
+  <!-- 🚨 Résumé global alertes -->
+  <div id="alertsSummary">Chargement du résumé des alertes…</div>
+  <canvas id="alertsChart"></canvas>
 
-  <!-- Colonnes Europe / USA -->
-  <div class="columns">
-    <div class="col"><h2>🌍 Europe – Prévisions</h2><div id="europe-forecast"></div></div>
-    <div class="col"><h2>🌍 Europe – Alertes</h2><div id="europe-alerts"></div></div>
-  </div>
-  <div class="columns">
-    <div class="col"><h2>🇺🇸 USA – Prévisions</h2><div id="usa-forecast"></div></div>
-    <div class="col"><h2>🇺🇸 USA – Alertes</h2><div id="usa-alerts"></div></div>
-  </div>
+  <!-- 🛠 Contrôle moteur -->
+  <section id="engineControls">
+    <h2>🛠 Contrôle moteur</h2>
+    <button id="btnEurope" class="button" onclick="runProcess('/api/run-europe','btnEurope')">Run Prévisions Europe</button>
+    <button id="btnUSA" class="button" onclick="runProcess('/api/run-usa','btnUSA')">Run Prévisions USA</button>
+    <button id="btnAlertsEurope" class="button" onclick="runProcess('/api/run-alerts','btnAlertsEurope')">Run Alertes Europe</button>
+    <button id="btnAlertsContinental" class="button" onclick="runProcess('/api/run-alerts-continental','btnAlertsContinental')">Run Alertes Continentales</button>
+    <button id="btnAlertsWorld" class="button" onclick="runProcess('/api/run-alerts-world','btnAlertsWorld')">Run Alertes Mondiales</button>
+    <button id="btnOrchestrator" class="button" onclick="runProcess('/api/run-orchestrator','btnOrchestrator')">Run Orchestrateur IA</button>
+    <button onclick="toggleLogs()">📜 Voir logs</button>
+    <div id="logs"></div>
+  </section>
 
-  <!-- Logs -->
-  <div class="logs">
-    <div class="logs-header" onclick="toggleLogs()">📜 Logs (cliquez pour afficher/masquer)</div>
-    <select id="cycleSelect" onchange="loadLogsByCycle(this.value)">
-      <option value="current">Cycle courant</option>
-      <option value="all">Tous les logs</option>
-    </select>
-    <div class="logs-content" id="logsContent"></div>
-  </div>
-
-  <!-- Chat moteur -->
-  <div class="chat-bubble" onclick="toggleChat()">💬</div>
-  <div id="chat-window">
-    <div id="chat-messages"></div>
-    <div id="chat-input">
-      <input type="text" id="chatMessage" placeholder="Question au moteur..." />
+  <!-- 💬 Bulle Chat IA moteur -->
+  <div id="chatBubble">
+    <header>🤖 ChatGPT5 – Moteur</header>
+    <div id="chatLog"></div>
+    <div id="chatInput">
+      <input type="text" id="chatMsg" placeholder="Demander au moteur..." onkeypress="if(event.key==='Enter') sendChat()">
       <button onclick="sendChat()">Envoyer</button>
     </div>
   </div>
-
-  <script>
-    const EUROPE_COUNTRIES = ["Belgium","France","Germany","Netherlands","Luxembourg","Switzerland","Austria","Denmark","Norway","Sweden","Finland","Iceland","Poland","Czechia","Slovakia","Hungary","Romania","Moldova","Ukraine","Estonia","Latvia","Lithuania","Spain","Portugal","Italy","Malta","Greece","Cyprus","Croatia","Slovenia","BosniaHerzegovina","Serbia","Montenegro","Kosovo","NorthMacedonia","Albania","UnitedKingdom","Ireland"];
-    const USA_STATES = ["California","Texas","Florida","New York","Illinois","Ohio","Georgia","North Carolina","Michigan","Pennsylvania"];
-
-    function renderCountries(containerId, list) {
-      const el=document.getElementById(containerId); el.innerHTML="";
-      list.forEach(c=>{
-        const div=document.createElement("div");
-        div.className="country";
-        div.innerHTML=`<div class="bubble" id="${containerId}-${c}"></div>${c}`;
-        el.appendChild(div);
-      });
-    }
-    renderCountries("europe-forecast", EUROPE_COUNTRIES);
-    renderCountries("europe-alerts", EUROPE_COUNTRIES);
-    renderCountries("usa-forecast", USA_STATES);
-    renderCountries("usa-alerts", USA_STATES);
-
-    function toggleLogs(){const logs=document.getElementById("logsContent"); logs.style.display=logs.style.display==="block"?"none":"block";}
-    async function loadLogsByCycle(cycle){const res=await fetch(`/api/logs?cycle=${cycle}`); const logs=await res.json(); document.getElementById("logsContent").innerText=logs.map(l=>`${l.time} - ${l.msg}`).join("\n");}
-
-    function toggleChat(){const chat=document.getElementById("chat-window"); chat.style.display=chat.style.display==="flex"?"none":"flex";}
-    async function sendChat(){const input=document.getElementById("chatMessage"); const msg=input.value; input.value=""; const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})}); const data=await res.json(); const chatBox=document.getElementById("chat-messages"); chatBox.innerHTML+=`<div><b>Moi:</b> ${msg}</div><div><b>IA:</b> ${data.reply}</div>`; chatBox.scrollTop=chatBox.scrollHeight;}
-
-    async function triggerRun(zone,type){
-      const map={ "europe-forecast":"/api/run-europe","europe-alerts":"/api/run-alerts","usa-forecast":"/api/run-usa","usa-alerts":"/api/run-alerts","continental-alerts":"/api/run-alerts-continental","fusion-alerts":"/api/run-alerts-world","ia-forecast":"/api/run-orchestrator","ia-alerts":"/api/run-orchestrator"};
-      const key=`${zone}-${type}`;
-      const btn=document.getElementById("btn-"+key); const bar=document.getElementById("prog-"+key);
-      if(btn){btn.className="run-btn orange";} if(bar){bar.style.width="0%";}
-      const res=await fetch(map[key]||"",{method:"POST"}); if(res.ok){alert(`✅ Run ${zone} ${type} lancé`);} else {alert(`❌ Erreur lancement run ${zone} ${type}`);}
-    }
-
-    async function updateProgress(){
-      const res=await fetch("/api/checkup"); const state=await res.json();
-      const mapping={ "europe-forecast":state?.zonesCoveredSummaryEurope,"europe-alerts":state?.alertsEurope,"usa-forecast":state?.zonesCoveredSummaryUSA,"usa-alerts":state?.alertsUSA};
-      for(const [key,data] of Object.entries(mapping)){
-        const bar=document.getElementById("prog-"+key);
-        if(!bar) continue;
-        let percent=0;
-        if(data?.points>0){percent=Math.round((data.success/data.points)*100);} else if(Array.isArray(data)){percent=100;}
-        bar.style.width=percent+"%";
-      }
-    }
-    setInterval(updateProgress,3000);
-
-    const evtSource=new EventSource("/api/logs/stream");
-    evtSource.onmessage=(e)=>{const log=JSON.parse(e.data); const logs=document.getElementById("logsContent"); logs.innerText+=`\n${log.time} - ${log.msg}`; updateProgress();};
-  </script>
 </body>
 </html>
