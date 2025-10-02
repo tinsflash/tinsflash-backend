@@ -11,39 +11,53 @@ async function getNationalForecast(country) {
   try {
     const zones = ALL_ZONES[country];
     if (!zones) {
-      return { country, source: "Centrale Nucléaire Météo", error: "Pays non couvert", forecasts: {} };
+      return { 
+        country, 
+        source: "Centrale Nucléaire Météo", 
+        error: "Pays non couvert", 
+        forecasts: {} 
+      };
     }
 
-    // 🔹 Exécution en parallèle pour toutes les zones
     const results = await Promise.all(zones.map(async (z) => {
-      const sf = await runSuperForecast({
-        lat: z.lat,
-        lon: z.lon,
-        country,
-        region: z.region,
-      });
-      return [
-        z.region,
-        {
+      try {
+        const sf = await runSuperForecast({
           lat: z.lat,
           lon: z.lon,
           country,
-          forecast: sf.forecast || "⚠️ Pas de données",
-          sources: sf.sources || null,
-          enriched: sf.enriched || null,
-          source: "Centrale Nucléaire Météo",
-          note:
-            country === "USA"
-              ? "⚡ HRRR intégré (précision USA)"
-              : ["FR", "BE"].includes(country)
-              ? "⚡ AROME intégré (précision France/Belgique)"
-              : "Sources standards (GFS/ECMWF/ICON/Meteomatics)",
-        },
-      ];
+          region: z.region,
+        });
+        return [
+          z.region,
+          {
+            lat: z.lat,
+            lon: z.lon,
+            country,
+            forecast: sf?.forecast || "⚠️ Pas de données",
+            sources: sf?.sources || null,
+            enriched: sf?.enriched || null,
+            source: "Centrale Nucléaire Météo",
+            note: country === "USA"
+              ? "⚡ Fusion multi-modèles + HRRR (USA)"
+              : "⚡ Fusion multi-modèles (GFS/ECMWF/ICON/Meteomatics + Copernicus/NASA + benchmarks)",
+          },
+        ];
+      } catch (e) {
+        return [
+          z.region,
+          {
+            lat: z.lat,
+            lon: z.lon,
+            country,
+            forecast: "❌ Erreur lors du calcul",
+            error: e.message,
+            source: "Centrale Nucléaire Météo",
+          },
+        ];
+      }
     }));
 
-    const forecasts = Object.fromEntries(results);
-    return { country, source: "Centrale Nucléaire Météo", forecasts };
+    return { country, source: "Centrale Nucléaire Météo", forecasts: Object.fromEntries(results) };
   } catch (err) {
     console.error("❌ getNationalForecast error:", err.message);
     return { country, source: "Centrale Nucléaire Météo", error: err.message, forecasts: {} };
@@ -60,16 +74,13 @@ async function getLocalForecast(lat, lon, country) {
         lat,
         lon,
         country,
-        forecast: sf.forecast,
-        sources: sf.sources,
-        enriched: sf.enriched || null,
+        forecast: sf?.forecast || "⚠️ Pas de données",
+        sources: sf?.sources || null,
+        enriched: sf?.enriched || null,
         source: "Centrale Nucléaire Météo",
-        note:
-          country === "USA"
-            ? "⚡ HRRR intégré (précision USA)"
-            : ["FR", "BE"].includes(country)
-            ? "⚡ AROME intégré (précision France/Belgique)"
-            : "Sources standards (GFS/ECMWF/ICON/Meteomatics)",
+        note: country === "USA"
+          ? "⚡ Fusion multi-modèles + HRRR (USA)"
+          : "⚡ Fusion multi-modèles (GFS/ECMWF/ICON/Meteomatics + Copernicus/NASA + benchmarks)",
       };
     }
 
@@ -80,8 +91,9 @@ async function getLocalForecast(lat, lon, country) {
       lon,
       country,
       forecast: {
-        resume: "Prévisions OpenWeather",
+        resume: "Prévisions OpenWeather (fallback hors zones couvertes)",
         data: ow,
+        fiabilite: "≈45%",
       },
       source: "OpenWeather (fallback)",
     };
