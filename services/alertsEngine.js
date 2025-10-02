@@ -1,6 +1,6 @@
 // services/alertsEngine.js
 // ✅ Classement final des alertes
-// Règle nucléaire : >90% publié, 70–90% à valider, <70% ignoré
+// Règle nucléaire : >90% publié, 70–90% à valider, <70% sous surveillance
 
 /**
  * Classe une alerte météo en fonction de sa fiabilité
@@ -9,7 +9,7 @@
  */
 export function classifyAlerts(alertData) {
   if (!alertData) {
-    return { status: "ignored", reason: "Aucune donnée" };
+    return { status: "archived", reason: "Aucune donnée" };
   }
 
   const confidence =
@@ -24,13 +24,17 @@ export function classifyAlerts(alertData) {
   } else if (confidence >= 70) {
     status = "toValidate";
   } else {
-    status = "ignored";
+    status = "under-surveillance"; // ✅ suivi continu
   }
 
   return {
     ...alertData,
     confidence,
     status,
+    disappearedRunsCount: alertData.disappearedRunsCount ?? 0,
+    history: Array.isArray(alertData.history)
+      ? [...alertData.history, { run: Date.now(), confidence }]
+      : [{ run: Date.now(), confidence }],
     classifiedAt: new Date().toISOString(),
   };
 }
