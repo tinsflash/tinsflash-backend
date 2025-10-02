@@ -253,7 +253,7 @@ const EUROPE_ZONES = {
 // ===========================
 export async function runEuropeForecasts() {
   const state = getEngineState();
-  state.checkup = state.checkup || {};
+  state.checkup = state.checkup || {};   // ✅ Sécurité
   addEngineLog("🌍 Démarrage Prévisions Europe…");
 
   const byCountry = {};
@@ -285,8 +285,8 @@ export async function runEuropeForecasts() {
     points: totalPoints,
     success: successCount
   };
-  state.checkup.localForecasts = successCount > 0 ? "OK" : "FAIL";
-  state.checkup.nationalForecasts = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
+  state.checkup.localForecastsEurope = successCount > 0 ? "OK" : "FAIL";
+  state.checkup.nationalForecastsEurope = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
   saveEngineState(state);
 
   addEngineLog("✅ Prévisions Europe terminées.");
@@ -298,7 +298,7 @@ export async function runEuropeForecasts() {
 // ===========================
 export async function runEuropeAlerts() {
   const state = getEngineState();
-  state.checkup = state.checkup || {};
+  state.checkup = state.checkup || {};   // ✅ Sécurité
   addEngineLog("🚨 Démarrage Alertes Europe…");
 
   if (!state.zonesCoveredEurope) {
@@ -327,7 +327,7 @@ export async function runEuropeAlerts() {
   }
 
   state.alertsEurope = alertsByCountry;
-  state.checkup.alerts = "OK";
+  state.checkup.alertsEurope = "OK";
   saveEngineState(state);
 
   addEngineLog("✅ Alertes Europe terminées.");
@@ -339,18 +339,16 @@ export async function runEuropeAlerts() {
 // ===========================
 export async function runGlobalEurope() {
   const state = getEngineState();
+  state.checkup = state.checkup || {};   // ✅ Sécurité
   try {
     addEngineLog("🌍 Démarrage RUN GLOBAL EUROPE (prévisions + alertes)…");
-    state.checkup.engineStatus = "PENDING";
+    state.checkup.engineStatusEurope = "PENDING";
     saveEngineState(state);
 
-    // 1. Prévisions
     await runEuropeForecasts();
-
-    // 2. Alertes
     await runEuropeAlerts();
 
-    state.checkup.engineStatus = "OK";
+    state.checkup.engineStatusEurope = "OK";
     saveEngineState(state);
 
     addEngineLog("✅ RUN GLOBAL EUROPE complet terminé avec succès.");
@@ -360,11 +358,10 @@ export async function runGlobalEurope() {
     };
   } catch (err) {
     addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
-    state.checkup.engineStatus = "FAIL";
+    state.checkup.engineStatusEurope = "FAIL";
     saveEngineState(state);
     throw err;
   }
 }
 
-// ✅ Export des zones pour usage externe
 export { EUROPE_ZONES };
