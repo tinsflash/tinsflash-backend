@@ -388,7 +388,7 @@ const USA_ZONES = {
 // ===========================
 export async function runUSAForecasts() {
   const state = getEngineState();
-  state.checkup = state.checkup || {};
+  state.checkup = state.checkup || {};   // ✅ Sécurité
   addEngineLog("🇺🇸 Démarrage Prévisions USA…");
 
   const byState = {};
@@ -432,7 +432,7 @@ export async function runUSAForecasts() {
 // ===========================
 export async function runUSAAlerts() {
   const state = getEngineState();
-  state.checkup = state.checkup || {};
+  state.checkup = state.checkup || {};   // ✅ Sécurité
   addEngineLog("🚨 Démarrage Alertes USA…");
 
   if (!state.zonesCoveredUSA) {
@@ -473,15 +473,13 @@ export async function runUSAAlerts() {
 // ===========================
 export async function runGlobalUSA() {
   const state = getEngineState();
+  state.checkup = state.checkup || {};   // ✅ Sécurité
   try {
     addEngineLog("🇺🇸 Démarrage RUN GLOBAL USA (prévisions + alertes)…");
     state.checkup.engineStatusUSA = "PENDING";
     saveEngineState(state);
 
-    // 1. Prévisions
     await runUSAForecasts();
-
-    // 2. Alertes
     await runUSAAlerts();
 
     state.checkup.engineStatusUSA = "OK";
@@ -500,5 +498,4 @@ export async function runGlobalUSA() {
   }
 }
 
-// ✅ Export des zones pour runGlobal.js
 export { USA_ZONES };
