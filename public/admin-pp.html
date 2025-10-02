@@ -5,7 +5,6 @@
   <title>🌌 Console Administrateur - TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
-
   <style>
     body {
       margin: 0;
@@ -37,9 +36,7 @@
       text-decoration: none;
       font-weight: bold;
     }
-    nav a:hover {
-      text-decoration: underline;
-    }
+    nav a:hover { text-decoration: underline; }
     main {
       padding: 1.5rem;
       display: grid;
@@ -60,6 +57,7 @@
       padding-bottom: .3rem;
     }
     button {
+      background: #2563eb;
       border: none;
       color: white;
       padding: .6rem 1rem;
@@ -68,46 +66,51 @@
       font-size: .9rem;
       margin: .2rem;
       transition: 0.2s;
+    }
+    button:hover { background: #1d4ed8; }
+    .status-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #f59e0b;
       display: inline-block;
-      min-width: 180px;
-      text-align: center;
+      margin-right: 6px;
     }
-    .btn-orange { background: #f59e0b; }
-    .btn-green { background: #22c55e; }
-    .btn-red   { background: #ef4444; }
-    .btn-grey  { background: #374151; }
-    button:hover { opacity: 0.8; }
-    .logs {
-      max-height: 300px;
-      overflow-y: auto;
-      background: #0f172a;
-      font-family: monospace;
-      font-size: .9rem;
-      padding: .5rem;
-      border-radius: 6px;
-      display: none; /* caché par défaut */
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { padding: .4rem; border-bottom: 1px solid #374151; }
+    th { background: #111827; color: #38bdf8; text-align: left; }
+
+    /* 💬 Chat Bubble flottante */
+    #chatBubble {
+      position:fixed; bottom:20px; right:20px;
+      background:#2563eb; color:white;
+      width:60px; height:60px;
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.5rem;
+      cursor:pointer; z-index:1000;
+      transition: box-shadow 0.3s;
     }
-    .show { display: block !important; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: .9rem;
+    #chatBubble.green { box-shadow:0 0 20px 5px #22c55e; }
+    #chatBubble.orange { box-shadow:0 0 20px 5px #f59e0b; }
+    #chatBubble.red { box-shadow:0 0 20px 5px #ef4444; }
+    #chatBubble.purple { box-shadow:0 0 20px 5px #a855f7; }
+
+    #chatWindow {
+      position:fixed; bottom:90px; right:20px;
+      width:300px; height:400px;
+      background:#1f2937; border:1px solid #374151;
+      border-radius:10px; display:none;
+      flex-direction:column; z-index:1001;
     }
-    th, td {
-      padding: .5rem;
-      border-bottom: 1px solid #374151;
-    }
-    th {
-      background: #111827;
-      color: #38bdf8;
-      text-align: left;
-    }
+    #chatHeader { background:#111827; padding:.5rem; color:#38bdf8; font-weight:bold; text-align:center; }
+    #chatMessages { flex:1; overflow-y:auto; padding:.5rem; font-size:.9rem; }
+    #chatInput { display:flex; border-top:1px solid #374151; }
+    #chatInput input { flex:1; padding:.5rem; border:none; background:#0f172a; color:white; }
+    #chatInput button { padding:.5rem; background:#2563eb; border:none; color:white; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🌌 Console Admin – TINSFLASH</h1>
-  </header>
+  <header><h1>🌌 Console Admin – TINSFLASH</h1></header>
   <nav>
     <a href="/admin">Dashboard</a>
     <a href="/admin-alerts">Alertes</a>
@@ -117,145 +120,115 @@
     <a href="/admin-users">Utilisateurs</a>
   </nav>
   <main>
-    <!-- Contrôle moteur -->
-    <section style="grid-column: span 2;">
-      <h2>⚡ Contrôle moteur (direct)</h2>
-      <div id="buttonsPanel">
-        <button class="btn-grey" onclick="resetButtons()">🔄 RESET Voyants</button>
-        <hr>
-        <button id="btn-forecast-europe" class="btn-grey" onclick="launchRun('europe','btn-forecast-europe')">🌍 Prévisions Europe</button>
-        <button id="btn-forecast-usa" class="btn-grey" onclick="launchRun('usa','btn-forecast-usa')">🗽 Prévisions USA</button>
-        <button id="btn-forecast-continental" class="btn-grey" onclick="launchRun('continental','btn-forecast-continental')">🌐 Prévisions Continentales</button>
-        <hr>
-        <button id="btn-alerts-europe" class="btn-grey" onclick="launchRun('alerts-europe','btn-alerts-europe')">🚨 Alertes Europe</button>
-        <button id="btn-alerts-usa" class="btn-grey" onclick="launchRun('alerts-usa','btn-alerts-usa')">🚨 Alertes USA</button>
-        <button id="btn-alerts-continental" class="btn-grey" onclick="launchRun('alerts-continental','btn-alerts-continental')">🚨 Alertes Continentales</button>
-        <button id="btn-alerts-world" class="btn-grey" onclick="launchRun('alerts-world','btn-alerts-world')">🌍 Fusion Alertes Mondiales</button>
-        <hr>
-        <button id="btn-ia-forecast" class="btn-grey" onclick="launchRun('ia-forecast','btn-ia-forecast')">🤖 IA Analyse Prévisions</button>
-        <button id="btn-ia-alerts" class="btn-grey" onclick="launchRun('ia-alerts','btn-ia-alerts')">🤖 IA Analyse Alertes</button>
-      </div>
-      <p><strong>Dernier run :</strong> <span id="lastRun">-</span> | 
-         <strong>Dernières alertes :</strong> <span id="lastAlerts">-</span></p>
-    </section>
-
-    <!-- Europe + USA -->
     <section>
-      <h2>🌍 Prévisions par pays</h2>
-      <table id="forecastTable">
-        <thead><tr><th>Pays / État</th><th>Status</th></tr></thead>
-        <tbody></tbody>
-      </table>
+      <h2>⚡ Pilotage du moteur</h2>
+      <button onclick="launchRun('europe')">🌍 Prévisions Europe</button>
+      <button onclick="launchRun('usa')">🗽 Prévisions USA</button>
+      <button onclick="launchRun('alerts-europe')">🚨 Alertes Europe</button>
+      <button onclick="launchRun('alerts-usa')">🚨 Alertes USA</button>
+      <button onclick="launchRun('continental')">🌐 Alertes Continentales</button>
+      <button onclick="launchRun('alerts-world')">🌍 Fusion Alertes Mondiales</button>
+      <button onclick="launchRun('ia-forecast')">🤖 IA Analyse Prévisions</button>
+      <button onclick="launchRun('ia-alerts')">🤖 IA Analyse Alertes</button>
     </section>
 
     <section>
-      <h2>🚨 Alertes par pays</h2>
-      <table id="alertsTable">
-        <thead><tr><th>Pays / État</th><th>Status</th></tr></thead>
-        <tbody></tbody>
-      </table>
+      <h2>📊 États par pays (Europe)</h2>
+      <table id="europeTable"><thead><tr><th>Pays</th><th>Prévisions</th><th>Alertes</th></tr></thead><tbody></tbody></table>
     </section>
 
-    <!-- Logs cachés par défaut -->
-    <section style="grid-column: span 2;">
-      <h2 onclick="toggleLogs()" style="cursor:pointer;">📡 Logs (200 derniers) — cliquer pour ouvrir</h2>
-      <div id="logs" class="logs"></div>
+    <section>
+      <h2>📊 États par États (USA)</h2>
+      <table id="usaTable"><thead><tr><th>État</th><th>Prévisions</th><th>Alertes</th></tr></thead><tbody></tbody></table>
     </section>
   </main>
 
+  <!-- 💬 Chat flottant -->
+  <div id="chatBubble">💬</div>
+  <div id="chatWindow">
+    <div id="chatHeader">Chat Moteur IA</div>
+    <div id="chatMessages"></div>
+    <div id="chatInput">
+      <input type="text" id="chatText" placeholder="Écrire..."/>
+      <button onclick="sendChat()">Envoyer</button>
+    </div>
+  </div>
+
   <script>
-    function statusDot(color) {
-      return color === "green" ? "🟢" :
-             color === "red"   ? "🔴" : "🟠";
-    }
-
-    async function launchRun(action,btnId) {
-      setBtn(btnId,"orange");
-      try {
-        const res = await fetch(`/api/run-${action}`, { method:"POST" });
+    // === Gestion Runs ===
+    async function launchRun(action){
+      try{
+        const res = await fetch(`/api/run-${action}`,{method:"POST"});
         const data = await res.json();
-        if (data && !data.error) {
-          setBtn(btnId,"green");
-          appendLog(`🟢 ${action} terminé avec succès.`);
-        } else {
-          setBtn(btnId,"red");
-          appendLog(`🔴 Erreur ${action}: ${data.error}`);
-        }
-        refreshTables();
-      } catch(e) {
-        setBtn(btnId,"red");
-        appendLog(`🔴 Exception ${action}: ${e.message}`);
-      }
+        console.log("Run",action,data);
+      }catch(e){console.error("Erreur run",action,e);}
     }
 
-    function setBtn(id,color) {
-      const btn = document.getElementById(id);
-      btn.className = color==="green" ? "btn-green" :
-                      color==="red"   ? "btn-red" :
-                      color==="orange"? "btn-orange":"btn-grey";
-    }
-
-    function resetButtons() {
-      document.querySelectorAll("#buttonsPanel button").forEach(btn=>{
-        if (btn.id) btn.className = "btn-grey";
-      });
-      appendLog("🔄 Voyants remis à zéro.");
-    }
-
-    function appendLog(msg) {
-      const logsDiv = document.getElementById("logs");
-      const line = document.createElement("div");
-      line.textContent = new Date().toLocaleTimeString("fr-BE")+" — "+msg;
-      logsDiv.appendChild(line);
-      while (logsDiv.children.length > 200) {
-        logsDiv.removeChild(logsDiv.firstChild);
-      }
-      logsDiv.scrollTop = logsDiv.scrollHeight;
-    }
-
-    function toggleLogs() {
-      document.getElementById("logs").classList.toggle("show");
-    }
-
-    async function refreshTables() {
+    // === Rafraîchissement état ===
+    async function refreshTables(){
       const res = await fetch("/api/engine-state");
       const state = await res.json();
-      document.getElementById("lastRun").textContent = state?.lastRunFinished || "-";
-      document.getElementById("lastAlerts").textContent = state?.lastAlertsGenerated || "-";
+      fillTable("europeTable", state.zonesCoveredEurope, state.alertsEurope);
+      fillTable("usaTable", state.zonesCoveredUSA, state.alertsUSA);
+      updateChatBubbleStatus(state);
+    }
 
-      const fbody = document.querySelector("#forecastTable tbody");
-      const abody = document.querySelector("#alertsTable tbody");
-      fbody.innerHTML = ""; abody.innerHTML = "";
-
-      const renderRow = (tbody, name, status, flag="") => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${flag} ${name}</td><td style="text-align:center;">${statusDot(status)}</td>`;
+    function fillTable(tableId, forecastData, alertData){
+      const tbody=document.querySelector(`#${tableId} tbody`);
+      tbody.innerHTML="";
+      if(!forecastData) return;
+      for(const [country,data] of Object.entries(forecastData)){
+        const tr=document.createElement("tr");
+        const forecastStatus=data.regions?.length>0?"green":"red";
+        const alertStatus=alertData && alertData[country] && alertData[country].length>0?"green":"red";
+        tr.innerHTML=`<td>${country}</td>
+          <td><span class="status-dot" style="background:${forecastStatus==='green'?'#22c55e':'#ef4444'}"></span></td>
+          <td><span class="status-dot" style="background:${alertStatus==='green'?'#22c55e':'#ef4444'}"></span></td>`;
         tbody.appendChild(tr);
-      };
-
-      if (state.zonesCoveredEurope) {
-        for (const country of Object.keys(state.zonesCoveredEurope)) {
-          const forecasts = state.zonesCoveredEurope[country]?.regions?.length;
-          const alerts = state.alertsEurope && state.alertsEurope[country]?.length;
-          renderRow(fbody, country, forecasts?"green":"red","🇪🇺");
-          renderRow(abody, country, alerts?"green":"red","🇪🇺");
-        }
-      }
-      if (state.zonesCoveredUSA) {
-        for (const stateName of Object.keys(state.zonesCoveredUSA)) {
-          const forecasts = state.zonesCoveredUSA[stateName]?.regions?.length;
-          const alerts = state.alertsUSA && state.alertsUSA[stateName]?.length;
-          renderRow(fbody, stateName, forecasts?"green":"red","🇺🇸");
-          renderRow(abody, stateName, alerts?"green":"red","🇺🇸");
-        }
       }
     }
 
-    const evtSource = new EventSource("/api/logs/stream");
-    evtSource.onmessage = function(e) { appendLog(e.data); };
+    function updateChatBubbleStatus(state){
+      const bubble=document.getElementById("chatBubble");
+      bubble.className="";
+      bubble.id="chatBubble";
+      let anyOrange=false,anyRed=false,anyGreen=false;
+      if(state?.checkup){
+        for(const key of Object.keys(state.checkup)){
+          if(state.checkup[key]==="PENDING") anyOrange=true;
+          else if(state.checkup[key]==="FAIL") anyRed=true;
+          else if(state.checkup[key]==="OK") anyGreen=true;
+        }
+      }
+      if(anyOrange){bubble.classList.add("orange");}
+      else if(anyRed && anyGreen){bubble.classList.add("purple");}
+      else if(anyRed){bubble.classList.add("red");}
+      else if(anyGreen){bubble.classList.add("green");}
+    }
 
-    setInterval(refreshTables, 20000);
+    setInterval(refreshTables,10000);
     refreshTables();
+
+    // === Chat Flottant ===
+    const chatBubble=document.getElementById("chatBubble");
+    const chatWindow=document.getElementById("chatWindow");
+    chatBubble.onclick=()=>{chatWindow.style.display=chatWindow.style.display==="flex"?"none":"flex";};
+
+    async function sendChat(){
+      const text=document.getElementById("chatText").value.trim();
+      if(!text) return;
+      const messages=document.getElementById("chatMessages");
+      const userDiv=document.createElement("div");
+      userDiv.textContent="👤 "+text;
+      messages.appendChild(userDiv);
+      document.getElementById("chatText").value="";
+      const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text})});
+      const data=await res.json();
+      const botDiv=document.createElement("div");
+      botDiv.textContent="🤖 "+(data.reply||"Erreur IA");
+      messages.appendChild(botDiv);
+      messages.scrollTop=messages.scrollHeight;
+    }
   </script>
 </body>
 </html>
