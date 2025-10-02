@@ -159,7 +159,7 @@ app.post("/api/superforecast", async (req, res) => {
 
 app.get("/api/forecast/:country", async (req, res) => {
   try {
-    res.json(await safeCall(forecastService.getNationalForecast, req.params.country)); // ✅ Correction
+    res.json(await safeCall(forecastService.getNationalForecast, req.params.country));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -253,15 +253,28 @@ app.post("/api/textgen", async (req, res) => {
 
 // === Logs & Engine state ===
 app.get("/api/logs", async (req, res) => {
-  res.json(await adminLogs.getLogs());
+  try {
+    const { cycle } = req.query; // ex: ?cycle=current | ?cycle=all | ?cycle=20251001-191000
+    const logs = await adminLogs.getLogs(cycle || "all");
+    res.json(logs);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
-// Logs SSE (live stream)
-app.get("/api/logs/stream", (req, res) => {
+// Logs SSE (live stream du cycle courant uniquement)
+app.get("/api/logs/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
+
+  // ✅ Nouveau cycle automatiquement si aucun cycle actif
+  const current = await adminLogs.getLogs("current");
+  if (!current || current.length === 0) {
+    await adminLogs.startNewCycle();
+  }
+
   adminLogs.registerClient(res);
 });
 
