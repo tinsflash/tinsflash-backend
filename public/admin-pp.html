@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>🌌 Console Administrateur - TINSFLASH</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
 
   <style>
     body {
@@ -36,7 +37,9 @@
       text-decoration: none;
       font-weight: bold;
     }
-    nav a:hover { text-decoration: underline; }
+    nav a:hover {
+      text-decoration: underline;
+    }
     main {
       padding: 1.5rem;
       display: grid;
@@ -60,13 +63,16 @@
       background: #2563eb;
       border: none;
       color: white;
-      padding: .7rem 1.2rem;
+      padding: .6rem 1rem;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: .9rem;
+      margin: .2rem;
       transition: 0.2s;
     }
-    button:hover { background: #1d4ed8; }
+    button:hover {
+      background: #1d4ed8;
+    }
     .logs {
       max-height: 300px;
       overflow-y: auto;
@@ -76,8 +82,16 @@
       padding: .5rem;
       border-radius: 6px;
     }
-    .checklist { display: flex; flex-direction: column; gap: .6rem; }
-    .check-item { display: flex; align-items: center; gap: .6rem; }
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+    }
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
     .status-dot {
       width: 14px;
       height: 14px;
@@ -85,10 +99,26 @@
       background: #f59e0b;
       box-shadow: 0 0 5px rgba(0,0,0,0.6);
     }
-    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    th, td { padding: .5rem; border-bottom: 1px solid #374151; }
-    th { background: #111827; color: #38bdf8; text-align: left; }
-    pre { background:#0f172a; padding:0.5rem; border-radius:6px; font-size:.8rem; overflow:auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    th, td {
+      padding: .5rem;
+      border-bottom: 1px solid #374151;
+    }
+    th {
+      background: #111827;
+      color: #38bdf8;
+      text-align: left;
+    }
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -101,13 +131,21 @@
     <a href="/admin-chat">Chat IA</a>
     <a href="/admin-radar">Radar</a>
     <a href="/admin-index">Vue Index</a>
-    <a href="/admin-infos">Infos</a>
     <a href="/admin-users">Utilisateurs</a>
   </nav>
   <main>
     <section>
-      <h2>⚡ Lancement du moteur</h2>
-      <button onclick="launchRun()">🚀 Lancer un Run Global</button>
+      <h2>⚡ Lancement du moteur (par phases)</h2>
+      <button onclick="launchRun('europe','forecast-europe')">🌍 Prévisions Europe</button>
+      <button onclick="launchRun('usa','forecast-usa')">🗽 Prévisions USA</button>
+      <button onclick="launchRun('continental','forecast-continental')">🌐 Prévisions Continentales</button>
+      <hr>
+      <button onclick="launchRun('alerts-local','alerts-local')">🚨 Alertes Locales/Nationales</button>
+      <button onclick="launchRun('alerts-continental','alerts-continental')">🚨 Alertes Continentales</button>
+      <button onclick="launchRun('alerts-world','alerts-world')">🌍 Alertes Mondiales</button>
+      <hr>
+      <button onclick="launchRun('orchestrator','orchestrator')">🤖 IA Orchestrateur</button>
+
       <div id="engineState" style="margin-top:1rem;font-size:.9rem;"></div>
       <p><strong>Dernier run :</strong> <span id="lastRun">-</span></p>
       <p><strong>Dernières alertes :</strong> <span id="lastAlerts">-</span></p>
@@ -116,10 +154,13 @@
     <section>
       <h2>📋 Checklist Moteur</h2>
       <div class="checklist">
-        <div class="check-item"><div id="check-forecast" class="status-dot"></div> Prévisions</div>
-        <div class="check-item"><div id="check-alerts" class="status-dot"></div> Alertes</div>
-        <div class="check-item"><div id="check-ia" class="status-dot"></div> IA Orchestrateur</div>
-        <div class="check-item"><div id="check-users" class="status-dot"></div> Utilisateurs</div>
+        <div class="check-item"><div id="check-forecast-europe" class="status-dot"></div> Prévisions Europe</div>
+        <div class="check-item"><div id="check-forecast-usa" class="status-dot"></div> Prévisions USA</div>
+        <div class="check-item"><div id="check-forecast-continental" class="status-dot"></div> Prévisions Continentales</div>
+        <div class="check-item"><div id="check-alerts-local" class="status-dot"></div> Alertes Locales/Nationales</div>
+        <div class="check-item"><div id="check-alerts-continental" class="status-dot"></div> Alertes Continentales</div>
+        <div class="check-item"><div id="check-alerts-world" class="status-dot"></div> Alertes Mondiales</div>
+        <div class="check-item"><div id="check-orchestrator" class="status-dot"></div> IA Orchestrateur</div>
       </div>
     </section>
 
@@ -137,38 +178,31 @@
         <tbody></tbody>
       </table>
     </section>
+
+    <section style="grid-column: span 2;">
+      <h2>🛰️ Radar météo</h2>
+      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=4&level=surface&overlay=rain&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&detailLat=50&detailLon=4&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
+    </section>
   </main>
 
   <script>
-    async function launchRun() {
-      appendLog("🟠 Run lancé manuellement…");
-      setStatus("forecast","orange");
-      setStatus("alerts","orange");
-      setStatus("ia","orange");
+    async function launchRun(action,key) {
+      appendLog(`🟠 Lancement manuel : ${action}…`);
+      setStatus(key,"orange");
 
       try {
-        const res = await fetch("/api/run-global", {
-          method: "POST",
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ zone: "Europe" })
-        });
+        const res = await fetch(`/api/run-${action}`, { method:"POST" });
         const data = await res.json();
-        if (data.success) {
-          appendLog("🟢 Run Global terminé avec succès.");
-          setStatus("forecast","green");
-          setStatus("alerts","green");
-          setStatus("ia","green");
+        if (data && !data.error) {
+          appendLog(`🟢 ${action} terminé avec succès.`);
+          setStatus(key,"green");
         } else {
-          appendLog("🔴 Erreur Run Global: "+data.error);
-          setStatus("forecast","red");
-          setStatus("alerts","red");
-          setStatus("ia","red");
+          appendLog(`🔴 Erreur ${action}: ${data.error}`);
+          setStatus(key,"red");
         }
-      } catch (e) {
-        appendLog("🔴 Exception Run: "+e.message);
-        setStatus("forecast","red");
-        setStatus("alerts","red");
-        setStatus("ia","red");
+      } catch(e) {
+        appendLog(`🔴 Exception ${action}: ${e.message}`);
+        setStatus(key,"red");
       }
     }
 
@@ -186,12 +220,12 @@
     }
 
     const evtSource = new EventSource("/api/logs/stream");
-    evtSource.onmessage = e => appendLog(e.data);
+    evtSource.onmessage = function(e) { appendLog(e.data); };
 
     async function refreshEngine() {
       const res = await fetch("/api/engine-state");
       const state = await res.json();
-      document.getElementById("engineState").innerHTML = "<pre>"+JSON.stringify(state,null,2)+"</pre>";
+      document.getElementById("engineState").textContent = JSON.stringify(state,null,2);
       document.getElementById("lastRun").textContent = state?.lastRunFinished || "-";
       document.getElementById("lastAlerts").textContent = state?.lastAlertsGenerated || "-";
     }
