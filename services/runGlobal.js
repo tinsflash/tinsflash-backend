@@ -66,7 +66,7 @@ export async function runGlobal(zone = "All") {
       addEngineLog("🌐 Phase 2 – Prévisions Continentales (fallback)...");
       const cont = await runContinental();
       forecasts.Continental = cont?.forecasts || {};
-      state.forecastsContinental = forecasts.Continental;   // ✅ stocké
+      state.forecastsContinental = forecasts.Continental;
       state.checkup.forecastsContinental = "OK";
       await saveEngineState(state);
     }
@@ -87,13 +87,14 @@ export async function runGlobal(zone = "All") {
     await saveEngineState(state);
 
     // =============================
-    // 🔹 PHASE 4 : ALERTES CONTINENTALES (fallback)
+    // 🔹 PHASE 4 : ALERTES CONTINENTALES
     // =============================
     if (zone === "All") {
       addEngineLog("🚨 Phase 4 – Alertes Continentales (fallback)...");
       const contAlerts = await runContinental();
       state.alertsContinental = contAlerts?.alerts || [];
-      state.checkup.alertsContinental = state.alertsContinental.length > 0 ? "OK" : "FAIL";
+      state.checkup.alertsContinental =
+        state.alertsContinental.length > 0 ? "OK" : "FAIL";
       await saveEngineState(state);
     }
 
@@ -109,15 +110,15 @@ export async function runGlobal(zone = "All") {
     }
 
     // =============================
-    // 🔹 PHASE 6 : IA CHEF D’ORCHESTRE
+    // 🔹 PHASE 6 : IA CHEF D’ORCHESTRE (FusionNet Global)
     // =============================
-    addEngineLog("🤖 Phase 6 – IA Chef d’orchestre (fusion finale)…");
+    addEngineLog("🤖 Phase 6 – IA Chef d’orchestre (FusionNet Global)…");
 
     const aiInput = { forecasts, alerts: state.alertsLocal, world: state.alertsWorld };
     let aiFusion;
     try {
       aiFusion = await askOpenAI(
-        "Tu es l’IA chef d’orchestre météo nucléaire. Analyse et fusionne.",
+        "Tu es l’IA J.E.A.N., chef d’orchestre météo nucléaire. Analyse, fusionne et renvoie une synthèse fiable.",
         JSON.stringify(aiInput)
       );
     } catch (e) {
@@ -125,19 +126,24 @@ export async function runGlobal(zone = "All") {
       aiFusion = "{}";
     }
 
-    let finalOutput;
+    let fusionNetGlobal;
     try {
-      finalOutput = JSON.parse(aiFusion);
+      fusionNetGlobal = JSON.parse(aiFusion);
     } catch {
-      finalOutput = { raw: aiFusion };
+      fusionNetGlobal = { raw: aiFusion };
     }
 
-    state.finalReport = finalOutput;
+    state.finalReport = fusionNetGlobal;
     state.checkup.engineStatus = "OK";
     await saveEngineState(state);
 
     addEngineLog("✅ RUN GLOBAL terminé avec succès.");
-    return { forecasts, alerts, final: finalOutput };
+    return {
+      forecasts,
+      alerts,
+      fusionNet: fusionNetGlobal, // ✅ ajouté
+      finalReport: fusionNetGlobal,
+    };
   } catch (err) {
     await addEngineError("❌ Erreur RUN GLOBAL : " + (err.message || err));
 
