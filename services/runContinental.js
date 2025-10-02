@@ -1,13 +1,15 @@
 // services/runContinental.js
 // ⚡ Centrale nucléaire météo – RUN Continental (zones non couvertes)
-// Génère uniquement des prévisions brutes par continent
-// Les alertes sont gérées ensuite par runGlobal.js
+// ⚠️ IMPORTANT : Ces prévisions ne sont PAS issues de notre moteur TINSFLASH
+// mais d'un fallback open-data (ex: OpenWeather). Elles servent uniquement d'aperçu.
+// Les alertes générées sont continentales, de niveau simplifié.
 
 import { runSuperForecast } from "./superForecast.js";
+import { generateAlerts } from "./alertsService.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-// === Exemple de zones continentales (fallback open-data ou simplifiées) ===
-// ⚠️ À enrichir progressivement (Afrique, Asie, Amérique du Sud, Océanie, etc.)
+// === Zones continentales simplifiées ===
+// (à enrichir progressivement)
 export const CONTINENTAL_ZONES = {
   Africa: [
     { region: "North", lat: 30.0444, lon: 31.2357 },   // Le Caire
@@ -27,52 +29,132 @@ export const CONTINENTAL_ZONES = {
   ]
 };
 
+// ===========================
+// 1️⃣ Prévisions continentales (fallback)
+// ===========================
+export async function runContinentalForecasts() {
+  const state = getEngineState();
+  state.checkup = state.checkup || {};
+  addEngineLog("🌐 Démarrage Prévisions Continentales (fallback open-data)…");
+
+  const byContinent = {};
+  let successCount = 0, totalPoints = 0;
+
+  for (const [continent, zones] of Object.entries(CONTINENTAL_ZONES)) {
+    byContinent[continent] = { regions: [] };
+    for (const z of zones) {
+      try {
+        const res = await runSuperForecast({
+          lat: z.lat,
+          lon: z.lon,
+          country: continent,
+          region: z.region
+        });
+
+        byContinent[continent].regions.push({ 
+          ...z, 
+          forecast: res?.forecast || {}, 
+          source: "fallback"  // 🔥 important : pas notre machine !
+        });
+
+        successCount++; totalPoints++;
+        addEngineLog(`⚠️ [Fallback] Prévisions ${continent} — ${z.region}`);
+      } catch (e) {
+        addEngineError(`❌ Prévisions ${continent} — ${z.region}: ${e.message}`);
+        totalPoints++;
+      }
+    }
+  }
+
+  state.zonesCoveredContinental = byContinent;
+  state.zonesCoveredSummaryContinental = {
+    continents: Object.keys(byContinent).length,
+    points: totalPoints,
+    success: successCount,
+    note: "⚠️ Données fallback hors zones couvertes TINSFLASH"
+  };
+  state.checkup.forecastsContinental = successCount > 0 ? "OK" : "FAIL";
+  saveEngineState(state);
+
+  addEngineLog("✅ Prévisions Continentales (fallback) terminées.");
+  return { summary: state.zonesCoveredSummaryContinental };
+}
+
+// ===========================
+// 2️⃣ Alertes continentales (simplifiées)
+// ===========================
+export async function runContinentalAlerts() {
+  const state = getEngineState();
+  state.checkup = state.checkup || {};
+  addEngineLog("🚨 Démarrage Alertes Continentales (simplifiées)…");
+
+  if (!state.zonesCoveredContinental) {
+    addEngineError("❌ Impossible de générer les alertes : pas de prévisions continentales disponibles.");
+    return;
+  }
+
+  const alertsByContinent = {};
+  for (const [continent, data] of Object.entries(state.zonesCoveredContinental)) {
+    alertsByContinent[continent] = [];
+    for (const regionData of data.regions) {
+      try {
+        const alert = await generateAlerts(
+          regionData.lat,
+          regionData.lon,
+          continent,
+          regionData.region,
+          "Continental"
+        );
+
+        alertsByContinent[continent].push({ 
+          region: regionData.region, 
+          alert, 
+          source: "fallback"  // 🔥 bien marqué
+        });
+
+        addEngineLog(`🚨 [Fallback] Alerte ${continent} — ${regionData.region}`);
+      } catch (e) {
+        addEngineError(`❌ Alerte ${continent} — ${regionData.region}: ${e.message}`);
+      }
+    }
+  }
+
+  state.alertsContinental = alertsByContinent;
+  state.checkup.alertsContinental = "OK";
+  saveEngineState(state);
+
+  addEngineLog("✅ Alertes Continentales terminées.");
+  return alertsByContinent;
+}
+
+// ===========================
+// 3️⃣ Run complet Continental
+// ===========================
 export async function runContinental() {
   const state = getEngineState();
   try {
-    state.checkup = state.checkup || {};   // 🔒 Sécurité
-    addEngineLog("🌐 Démarrage du RUN Continental (zones non couvertes)...");
-    state.runTime = new Date().toISOString();
-
-    const byContinent = {};
-    let successCount = 0;
-    let totalPoints = 0;
-
-    for (const [continent, zones] of Object.entries(CONTINENTAL_ZONES)) {
-      byContinent[continent] = { regions: [] };
-      for (const z of zones) {
-        try {
-          const res = await runSuperForecast({
-            lat: z.lat,
-            lon: z.lon,
-            country: continent,
-            region: z.region
-          });
-          byContinent[continent].regions.push({ ...z, forecast: res?.forecast });
-          successCount++; totalPoints++;
-          addEngineLog(`✅ ${continent} — ${z.region}`);
-        } catch (e) {
-          addEngineError(`❌ ${continent} — ${z.region}: ${e.message}`);
-          totalPoints++;
-        }
-      }
-    }
-
-    state.zonesCoveredContinental = byContinent;
-    state.zonesCoveredSummaryContinental = {
-      continents: Object.keys(byContinent).length,
-      points: totalPoints,
-      success: successCount
-    };
-    state.checkup.engineStatus = "OK";
+    addEngineLog("🌐 Démarrage RUN Continental (prévisions + alertes, fallback)…");
+    state.checkup.engineStatusContinental = "PENDING";
     saveEngineState(state);
 
-    addEngineLog("✅ RUN Continental terminé avec succès.");
-    return { summary: state.zonesCoveredSummaryContinental };
+    // 1. Prévisions fallback
+    await runContinentalForecasts();
+
+    // 2. Alertes fallback
+    await runContinentalAlerts();
+
+    state.checkup.engineStatusContinental = "OK";
+    saveEngineState(state);
+
+    addEngineLog("✅ RUN Continental complet terminé avec succès (fallback).");
+    return {
+      forecasts: state.zonesCoveredSummaryContinental,
+      alerts: state.alertsContinental ? "OK" : "FAIL",
+      source: "fallback"
+    };
   } catch (err) {
-    state.checkup = state.checkup || {};   // 🔒 Sécurité
     addEngineError("❌ Erreur RUN Continental: " + err.message);
-    state.checkup.engineStatus = "FAIL";
+    state.checkup.engineStatusContinental = "FAIL";
     saveEngineState(state);
     throw err;
   }
