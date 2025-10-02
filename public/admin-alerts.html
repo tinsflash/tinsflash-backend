@@ -13,12 +13,16 @@
     .alert-block { padding:15px; margin:10px; border-radius:8px; }
     .published { background:#163; }
     .tovalidate { background:#663; }
-    .ignored { background:#633; }
+    .surveillance { background:#335; }
     pre { white-space:pre-wrap; background:#000; padding:10px; border-radius:6px; }
     button { margin:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; }
     button.validate { background:#2a2; color:white; }
     button.reject { background:#a22; color:white; }
     button.pending { background:#cc0; color:black; }
+    .badge { padding:2px 6px; border-radius:4px; font-size:0.8em; margin-left:6px; }
+    .exclusive { background:#a22; color:#fff; }
+    .confirmed { background:#2a2; color:#fff; }
+    #summary { background:#222; padding:10px; margin:10px; border-radius:8px; }
   </style>
   <script>
     const pwd = prompt("Mot de passe ?");
@@ -27,35 +31,62 @@
       throw new Error("Accès refusé");
     }
 
+    async function fetchSummary() {
+      const res = await fetch("/api/alerts/summary");
+      if (!res.ok) return {};
+      return await res.json();
+    }
+
     async function fetchAlerts() {
-      const res = await fetch("/api/alerts");
-      const data = await res.json();
-      if (!Array.isArray(data)) return;
+      const [alertsRes, summary] = await Promise.all([
+        fetch("/api/alerts").then(r => r.json()),
+        fetchSummary()
+      ]);
 
       const publishedDiv = document.getElementById("published");
       const toValidateDiv = document.getElementById("tovalidate");
-      const ignoredDiv = document.getElementById("ignored");
+      const surveillanceDiv = document.getElementById("surveillance");
 
       publishedDiv.innerHTML = "";
       toValidateDiv.innerHTML = "";
-      ignoredDiv.innerHTML = "";
+      surveillanceDiv.innerHTML = "";
 
-      data.forEach(alert => {
-        const fiab = alert?.data?.fiabilite || 0;
+      // 🔎 Résumé global
+      if (summary && summary.total != null) {
+        document.getElementById("summary").innerHTML = `
+          <strong>Total alertes :</strong> ${summary.total}<br>
+          🟢 Publiées : ${summary.byStatus.published} | 
+          🟡 À valider : ${summary.byStatus.toValidate} | 
+          🔵 Surveillance : ${summary.byStatus["under-surveillance"]} | 
+          ⚪ Archivées : ${summary.byStatus.archived}<br>
+          🔴 Exclusives : ${summary.exclusives} | 
+          🟢 Confirmées ailleurs : ${summary.confirmedElsewhere}
+        `;
+      }
+
+      alertsRes.forEach(alert => {
+        const fiab = alert?.data?.confidence || 0;
+        const status = alert?.data?.status || "under-surveillance";
         let block;
-        if (fiab >= 90) block = publishedDiv;
-        else if (fiab >= 70) block = toValidateDiv;
-        else block = ignoredDiv;
+        if (status === "published") block = publishedDiv;
+        else if (status === "toValidate") block = toValidateDiv;
+        else block = surveillanceDiv;
+
+        // Badge exclusivité
+        let badge = "";
+        const ex = alert?.data?.external?.exclusivity;
+        if (ex === "exclusive") badge = `<span class="badge exclusive">TINSFLASH Exclusif</span>`;
+        if (ex === "confirmed-elsewhere") badge = `<span class="badge confirmed">Confirmé ailleurs</span>`;
 
         const el = document.createElement("div");
-        el.className = "alert-block";
+        el.className = `alert-block ${status}`;
         el.innerHTML = `
-          <strong>${alert.country} ${alert.region || ""}</strong> – ${alert.continent}<br>
+          <strong>${alert.country} ${alert.region || ""}</strong> – ${alert.continent} ${badge}<br>
           <em>Confiance : ${fiab}%</em><br>
           <pre>${JSON.stringify(alert.data, null, 2)}</pre>
-          ${fiab >= 70 && fiab < 90 ? `
+          ${status === "toValidate" ? `
             <button class="validate" onclick="updateStatus('${alert.id}','published')">Valider</button>
-            <button class="reject" onclick="updateStatus('${alert.id}','ignored')">Rejeter</button>
+            <button class="reject" onclick="updateStatus('${alert.id}','under-surveillance')">Rejeter</button>
             <button class="pending" onclick="updateStatus('${alert.id}','pending')">En attente</button>
           ` : ""}
         `;
@@ -85,13 +116,15 @@
     </nav>
   </header>
 
+  <div id="summary"></div>
+
   <h2>✅ Auto-publiées (&gt;90%)</h2>
   <div id="published"></div>
 
   <h2>⏳ À valider (70–90%)</h2>
   <div id="tovalidate"></div>
 
-  <h2>❌ Ignorées (&lt;70%)</h2>
-  <div id="ignored"></div>
+  <h2>🔵 Sous surveillance (&lt;70%)</h2>
+  <div id="surveillance"></div>
 </body>
 </html>
