@@ -21,7 +21,6 @@
     button.pending { background:#cc0; color:black; }
   </style>
   <script>
-    // Protection simple par mot de passe
     const pwd = prompt("Mot de passe ?");
     if (pwd !== "202679") {
       document.write("⛔ Accès refusé");
@@ -31,7 +30,7 @@
     async function fetchAlerts() {
       const res = await fetch("/api/alerts");
       const data = await res.json();
-      if (!data.success) return;
+      if (!Array.isArray(data)) return;
 
       const publishedDiv = document.getElementById("published");
       const toValidateDiv = document.getElementById("tovalidate");
@@ -41,8 +40,8 @@
       toValidateDiv.innerHTML = "";
       ignoredDiv.innerHTML = "";
 
-      data.alerts.forEach(alert => {
-        const fiab = alert?.data?.confidence || alert?.data?.fiabilite || 0;
+      data.forEach(alert => {
+        const fiab = alert?.data?.fiabilite || 0;
         let block;
         if (fiab >= 90) block = publishedDiv;
         else if (fiab >= 70) block = toValidateDiv;
