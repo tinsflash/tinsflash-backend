@@ -39,7 +39,7 @@ import * as newsService from "./services/newsService.js";
 import * as userService from "./services/userService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import * as adminLogs from "./services/adminLogs.js";
-import { runWorldAlerts } from "./services/runWorldAlerts.js"; // ✅ Import ajouté
+import { runWorldAlerts } from "./services/runWorldAlerts.js"; 
 
 // ✅ Router vérification
 import verifyRouter from "./services/verifyRouter.js";
@@ -70,8 +70,6 @@ app.post("/api/run-global", async (req, res) => {
 });
 
 // === Alias pour boutons séparés ===
-
-// Europe
 app.post("/api/run-europe", async (req, res) => {
   try {
     await checkSourcesFreshness();
@@ -82,7 +80,6 @@ app.post("/api/run-europe", async (req, res) => {
   }
 });
 
-// USA
 app.post("/api/run-usa", async (req, res) => {
   try {
     await checkSourcesFreshness();
@@ -93,7 +90,6 @@ app.post("/api/run-usa", async (req, res) => {
   }
 });
 
-// Continental
 app.post("/api/run-continental", async (req, res) => {
   try {
     await checkSourcesFreshness();
@@ -104,7 +100,6 @@ app.post("/api/run-continental", async (req, res) => {
   }
 });
 
-// Alertes locales/nationales
 app.post("/api/run-alerts", async (req, res) => {
   try {
     const result = await safeCall(alertsService.generateAlerts);
@@ -114,7 +109,6 @@ app.post("/api/run-alerts", async (req, res) => {
   }
 });
 
-// Alertes continentales
 app.post("/api/run-alerts-continental", async (req, res) => {
   try {
     const result = await safeCall(runContinental.runContinental);
@@ -124,7 +118,6 @@ app.post("/api/run-alerts-continental", async (req, res) => {
   }
 });
 
-// Alertes mondiales
 app.post("/api/run-alerts-world", async (req, res) => {
   try {
     const result = await safeCall(runWorldAlerts);
@@ -134,7 +127,6 @@ app.post("/api/run-alerts-world", async (req, res) => {
   }
 });
 
-// IA Orchestrateur
 app.post("/api/run-orchestrator", async (req, res) => {
   try {
     const result = await safeCall(runGlobal, "All");
@@ -169,6 +161,16 @@ app.get("/api/forecast/:country", async (req, res) => {
 app.get("/api/alerts", async (req, res) => {
   try {
     res.json((await safeCall(alertsService.getActiveAlerts)) || []);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ✅ Nouveau résumé de surveillance pour admin
+app.get("/api/alerts/summary", async (req, res) => {
+  try {
+    const summary = await safeCall(alertsService.getSurveillanceSummary);
+    res.json(summary || {});
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -254,7 +256,7 @@ app.post("/api/textgen", async (req, res) => {
 // === Logs & Engine state ===
 app.get("/api/logs", async (req, res) => {
   try {
-    const { cycle } = req.query; // ex: ?cycle=current | ?cycle=all | ?cycle=20251001-191000
+    const { cycle } = req.query; 
     const logs = await adminLogs.getLogs(cycle || "all");
     res.json(logs);
   } catch (e) {
@@ -262,19 +264,16 @@ app.get("/api/logs", async (req, res) => {
   }
 });
 
-// Logs SSE (live stream du cycle courant uniquement)
 app.get("/api/logs/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  // ✅ Nouveau cycle automatiquement si aucun cycle actif
   const current = await adminLogs.getLogs("current");
   if (!current || current.length === 0) {
     await adminLogs.startNewCycle();
   }
-
   adminLogs.registerClient(res);
 });
 
