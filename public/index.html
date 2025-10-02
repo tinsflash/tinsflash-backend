@@ -40,8 +40,8 @@
 <main>
   <section>
     <p>
-      Notre moteur <b>météo</b> croise les modèles mondiaux, le relief, le climat et les anomalies saisonnières.  
-      Résultat : <b>Avec le support de notre intelligence artificielle J.E.A.N. nous vous fournissons les prévisions locales et nationales les plus fiables au monde</b>, avec des alertes <b>avant tout le monde</b>.  
+      Notre moteur <b>nucléaire météo</b> croise les modèles mondiaux, le relief, le climat et les anomalies saisonnières.  
+      Résultat : <b>les prévisions locales et nationales les plus fiables au monde</b>, avec des alertes <b>avant tout le monde</b>.  
     </p>
   </section>
 
@@ -82,3 +82,143 @@
     loop
     autoplay>
   </lottie-player>
+</div>
+
+<script>
+document.getElementById("avatar-jean").addEventListener("click", async () => {
+  const q = prompt("Posez une question météo à J.E.A.N :");
+  if(!q) return;
+  const res = await fetch("/api/jean", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message:q})
+  });
+  const data = await res.json();
+  alert("J.E.A.N : " + (data.reply || "Pas de réponse"));
+});
+
+// === Paramètres URL
+const params = new URLSearchParams(window.location.search);
+let city = params.get("city") || "Bruxelles";
+let country = params.get("country") || "BE";
+
+// Géocodage simplifié
+let lat=50.8503, lon=4.3517;
+function geo(city,country){
+  if(city.toLowerCase()==="paris"){return [48.8566,2.3522];}
+  if(city.toLowerCase()==="new york"){return [40.7128,-74.0060];}
+  return [50.8503,4.3517]; // défaut Bruxelles
+}
+[lat,lon]=geo(city,country);
+
+// Changement manuel
+function manualForecast(){
+  const c=document.getElementById("cityInput").value;
+  const p=document.getElementById("countryInput").value;
+  if(c&&p){window.location.search=`?city=${c}&country=${p}`;}
+}
+
+// Charger les prévisions
+async function loadForecast(){
+  try{
+    const res = await fetch("/api/superforecast",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({lat,lon,country,region:city})
+    });
+    const data = await res.json();
+
+    const table=document.getElementById("forecastTable");
+    table.innerHTML="";
+
+    let bulletin="Prévisions indisponibles.";
+    if(data && data.forecast){
+      // On tente d’analyser JSON IA
+      let f=data.forecast;
+      if(typeof f==="string"){
+        try{ f=JSON.parse(f); }catch(e){}
+      }
+      if(f.resume || f.message_utilisateur){
+        bulletin=f.message_utilisateur || f.resume;
+      }
+      if(f.points_forts){
+        table.innerHTML="<tr><th>Points forts</th></tr>";
+        f.points_forts.forEach(pt=>{
+          const row=document.createElement("tr");
+          row.innerHTML=`<td>${pt}</td>`;
+          table.appendChild(row);
+        });
+      }
+    }
+    document.getElementById("forecastBulletin").textContent=bulletin;
+
+    if("Notification" in window && Notification.permission==="granted"){
+      new Notification("Prévision TINSFLASH", { body: bulletin });
+    }
+  }catch(e){
+    document.getElementById("forecastBulletin").textContent="Erreur forecast: "+e.message;
+  }
+}
+
+// Charger alertes
+async function loadAlerts(){
+  try{
+    const res = await fetch("/api/alerts");
+    const data = await res.json();
+    if(!Array.isArray(data) || data.length===0){
+      document.getElementById("alerts").innerHTML="✅ Aucune alerte active.";
+      return;
+    }
+    renderAlerts(data);
+  }catch(e){
+    document.getElementById("alerts").textContent="Erreur alertes: "+e.message;
+  }
+}
+
+// Charger alertes mondiales
+async function loadWorldAlerts(){
+  try{
+    const res = await fetch("/api/alerts");
+    const data = await res.json();
+    const world = data.filter(a=>a.continent && !a.region); // continentales
+    if(!world || world.length===0){
+      document.getElementById("alerts").innerHTML="✅ Aucune alerte mondiale.";
+      return;
+    }
+    renderAlerts(world);
+  }catch(e){
+    document.getElementById("alerts").textContent="Erreur alertes mondiales: "+e.message;
+  }
+}
+
+// Rendu alertes
+function renderAlerts(list){
+  let html="";
+  list.forEach(a=>{
+    const d=a.data||{};
+    const fiab=d.fiabilite||0;
+    const color=fiab>90?"#0f0":fiab>70?"#ffa500":"#f00";
+    html+=`
+      <div class="alert-card">
+        <b>${a.country||""} ${a.region? "– "+a.region:""} (${a.continent||""})</b><br>
+        Type : ${d.type||"?"} – Intensité : ${d.intensite||"?"}<br>
+        Fiabilité : <span style="color:${color};">${fiab}%</span><br>
+        ⏱️ ${a.timestamp}<br>
+        ⚠️ Conséquences : ${d.consequences||"?"}<br>
+        ✅ Recommandations : ${d.recommandations||"?"}
+      </div>
+    `;
+  });
+  document.getElementById("alerts").innerHTML=html;
+}
+
+// Notifications navigateur
+if("Notification" in window && Notification.permission!=="granted"){
+  Notification.requestPermission();
+}
+
+loadForecast();
+loadAlerts();
+</script>
+</body>
+</html>
