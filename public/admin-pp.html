@@ -1,234 +1,133 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>🌌 Console Administrateur - TINSFLASH</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex,nofollow">
+  <meta charset="UTF-8" />
+  <title>⚡ Centrale Nucléaire Météo – Admin</title>
   <style>
-    body {
-      margin: 0;
-      font-family: "Orbitron", Arial, sans-serif;
-      background-color: #0b0f1a;
-      color: #e0e0e0;
-    }
-    header {
-      background: #111827;
-      padding: 1rem;
-      text-align: center;
-      border-bottom: 2px solid #1f2937;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 1.6rem;
-      color: #38bdf8;
-      letter-spacing: 2px;
-    }
-    nav {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      background: #1f2937;
-      padding: .5rem;
-    }
-    nav a {
-      color: #38bdf8;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    nav a:hover { text-decoration: underline; }
-    main {
-      padding: 1.5rem;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-    }
-    section {
-      background: #1f2937;
-      padding: 1rem;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-    h2 {
-      font-size: 1.2rem;
-      color: #38bdf8;
-      margin-bottom: .5rem;
-      border-bottom: 1px solid #374151;
-      padding-bottom: .3rem;
-    }
-    button {
-      background: #2563eb;
-      border: none;
-      color: white;
-      padding: .6rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: .9rem;
-      margin: .2rem;
-      transition: 0.2s;
-    }
-    button:hover { background: #1d4ed8; }
-    .status-dot {
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      background: #f59e0b;
-      display: inline-block;
-      margin-right: 6px;
-    }
-    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    th, td { padding: .4rem; border-bottom: 1px solid #374151; }
-    th { background: #111827; color: #38bdf8; text-align: left; }
+    body { background:#0a0f1c; color:#fff; font-family:Arial, sans-serif; margin:0; }
+    header { padding:20px; background:#11172b; text-align:center; font-size:22px; font-weight:bold; }
+    .controls { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; padding:15px; background:#141c33; }
+    .run-btn { padding:10px 15px; border-radius:6px; border:none; cursor:pointer; font-weight:bold; color:#fff; background:#444; }
+    .run-btn.orange { background:orange; }
+    .run-btn.green { background:#2ecc71; }
+    .run-btn.red { background:#e74c3c; }
+    .run-btn.purple { background:#9b59b6; }
+    .progress { width:160px; height:8px; background:#222; border-radius:4px; margin:5px auto; overflow:hidden; }
+    .progress-bar { height:8px; width:0%; background:#2ecc71; transition:width 0.3s; }
 
-    /* 💬 Chat Bubble flottante */
-    #chatBubble {
-      position:fixed; bottom:20px; right:20px;
-      background:#2563eb; color:white;
-      width:60px; height:60px;
-      border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      font-size:1.5rem;
-      cursor:pointer; z-index:1000;
-      transition: box-shadow 0.3s;
-    }
-    #chatBubble.green { box-shadow:0 0 20px 5px #22c55e; }
-    #chatBubble.orange { box-shadow:0 0 20px 5px #f59e0b; }
-    #chatBubble.red { box-shadow:0 0 20px 5px #ef4444; }
-    #chatBubble.purple { box-shadow:0 0 20px 5px #a855f7; }
+    .columns { display:flex; justify-content:space-around; padding:20px; }
+    .col { flex:1; padding:10px; }
+    h2 { font-size:18px; margin-bottom:10px; }
+    .country { display:flex; align-items:center; margin:5px 0; }
+    .bubble { width:14px; height:14px; border-radius:50%; margin-right:8px; background:orange; }
+    .bubble.green { background:#2ecc71; }
+    .bubble.red { background:#e74c3c; }
+    .bubble.purple { background:#9b59b6; }
 
-    #chatWindow {
-      position:fixed; bottom:90px; right:20px;
-      width:300px; height:400px;
-      background:#1f2937; border:1px solid #374151;
-      border-radius:10px; display:none;
-      flex-direction:column; z-index:1001;
-    }
-    #chatHeader { background:#111827; padding:.5rem; color:#38bdf8; font-weight:bold; text-align:center; }
-    #chatMessages { flex:1; overflow-y:auto; padding:.5rem; font-size:.9rem; }
-    #chatInput { display:flex; border-top:1px solid #374151; }
-    #chatInput input { flex:1; padding:.5rem; border:none; background:#0f172a; color:white; }
-    #chatInput button { padding:.5rem; background:#2563eb; border:none; color:white; }
+    .logs { padding:20px; background:#11172b; }
+    .logs-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-weight:bold; }
+    .logs-content { max-height:300px; overflow-y:auto; display:none; background:#0d1324; padding:10px; margin-top:10px; border-radius:6px; font-size:14px; }
+
+    .chat-bubble { position:fixed; bottom:20px; right:20px; background:#2ecc71; color:#fff; border-radius:50%; width:60px; height:60px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:26px; box-shadow:0 0 15px rgba(0,0,0,0.4); }
+    #chat-window { position:fixed; bottom:90px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:10px; display:none; flex-direction:column; }
+    #chat-messages { flex:1; padding:10px; overflow-y:auto; }
+    #chat-input { display:flex; }
+    #chat-input input { flex:1; padding:8px; border:none; border-top:1px solid #ccc; }
+    #chat-input button { padding:8px 12px; border:none; background:#2ecc71; color:#fff; cursor:pointer; }
   </style>
 </head>
 <body>
-  <header><h1>🌌 Console Admin – TINSFLASH</h1></header>
-  <nav>
-    <a href="/admin">Dashboard</a>
-    <a href="/admin-alerts">Alertes</a>
-    <a href="/admin-chat">Chat IA</a>
-    <a href="/admin-radar">Radar</a>
-    <a href="/admin-index">Vue Index</a>
-    <a href="/admin-users">Utilisateurs</a>
-  </nav>
-  <main>
-    <section>
-      <h2>⚡ Pilotage du moteur</h2>
-      <button onclick="launchRun('europe')">🌍 Prévisions Europe</button>
-      <button onclick="launchRun('usa')">🗽 Prévisions USA</button>
-      <button onclick="launchRun('alerts-europe')">🚨 Alertes Europe</button>
-      <button onclick="launchRun('alerts-usa')">🚨 Alertes USA</button>
-      <button onclick="launchRun('continental')">🌐 Alertes Continentales</button>
-      <button onclick="launchRun('alerts-world')">🌍 Fusion Alertes Mondiales</button>
-      <button onclick="launchRun('ia-forecast')">🤖 IA Analyse Prévisions</button>
-      <button onclick="launchRun('ia-alerts')">🤖 IA Analyse Alertes</button>
-    </section>
+  <header>⚡ Centrale Nucléaire Météo – Console Admin</header>
 
-    <section>
-      <h2>📊 États par pays (Europe)</h2>
-      <table id="europeTable"><thead><tr><th>Pays</th><th>Prévisions</th><th>Alertes</th></tr></thead><tbody></tbody></table>
-    </section>
+  <!-- Boutons + Progress -->
+  <div class="controls">
+    <div><button id="btn-europe-forecast" class="run-btn orange" onclick="triggerRun('europe','forecast')">Prévisions Europe</button><div class="progress"><div id="prog-europe-forecast" class="progress-bar"></div></div></div>
+    <div><button id="btn-europe-alerts" class="run-btn orange" onclick="triggerRun('europe','alerts')">Alertes Europe</button><div class="progress"><div id="prog-europe-alerts" class="progress-bar"></div></div></div>
+    <div><button id="btn-usa-forecast" class="run-btn orange" onclick="triggerRun('usa','forecast')">Prévisions USA</button><div class="progress"><div id="prog-usa-forecast" class="progress-bar"></div></div></div>
+    <div><button id="btn-usa-alerts" class="run-btn orange" onclick="triggerRun('usa','alerts')">Alertes USA</button><div class="progress"><div id="prog-usa-alerts" class="progress-bar"></div></div></div>
+    <div><button id="btn-continental-alerts" class="run-btn orange" onclick="triggerRun('continental','alerts')">Continental Alertes</button><div class="progress"><div id="prog-continental-alerts" class="progress-bar"></div></div></div>
+    <div><button id="btn-fusion-alerts" class="run-btn orange" onclick="triggerRun('fusion','alerts')">Fusion Alertes</button><div class="progress"><div id="prog-fusion-alerts" class="progress-bar"></div></div></div>
+    <div><button id="btn-ia-forecast" class="run-btn orange" onclick="triggerRun('ia','forecast')">IA Analyse Prévisions</button><div class="progress"><div id="prog-ia-forecast" class="progress-bar"></div></div></div>
+    <div><button id="btn-ia-alerts" class="run-btn orange" onclick="triggerRun('ia','alerts')">IA Analyse Alertes</button><div class="progress"><div id="prog-ia-alerts" class="progress-bar"></div></div></div>
+  </div>
 
-    <section>
-      <h2>📊 États par États (USA)</h2>
-      <table id="usaTable"><thead><tr><th>État</th><th>Prévisions</th><th>Alertes</th></tr></thead><tbody></tbody></table>
-    </section>
-  </main>
+  <!-- Colonnes Europe / USA -->
+  <div class="columns">
+    <div class="col"><h2>🌍 Europe – Prévisions</h2><div id="europe-forecast"></div></div>
+    <div class="col"><h2>🌍 Europe – Alertes</h2><div id="europe-alerts"></div></div>
+  </div>
+  <div class="columns">
+    <div class="col"><h2>🇺🇸 USA – Prévisions</h2><div id="usa-forecast"></div></div>
+    <div class="col"><h2>🇺🇸 USA – Alertes</h2><div id="usa-alerts"></div></div>
+  </div>
 
-  <!-- 💬 Chat flottant -->
-  <div id="chatBubble">💬</div>
-  <div id="chatWindow">
-    <div id="chatHeader">Chat Moteur IA</div>
-    <div id="chatMessages"></div>
-    <div id="chatInput">
-      <input type="text" id="chatText" placeholder="Écrire..."/>
+  <!-- Logs -->
+  <div class="logs">
+    <div class="logs-header" onclick="toggleLogs()">📜 Logs (cliquez pour afficher/masquer)</div>
+    <select id="cycleSelect" onchange="loadLogsByCycle(this.value)">
+      <option value="current">Cycle courant</option>
+      <option value="all">Tous les logs</option>
+    </select>
+    <div class="logs-content" id="logsContent"></div>
+  </div>
+
+  <!-- Chat moteur -->
+  <div class="chat-bubble" onclick="toggleChat()">💬</div>
+  <div id="chat-window">
+    <div id="chat-messages"></div>
+    <div id="chat-input">
+      <input type="text" id="chatMessage" placeholder="Question au moteur..." />
       <button onclick="sendChat()">Envoyer</button>
     </div>
   </div>
 
   <script>
-    // === Gestion Runs ===
-    async function launchRun(action){
-      try{
-        const res = await fetch(`/api/run-${action}`,{method:"POST"});
-        const data = await res.json();
-        console.log("Run",action,data);
-      }catch(e){console.error("Erreur run",action,e);}
+    const EUROPE_COUNTRIES = ["Belgium","France","Germany","Netherlands","Luxembourg","Switzerland","Austria","Denmark","Norway","Sweden","Finland","Iceland","Poland","Czechia","Slovakia","Hungary","Romania","Moldova","Ukraine","Estonia","Latvia","Lithuania","Spain","Portugal","Italy","Malta","Greece","Cyprus","Croatia","Slovenia","BosniaHerzegovina","Serbia","Montenegro","Kosovo","NorthMacedonia","Albania","UnitedKingdom","Ireland"];
+    const USA_STATES = ["California","Texas","Florida","New York","Illinois","Ohio","Georgia","North Carolina","Michigan","Pennsylvania"];
+
+    function renderCountries(containerId, list) {
+      const el=document.getElementById(containerId); el.innerHTML="";
+      list.forEach(c=>{
+        const div=document.createElement("div");
+        div.className="country";
+        div.innerHTML=`<div class="bubble" id="${containerId}-${c}"></div>${c}`;
+        el.appendChild(div);
+      });
+    }
+    renderCountries("europe-forecast", EUROPE_COUNTRIES);
+    renderCountries("europe-alerts", EUROPE_COUNTRIES);
+    renderCountries("usa-forecast", USA_STATES);
+    renderCountries("usa-alerts", USA_STATES);
+
+    function toggleLogs(){const logs=document.getElementById("logsContent"); logs.style.display=logs.style.display==="block"?"none":"block";}
+    async function loadLogsByCycle(cycle){const res=await fetch(`/api/logs?cycle=${cycle}`); const logs=await res.json(); document.getElementById("logsContent").innerText=logs.map(l=>`${l.time} - ${l.msg}`).join("\n");}
+
+    function toggleChat(){const chat=document.getElementById("chat-window"); chat.style.display=chat.style.display==="flex"?"none":"flex";}
+    async function sendChat(){const input=document.getElementById("chatMessage"); const msg=input.value; input.value=""; const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})}); const data=await res.json(); const chatBox=document.getElementById("chat-messages"); chatBox.innerHTML+=`<div><b>Moi:</b> ${msg}</div><div><b>IA:</b> ${data.reply}</div>`; chatBox.scrollTop=chatBox.scrollHeight;}
+
+    async function triggerRun(zone,type){
+      const map={ "europe-forecast":"/api/run-europe","europe-alerts":"/api/run-alerts","usa-forecast":"/api/run-usa","usa-alerts":"/api/run-alerts","continental-alerts":"/api/run-alerts-continental","fusion-alerts":"/api/run-alerts-world","ia-forecast":"/api/run-orchestrator","ia-alerts":"/api/run-orchestrator"};
+      const key=`${zone}-${type}`;
+      const btn=document.getElementById("btn-"+key); const bar=document.getElementById("prog-"+key);
+      if(btn){btn.className="run-btn orange";} if(bar){bar.style.width="0%";}
+      const res=await fetch(map[key]||"",{method:"POST"}); if(res.ok){alert(`✅ Run ${zone} ${type} lancé`);} else {alert(`❌ Erreur lancement run ${zone} ${type}`);}
     }
 
-    // === Rafraîchissement état ===
-    async function refreshTables(){
-      const res = await fetch("/api/engine-state");
-      const state = await res.json();
-      fillTable("europeTable", state.zonesCoveredEurope, state.alertsEurope);
-      fillTable("usaTable", state.zonesCoveredUSA, state.alertsUSA);
-      updateChatBubbleStatus(state);
-    }
-
-    function fillTable(tableId, forecastData, alertData){
-      const tbody=document.querySelector(`#${tableId} tbody`);
-      tbody.innerHTML="";
-      if(!forecastData) return;
-      for(const [country,data] of Object.entries(forecastData)){
-        const tr=document.createElement("tr");
-        const forecastStatus=data.regions?.length>0?"green":"red";
-        const alertStatus=alertData && alertData[country] && alertData[country].length>0?"green":"red";
-        tr.innerHTML=`<td>${country}</td>
-          <td><span class="status-dot" style="background:${forecastStatus==='green'?'#22c55e':'#ef4444'}"></span></td>
-          <td><span class="status-dot" style="background:${alertStatus==='green'?'#22c55e':'#ef4444'}"></span></td>`;
-        tbody.appendChild(tr);
+    async function updateProgress(){
+      const res=await fetch("/api/checkup"); const state=await res.json();
+      const mapping={ "europe-forecast":state?.zonesCoveredSummaryEurope,"europe-alerts":state?.alertsEurope,"usa-forecast":state?.zonesCoveredSummaryUSA,"usa-alerts":state?.alertsUSA};
+      for(const [key,data] of Object.entries(mapping)){
+        const bar=document.getElementById("prog-"+key);
+        if(!bar) continue;
+        let percent=0;
+        if(data?.points>0){percent=Math.round((data.success/data.points)*100);} else if(Array.isArray(data)){percent=100;}
+        bar.style.width=percent+"%";
       }
     }
+    setInterval(updateProgress,3000);
 
-    function updateChatBubbleStatus(state){
-      const bubble=document.getElementById("chatBubble");
-      bubble.className="";
-      bubble.id="chatBubble";
-      let anyOrange=false,anyRed=false,anyGreen=false;
-      if(state?.checkup){
-        for(const key of Object.keys(state.checkup)){
-          if(state.checkup[key]==="PENDING") anyOrange=true;
-          else if(state.checkup[key]==="FAIL") anyRed=true;
-          else if(state.checkup[key]==="OK") anyGreen=true;
-        }
-      }
-      if(anyOrange){bubble.classList.add("orange");}
-      else if(anyRed && anyGreen){bubble.classList.add("purple");}
-      else if(anyRed){bubble.classList.add("red");}
-      else if(anyGreen){bubble.classList.add("green");}
-    }
-
-    setInterval(refreshTables,10000);
-    refreshTables();
-
-    // === Chat Flottant ===
-    const chatBubble=document.getElementById("chatBubble");
-    const chatWindow=document.getElementById("chatWindow");
-    chatBubble.onclick=()=>{chatWindow.style.display=chatWindow.style.display==="flex"?"none":"flex";};
-
-    async function sendChat(){
-      const text=document.getElementById("chatText").value.trim();
-      if(!text) return;
-      const messages=document.getElementById("chatMessages");
-      const userDiv=document.createElement("div");
-      userDiv.textContent="👤 "+text;
-      messages.appendChild(userDiv);
-      document.getElementById("chatText").value="";
-      const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text})});
-      const data=await res.json();
-      const botDiv=document.createElement("div");
-      botDiv.textContent="🤖 "+(data.reply||"Erreur IA");
-      messages.appendChild(botDiv);
-      messages.scrollTop=messages.scrollHeight;
-    }
+    const evtSource=new EventSource("/api/logs/stream");
+    evtSource.onmessage=(e)=>{const log=JSON.parse(e.data); const logs=document.getElementById("logsContent"); logs.innerText+=`\n${log.time} - ${log.msg}`; updateProgress();};
   </script>
 </body>
 </html>
