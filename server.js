@@ -55,7 +55,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Runs
+// === Runs générique ===
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
@@ -67,19 +67,82 @@ app.post("/api/run-global", async (req, res) => {
   }
 });
 
-app.post("/api/run-continental", async (req, res) => {
+// === Alias pour boutons séparés ===
+
+// Europe
+app.post("/api/run-europe", async (req, res) => {
   try {
     await checkSourcesFreshness();
-    res.json({
-      success: true,
-      result: await safeCall(runContinental.runContinental),
-    });
+    const result = await safeCall(runGlobal, "Europe");
+    res.json({ success: true, result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// Forecasts
+// USA
+app.post("/api/run-usa", async (req, res) => {
+  try {
+    await checkSourcesFreshness();
+    const result = await safeCall(runGlobal, "USA");
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Continental
+app.post("/api/run-continental", async (req, res) => {
+  try {
+    await checkSourcesFreshness();
+    const result = await safeCall(runContinental.runContinental);
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Alertes locales/nationales
+app.post("/api/run-alerts", async (req, res) => {
+  try {
+    const result = await safeCall(alertsService.generateAlerts);
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Alertes continentales
+app.post("/api/run-alerts-continental", async (req, res) => {
+  try {
+    const result = await safeCall(runContinental.runContinental);
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Alertes mondiales
+app.post("/api/run-alerts-world", async (req, res) => {
+  try {
+    const result = await safeCall(alertsService.runWorldAlerts);
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// IA Orchestrateur
+app.post("/api/run-orchestrator", async (req, res) => {
+  try {
+    const result = await safeCall(runGlobal, "All");
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// === Forecasts ===
 app.post("/api/superforecast", async (req, res) => {
   try {
     const { lat, lon, country, region } = req.body;
@@ -100,7 +163,7 @@ app.get("/api/forecast/:country", async (req, res) => {
   }
 });
 
-// Alerts
+// === Alerts ===
 app.get("/api/alerts", async (req, res) => {
   try {
     res.json((await safeCall(alertsService.getActiveAlerts)) || []);
@@ -124,7 +187,7 @@ app.post("/api/alerts/:id/:action", async (req, res) => {
   }
 });
 
-// Radar
+// === Radar ===
 app.get("/api/radar/global", async (req, res) => {
   try {
     const fn = radarService.getGlobalRadar ?? radarService.radarHandler;
@@ -134,7 +197,7 @@ app.get("/api/radar/global", async (req, res) => {
   }
 });
 
-// Podcasts
+// === Podcasts ===
 app.get("/api/podcast/:country", async (req, res) => {
   try {
     res.json({
@@ -146,7 +209,7 @@ app.get("/api/podcast/:country", async (req, res) => {
   }
 });
 
-// Chat IA général
+// === Chat IA général ===
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -159,7 +222,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Chat IA moteur
+// === Chat IA moteur ===
 app.post("/api/chat/engine", async (req, res) => {
   try {
     const { message } = req.body;
@@ -172,14 +235,12 @@ app.post("/api/chat/engine", async (req, res) => {
   }
 });
 
-// ✅ TextGen (IA console admin)
+// === TextGen (IA console admin) ===
 app.post("/api/textgen", async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Prompt manquant" });
+      return res.status(400).json({ success: false, error: "Prompt manquant" });
     }
     const result = await safeCall(textGenService.generateText, prompt);
     res.json({ success: true, reply: result });
@@ -188,18 +249,17 @@ app.post("/api/textgen", async (req, res) => {
   }
 });
 
-// Logs & Engine state
+// === Logs & Engine state ===
 app.get("/api/logs", async (req, res) => {
   res.json(await adminLogs.getLogs());
 });
 
-// ✅ Logs SSE (live stream)
+// Logs SSE (live stream)
 app.get("/api/logs/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
-
   adminLogs.registerClient(res);
 });
 
@@ -207,7 +267,7 @@ app.get("/api/engine-state", async (req, res) => {
   res.json((await safeCall(engineStateService.getEngineState)) || {});
 });
 
-// Sources
+// === Sources ===
 app.get("/api/sources", async (req, res) => {
   try {
     res.json({ success: true, sources: await checkSourcesFreshness() });
@@ -216,7 +276,7 @@ app.get("/api/sources", async (req, res) => {
   }
 });
 
-// Checkup
+// === Checkup ===
 app.get("/api/checkup", async (req, res) => {
   try {
     const state = await safeCall(engineStateService.getEngineState);
@@ -226,7 +286,7 @@ app.get("/api/checkup", async (req, res) => {
   }
 });
 
-// ✅ Infos météo mondiales
+// === Infos météo mondiales ===
 app.get("/api/news", async (req, res) => {
   try {
     res.json({ success: true, news: await safeCall(newsService.getNews) });
@@ -235,7 +295,7 @@ app.get("/api/news", async (req, res) => {
   }
 });
 
-// ✅ Utilisateurs
+// === Utilisateurs ===
 app.get("/api/users", async (req, res) => {
   try {
     res.json({ success: true, users: await safeCall(userService.getUsers) });
@@ -244,7 +304,7 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-// ✅ Chat public J.E.A.N. (Index public via Cohere)
+// === Chat public J.E.A.N. ===
 app.post("/api/jean", async (req, res) => {
   try {
     const { message } = req.body;
@@ -274,13 +334,4 @@ app.get("/admin-radar", (req, res) =>
 app.get("/admin-index", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-index.html"))
 );
-app.get("/admin-infos", (req, res) =>
-  res.sendFile(path.join(__dirname, "public", "admin-infos.html"))
-);
-app.get("/admin-users", (req, res) =>
-  res.sendFile(path.join(__dirname, "public", "admin-users.html"))
-);
-
-// === Start server ===
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app
