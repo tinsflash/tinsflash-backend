@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -38,6 +39,7 @@ import * as newsService from "./services/newsService.js";
 import * as userService from "./services/userService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import * as adminLogs from "./services/adminLogs.js";
+import { runWorldAlerts } from "./services/runWorldAlerts.js"; // ✅ Import ajouté
 
 // ✅ Router vérification
 import verifyRouter from "./services/verifyRouter.js";
@@ -125,7 +127,7 @@ app.post("/api/run-alerts-continental", async (req, res) => {
 // Alertes mondiales
 app.post("/api/run-alerts-world", async (req, res) => {
   try {
-    const result = await safeCall(alertsService.runWorldAlerts);
+    const result = await safeCall(runWorldAlerts);
     res.json({ success: true, result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -157,7 +159,7 @@ app.post("/api/superforecast", async (req, res) => {
 
 app.get("/api/forecast/:country", async (req, res) => {
   try {
-    res.json(await safeCall(forecastService.getForecast, req.params.country));
+    res.json(await safeCall(forecastService.getNationalForecast, req.params.country)); // ✅ Correction
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -334,4 +336,13 @@ app.get("/admin-radar", (req, res) =>
 app.get("/admin-index", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-index.html"))
 );
-app
+app.get("/admin-infos", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-infos.html"))
+);
+app.get("/admin-users", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-users.html"))
+);
+
+// === Start server ===
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
