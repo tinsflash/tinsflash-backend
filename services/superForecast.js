@@ -30,9 +30,7 @@ export async function runSuperForecast({ lat, lon, country, region }) {
   const state = await getEngineState();
   try {
     addEngineLog(
-      `⚡ Lancement du SuperForecast pour ${country}${
-        region ? " - " + region : ""
-      } (${lat},${lon})`
+      `⚡ Lancement du SuperForecast pour ${country}${region ? " - " + region : ""} (${lat},${lon})`
     );
 
     // === Étape 1 : préparer Copernicus ERA5
@@ -87,26 +85,33 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     };
     addEngineLog("✅ Sources météo collectées");
 
-    // === Étape 3 : fusion brute (GFS/ECMWF/ICON + Meteomatics si dispo)
+    // === Étape 3 : fusion brute (GFS/ECMWF/ICON + Meteomatics + Copernicus si dispo)
     const baseForecast = {};
     try {
       const temps = [];
-      if (sources.gfs?.temperature) temps.push(sources.gfs.temperature);
-      if (sources.ecmwf?.temperature) temps.push(sources.ecmwf.temperature);
-      if (sources.icon?.temperature) temps.push(sources.icon.temperature);
-      if (sources.meteomatics?.temperature) temps.push(sources.meteomatics.temperature);
-      baseForecast.temperature = temps.length
-        ? temps.reduce((a, b) => a + b, 0) / temps.length
-        : null;
-
       const precs = [];
-      if (sources.gfs?.precipitation) precs.push(sources.gfs.precipitation);
-      if (sources.ecmwf?.precipitation) precs.push(sources.ecmwf.precipitation);
-      if (sources.icon?.precipitation) precs.push(sources.icon.precipitation);
-      if (sources.meteomatics?.precipitation) precs.push(sources.meteomatics.precipitation);
-      baseForecast.precipitation = precs.length
-        ? precs.reduce((a, b) => a + b, 0) / precs.length
-        : null;
+
+      const addIfValid = (arr, val) => {
+        if (typeof val === "number" && !isNaN(val)) arr.push(val);
+      };
+
+      // Températures
+      addIfValid(temps, sources.gfs?.temperature);
+      addIfValid(temps, sources.ecmwf?.temperature);
+      addIfValid(temps, sources.icon?.temperature);
+      addIfValid(temps, sources.meteomatics?.temperature);
+      addIfValid(temps, sources.copernicus?.temperature);
+
+      // Précipitations
+      addIfValid(precs, sources.gfs?.precipitation);
+      addIfValid(precs, sources.ecmwf?.precipitation);
+      addIfValid(precs, sources.icon?.precipitation);
+      addIfValid(precs, sources.meteomatics?.precipitation);
+      addIfValid(precs, sources.copernicus?.precipitation);
+
+      baseForecast.temperature = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
+      baseForecast.precipitation = precs.length ? precs.reduce((a, b) => a + b, 0) / precs.length : null;
+      baseForecast.reliability = Math.round(((temps.length + precs.length) / 10) * 100); // sur 10 sources max
     } catch (err) {
       addEngineError("⚠️ Erreur fusion brute prévisions: " + err.message);
     }
@@ -127,9 +132,7 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     addEngineLog("🤖 Analyse IA des données multi-sources…");
     const prompt = `
 Prévisions météo enrichies pour un point précis.
-Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${
-      region ? ", région=" + region : ""
-    }
+Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${region ? ", région=" + region : ""}
 
 Fusion principale: ${JSON.stringify(baseForecast)}
 Ajustements: ${JSON.stringify(enriched)}
@@ -174,11 +177,12 @@ Consignes IA:
       forecast: parsedForecast,
       sources,
       enriched,
+      baseForecast, // ✅ ajouté pour debug / admin
     });
     await saveEngineState(state);
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
-    return { lat, lon, country, region, forecast: parsedForecast, sources, enriched };
+    return { lat, lon, country, region, forecast: parsedForecast, sources, enriched, baseForecast };
   } catch (err) {
     await addEngineError(err.message || "Erreur inconnue SuperForecast");
     addEngineLog("❌ Erreur dans SuperForecast");
