@@ -11,7 +11,12 @@
     nav{background:#1c1f26;padding:10px;display:flex;justify-content:center;gap:20px;}
     nav a{color:#00d8ff;text-decoration:none;font-weight:bold;padding:6px 12px;border-radius:6px;}
     nav a:hover{background:#00d8ff;color:#000;}
-    iframe{width:100%;height:90vh;border:none;}
+    iframe{width:100%;height:85vh;border:none;margin-top:10px;}
+    .inputs{margin:15px;text-align:center;}
+    input,button{padding:8px;margin:5px;font-size:1rem;border-radius:6px;border:none;}
+    input{width:200px;}
+    button{background:#00d8ff;color:#000;font-weight:bold;cursor:pointer;}
+    button:hover{background:#0096c7;color:#fff;}
   </style>
 </head>
 <body>
@@ -28,27 +33,28 @@
   <a href="/admin-alerts.html">🚨 Alertes</a>
   <a href="/admin-index.html">👁️ Vue Index</a>
   <a href="/admin-radar.html">🛰️ Radar & News</a>
+  <a href="/admin-users.html">👥 Utilisateurs</a>
 </nav>
 
-<div style="text-align:center;margin:10px;">
-  <select id="userSelect"></select>
-  <button onclick="loadUser()">Charger</button>
+<div class="inputs">
+  <input type="text" id="city" placeholder="Ville (ex: Bruxelles)">
+  <input type="text" id="country" placeholder="Pays (ex: BE)">
+  <button onclick="loadUser()">Charger la vue</button>
 </div>
+
 <iframe id="userFrame"></iframe>
 
 <script>
-async function loadUsers(){
-  const res=await fetch("/api/users");
-  const users=await res.json();
-  const sel=document.getElementById("userSelect");
-  sel.innerHTML="";
-  users.forEach(u=>{const o=document.createElement("option");o.value=u.id;o.textContent=`${u.name} – ${u.country}`;sel.appendChild(o);});
-}
 function loadUser(){
-  const id=document.getElementById("userSelect").value;
-  document.getElementById("userFrame").src="/api/user-index?id="+id;
+  const city=document.getElementById("city").value.trim();
+  const country=document.getElementById("country").value.trim();
+  if(!city || !country){
+    alert("Merci de saisir une ville ET un pays.");
+    return;
+  }
+  // Charge l'index public comme si on était cet utilisateur
+  document.getElementById("userFrame").src=`/index.html?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}`;
 }
-loadUsers();
 </script>
 </body>
 </html>
