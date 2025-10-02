@@ -1,6 +1,5 @@
 // services/runGlobal.js
 // ⚡ Centrale nucléaire météo – Moteur atomique orchestral
-// Étapes : Prévisions Europe/USA → Prévisions Continental (fallback) → Alertes → IA Finale
 
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
@@ -11,7 +10,7 @@ import { generateAlerts, getActiveAlerts } from "./alertsService.js";
 import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-// === Zones disponibles (Europe + USA)
+// Zones disponibles
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
 
@@ -67,6 +66,7 @@ export async function runGlobal(zone = "All") {
       addEngineLog("🌐 Phase 2 – Prévisions Continentales (fallback)...");
       const cont = await runContinental();
       forecasts.Continental = cont?.forecasts || {};
+      state.forecastsContinental = forecasts.Continental;   // ✅ stocké
       state.checkup.forecastsContinental = "OK";
       await saveEngineState(state);
     }
@@ -82,6 +82,7 @@ export async function runGlobal(zone = "All") {
     }
 
     const alerts = await getActiveAlerts();
+    state.alertsLocal = alerts;
     state.checkup.aiAlerts = alerts?.length > 0 ? "OK" : "FAIL";
     await saveEngineState(state);
 
@@ -90,7 +91,9 @@ export async function runGlobal(zone = "All") {
     // =============================
     if (zone === "All") {
       addEngineLog("🚨 Phase 4 – Alertes Continentales (fallback)...");
-      state.checkup.alertsContinental = state.alertsContinental ? "OK" : "FAIL";
+      const contAlerts = await runContinental();
+      state.alertsContinental = contAlerts?.alerts || [];
+      state.checkup.alertsContinental = state.alertsContinental.length > 0 ? "OK" : "FAIL";
       await saveEngineState(state);
     }
 
@@ -100,6 +103,7 @@ export async function runGlobal(zone = "All") {
     if (zone === "All") {
       addEngineLog("🌍 Phase 5 – Fusion mondiale des alertes...");
       const world = await runWorldAlerts();
+      state.alertsWorld = world || [];
       state.checkup.alertsWorld = world ? "OK" : "FAIL";
       await saveEngineState(state);
     }
@@ -109,30 +113,17 @@ export async function runGlobal(zone = "All") {
     // =============================
     addEngineLog("🤖 Phase 6 – IA Chef d’orchestre (fusion finale)…");
 
-    const prompt = `
-Tu es l'intelligence artificielle nucléaire météo.
-Objectif : produire un état final unique cohérent pour le RUN GLOBAL.
-Tu reçois :
-- Prévisions enrichies (locales, nationales, continentales fallback)
-- Alertes générées (locales, nationales, continentales, mondiales)
-Consignes :
-1. Vérifie la cohérence entre prévisions et alertes.
-2. Ajuste si besoin.
-3. Sors un rapport final clair et structuré :
-   {
-     "resume": "...",
-     "points_forts": ["..."],
-     "alertes_majeures": [...],
-     "fiabilite_globale": "…%",
-     "message_utilisateur": "Bulletin simplifié grand public"
-   }
-4. Format JSON strict.
-    `;
-
-    const aiFusion = await askOpenAI(
-      "Tu es l’IA chef d’orchestre de la centrale nucléaire météo.",
-      JSON.stringify({ forecasts, alerts })
-    );
+    const aiInput = { forecasts, alerts: state.alertsLocal, world: state.alertsWorld };
+    let aiFusion;
+    try {
+      aiFusion = await askOpenAI(
+        "Tu es l’IA chef d’orchestre météo nucléaire. Analyse et fusionne.",
+        JSON.stringify(aiInput)
+      );
+    } catch (e) {
+      addEngineError("⚠️ IA Chef d’orchestre non disponible : " + e.message);
+      aiFusion = "{}";
+    }
 
     let finalOutput;
     try {
@@ -148,10 +139,10 @@ Consignes :
     addEngineLog("✅ RUN GLOBAL terminé avec succès.");
     return { forecasts, alerts, final: finalOutput };
   } catch (err) {
-    await addEngineError(err.message || "Erreur RUN GLOBAL");
+    await addEngineError("❌ Erreur RUN GLOBAL : " + (err.message || err));
 
     const failedState = await getEngineState();
-    failedState.checkup = failedState.checkup || {};  // 🔒 sécurité ajoutée
+    failedState.checkup = failedState.checkup || {};
     failedState.checkup.engineStatus = "FAIL";
     await saveEngineState(failedState);
 
