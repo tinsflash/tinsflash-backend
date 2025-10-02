@@ -26,16 +26,18 @@ export async function runGlobal(zone = "All") {
   try {
     addEngineLog(`🌍 Lancement du RUN GLOBAL (${zone})…`);
     state.runTime = new Date().toISOString();
-    state.checkup = {
-      models: "PENDING",
-      localForecasts: "PENDING",
-      nationalForecasts: "PENDING",
-      forecastsContinental: "PENDING",
-      aiAlerts: "PENDING",
-      alertsContinental: "PENDING",
-      alertsWorld: "PENDING",
-      engineStatus: "RUNNING",
-    };
+
+    // Sécurisation checkup
+    state.checkup = state.checkup || {};
+    state.checkup.models = "PENDING";
+    state.checkup.localForecasts = "PENDING";
+    state.checkup.nationalForecasts = "PENDING";
+    state.checkup.forecastsContinental = "PENDING";
+    state.checkup.aiAlerts = "PENDING";
+    state.checkup.alertsContinental = "PENDING";
+    state.checkup.alertsWorld = "PENDING";
+    state.checkup.engineStatus = "RUNNING";
+
     await saveEngineState(state);
 
     // =============================
@@ -88,7 +90,6 @@ export async function runGlobal(zone = "All") {
     // =============================
     if (zone === "All") {
       addEngineLog("🚨 Phase 4 – Alertes Continentales (fallback)...");
-      // déjà fait dans runContinental()
       state.checkup.alertsContinental = state.alertsContinental ? "OK" : "FAIL";
       await saveEngineState(state);
     }
@@ -148,8 +149,9 @@ Consignes :
     return { forecasts, alerts, final: finalOutput };
   } catch (err) {
     await addEngineError(err.message || "Erreur RUN GLOBAL");
+
     const failedState = await getEngineState();
-    failedState.checkup = failedState.checkup || {};
+    failedState.checkup = failedState.checkup || {};  // 🔒 sécurité ajoutée
     failedState.checkup.engineStatus = "FAIL";
     await saveEngineState(failedState);
 
