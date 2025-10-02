@@ -60,7 +60,6 @@
       padding-bottom: .3rem;
     }
     button {
-      background: #2563eb;
       border: none;
       color: white;
       padding: .6rem 1rem;
@@ -69,10 +68,15 @@
       font-size: .9rem;
       margin: .2rem;
       transition: 0.2s;
+      display: inline-block;
+      min-width: 180px;
+      text-align: center;
     }
-    button:hover {
-      background: #1d4ed8;
-    }
+    .btn-orange { background: #f59e0b; }
+    .btn-green { background: #22c55e; }
+    .btn-red   { background: #ef4444; }
+    .btn-grey  { background: #374151; }
+    button:hover { opacity: 0.8; }
     .logs {
       max-height: 300px;
       overflow-y: auto;
@@ -81,7 +85,9 @@
       font-size: .9rem;
       padding: .5rem;
       border-radius: 6px;
+      display: none; /* caché par défaut */
     }
+    .show { display: block !important; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -90,17 +96,11 @@
     th, td {
       padding: .5rem;
       border-bottom: 1px solid #374151;
-      text-align: center;
     }
     th {
       background: #111827;
       color: #38bdf8;
-    }
-    iframe {
-      width: 100%;
-      height: 400px;
-      border: none;
-      border-radius: 8px;
+      text-align: left;
     }
   </style>
 </head>
@@ -117,85 +117,89 @@
     <a href="/admin-users">Utilisateurs</a>
   </nav>
   <main>
-    <section>
-      <h2>⚡ Lancement du moteur</h2>
-      <button onclick="launchRun('europe','forecast-europe')">🌍 Prévisions Europe</button>
-      <button onclick="launchRun('usa','forecast-usa')">🗽 Prévisions USA</button>
-      <button onclick="launchRun('continental','forecast-continental')">🌐 Prévisions Continentales</button>
-      <hr>
-      <button onclick="launchRun('alerts-local','alerts-local')">🚨 Alertes Locales/Nationales</button>
-      <button onclick="launchRun('alerts-continental','alerts-continental')">🚨 Alertes Continentales</button>
-      <button onclick="launchRun('alerts-world','alerts-world')">🌍 Alertes Mondiales</button>
-      <hr>
-      <button onclick="launchRun('orchestrator','orchestrator')">🤖 IA Orchestrateur</button>
-
-      <div id="engineState" style="margin-top:1rem;font-size:.9rem;"></div>
-      <p><strong>Dernier run :</strong> <span id="lastRun">-</span></p>
-      <p><strong>Dernières alertes :</strong> <span id="lastAlerts">-</span></p>
-    </section>
-
-    <section>
-      <h2>📋 Checklist Moteur</h2>
-      <div id="checklist"></div>
-    </section>
-
+    <!-- Contrôle moteur -->
     <section style="grid-column: span 2;">
-      <h2>🌍 Suivi par pays</h2>
-      <table id="zonesTable">
-        <thead>
-          <tr>
-            <th>Pays / État</th>
-            <th>Prévisions</th>
-            <th>Alertes</th>
-          </tr>
-        </thead>
+      <h2>⚡ Contrôle moteur (direct)</h2>
+      <div id="buttonsPanel">
+        <button class="btn-grey" onclick="resetButtons()">🔄 RESET Voyants</button>
+        <hr>
+        <button id="btn-forecast-europe" class="btn-grey" onclick="launchRun('europe','btn-forecast-europe')">🌍 Prévisions Europe</button>
+        <button id="btn-forecast-usa" class="btn-grey" onclick="launchRun('usa','btn-forecast-usa')">🗽 Prévisions USA</button>
+        <button id="btn-forecast-continental" class="btn-grey" onclick="launchRun('continental','btn-forecast-continental')">🌐 Prévisions Continentales</button>
+        <hr>
+        <button id="btn-alerts-europe" class="btn-grey" onclick="launchRun('alerts-europe','btn-alerts-europe')">🚨 Alertes Europe</button>
+        <button id="btn-alerts-usa" class="btn-grey" onclick="launchRun('alerts-usa','btn-alerts-usa')">🚨 Alertes USA</button>
+        <button id="btn-alerts-continental" class="btn-grey" onclick="launchRun('alerts-continental','btn-alerts-continental')">🚨 Alertes Continentales</button>
+        <button id="btn-alerts-world" class="btn-grey" onclick="launchRun('alerts-world','btn-alerts-world')">🌍 Fusion Alertes Mondiales</button>
+        <hr>
+        <button id="btn-ia-forecast" class="btn-grey" onclick="launchRun('ia-forecast','btn-ia-forecast')">🤖 IA Analyse Prévisions</button>
+        <button id="btn-ia-alerts" class="btn-grey" onclick="launchRun('ia-alerts','btn-ia-alerts')">🤖 IA Analyse Alertes</button>
+      </div>
+      <p><strong>Dernier run :</strong> <span id="lastRun">-</span> | 
+         <strong>Dernières alertes :</strong> <span id="lastAlerts">-</span></p>
+    </section>
+
+    <!-- Europe + USA -->
+    <section>
+      <h2>🌍 Prévisions par pays</h2>
+      <table id="forecastTable">
+        <thead><tr><th>Pays / État</th><th>Status</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
 
+    <section>
+      <h2>🚨 Alertes par pays</h2>
+      <table id="alertsTable">
+        <thead><tr><th>Pays / État</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Logs cachés par défaut -->
     <section style="grid-column: span 2;">
-      <h2>📡 Logs en direct</h2>
+      <h2 onclick="toggleLogs()" style="cursor:pointer;">📡 Logs (200 derniers) — cliquer pour ouvrir</h2>
       <div id="logs" class="logs"></div>
-    </section>
-
-    <section style="grid-column: span 2;">
-      <h2>👥 Utilisateurs par zones</h2>
-      <table id="usersTable">
-        <thead>
-          <tr><th>Pays</th><th>Ville/Zone</th><th>Utilisateurs</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section style="grid-column: span 2;">
-      <h2>🛰️ Radar météo</h2>
-      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=4&level=surface&overlay=rain&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&detailLat=50&detailLon=4&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
     </section>
   </main>
 
   <script>
     function statusDot(color) {
-      const c = color === "green" ? "#22c55e" :
-                color === "red"   ? "#ef4444" :
-                "#f59e0b"; // orange
-      return `<div style="width:14px;height:14px;border-radius:50%;background:${c};margin:auto;"></div>`;
+      return color === "green" ? "🟢" :
+             color === "red"   ? "🔴" : "🟠";
     }
 
-    async function launchRun(action,key) {
-      appendLog(`🟠 Lancement manuel : ${action}…`);
+    async function launchRun(action,btnId) {
+      setBtn(btnId,"orange");
       try {
         const res = await fetch(`/api/run-${action}`, { method:"POST" });
         const data = await res.json();
         if (data && !data.error) {
+          setBtn(btnId,"green");
           appendLog(`🟢 ${action} terminé avec succès.`);
         } else {
+          setBtn(btnId,"red");
           appendLog(`🔴 Erreur ${action}: ${data.error}`);
         }
-        refreshZones();
+        refreshTables();
       } catch(e) {
+        setBtn(btnId,"red");
         appendLog(`🔴 Exception ${action}: ${e.message}`);
       }
+    }
+
+    function setBtn(id,color) {
+      const btn = document.getElementById(id);
+      btn.className = color==="green" ? "btn-green" :
+                      color==="red"   ? "btn-red" :
+                      color==="orange"? "btn-orange":"btn-grey";
+    }
+
+    function resetButtons() {
+      document.querySelectorAll("#buttonsPanel button").forEach(btn=>{
+        if (btn.id) btn.className = "btn-grey";
+      });
+      appendLog("🔄 Voyants remis à zéro.");
     }
 
     function appendLog(msg) {
@@ -203,82 +207,55 @@
       const line = document.createElement("div");
       line.textContent = new Date().toLocaleTimeString("fr-BE")+" — "+msg;
       logsDiv.appendChild(line);
+      while (logsDiv.children.length > 200) {
+        logsDiv.removeChild(logsDiv.firstChild);
+      }
       logsDiv.scrollTop = logsDiv.scrollHeight;
     }
 
-    async function refreshEngine() {
-      const res = await fetch("/api/engine-state");
-      const state = await res.json();
-      document.getElementById("engineState").textContent = JSON.stringify(state,null,2);
-      document.getElementById("lastRun").textContent = state?.lastRunFinished || "-";
-      document.getElementById("lastAlerts").textContent = state?.lastAlertsGenerated || "-";
+    function toggleLogs() {
+      document.getElementById("logs").classList.toggle("show");
     }
 
-    async function refreshZones() {
+    async function refreshTables() {
       const res = await fetch("/api/engine-state");
       const state = await res.json();
-      const tbody = document.querySelector("#zonesTable tbody");
-      tbody.innerHTML = "";
+      document.getElementById("lastRun").textContent = state?.lastRunFinished || "-";
+      document.getElementById("lastAlerts").textContent = state?.lastAlertsGenerated || "-";
 
-      const renderRow = (name, forecastStatus, alertStatus, flag="") => {
+      const fbody = document.querySelector("#forecastTable tbody");
+      const abody = document.querySelector("#alertsTable tbody");
+      fbody.innerHTML = ""; abody.innerHTML = "";
+
+      const renderRow = (tbody, name, status, flag="") => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${flag} ${name}</td>
-          <td>${statusDot(forecastStatus)}</td>
-          <td>${statusDot(alertStatus)}</td>
-        `;
+        tr.innerHTML = `<td>${flag} ${name}</td><td style="text-align:center;">${statusDot(status)}</td>`;
         tbody.appendChild(tr);
       };
 
-      // Europe
       if (state.zonesCoveredEurope) {
         for (const country of Object.keys(state.zonesCoveredEurope)) {
           const forecasts = state.zonesCoveredEurope[country]?.regions?.length;
           const alerts = state.alertsEurope && state.alertsEurope[country]?.length;
-          renderRow(country,
-            forecasts ? "green" : state.checkup?.engineStatusEurope==="PENDING" ? "orange" : "red",
-            alerts ? "green" : state.checkup?.engineStatusEurope==="PENDING" ? "orange" : "red",
-            "🇪🇺");
+          renderRow(fbody, country, forecasts?"green":"red","🇪🇺");
+          renderRow(abody, country, alerts?"green":"red","🇪🇺");
         }
       }
-
-      // USA
       if (state.zonesCoveredUSA) {
         for (const stateName of Object.keys(state.zonesCoveredUSA)) {
           const forecasts = state.zonesCoveredUSA[stateName]?.regions?.length;
           const alerts = state.alertsUSA && state.alertsUSA[stateName]?.length;
-          renderRow(stateName,
-            forecasts ? "green" : state.checkup?.engineStatusUSA==="PENDING" ? "orange" : "red",
-            alerts ? "green" : state.checkup?.engineStatusUSA==="PENDING" ? "orange" : "red",
-            "🇺🇸");
+          renderRow(fbody, stateName, forecasts?"green":"red","🇺🇸");
+          renderRow(abody, stateName, alerts?"green":"red","🇺🇸");
         }
-      }
-    }
-
-    async function loadUsers() {
-      const res = await fetch("/api/users");
-      const data = await res.json();
-      const tbody = document.querySelector("#usersTable tbody");
-      tbody.innerHTML="";
-      if (data.success && data.users) {
-        data.users.forEach(u=>{
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${u.country||"-"}</td><td>${u.zone||"-"}</td><td>${u.count||1}</td>`;
-          tbody.appendChild(tr);
-        });
       }
     }
 
     const evtSource = new EventSource("/api/logs/stream");
     evtSource.onmessage = function(e) { appendLog(e.data); };
 
-    setInterval(refreshEngine, 10000);
-    setInterval(refreshZones, 20000);
-    setInterval(loadUsers, 60000);
-
-    refreshEngine();
-    refreshZones();
-    loadUsers();
+    setInterval(refreshTables, 20000);
+    refreshTables();
   </script>
 </body>
 </html>
