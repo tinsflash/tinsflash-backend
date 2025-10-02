@@ -2,270 +2,137 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – Prévisions et alertes météo</title>
+  <title>TINSFLASH – Prévisions et Alertes Météo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Google Ads -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-  <script>
-    (adsbygoogle = window.adsbygoogle || []).push({});
-  </script>
-
+  <meta name="robots" content="index,follow">
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      color: #111827;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    header {
-      position: relative;
-      height: 250px;
-      overflow: hidden;
-    }
-    header video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    header h1 {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      font-size: 2rem;
-      color: white;
-      text-shadow: 2px 2px 8px black;
-    }
-    main {
-      flex: 1;
-      padding: 1rem;
-      max-width: 1200px;
-      margin: auto;
-    }
-    h2 {
-      margin-top: 1.5rem;
-      border-left: 5px solid #2563eb;
-      padding-left: .5rem;
-      font-size: 1.4rem;
-      color: #1e3a8a;
-    }
-    .forecast, .alerts, .radar, .intro {
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    }
-    .intro {
-      font-size: 1rem;
-      line-height: 1.6;
-      color: #1f2937;
-    }
-    .forecast-day {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #e5e7eb;
-      padding: .5rem 0;
-    }
-    .forecast-day:last-child {
-      border-bottom: none;
-    }
-    .ads {
-      margin: 1rem 0;
-      text-align: center;
-    }
-    iframe {
-      border: none;
-      width: 100%;
-      height: 400px;
-      border-radius: 8px;
-    }
-    /* Avatar J.E.A.N. */
-    #avatar-papa {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 120px;
-      height: 120px;
-      cursor: pointer;
-      z-index: 9999;
-    }
-    footer {
-      background: #111827;
-      color: #e5e7eb;
-      text-align: center;
-      padding: 1rem;
-      font-size: .9rem;
-    }
-    footer a {
-      color: #38bdf8;
-      text-decoration: none;
-    }
+    body{margin:0;font-family:Arial,sans-serif;background:#0d1117;color:#eee;line-height:1.6;}
+    header{position:relative;height:40vh;overflow:hidden;}
+    header video{width:100%;height:100%;object-fit:cover;}
+    header .overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;}
+    header h1{font-size:2rem;color:#00d8ff;text-align:center;}
+    main{padding:20px;}
+    h2{color:#00d8ff;margin-top:20px;}
+    .forecast,.alerts{background:#161b22;padding:15px;border-radius:8px;margin:15px 0;}
+    pre{background:#0d1117;color:#0f0;font-size:.9rem;padding:10px;border-radius:6px;overflow-x:auto;}
+    iframe{width:100%;height:400px;border:none;border-radius:8px;}
+    footer{text-align:center;font-size:.8rem;color:#888;padding:15px;background:#111;}
+    .ads{margin:20px 0;text-align:center;}
   </style>
-
-  <!-- Lottie Avatar -->
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <!-- ✅ Google AdSense placeholder -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 </head>
 <body>
-  <header>
-    <video autoplay muted loop id="intro-video">
-      <source src="intro-jean.mp4" type="video/mp4">
-    </video>
-    <h1>🌍 TINSFLASH</h1>
-  </header>
 
-  <main>
-    <!-- Bloc d'introduction -->
-    <section class="intro">
-      <p>
-        Bienvenue sur <strong>TINSFLASH</strong>, la première centrale météo mondiale propulsée par 
-        <strong>le système J.E.A.N.</strong>.  
-      </p>
-      <p>
-        Nos prévisions sont uniques car elles croisent <strong>tous les modèles météorologiques mondiaux</strong> 
-        avec des données locales de <strong>relief, climat, rivières et stations</strong>.  
-        Résultat : des prévisions <strong>les plus fiables et les plus précises au monde</strong>, 
-        avec des <strong>alertes anticipées</strong> souvent avant les autres organismes.
-      </p>
-      <p>
-        Grâce à notre moteur IA, nous offrons un niveau de précision qui fait frissonner
-        les supercalculateurs météorologiques traditionnels 🌩️.
-      </p>
-    </section>
+<header>
+  <video autoplay muted loop id="introVideo">
+    <source src="intro-jean.mp4" type="video/mp4">
+  </video>
+  <div class="overlay"><h1>🌍 TINSFLASH – Les prévisions et alertes météo les plus précises du monde</h1></div>
+</header>
 
-    <div class="ads">
-      <!-- Bandeau pub haut -->
-      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8204947691352732" data-ad-slot="9437146866" data-ad-format="auto"></ins>
-    </div>
+<main>
+  <section>
+    <p>
+      Grâce à notre moteur <b>nucléaire météo</b> et à l’IA J.E.A.N., 
+      nous croisons les données de tous les modèles météorologiques, du relief, 
+      de l’altitude, des rivières et du climat. Résultat : 
+      <b>les prévisions locales et nationales les plus fiables au monde</b> 
+      et des alertes générées <b>avant tout le monde</b>. 
+    </p>
+  </section>
 
-    <section class="forecast">
-      <h2>Prévisions locales</h2>
-      <div id="local-forecast">Chargement...</div>
-    </section>
-
-    <section class="forecast">
-      <h2>Prévisions nationales</h2>
-      <div id="national-forecast">Chargement...</div>
-    </section>
-
-    <div class="ads">
-      <!-- Pub milieu -->
-      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8204947691352732" data-ad-slot="1231353788" data-ad-format="auto"></ins>
-    </div>
-
-    <section class="alerts">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts">Chargement...</div>
-    </section>
-
-    <section class="radar">
-      <h2>Radar météo</h2>
-      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=5&level=surface&overlay=precipitation&menu=&message=&marker=&calendar=&pressure=&type=map&location=coordinates&detail=&detailLat=50&detailLon=4&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
-    </section>
-
-    <div class="ads">
-      <!-- Pub bas -->
-      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8204947691352732" data-ad-slot="9109843802" data-ad-format="auto"></ins>
-    </div>
-  </main>
-
-  <!-- Avatar J.E.A.N. -->
-  <div id="avatar-papa">
-    <lottie-player 
-      src="https://assets10.lottiefiles.com/packages/lf20_j1adxtyb.json"
-      background="transparent"
-      speed="1"
-      loop
-      autoplay>
-    </lottie-player>
+  <div class="ads">
+    <!-- Bloc pub -->
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-xxxxxxxx"
+         data-ad-slot="1234567890"
+         data-ad-format="auto"></ins>
+    <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
   </div>
 
-  <footer>
-    © 2025 TINSFLASH – System J.E.A.N by <strong>Pydaris</strong> <br>
-    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 
-    📱 <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77 (WhatsApp)</a>
-  </footer>
+  <section class="forecast">
+    <h2>📊 Prévisions locales</h2>
+    <div id="forecast">Chargement...</div>
+  </section>
 
-  <script>
-    async function loadForecast() {
-      try {
-        let lat = 50.85, lon = 4.35, country = "BE";
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(async (pos) => {
-            lat = pos.coords.latitude;
-            lon = pos.coords.longitude;
-            fetchForecast(lat, lon, country);
-          }, () => fetchForecast(lat, lon, country));
-        } else {
-          fetchForecast(lat, lon, country);
-        }
-      } catch (e) {
-        document.getElementById("local-forecast").innerText = "Erreur prévisions locales.";
-      }
-    }
+  <section class="alerts">
+    <h2>🚨 Alertes météo</h2>
+    <div id="alerts">Chargement...</div>
+  </section>
 
-    async function fetchForecast(lat, lon, country) {
-      const res = await fetch("/api/superforecast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat, lon, country })
-      });
-      const data = await res.json();
-      document.getElementById("local-forecast").innerText = data.forecast || "Pas de données locales.";
-    }
+  <h2>🛰️ Radar</h2>
+  <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=5&level=surface&overlay=rain&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&detailLat=50&detailLon=4&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
 
-    async function loadNational() {
-      const res = await fetch("/api/forecast/BE");
-      const data = await res.json();
-      document.getElementById("national-forecast").innerText = JSON.stringify(data, null, 2);
-    }
+</main>
 
-    async function loadAlerts() {
-      const res = await fetch("/api/alerts");
-      const data = await res.json();
-      const div = document.getElementById("alerts");
-      div.innerHTML = "";
-      if (!data || data.length === 0) {
-        div.innerText = "Aucune alerte active.";
-      } else {
-        data.forEach(a => {
-          const p = document.createElement("p");
-          p.textContent = `[${a.country}] ${JSON.stringify(a.data)}`;
-          div.appendChild(p);
-        });
-      }
-    }
+<footer>
+  © 2025 TINSFLASH – System J.E.A.N by Pydaris <br>
+  📧 skysnapia@gmail.com | 📱 WhatsApp +32 473 26 44 77
+</footer>
 
-    document.getElementById("avatar-papa").addEventListener("click", async () => {
-      const q = prompt("Pose ta question météo à J.E.A.N 🌦️");
-      if (!q) return;
-      const res = await fetch("/api/jean", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: q })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("🧑‍💻 J.E.A.N.: " + data.reply);
-      } else {
-        alert("⚠️ J.E.A.N. indisponible: " + data.error);
-      }
+<!-- Avatar J.E.A.N -->
+<script src="https://unpkg.com/lottie-web@latest/build/player/lottie.min.js"></script>
+<div id="avatar-jean" style="position: fixed; bottom: 20px; right: 20px; width: 120px; height: 120px; cursor: pointer; z-index: 9999;">
+  <lottie-player 
+    src="https://assets10.lottiefiles.com/packages/lf20_j1adxtyb.json"
+    background="transparent"
+    speed="1"
+    loop
+    autoplay>
+  </lottie-player>
+</div>
+
+<script>
+document.getElementById("avatar-jean").addEventListener("click", async () => {
+  const q = prompt("Posez une question météo à J.E.A.N :");
+  if(!q) return;
+  const res = await fetch("/api/jean", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message:q})
+  });
+  const data = await res.json();
+  alert("J.E.A.N : " + (data.reply || "Pas de réponse"));
+});
+
+// === Prévisions utilisateur via query ?city&country ===
+const params = new URLSearchParams(window.location.search);
+const city = params.get("city") || "Bruxelles";
+const country = params.get("country") || "BE";
+
+// ⚠️ TODO : remplacer par une vraie API géocoding
+let lat=50.8503, lon=4.3517;
+if(city.toLowerCase()==="paris"){lat=48.8566;lon=2.3522;}
+if(city.toLowerCase()==="new york"){lat=40.7128;lon=-74.0060;}
+
+async function loadForecast(){
+  try{
+    const res = await fetch("/api/superforecast",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({lat,lon,country,region:city})
     });
+    const data = await res.json();
+    document.getElementById("forecast").innerHTML = "<pre>"+JSON.stringify(data,null,2)+"</pre>";
+  }catch(e){
+    document.getElementById("forecast").textContent="Erreur forecast: "+e.message;
+  }
+}
 
-    loadForecast();
-    loadNational();
-    loadAlerts();
-    setInterval(loadAlerts, 60000);
+async function loadAlerts(){
+  try{
+    const res = await fetch("/api/alerts");
+    const data = await res.json();
+    document.getElementById("alerts").innerHTML = "<pre>"+JSON.stringify(data,null,2)+"</pre>";
+  }catch(e){
+    document.getElementById("alerts").textContent="Erreur alertes: "+e.message;
+  }
+}
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/service-worker.js")
-        .then(() => console.log("🔔 Service Worker enregistré"))
-        .catch(err => console.error("❌ SW error:", err));
-    }
-  </script>
+loadForecast();
+loadAlerts();
+</script>
 </body>
 </html>
