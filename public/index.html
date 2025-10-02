@@ -14,12 +14,19 @@
     main{padding:20px;}
     h2{color:#00d8ff;margin-top:20px;}
     .forecast,.alerts{background:#161b22;padding:15px;border-radius:8px;margin:15px 0;}
-    pre{background:#0d1117;color:#0f0;font-size:.9rem;padding:10px;border-radius:6px;overflow-x:auto;}
+    .forecast-table{width:100%;border-collapse:collapse;margin-top:10px;}
+    .forecast-table th,.forecast-table td{border:1px solid #333;padding:8px;text-align:center;}
+    .forecast-table th{background:#222;color:#00d8ff;}
     iframe{width:100%;height:400px;border:none;border-radius:8px;}
     footer{text-align:center;font-size:.8rem;color:#888;padding:15px;background:#111;}
     .ads{margin:20px 0;text-align:center;}
+    .input-box{text-align:center;margin:15px 0;}
+    input,button{padding:8px 12px;border-radius:6px;border:none;margin:5px;}
+    button{background:#00d8ff;color:#000;cursor:pointer;}
+    button:hover{background:#00aacc;}
+    .bulletin{background:#202530;padding:15px;border-radius:8px;margin-top:10px;font-style:italic;}
+    .alert-card{background:#222;padding:12px;margin:10px 0;border-radius:6px;}
   </style>
-  <!-- ✅ Google AdSense placeholder -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 </head>
 <body>
@@ -34,16 +41,18 @@
 <main>
   <section>
     <p>
-      Grâce à notre moteur <b>nucléaire météo</b> et à l’IA J.E.A.N., 
-      nous croisons les données de tous les modèles météorologiques, du relief, 
-      de l’altitude, des rivières et du climat. Résultat : 
-      <b>les prévisions locales et nationales les plus fiables au monde</b> 
-      et des alertes générées <b>avant tout le monde</b>. 
+      Notre moteur <b>nucléaire météo</b> croise les modèles mondiaux, le relief, le climat et les anomalies saisonnières.  
+      Résultat : <b>les prévisions locales et nationales les plus fiables au monde</b>, avec des alertes <b>avant tout le monde</b>.  
     </p>
   </section>
 
+  <div class="input-box">
+    <input type="text" id="cityInput" placeholder="Ville (ex: Paris)">
+    <input type="text" id="countryInput" placeholder="Pays (ex: FR)">
+    <button onclick="manualForecast()">🔍 Voir la météo</button>
+  </div>
+
   <div class="ads">
-    <!-- Bloc pub -->
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-client="ca-pub-xxxxxxxx"
@@ -54,17 +63,18 @@
 
   <section class="forecast">
     <h2>📊 Prévisions locales</h2>
-    <div id="forecast">Chargement...</div>
+    <table class="forecast-table" id="forecastTable"></table>
+    <div class="bulletin" id="forecastBulletin">Chargement du bulletin météo...</div>
   </section>
 
   <section class="alerts">
     <h2>🚨 Alertes météo</h2>
     <div id="alerts">Chargement...</div>
+    <button onclick="loadWorldAlerts()">🌍 Voir alertes mondiales</button>
   </section>
 
   <h2>🛰️ Radar</h2>
   <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=5&level=surface&overlay=rain&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&detailLat=50&detailLon=4&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
-
 </main>
 
 <footer>
@@ -97,16 +107,28 @@ document.getElementById("avatar-jean").addEventListener("click", async () => {
   alert("J.E.A.N : " + (data.reply || "Pas de réponse"));
 });
 
-// === Prévisions utilisateur via query ?city&country ===
+// === Paramètres URL
 const params = new URLSearchParams(window.location.search);
-const city = params.get("city") || "Bruxelles";
-const country = params.get("country") || "BE";
+let city = params.get("city") || "Bruxelles";
+let country = params.get("country") || "BE";
 
-// ⚠️ TODO : remplacer par une vraie API géocoding
+// Géocodage simplifié (remplacer par API si besoin)
 let lat=50.8503, lon=4.3517;
-if(city.toLowerCase()==="paris"){lat=48.8566;lon=2.3522;}
-if(city.toLowerCase()==="new york"){lat=40.7128;lon=-74.0060;}
+function geo(city,country){
+  if(city.toLowerCase()==="paris"){return [48.8566,2.3522];}
+  if(city.toLowerCase()==="new york"){return [40.7128,-74.0060];}
+  return [50.8503,4.3517]; // défaut Bruxelles
+}
+[lat,lon]=geo(city,country);
 
+// Fonction manuelle
+function manualForecast(){
+  const c=document.getElementById("cityInput").value;
+  const p=document.getElementById("countryInput").value;
+  if(c&&p){window.location.search=`?city=${c}&country=${p}`;}
+}
+
+// Charger les prévisions
 async function loadForecast(){
   try{
     const res = await fetch("/api/superforecast",{
@@ -115,20 +137,90 @@ async function loadForecast(){
       body:JSON.stringify({lat,lon,country,region:city})
     });
     const data = await res.json();
-    document.getElementById("forecast").innerHTML = "<pre>"+JSON.stringify(data,null,2)+"</pre>";
+
+    // Affichage tableau
+    const table=document.getElementById("forecastTable");
+    table.innerHTML="<tr><th>Jour</th><th>Conditions</th><th>Temp. Min</th><th>Temp. Max</th></tr>";
+    if(data && data.daily){
+      data.daily.forEach(d=>{
+        const row=document.createElement("tr");
+        row.innerHTML=`<td>${d.date}</td><td>${d.condition||"?"}</td><td>${d.temp_min||"?"}°C</td><td>${d.temp_max||"?"}°C</td>`;
+        table.appendChild(row);
+      });
+    }
+
+    // Bulletin texte
+    let bulletin="Prévisions indisponibles.";
+    if(data && data.daily){
+      const today=data.daily[0];
+      bulletin=`Aujourd'hui à ${city} (${country}) : ${today.condition||"conditions variables"}, 
+      températures entre ${today.temp_min||"?"}°C et ${today.temp_max||"?"}°C.`;
+    }
+    document.getElementById("forecastBulletin").textContent=bulletin;
+
+    // Notification automatique
+    if("Notification" in window && Notification.permission==="granted"){
+      new Notification("Prévision TINSFLASH", { body: bulletin });
+    }
   }catch(e){
-    document.getElementById("forecast").textContent="Erreur forecast: "+e.message;
+    document.getElementById("forecastBulletin").textContent="Erreur forecast: "+e.message;
   }
 }
 
+// Charger alertes (locales/nationales/continentales)
 async function loadAlerts(){
   try{
     const res = await fetch("/api/alerts");
     const data = await res.json();
-    document.getElementById("alerts").innerHTML = "<pre>"+JSON.stringify(data,null,2)+"</pre>";
+    if(!data || data.length===0){
+      document.getElementById("alerts").innerHTML="✅ Aucune alerte active.";
+      return;
+    }
+    renderAlerts(data);
   }catch(e){
     document.getElementById("alerts").textContent="Erreur alertes: "+e.message;
   }
+}
+
+// Charger alertes mondiales uniquement
+async function loadWorldAlerts(){
+  try{
+    const res = await fetch("/api/alerts");
+    const data = await res.json();
+    const world = data.filter(a=>a.continent && !a.region); // continentales
+    if(!world || world.length===0){
+      document.getElementById("alerts").innerHTML="✅ Aucune alerte mondiale.";
+      return;
+    }
+    renderAlerts(world);
+  }catch(e){
+    document.getElementById("alerts").textContent="Erreur alertes mondiales: "+e.message;
+  }
+}
+
+// Affichage lisible
+function renderAlerts(list){
+  let html="";
+  list.forEach(a=>{
+    const d=a.data||{};
+    const color=d.reliability>90?"#0f0":d.reliability>70?"#ffa500":"#f00";
+    html+=`
+      <div class="alert-card">
+        <b>${a.country||""} ${a.region? "– "+a.region:""} (${a.continent||""})</b><br>
+        Type : ${d.type||"?"} – Intensité : ${d.intensity||"?"}<br>
+        Fiabilité : <span style="color:${color};">${d.reliability||"?"}%</span><br>
+        ⏱️ ${a.timestamp}<br>
+        ⚠️ Conséquences : ${d.consequences||"?"}<br>
+        ✅ Recommandations : ${d.recommendations||"?"}
+      </div>
+    `;
+  });
+  document.getElementById("alerts").innerHTML=html;
+}
+
+// Demander permission notifications
+if("Notification" in window && Notification.permission!=="granted"){
+  Notification.requestPermission();
 }
 
 loadForecast();
