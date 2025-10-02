@@ -1,21 +1,23 @@
 // services/runGlobal.js
 // ⚡ Centrale nucléaire météo – Moteur atomique orchestral
-// Étapes : Prévisions → Alertes → IA Chef d’orchestre final
+// Étapes : Prévisions Europe/USA → Prévisions Continental (fallback) → Alertes → IA Finale
 
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
+import { runContinental } from "./runContinental.js";
+import { runWorldAlerts } from "./runWorldAlerts.js";
+
 import { generateAlerts, getActiveAlerts } from "./alertsService.js";
 import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 
-// === Zones disponibles (Europe + USA, extensible) ===
+// === Zones disponibles (Europe + USA)
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
 
 export const ALL_ZONES = {
   ...EUROPE_ZONES,
   ...USA_ZONES,
-  // Ajout futur : CANADA_ZONES, AFRICA_ZONES, etc.
 };
 
 // === Orchestrateur principal ===
@@ -28,15 +30,18 @@ export async function runGlobal(zone = "All") {
       models: "PENDING",
       localForecasts: "PENDING",
       nationalForecasts: "PENDING",
+      forecastsContinental: "PENDING",
       aiAlerts: "PENDING",
+      alertsContinental: "PENDING",
+      alertsWorld: "PENDING",
       engineStatus: "RUNNING",
     };
     await saveEngineState(state);
 
     // =============================
-    // 🔹 PHASE 1 : PRÉVISIONS
+    // 🔹 PHASE 1 : PRÉVISIONS ZONES COUVERTES
     // =============================
-    addEngineLog("📡 Phase 1 – Prévisions zones couvertes…");
+    addEngineLog("📡 Phase 1 – Prévisions zones couvertes (Europe/USA)...");
     let forecasts = {};
 
     if (zone === "Europe") {
@@ -46,8 +51,6 @@ export async function runGlobal(zone = "All") {
     } else if (zone === "All") {
       forecasts.Europe = await runGlobalEurope();
       forecasts.USA = await runGlobalUSA();
-    } else {
-      throw new Error(`Zone inconnue: ${zone}`);
     }
 
     state.checkup.models = "OK";
@@ -56,9 +59,20 @@ export async function runGlobal(zone = "All") {
     await saveEngineState(state);
 
     // =============================
-    // 🔹 PHASE 2 : ALERTES
+    // 🔹 PHASE 2 : PRÉVISIONS CONTINENTALES (fallback)
     // =============================
-    addEngineLog("🚨 Phase 2 – Génération alertes zones couvertes + continentales…");
+    if (zone === "All") {
+      addEngineLog("🌐 Phase 2 – Prévisions Continentales (fallback)...");
+      const cont = await runContinental();
+      forecasts.Continental = cont?.forecasts || {};
+      state.checkup.forecastsContinental = "OK";
+      await saveEngineState(state);
+    }
+
+    // =============================
+    // 🔹 PHASE 3 : ALERTES LOCALES/NATIONALES
+    // =============================
+    addEngineLog("🚨 Phase 3 – Génération alertes locales/nationales (zones couvertes)...");
     for (const [country, zones] of Object.entries(ALL_ZONES)) {
       for (const z of zones) {
         await generateAlerts(z.lat, z.lon, country, z.region, zone);
@@ -70,21 +84,39 @@ export async function runGlobal(zone = "All") {
     await saveEngineState(state);
 
     // =============================
-    // 🔹 PHASE 3 : IA CHEF D’ORCHESTRE
+    // 🔹 PHASE 4 : ALERTES CONTINENTALES (fallback)
     // =============================
-    addEngineLog("🤖 Phase 3 – IA Chef d’orchestre (fusion prévisions + alertes)…");
+    if (zone === "All") {
+      addEngineLog("🚨 Phase 4 – Alertes Continentales (fallback)...");
+      // déjà fait dans runContinental()
+      state.checkup.alertsContinental = state.alertsContinental ? "OK" : "FAIL";
+      await saveEngineState(state);
+    }
+
+    // =============================
+    // 🔹 PHASE 5 : ALERTES MONDIALES
+    // =============================
+    if (zone === "All") {
+      addEngineLog("🌍 Phase 5 – Fusion mondiale des alertes...");
+      const world = await runWorldAlerts();
+      state.checkup.alertsWorld = world ? "OK" : "FAIL";
+      await saveEngineState(state);
+    }
+
+    // =============================
+    // 🔹 PHASE 6 : IA CHEF D’ORCHESTRE
+    // =============================
+    addEngineLog("🤖 Phase 6 – IA Chef d’orchestre (fusion finale)…");
 
     const prompt = `
 Tu es l'intelligence artificielle nucléaire météo.
-Objectif : produire un état final unique cohérent.
+Objectif : produire un état final unique cohérent pour le RUN GLOBAL.
 Tu reçois :
-- Prévisions enrichies (locales et nationales)
-- Alertes générées (locales, nationales, continentales)
-- Facteurs externes (relief, climat, altitude intégrés en amont)
-
+- Prévisions enrichies (locales, nationales, continentales fallback)
+- Alertes générées (locales, nationales, continentales, mondiales)
 Consignes :
 1. Vérifie la cohérence entre prévisions et alertes.
-2. Ajuste si besoin : une alerte peut renforcer une prévision, une prévision peut confirmer une alerte.
+2. Ajuste si besoin.
 3. Sors un rapport final clair et structuré :
    {
      "resume": "...",
@@ -112,7 +144,7 @@ Consignes :
     state.checkup.engineStatus = "OK";
     await saveEngineState(state);
 
-    addEngineLog("✅ RUN GLOBAL terminé avec succès (Prévisions + Alertes + IA Finales)");
+    addEngineLog("✅ RUN GLOBAL terminé avec succès.");
     return { forecasts, alerts, final: finalOutput };
   } catch (err) {
     await addEngineError(err.message || "Erreur RUN GLOBAL");
