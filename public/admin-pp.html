@@ -209,9 +209,21 @@
 
     function appendLog(msg) {
       const logsDiv = document.getElementById("logs");
+
+      // ⚡ Heure belge
+      const now = new Date();
+      const options = { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Brussels" };
+      const timeStr = now.toLocaleTimeString("fr-BE", options);
+
       const line = document.createElement("div");
-      line.textContent = new Date().toLocaleTimeString()+" — "+msg;
+      line.textContent = `${timeStr} — ${msg}`;
       logsDiv.appendChild(line);
+
+      // ⚡ Garde seulement les 200 derniers logs
+      while (logsDiv.children.length > 200) {
+        logsDiv.removeChild(logsDiv.firstChild);
+      }
+
       logsDiv.scrollTop = logsDiv.scrollHeight;
     }
 
