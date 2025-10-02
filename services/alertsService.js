@@ -21,8 +21,10 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
   try {
     addEngineLog(`🚨 Analyse alertes pour ${country}${region ? " - " + region : ""}`);
 
+    // 1️⃣ Détection brute
     const detectorResults = await detectAlerts(lat, lon, country);
 
+    // 2️⃣ Analyse spécialisée
     const [snow, rain, wind, stations] = await Promise.all([
       analyzeSnow(lat, lon, country, region),
       analyzeRain(lat, lon, country, region),
@@ -30,6 +32,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       fetchStationData(lat, lon, country, region),
     ]);
 
+    // 2️⃣ bis HRRR / AROME
     let hiRes = null;
     if (country === "USA") {
       hiRes = await hrrr(lat, lon);
@@ -37,29 +40,39 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       hiRes = await arome(lat, lon);
     }
 
-    let enriched = { snow, rain, wind, stations, detectorResults, hiRes };
-    enriched = await applyGeoFactors(enriched, lat, lon, country);
-    enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
+    // 3️⃣ Fusion minimale pour ajustements
+    let base = {
+      temperature: rain?.temperature ?? snow?.temperature ?? null,
+      precipitation: rain?.precipitation ?? snow?.precipitation ?? null,
+      wind: wind?.speed ?? null,
+    };
+    base = await applyGeoFactors(base, lat, lon, country);
+    base = await adjustWithLocalFactors(base, country, lat, lon);
 
-    const anomaly = forecastVision.detectSeasonalAnomaly(
-      enriched?.rain || enriched?.snow || null
-    );
-    if (anomaly) enriched.anomaly = anomaly;
+    const anomaly = forecastVision.detectSeasonalAnomaly(base);
+    if (anomaly) base.anomaly = anomaly;
 
+    // 4️⃣ IA moteur d’alerte
     const prompt = `
 Analyse des risques météo pour ${country}${region ? " - " + region : ""}, continent=${continent}.
-Sources enrichies :
-${JSON.stringify(enriched, null, 2)}
+Sources enrichies (résumées):
+- Neige: ${JSON.stringify(snow)}
+- Pluie: ${JSON.stringify(rain)}
+- Vent: ${JSON.stringify(wind)}
+- Détecteur brut: ${JSON.stringify(detectorResults)}
+- Stations (résumé): ${JSON.stringify(stations?.summary || {})}
+- Haute résolution: ${JSON.stringify(hiRes || {})}
+- Anomalies: ${JSON.stringify(anomaly)}
+
 Consignes :
 - Croiser toutes les données (neige, pluie, vent, stations, détecteur multi-modèles).
 - Si USA → intégrer HRRR.
 - Si France/Belgique → intégrer AROME.
 - Ajuster selon relief, climat, altitude et saison.
-- Tenir compte des anomalies saisonnières détectées (${JSON.stringify(anomaly)}).
 - Déterminer si une alerte doit être générée.
 - Classer: type, zone, fiabilité (0–100), intensité, conséquences, recommandations, durée.
 - Répondre format JSON strict.
-    `;
+`;
 
     const aiResult = await askOpenAI("Tu es un moteur d’alerte météo nucléaire", prompt);
 
@@ -67,7 +80,12 @@ Consignes :
     try {
       parsed = JSON.parse(aiResult);
     } catch {
-      parsed = { raw: aiResult };
+      parsed = {
+        type: "inconnu",
+        fiabilite: 0,
+        note: "JSON invalide",
+        raw: aiResult
+      };
     }
 
     const classified = classifyAlerts(parsed);
@@ -89,7 +107,7 @@ Consignes :
     activeAlerts.push(alert);
     if (activeAlerts.length > 500) activeAlerts.shift();
 
-    // 🔥 Ajout engine-state avec timestamp alerte
+    // 🔥 Mise à jour engine-state
     state.alerts = activeAlerts;
     state.lastAlertsGenerated = new Date().toISOString();
     await saveEngineState(state);
@@ -103,7 +121,8 @@ Consignes :
 }
 
 export async function getActiveAlerts() {
-  return activeAlerts;
+  // copie immuable pour éviter modif externe
+  return [...activeAlerts];
 }
 
 export async function updateAlertStatus(id, action) {
