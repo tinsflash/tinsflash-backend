@@ -247,13 +247,12 @@ const EUROPE_ZONES = {
     { lat: 51.90, lon: -8.47, region: "South - Cork" }
   ]
 };
-
 // ===========================
 // 1️⃣ Prévisions Europe
 // ===========================
 export async function runEuropeForecasts() {
-  const state = getEngineState();
-  state.checkup = state.checkup || {};   // ✅ Sécurité
+  const state = await getEngineState();   // ✅ await ajouté
+  state.checkup = state.checkup || {};   
   addEngineLog("🌍 Démarrage Prévisions Europe…");
 
   const byCountry = {};
@@ -273,7 +272,7 @@ export async function runEuropeForecasts() {
         successCount++; totalPoints++;
         addEngineLog(`✅ Prévisions ${country} — ${z.region}`);
       } catch (e) {
-        addEngineError(`❌ Prévisions ${country} — ${z.region}: ${e.message}`);
+        await addEngineError(`❌ Prévisions ${country} — ${z.region}: ${e.message}`);
         totalPoints++;
       }
     }
@@ -287,7 +286,7 @@ export async function runEuropeForecasts() {
   };
   state.checkup.localForecastsEurope = successCount > 0 ? "OK" : "FAIL";
   state.checkup.nationalForecastsEurope = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
-  saveEngineState(state);
+  await saveEngineState(state);   // ✅ await ajouté
 
   addEngineLog("✅ Prévisions Europe terminées.");
   return { summary: state.zonesCoveredSummaryEurope };
@@ -297,12 +296,12 @@ export async function runEuropeForecasts() {
 // 2️⃣ Alertes Europe
 // ===========================
 export async function runEuropeAlerts() {
-  const state = getEngineState();
-  state.checkup = state.checkup || {};   // ✅ Sécurité
+  const state = await getEngineState();   // ✅ await ajouté
+  state.checkup = state.checkup || {};   
   addEngineLog("🚨 Démarrage Alertes Europe…");
 
   if (!state.zonesCoveredEurope) {
-    addEngineError("❌ Impossible de générer les alertes : pas de prévisions Europe disponibles.");
+    await addEngineError("❌ Impossible de générer les alertes : pas de prévisions Europe disponibles.");
     return;
   }
 
@@ -321,14 +320,14 @@ export async function runEuropeAlerts() {
         alertsByCountry[country].push({ region: regionData.region, alert });
         addEngineLog(`🚨 Alerte générée pour ${country} — ${regionData.region}`);
       } catch (e) {
-        addEngineError(`❌ Alerte ${country} — ${regionData.region}: ${e.message}`);
+        await addEngineError(`❌ Alerte ${country} — ${regionData.region}: ${e.message}`);
       }
     }
   }
 
   state.alertsEurope = alertsByCountry;
   state.checkup.alertsEurope = "OK";
-  saveEngineState(state);
+  await saveEngineState(state);   // ✅ await ajouté
 
   addEngineLog("✅ Alertes Europe terminées.");
   return alertsByCountry;
@@ -338,18 +337,18 @@ export async function runEuropeAlerts() {
 // 3️⃣ Chef d’orchestre : Run Global Europe
 // ===========================
 export async function runGlobalEurope() {
-  const state = getEngineState();
-  state.checkup = state.checkup || {};   // ✅ Sécurité
+  const state = await getEngineState();   // ✅ await ajouté
+  state.checkup = state.checkup || {};   
   try {
     addEngineLog("🌍 Démarrage RUN GLOBAL EUROPE (prévisions + alertes)…");
     state.checkup.engineStatusEurope = "PENDING";
-    saveEngineState(state);
+    await saveEngineState(state);   // ✅ await ajouté
 
     await runEuropeForecasts();
     await runEuropeAlerts();
 
     state.checkup.engineStatusEurope = "OK";
-    saveEngineState(state);
+    await saveEngineState(state);   // ✅ await ajouté
 
     addEngineLog("✅ RUN GLOBAL EUROPE complet terminé avec succès.");
     return {
@@ -357,9 +356,9 @@ export async function runGlobalEurope() {
       alerts: state.alertsEurope ? "OK" : "FAIL"
     };
   } catch (err) {
-    addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
+    await addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
     state.checkup.engineStatusEurope = "FAIL";
-    saveEngineState(state);
+    await saveEngineState(state);   // ✅ await ajouté
     throw err;
   }
 }
