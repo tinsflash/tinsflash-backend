@@ -36,9 +36,7 @@
       text-decoration: none;
       font-weight: bold;
     }
-    nav a:hover {
-      text-decoration: underline;
-    }
+    nav a:hover { text-decoration: underline; }
     main {
       padding: 1.5rem;
       display: grid;
@@ -68,9 +66,7 @@
       font-size: 1rem;
       transition: 0.2s;
     }
-    button:hover {
-      background: #1d4ed8;
-    }
+    button:hover { background: #1d4ed8; }
     .logs {
       max-height: 300px;
       overflow-y: auto;
@@ -80,16 +76,8 @@
       padding: .5rem;
       border-radius: 6px;
     }
-    .checklist {
-      display: flex;
-      flex-direction: column;
-      gap: .6rem;
-    }
-    .check-item {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-    }
+    .checklist { display: flex; flex-direction: column; gap: .6rem; }
+    .check-item { display: flex; align-items: center; gap: .6rem; }
     .status-dot {
       width: 14px;
       height: 14px;
@@ -97,20 +85,10 @@
       background: #f59e0b;
       box-shadow: 0 0 5px rgba(0,0,0,0.6);
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: .9rem;
-    }
-    th, td {
-      padding: .5rem;
-      border-bottom: 1px solid #374151;
-    }
-    th {
-      background: #111827;
-      color: #38bdf8;
-      text-align: left;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { padding: .5rem; border-bottom: 1px solid #374151; }
+    th { background: #111827; color: #38bdf8; text-align: left; }
+    pre { background:#0f172a; padding:0.5rem; border-radius:6px; font-size:.8rem; overflow:auto; }
   </style>
 </head>
 <body>
@@ -208,14 +186,12 @@
     }
 
     const evtSource = new EventSource("/api/logs/stream");
-    evtSource.onmessage = function(e) {
-      appendLog(e.data);
-    };
+    evtSource.onmessage = e => appendLog(e.data);
 
     async function refreshEngine() {
       const res = await fetch("/api/engine-state");
       const state = await res.json();
-      document.getElementById("engineState").textContent = JSON.stringify(state,null,2);
+      document.getElementById("engineState").innerHTML = "<pre>"+JSON.stringify(state,null,2)+"</pre>";
       document.getElementById("lastRun").textContent = state?.lastRunFinished || "-";
       document.getElementById("lastAlerts").textContent = state?.lastAlertsGenerated || "-";
     }
