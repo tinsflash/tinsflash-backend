@@ -2,6 +2,7 @@
 // SuperForecast — prévisions enrichies multi-sources par point unique
 // ⚡ Centrale nucléaire météo – Moteur atomique orchestral
 
+// === Sources physiques et satellites (déjà en place)
 import gfs from "./gfs.js";
 import ecmwf from "./ecmwf.js";
 import icon from "./icon.js";
@@ -12,6 +13,15 @@ import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
 import hrrr from "./hrrr.js";          // 🇺🇸 HRRR (NOAA, USA only)
 import arome from "./arome.js";        // 🇫🇷🇧🇪 AROME (France/Belgique via Meteomatics)
+
+// === Nouvelles IA
+import aifs from "./aifs.js";              // ECMWF AI Forecast
+import graphcast from "./graphcast.js";    // Google DeepMind
+import pangu from "./pangu.js";            // CMA Pangu
+import nowcastnet from "./nowcastnet.js";  // Nowcasting IA
+import corrDiff from "./corrDiff.js";      // NVIDIA Earth-2
+
+// === Services internes
 import { askOpenAI } from "./openaiService.js";
 import {
   addEngineLog,
@@ -20,7 +30,6 @@ import {
   getEngineState,
 } from "./engineState.js";
 
-// Facteurs d’ajustement
 import { applyGeoFactors } from "./geoFactors.js";     
 import adjustWithLocalFactors from "./localFactors.js"; 
 import forecastVision from "./forecastVision.js";       
@@ -45,19 +54,12 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       format: "json",
     };
 
-    // === Étape 2 : récupérer toutes les sources météo
-    addEngineLog("📡 Récupération multi-sources météo…");
+    // === Étape 2 : récupération toutes sources météo
+    addEngineLog("📡 Récupération multi-sources météo (physiques + IA)...");
     const [
-      gfsData,
-      ecmwfData,
-      iconData,
-      meteomaticsData,
-      nasaData,
-      copernicusData,
-      trullemansData,
-      wetterzentraleData,
-      hrrrData,
-      aromeData,
+      gfsData, ecmwfData, iconData, meteomaticsData, nasaData, copernicusData,
+      trullemansData, wetterzentraleData, hrrrData, aromeData,
+      aifsData, graphcastData, panguData, nowcastnetData, corrDiffData
     ] = await Promise.allSettled([
       gfs({ lat, lon, country }),
       ecmwf({ lat, lon, country }),
@@ -69,6 +71,11 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       wetterzentrale({ lat, lon, country }),
       hrrr(lat, lon),
       arome(lat, lon),
+      aifs({ lat, lon, country }),
+      graphcast({ lat, lon, country }),
+      pangu({ lat, lon, country }),
+      nowcastnet({ lat, lon, country }),
+      corrDiff({ lat, lon, country }),
     ]);
 
     const sources = {
@@ -82,42 +89,64 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       wetterzentrale: wetterzentraleData.value ?? { error: wetterzentraleData.reason?.message },
       hrrr: hrrrData.value ?? { error: hrrrData.reason?.message },
       arome: aromeData.value ?? { error: aromeData.reason?.message },
+      aifs: aifsData.value ?? { error: aifsData.reason?.message },
+      graphcast: graphcastData.value ?? { error: graphcastData.reason?.message },
+      pangu: panguData.value ?? { error: panguData.reason?.message },
+      nowcastnet: nowcastnetData.value ?? { error: nowcastnetData.reason?.message },
+      corrDiff: corrDiffData.value ?? { error: corrDiffData.reason?.message },
     };
-    addEngineLog("✅ Sources météo collectées");
+    addEngineLog("✅ Toutes sources météo collectées");
 
-    // === Étape 3 : fusion brute (GFS/ECMWF/ICON + Meteomatics + Copernicus si dispo)
-    const baseForecast = {};
+    // === Étape 3 : Fusion pondérée multi-sources
+    const fusion = {};
     try {
-      const temps = [];
-      const precs = [];
+      const weightedTemps = [];
+      const weightedPrecs = [];
 
-      const addIfValid = (arr, val) => {
-        if (typeof val === "number" && !isNaN(val)) arr.push(val);
+      const pushVal = (arr, val, weight) => {
+        if (typeof val === "number" && !isNaN(val)) arr.push(val * weight);
       };
 
+      // Poids par famille
+      const wIA = 0.35, wNowcast = 0.25, wPhys = 0.35, wDownscale = 0.05;
+
       // Températures
-      addIfValid(temps, sources.gfs?.temperature);
-      addIfValid(temps, sources.ecmwf?.temperature);
-      addIfValid(temps, sources.icon?.temperature);
-      addIfValid(temps, sources.meteomatics?.temperature);
-      addIfValid(temps, sources.copernicus?.temperature);
+      pushVal(weightedTemps, sources.gfs?.temperature, wPhys);
+      pushVal(weightedTemps, sources.ecmwf?.temperature, wPhys);
+      pushVal(weightedTemps, sources.icon?.temperature, wPhys);
+      pushVal(weightedTemps, sources.meteomatics?.temperature, wPhys);
+      pushVal(weightedTemps, sources.copernicus?.temperature, wPhys);
+
+      pushVal(weightedTemps, sources.aifs?.temperature, wIA);
+      pushVal(weightedTemps, sources.graphcast?.temperature, wIA);
+      pushVal(weightedTemps, sources.pangu?.temperature, wIA);
+
+      pushVal(weightedTemps, sources.nowcastnet?.temperature, wNowcast);
+      pushVal(weightedTemps, sources.corrDiff?.temperature, wDownscale);
 
       // Précipitations
-      addIfValid(precs, sources.gfs?.precipitation);
-      addIfValid(precs, sources.ecmwf?.precipitation);
-      addIfValid(precs, sources.icon?.precipitation);
-      addIfValid(precs, sources.meteomatics?.precipitation);
-      addIfValid(precs, sources.copernicus?.precipitation);
+      pushVal(weightedPrecs, sources.gfs?.precipitation, wPhys);
+      pushVal(weightedPrecs, sources.ecmwf?.precipitation, wPhys);
+      pushVal(weightedPrecs, sources.icon?.precipitation, wPhys);
+      pushVal(weightedPrecs, sources.meteomatics?.precipitation, wPhys);
+      pushVal(weightedPrecs, sources.copernicus?.precipitation, wPhys);
 
-      baseForecast.temperature = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
-      baseForecast.precipitation = precs.length ? precs.reduce((a, b) => a + b, 0) / precs.length : null;
-      baseForecast.reliability = Math.round(((temps.length + precs.length) / 10) * 100); // sur 10 sources max
+      pushVal(weightedPrecs, sources.aifs?.precipitation, wIA);
+      pushVal(weightedPrecs, sources.graphcast?.precipitation, wIA);
+      pushVal(weightedPrecs, sources.pangu?.precipitation, wIA);
+
+      pushVal(weightedPrecs, sources.nowcastnet?.precipitation, wNowcast);
+      pushVal(weightedPrecs, sources.corrDiff?.precipitation, wDownscale);
+
+      fusion.temperature = weightedTemps.length ? weightedTemps.reduce((a,b)=>a+b,0) / weightedTemps.length : null;
+      fusion.precipitation = weightedPrecs.length ? weightedPrecs.reduce((a,b)=>a+b,0) / weightedPrecs.length : null;
+      fusion.reliability = Math.min(100, Math.round(((weightedTemps.length + weightedPrecs.length) / 15) * 100));
     } catch (err) {
-      addEngineError("⚠️ Erreur fusion brute prévisions: " + err.message);
+      addEngineError("⚠️ Erreur fusion pondérée: " + err.message);
     }
 
     // === Étape 4 : ajustements globaux et locaux
-    let enriched = await applyGeoFactors(baseForecast, lat, lon, country);
+    let enriched = await applyGeoFactors(fusion, lat, lon, country);
     enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
 
     // === Étape 4bis : anomalies saisonnières
@@ -129,14 +158,15 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     }
 
     // === Étape 5 : analyse IA avec retour JSON
-    addEngineLog("🤖 Analyse IA des données multi-sources…");
+    addEngineLog("🤖 Analyse IA multi-sources (physiques + IA)...");
     const prompt = `
 Prévisions météo enrichies pour un point précis.
 Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${region ? ", région=" + region : ""}
 
-Fusion principale: ${JSON.stringify(baseForecast)}
+Fusion pondérée: ${JSON.stringify(fusion)}
 Ajustements: ${JSON.stringify(enriched)}
-Sources principales: GFS, ECMWF, ICON, Meteomatics, NASA, Copernicus
+Sources principales: GFS, ECMWF, ICON, Meteomatics, Copernicus, NASA
+IA: AIFS, GraphCast, Pangu, NowcastNet, CorrDiff
 Compléments: HRRR (USA), AROME (FR/BE)
 Benchmarks: Trullemans, Wetterzentrale
 
@@ -152,7 +182,6 @@ Consignes IA:
   "fiabilite": "...%",
   "bulletin": "Texte simplifié grand public"
 }
-3. Ne jamais sortir de texte en dehors du JSON.
 `;
 
     let aiFusion = await askOpenAI(
@@ -164,25 +193,22 @@ Consignes IA:
     try {
       parsedForecast = JSON.parse(aiFusion);
     } catch {
-      parsedForecast = { raw: aiFusion }; // fallback
+      parsedForecast = { raw: aiFusion };
     }
 
     // === Étape 6 : sauvegarde
     state.superForecasts = state.superForecasts || [];
     state.superForecasts.push({
-      lat,
-      lon,
-      country,
-      region,
+      lat, lon, country, region,
       forecast: parsedForecast,
       sources,
       enriched,
-      baseForecast, // ✅ ajouté pour debug / admin
+      fusion,
     });
     await saveEngineState(state);
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
-    return { lat, lon, country, region, forecast: parsedForecast, sources, enriched, baseForecast };
+    return { lat, lon, country, region, forecast: parsedForecast, sources, enriched, fusion };
   } catch (err) {
     await addEngineError(err.message || "Erreur inconnue SuperForecast");
     addEngineLog("❌ Erreur dans SuperForecast");
