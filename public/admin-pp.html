@@ -4,19 +4,18 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Console Admin – Centrale météo nucléaire</title>
+  <title>Console Admin – Centrale nucléaire météo</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
     header { background:#222; padding:10px; text-align:center; }
     nav a { color:#0af; margin:0 10px; text-decoration:none; }
-    h2 { margin-top:20px; }
-    #alertsSummary { background:#222; padding:12px; margin:12px; border-radius:8px; font-size:0.9em; }
+    h2, h3 { margin-top:20px; }
+    #alertsSummary { background:#222; padding:12px; margin:12px; border-radius:8px; font-size:0.95em; }
     .stat { margin:5px 0; }
     .badge { padding:3px 8px; border-radius:6px; margin-left:6px; }
     .exclusive { background:#a22; color:#fff; }
     .confirmed { background:#2a2; color:#fff; }
-    .surveillance { background:#335; color:#fff; }
     .blinker { animation: blink 1s infinite; }
     @keyframes blink { 50% { opacity:0; } }
     .button { margin:5px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
@@ -24,12 +23,11 @@
     .green { background:#2a2; color:#fff; }
     .red { background:#a22; color:#fff; }
     .purple { background:#639; color:#fff; }
-    #logs { display:none; background:#000; padding:10px; border-radius:6px; margin:10px; max-height:250px; overflow:auto; }
+    #logs { display:none; background:#000; padding:10px; border-radius:6px; margin:10px; max-height:250px; overflow:auto; font-size:0.85em; }
 
-    /* Colonnes prévisions / alertes */
     .columns { display:flex; gap:20px; margin:20px; }
-    .col { flex:1; background:#222; padding:10px; border-radius:8px; }
-    .col h3 { text-align:center; }
+    .zone { flex:1; background:#222; padding:10px; border-radius:8px; }
+    .zone h3 { margin:0 0 8px 0; }
     .row { display:flex; justify-content:space-between; margin:4px 0; }
     .ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-left:6px; }
     .ball.orange { background:#cc0; }
@@ -37,7 +35,6 @@
     .ball.red { background:#a22; }
     .ball.purple { background:#639; }
 
-    /* Chat bulle */
     #chatButton {
       position: fixed; bottom:20px; right:20px;
       width:60px; height:60px; border-radius:50%;
@@ -67,27 +64,24 @@
     let chart;
 
     async function fetchAlertsSummary() {
-      try {
-        const res = await fetch("/api/alerts/summary");
-        if (!res.ok) return;
-        const s = await res.json();
-        const exclusiveCount = s.exclusives || 0;
+      const res = await fetch("/api/alerts/summary");
+      if (!res.ok) return;
+      const s = await res.json();
+      const exclusiveCount = s.exclusives || 0;
 
-        let exclusiveBadge = `<span class="badge exclusive">${exclusiveCount}</span>`;
-        if (exclusiveCount > lastExclusiveCount) {
-          exclusiveBadge = `<span class="badge exclusive blinker">${exclusiveCount}</span>`;
-        }
-        lastExclusiveCount = exclusiveCount;
+      let exclusiveBadge = `<span class="badge exclusive">${exclusiveCount}</span>`;
+      if (exclusiveCount > lastExclusiveCount) {
+        exclusiveBadge = `<span class="badge exclusive blinker">${exclusiveCount}</span>`;
+      }
+      lastExclusiveCount = exclusiveCount;
 
-        document.getElementById("alertsSummary").innerHTML = `
-          <div class="stat">📊 <strong>Total alertes actives :</strong> ${s.total || 0}</div>
-          <div class="stat">🔵 Sous surveillance : ${s.byStatus?.["under-surveillance"] || 0}</div>
-          <div class="stat">🔴 Exclusives : ${exclusiveBadge}
-              🟢 Confirmées ailleurs : <span class="badge confirmed">${s.confirmedElsewhere || 0}</span></div>
-        `;
-
-        updateChart(s);
-      } catch (e) { console.error("Erreur résumé alertes:", e); }
+      document.getElementById("alertsSummary").innerHTML = `
+        <div class="stat">📊 <strong>Total alertes actives :</strong> ${s.total || 0}</div>
+        <div class="stat">🔵 Sous surveillance : ${s.byStatus?.["under-surveillance"] || 0}</div>
+        <div class="stat">🔴 Exclusives : ${exclusiveBadge}
+            🟢 Confirmées ailleurs : <span class="badge confirmed">${s.confirmedElsewhere || 0}</span></div>
+      `;
+      updateChart(s);
     }
 
     function updateChart(s) {
@@ -106,77 +100,96 @@
           backgroundColor: ["#2a2", "#cc0", "#335", "#633", "#a22", "#0af"]
         }]
       };
-      if (chart) { chart.data = data; chart.update(); }
-      else { chart = new Chart(ctx, { type:"doughnut", data, options:{ plugins:{ legend:{ labels:{ color:"#eee" } } } } }); }
+      if (chart) {
+        chart.data = data;
+        chart.update();
+      } else {
+        chart = new Chart(ctx, {
+          type: "doughnut",
+          data,
+          options: {
+            plugins: {
+              legend: {
+                labels: { color: "#eee" }
+              }
+            }
+          }
+        });
+      }
     }
 
     async function fetchCountries() {
-      try {
-        const res = await fetch("/api/checkup");
-        const state = await res.json();
-        const europe = state.zonesCoveredEurope?.countries || [];
-        const usa = state.zonesCoveredUSA?.states || [];
+      const res = await fetch("/api/checkup");
+      const state = await res.json();
+      // Europe zones (pays)
+      const europeCountries = Object.keys(state.zonesCoveredEurope || {});
+      const usaStates = Object.keys(state.zonesCoveredUSA || {});
 
-        fillCol("forecastList", europe, state.checkup);
-        fillCol("alertList", usa, state.checkup);
-      } catch (e) { console.error("Erreur pays:", e); }
+      fillZone("europeForecast", europeCountries, state.checkupForecast);
+      fillZone("usaForecast", usaStates, state.checkupForecast);
+      fillZone("europeAlerts", europeCountries, state.checkupAlerts);
+      fillZone("usaAlerts", usaStates, state.checkupAlerts);
     }
 
-    function fillCol(id, list, checkup) {
+    function fillZone(id, list, checkup) {
       const div = document.getElementById(id);
       div.innerHTML = "";
       list.forEach(c => {
         const st = checkup?.[c] || "PENDING";
-        const ballClass = st==="OK"?"green":st==="FAIL"?"red":st==="PARTIAL"?"purple":"orange";
+        let ballClass = "orange";
+        if (st === "OK") ballClass = "green";
+        else if (st === "FAIL") ballClass = "red";
+        else if (st === "PARTIAL") ballClass = "purple";
         div.innerHTML += `<div class="row"><span>${c}</span><span class="ball ${ballClass}"></span></div>`;
       });
     }
 
-    async function runProcess(endpoint, btnId) {
-      const btn = document.getElementById(btnId);
-      btn.className = "button orange";
-      try {
-        const res = await fetch(endpoint, { method:"POST" });
-        const data = await res.json();
-        btn.className = data.success ? "button green" : "button red";
-      } catch { btn.className = "button red"; }
-    }
-
+    let eventSource;
     function toggleLogs() {
       const logs = document.getElementById("logs");
-      logs.style.display = logs.style.display === "none" ? "block" : "none";
-      if (logs.style.display === "block") loadLogs();
-    }
-    async function loadLogs() {
-      const res = await fetch("/api/logs?cycle=current");
-      const data = await res.json();
-      document.getElementById("logs").innerText = data.map(l=>l.message).join("\n");
+      if (logs.style.display === "none") {
+        logs.style.display = "block";
+        logs.innerText = "Connexion logs en direct…\n";
+        eventSource = new EventSource("/api/logs/stream");
+        eventSource.onmessage = (e) => {
+          const obj = JSON.parse(e.data);
+          logs.innerText += `[${obj.time}] ${obj.message}\n`;
+          logs.scrollTop = logs.scrollHeight;
+        };
+      } else {
+        logs.style.display = "none";
+        if (eventSource) eventSource.close();
+      }
     }
 
     function toggleChat() {
       const chat = document.getElementById("chatBubble");
-      chat.style.display = chat.style.display==="none"?"flex":"none";
+      chat.style.display = chat.style.display === "none" ? "flex" : "none";
     }
 
     async function sendChat() {
       const input = document.getElementById("chatMsg");
       const msg = input.value.trim();
       if (!msg) return;
-      const log = document.getElementById("chatLog");
-      log.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
+      const logEl = document.getElementById("chatLog");
+      logEl.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
       input.value = "";
       const res = await fetch("/api/chat/engine", {
-        method:"POST", headers:{ "Content-Type":"application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: msg })
       });
       const data = await res.json();
-      log.innerHTML += `<div><b>GPT:</b> ${data.reply}</div>`;
-      log.scrollTop = log.scrollHeight;
+      logEl.innerHTML += `<div><b>GPT:</b> ${data.reply}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
     }
 
     setInterval(fetchAlertsSummary, 7000);
     setInterval(fetchCountries, 10000);
-    window.onload = () => { fetchAlertsSummary(); fetchCountries(); };
+    window.onload = () => {
+      fetchAlertsSummary();
+      fetchCountries();
+    };
   </script>
 </head>
 <body>
@@ -192,36 +205,42 @@
     </nav>
   </header>
 
-  <!-- 🚨 Résumé global alertes -->
-  <div id="alertsSummary">Chargement du résumé des alertes…</div>
+  <div id="alertsSummary">Chargement du résumé…</div>
   <canvas id="alertsChart"></canvas>
 
-  <!-- Colonnes Prévisions & Alertes -->
   <div class="columns">
-    <div class="col">
-      <h3>🌍 Prévisions par pays</h3>
-      <div id="forecastList"></div>
+    <div class="zone">
+      <h3>🌍 Prévisions Europe</h3>
+      <div id="europeForecast"></div>
     </div>
-    <div class="col">
-      <h3>🚨 Alertes par pays</h3>
-      <div id="alertList"></div>
+    <div class="zone">
+      <h3>🇺🇸 Prévisions USA</h3>
+      <div id="usaForecast"></div>
+    </div>
+  </div>
+  <div class="columns">
+    <div class="zone">
+      <h3>🚨 Alertes Europe</h3>
+      <div id="europeAlerts"></div>
+    </div>
+    <div class="zone">
+      <h3>🚨 Alertes USA</h3>
+      <div id="usaAlerts"></div>
     </div>
   </div>
 
-  <!-- 🛠 Contrôle moteur -->
   <section id="engineControls">
     <h2>🛠 Contrôle moteur</h2>
-    <button id="btnEurope" class="button" onclick="runProcess('/api/run-europe','btnEurope')">Run Prévisions Europe</button>
-    <button id="btnUSA" class="button" onclick="runProcess('/api/run-usa','btnUSA')">Run Prévisions USA</button>
-    <button id="btnAlertsEurope" class="button" onclick="runProcess('/api/run-alerts','btnAlertsEurope')">Run Alertes Europe</button>
-    <button id="btnAlertsContinental" class="button" onclick="runProcess('/api/run-alerts-continental','btnAlertsContinental')">Run Alertes Continentales</button>
-    <button id="btnAlertsWorld" class="button" onclick="runProcess('/api/run-alerts-world','btnAlertsWorld')">Run Alertes Mondiales</button>
-    <button id="btnOrchestrator" class="button" onclick="runProcess('/api/run-orchestrator','btnOrchestrator')">Run Orchestrateur IA</button>
+    <button class="button" onclick="runProcess('/api/run-europe','btnEurope')">Run Prévisions Europe</button>
+    <button class="button" onclick="runProcess('/api/run-usa','btnUSA')">Run Prévisions USA</button>
+    <button class="button" onclick="runProcess('/api/run-alerts','btnAlertsEurope')">Run Alertes Europe</button>
+    <button class="button" onclick="runProcess('/api/run-alerts-continental','btnAlertsContinental')">Run Alertes Continentales</button>
+    <button class="button" onclick="runProcess('/api/run-alerts-world','btnAlertsWorld')">Run Alertes Mondiales</button>
+    <button class="button" onclick="runProcess('/api/run-orchestrator','btnOrchestrator')">Run Orchestrateur IA</button>
     <button onclick="toggleLogs()">📜 Voir logs</button>
     <div id="logs"></div>
   </section>
 
-  <!-- 💬 Chat IA moteur (réductible) -->
   <button id="chatButton" onclick="toggleChat()">💬</button>
   <div id="chatBubble">
     <header>🤖 ChatGPT5 – Moteur</header>
