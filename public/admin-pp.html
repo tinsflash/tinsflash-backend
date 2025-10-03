@@ -4,120 +4,79 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ Console Admin – Centrale Nucléaire Météo</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>⚡ Console Admin — Centrale Météo Mondiale</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { background:#222; padding:12px; text-align:center; }
-    nav a { color:#0af; margin:0 10px; text-decoration:none; }
-    h2,h3 { margin-top:20px; }
-
-    #alertsSummary { background:#222; padding:12px; margin:12px; border-radius:8px; font-size:0.95em; }
-    .stat { margin:5px 0; }
-    .badge { padding:3px 8px; border-radius:6px; margin-left:6px; }
-    .exclusive { background:#a22; color:#fff; }
-    .confirmed { background:#2a2; color:#fff; }
-    .blinker { animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity:0; } }
-
-    .button { margin:5px; padding:10px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; min-width:220px; }
-    .idle { background:#cc0; color:#000; }    /* orange */
-    .running { background:#09f; color:#fff; } /* bleu */
-    .ok { background:#2a2; color:#fff; }      /* vert */
-    .fail { background:#a22; color:#fff; }    /* rouge */
-
-    #logs { display:block; background:#000; color:#0f0; padding:10px; border-radius:6px; margin:10px; max-height:250px; overflow:auto; font-family:monospace; font-size:0.85em; }
-
-    .columns { display:flex; gap:20px; margin:20px; flex-wrap:wrap; }
-    .zone { flex:1; background:#222; padding:10px; border-radius:8px; }
-    .zone h3 { margin:0 0 8px 0; }
-    .row { display:flex; justify-content:space-between; margin:4px 0; }
-    .ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-left:6px; }
-    .ball.orange { background:#cc0; }
-    .ball.green { background:#2a2; }
-    .ball.red { background:#a22; }
-    .ball.purple { background:#639; }
-
-    #chatButton {
-      position: fixed; bottom:20px; right:20px;
-      width:60px; height:60px; border-radius:50%;
-      background:#0af; color:#fff; font-size:24px; font-weight:bold;
-      border:none; cursor:pointer; z-index:9999;
-    }
-    #chatBubble {
-      position: fixed; bottom:90px; right:20px;
-      background:#222; border:2px solid #0af; border-radius:12px;
-      padding:10px; width:300px; height:400px;
-      display:none; flex-direction:column; z-index:9999;
-    }
-    #chatBubble header { font-weight:bold; text-align:center; margin-bottom:6px; }
-    #chatLog { flex:1; overflow-y:auto; background:#000; padding:6px; border-radius:6px; }
-    #chatInput { margin-top:6px; display:flex; }
-    #chatInput input { flex:1; padding:4px; }
-    #chatInput button { padding:4px 8px; }
+    body { font-family: Arial, sans-serif; background:#0d1117; color:#e6edf3; margin:0; }
+    header { background:#111; padding:12px; text-align:center; font-size:22px; font-weight:bold; color:#0af; }
+    nav { background:#1c1f26; padding:10px; text-align:center; }
+    nav a { color:#0af; margin:0 12px; text-decoration:none; }
+    h2, h3 { margin:15px 0 10px; color:#0af; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin:10px 0; }
+    .zone { background:#161b22; border-radius:6px; padding:10px; }
+    .zone button { margin-top:6px; padding:6px 10px; border:none; border-radius:4px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
+    .status-ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; }
+    .status-ball.pending { background:#cc0; }
+    .status-ball.ok { background:#2a2; }
+    .status-ball.fail { background:#a22; }
+    #logs { background:#000; color:#eee; font-family:monospace; padding:10px; height:250px; overflow-y:auto; border-radius:8px; margin-top:10px; white-space:pre-wrap; }
+    .info { color:#0af; }
+    .warn { color:#cc0; }
+    .error { color:#f55; }
+    #chatButton { position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; background:#0af; color:#fff; font-size:22px; font-weight:bold; border:none; cursor:pointer; }
+    #chatBubble { position:fixed; bottom:90px; right:20px; width:320px; height:420px; background:#161b22; border:2px solid #0af; border-radius:10px; display:none; flex-direction:column; }
+    #chatBubble header { padding:8px; font-weight:bold; text-align:center; color:#0af; }
+    #chatLog { flex:1; overflow-y:auto; padding:8px; background:#0d1117; border-radius:6px; }
+    #chatInput { display:flex; }
+    #chatInput input { flex:1; padding:6px; border:none; border-radius:6px; }
+    #chatInput button { padding:6px 10px; background:#0af; border:none; border-radius:6px; cursor:pointer; }
   </style>
 </head>
 <body>
 <script>
-  const pwd = prompt("Mot de passe ?");
-  if (pwd !== "202679") {
-    document.write("<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>");
+  const pass = prompt("Code d'accès ?");
+  if (pass !== "202679") {
+    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
     throw new Error("Accès refusé");
   }
 </script>
 
-<header>
-  <h1>⚡ Centrale nucléaire météo – Console Admin</h1>
-  <nav>
-    <a href="/admin">Console</a>
-    <a href="/admin-alerts">Alertes</a>
-    <a href="/admin-chat">Chat</a>
-    <a href="/admin-index">Vue Index</a>
-    <a href="/admin-radar">Radar & News</a>
-    <a href="/admin-users">Utilisateurs</a>
-  </nav>
-</header>
+<header>⚡ Centrale Nucléaire Météo — Console Admin</header>
+<nav>
+  <a href="/admin">Console</a>
+  <a href="/admin-alerts">Alertes</a>
+  <a href="/admin-chat">Chat IA</a>
+  <a href="/admin-index">Vue Index</a>
+  <a href="/admin-radar">Radar & News</a>
+  <a href="/admin-users">Utilisateurs</a>
+</nav>
 
-<div id="alertsSummary">Chargement du résumé…</div>
-<canvas id="alertsChart"></canvas>
+<main style="padding:20px;">
+  <h2>🛰️ Étapes du moteur</h2>
+  <div id="engine-steps" class="grid"></div>
 
-<div class="columns">
-  <div class="zone">
-    <h3>🌍 Prévisions Europe</h3>
-    <div id="europeForecast"></div>
+  <h2>📊 Prévisions — Zones couvertes</h2>
+  <div id="forecast-zones" class="grid"></div>
+
+  <h2>🚨 Alertes — Zones couvertes</h2>
+  <div id="alert-zones" class="grid"></div>
+
+  <h2>🌍 Alertes continentales</h2>
+  <div id="continental-zones" class="grid"></div>
+
+  <h2>🤖 Fusion & Orchestration IA</h2>
+  <div id="fusion-ia" class="zone">
+    <span class="status-ball pending"></span> Fusion & Orchestration globale
+    <button onclick="runZone('fusion','/api/run-orchestrator')">Relancer</button>
   </div>
-  <div class="zone">
-    <h3>🇺🇸 Prévisions USA</h3>
-    <div id="usaForecast"></div>
-  </div>
-</div>
-<div class="columns">
-  <div class="zone">
-    <h3>🚨 Alertes Europe</h3>
-    <div id="europeAlerts"></div>
-  </div>
-  <div class="zone">
-    <h3>🚨 Alertes USA</h3>
-    <div id="usaAlerts"></div>
-  </div>
-</div>
 
-<section id="engineControls">
-  <h2>🛠 Contrôle moteur</h2>
-  <button id="btnEurope" class="button idle" data-label="Run Prévisions Europe" onclick="runProcess('/api/run-europe','btnEurope')">Run Prévisions Europe</button>
-  <button id="btnUSA" class="button idle" data-label="Run Prévisions USA" onclick="runProcess('/api/run-usa','btnUSA')">Run Prévisions USA</button>
-  <button id="btnAlertsEurope" class="button idle" data-label="Run Alertes Europe" onclick="runProcess('/api/run-alerts','btnAlertsEurope')">Run Alertes Europe</button>
-  <button id="btnAlertsContinental" class="button idle" data-label="Run Alertes Continentales" onclick="runProcess('/api/run-alerts-continental','btnAlertsContinental')">Run Alertes Continentales</button>
-  <button id="btnAlertsWorld" class="button idle" data-label="Run Alertes Mondiales" onclick="runProcess('/api/run-alerts-world','btnAlertsWorld')">Run Alertes Mondiales</button>
-  <button id="btnOrchestrator" class="button idle" data-label="Run Orchestrateur IA" onclick="runProcess('/api/run-orchestrator','btnOrchestrator')">Run Orchestrateur IA</button>
-</section>
+  <h2>📜 Logs moteur (live)</h2>
+  <div id="logs">Connexion en cours…</div>
+</main>
 
-<h2>📜 Logs en direct</h2>
-<pre id="logs">Connexion logs en direct…</pre>
-
+<!-- Chat bulle -->
 <button id="chatButton" onclick="toggleChat()">💬</button>
 <div id="chatBubble">
-  <header>🤖 ChatGPT5 – Moteur</header>
+  <header>🤖 Chat IA Moteur</header>
   <div id="chatLog"></div>
   <div id="chatInput">
     <input type="text" id="chatMsg" placeholder="Demander au moteur..." onkeypress="if(event.key==='Enter') sendChat()">
@@ -126,139 +85,133 @@
 </div>
 
 <script>
-  let chart;
-  let lastExclusiveCount = 0;
+  // Étapes moteur fixes
+  const engineSteps = [
+    { id:"geo", name:"Import données géographiques" },
+    { id:"models", name:"Pompage modèles physiques & IA" },
+    { id:"forecast", name:"Prévisions zones couvertes" },
+    { id:"alerts", name:"Alertes zones couvertes" },
+    { id:"continental", name:"Alertes continentales" },
+    { id:"fusion-step", name:"Fusion IA finale" }
+  ];
 
-  // === Résumé alertes
-  async function fetchAlertsSummary() {
-    const res = await fetch("/api/alerts/summary");
-    if (!res.ok) return;
-    const s = await res.json();
-    const exclusiveCount = s.exclusives || 0;
-
-    let exclusiveBadge = `<span class="badge exclusive">${exclusiveCount}</span>`;
-    if (exclusiveCount > lastExclusiveCount) {
-      exclusiveBadge = `<span class="badge exclusive blinker">${exclusiveCount}</span>`;
-    }
-    lastExclusiveCount = exclusiveCount;
-
-    document.getElementById("alertsSummary").innerHTML = `
-      <div class="stat">📊 <strong>Total alertes actives :</strong> ${s.total || 0}</div>
-      <div class="stat">🔵 Sous surveillance : ${s.byStatus?.["under-surveillance"] || 0}</div>
-      <div class="stat">🔴 Exclusives : ${exclusiveBadge}
-          🟢 Confirmées ailleurs : <span class="badge confirmed">${s.confirmedElsewhere || 0}</span></div>
-    `;
-    updateChart(s);
+  function renderSteps() {
+    const c = document.getElementById("engine-steps");
+    c.innerHTML = "";
+    engineSteps.forEach(s=>{
+      const div = document.createElement("div");
+      div.className="zone";
+      div.id=s.id;
+      div.innerHTML=`<span class="status-ball pending"></span>${s.name}`;
+      c.appendChild(div);
+    });
   }
+  renderSteps();
 
-  function updateChart(s) {
-    const ctx = document.getElementById("alertsChart").getContext("2d");
-    const data = {
-      labels: ["Publiées", "À valider", "Surveillance", "Ignorées", "Exclusives", "Confirmées"],
-      datasets: [{
-        data: [
-          s.byStatus?.["published"] || 0,
-          s.byStatus?.["toValidate"] || 0,
-          s.byStatus?.["under-surveillance"] || 0,
-          s.byStatus?.["ignored"] || 0,
-          s.exclusives || 0,
-          s.confirmedElsewhere || 0
-        ],
-        backgroundColor: ["#2a2", "#cc0", "#335", "#633", "#a22", "#0af"]
-      }]
-    };
-    if (chart) { chart.data = data; chart.update(); }
-    else {
-      chart = new Chart(ctx, {
-        type: "doughnut",
-        data,
-        options: { plugins:{ legend:{ labels:{ color:"#eee" } } } }
+  // Zones continentales
+  const continentalZones = [
+    { id:"africa", name:"Afrique", endpoint:"/api/run-alerts-continental?continent=Africa" },
+    { id:"asia", name:"Asie", endpoint:"/api/run-alerts-continental?continent=Asia" },
+    { id:"oceania", name:"Océanie", endpoint:"/api/run-alerts-continental?continent=Oceania" },
+    { id:"south-america", name:"Amérique du Sud", endpoint:"/api/run-alerts-continental?continent=SouthAmerica" }
+  ];
+  function renderContinental() {
+    const c=document.getElementById("continental-zones");
+    c.innerHTML="";
+    continentalZones.forEach(z=>{
+      const div=document.createElement("div");
+      div.className="zone"; div.id=z.id;
+      div.innerHTML=`<span class="status-ball pending"></span>${z.name}
+      <button onclick="runZone('${z.id}','${z.endpoint}')">Relancer</button>`;
+      c.appendChild(div);
+    });
+  }
+  renderContinental();
+
+  // Génération zones couvertes depuis /api/engine-state
+  async function buildCoveredZones() {
+    const res=await fetch("/api/engine-state");
+    const state=await res.json();
+    const f=document.getElementById("forecast-zones");
+    const a=document.getElementById("alert-zones");
+    f.innerHTML=""; a.innerHTML="";
+    if(state && state.checkup){
+      Object.keys(state.checkup).forEach(zone=>{
+        const divF=document.createElement("div");
+        divF.className="zone"; divF.id="forecast-"+zone;
+        divF.innerHTML=`<span class="status-ball pending"></span>${zone}
+        <button onclick="runZone('forecast-${zone}','/api/run-global?zone=${zone}')">Relancer</button>`;
+        f.appendChild(divF);
+
+        const divA=document.createElement("div");
+        divA.className="zone"; divA.id="alert-"+zone;
+        divA.innerHTML=`<span class="status-ball pending"></span>${zone}
+        <button onclick="runZone('alert-${zone}','/api/run-alerts?zone=${zone}')">Relancer</button>`;
+        a.appendChild(divA);
       });
     }
   }
+  buildCoveredZones();
 
-  // === Zones prévisions / alertes
-  async function fetchCountries() {
-    const res = await fetch("/api/checkup");
-    const state = await res.json();
-    fillZone("europeForecast", Object.keys(state.zonesCoveredEurope || {}), state.checkupForecast);
-    fillZone("usaForecast", Object.keys(state.zonesCoveredUSA || {}), state.checkupForecast);
-    fillZone("europeAlerts", Object.keys(state.zonesCoveredEurope || {}), state.checkupAlerts);
-    fillZone("usaAlerts", Object.keys(state.zonesCoveredUSA || {}), state.checkupAlerts);
-  }
-  function fillZone(id, list, checkup) {
-    const div = document.getElementById(id);
-    div.innerHTML = "";
-    list.forEach(c => {
-      const st = checkup?.[c] || "PENDING";
-      let ballClass = "orange";
-      if (st === "OK") ballClass = "green";
-      else if (st === "FAIL") ballClass = "red";
-      else if (st === "PARTIAL") ballClass = "purple";
-      div.innerHTML += `<div class="row"><span>${c}</span><span class="ball ${ballClass}"></span></div>`;
-    });
+  // Statuts
+  function setStatus(zone,state){
+    const el=document.querySelector(`#${zone} .status-ball`);
+    if(el) el.className="status-ball "+state;
   }
 
-  // === Logs SSE
-  let eventSource = new EventSource("/api/logs/stream");
-  eventSource.onmessage = (e) => {
-    if (!e.data) return;
-    try {
-      const obj = JSON.parse(e.data);
-      const msg = `[${obj.ts ? new Date(obj.ts).toLocaleTimeString() : new Date().toLocaleTimeString()}] ${obj.type || ""} ${obj.message || ""}`;
-      addLog(msg);
-    } catch {
-      addLog(e.data);
+  async function runZone(zoneId,endpoint){
+    setStatus(zoneId,"pending");
+    try{
+      const res=await fetch(endpoint,{method:"POST"});
+      const data=await res.json();
+      setStatus(zoneId,data.success?"ok":"fail");
+    }catch{ setStatus(zoneId,"fail"); }
+  }
+
+  // Refresh auto
+  async function refreshStatus(){
+    const res=await fetch("/api/engine-state");
+    const state=await res.json();
+    if(state && state.checkup){
+      Object.entries(state.checkup).forEach(([zone,status])=>{
+        const f="forecast-"+zone, a="alert-"+zone;
+        if(status==="ok"){ setStatus(f,"ok"); setStatus(a,"ok"); }
+        else if(status==="fail"){ setStatus(f,"fail"); setStatus(a,"fail"); }
+        else { setStatus(f,"pending"); setStatus(a,"pending"); }
+      });
     }
+  }
+  setInterval(refreshStatus,10000);
+
+  // Logs live
+  const logDiv=document.getElementById("logs");
+  const evt=new EventSource("/api/logs/stream");
+  evt.onmessage=(e)=>{
+    const log=JSON.parse(e.data);
+    let cls="info";
+    if(log.message.includes("ERROR")) cls="error";
+    if(log.message.includes("WARN")) cls="warn";
+    logDiv.innerHTML+=`<div class="${cls}">[${new Date(log.ts).toLocaleTimeString()}] ${log.message}</div>`;
+    logDiv.scrollTop=logDiv.scrollHeight;
   };
-  function addLog(msg) {
-    const logs = document.getElementById("logs");
-    logs.innerText += msg + "\n";
-    logs.scrollTop = logs.scrollHeight;
-  }
 
-  // === Boutons Run
-  async function runProcess(url, btnId) {
-    const btn = document.getElementById(btnId);
-    const defaultLabel = btn.getAttribute("data-label");
-    btn.className = "button running"; btn.innerText = "⏳ En cours...";
-    try {
-      const res = await fetch(url, { method:"POST" });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        btn.className = "button ok"; btn.innerText = "✅ Terminé";
-      } else {
-        btn.className = "button fail"; btn.innerText = "❌ Erreur";
-      }
-    } catch (e) {
-      btn.className = "button fail"; btn.innerText = "❌ Erreur";
-    }
-    setTimeout(() => { btn.className = "button idle"; btn.innerText = defaultLabel; }, 5000);
+  // Chat moteur
+  function toggleChat(){
+    const c=document.getElementById("chatBubble");
+    c.style.display=c.style.display==="flex"?"none":"flex";
   }
-
-  // === Chat
-  function toggleChat() {
-    const chat = document.getElementById("chatBubble");
-    chat.style.display = chat.style.display === "none" ? "flex" : "none";
+  async function sendChat(){
+    const input=document.getElementById("chatMsg");
+    const msg=input.value.trim();
+    if(!msg) return;
+    const log=document.getElementById("chatLog");
+    log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
+    input.value="";
+    const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+    const data=await res.json();
+    log.innerHTML+=`<div><b>Moteur:</b> ${data.reply}</div>`;
+    log.scrollTop=log.scrollHeight;
   }
-  async function sendChat() {
-    const input = document.getElementById("chatMsg");
-    const msg = input.value.trim(); if (!msg) return;
-    const logEl = document.getElementById("chatLog");
-    logEl.innerHTML += `<div><b>Moi:</b> ${msg}</div>`; input.value = "";
-    const res = await fetch("/api/chat/engine", {
-      method:"POST", headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ message: msg })
-    });
-    const data = await res.json();
-    logEl.innerHTML += `<div><b>GPT:</b> ${data.reply}</div>`;
-    logEl.scrollTop = logEl.scrollHeight;
-  }
-
-  // Init
-  setInterval(fetchAlertsSummary, 7000);
-  setInterval(fetchCountries, 10000);
-  window.onload = () => { fetchAlertsSummary(); fetchCountries(); };
 </script>
 </body>
 </html>
