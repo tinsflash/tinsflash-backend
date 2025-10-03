@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tinsflash Météo</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="css/animations.css" />
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -24,13 +25,14 @@
       font-size: 2rem;
     }
     header p {
-      max-width: 800px;
+      max-width: 880px;
       margin: auto;
       font-size: 1.1rem;
+      line-height: 1.6;
     }
     main {
       padding: 1.5rem;
-      max-width: 900px;
+      max-width: 1000px;
       margin: auto;
     }
     section {
@@ -63,18 +65,27 @@
     .forecast-day {
       display: flex;
       align-items: center;
-      margin: 0.5rem 0;
+      margin: 0.6rem 0;
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
     }
-    .forecast-day img {
-      width: 32px;
-      height: 32px;
-      margin-right: 10px;
+    .forecast-day .weather-icon {
+      font-size: 1.8rem;
+      margin-right: 12px;
+    }
+    .alert-card {
+      border-left: 6px solid red;
+      background: #ffecec;
+      padding: 0.8rem;
+      margin: 0.6rem 0;
+      border-radius: 6px;
     }
     #jeanReply {
       margin-top: 1rem;
-      padding: 0.5rem;
+      padding: 0.8rem;
       background: #eef3ff;
       border-radius: 6px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
@@ -82,22 +93,36 @@
   <header>
     <h1>🌍 Tinsflash — La météo la plus précise au monde</h1>
     <p>
-      Grâce à <strong>J.E.A.N</strong>, notre intelligence artificielle météo,
-      nous croisons les modèles physiques internationaux,les modèles IA également, les données de relief,
-      de climat et d’anomalies saisonnières, pour fournir
-      <strong>les prévisions locales et nationales les plus fiables au monde ainsi que les alertes avant les autres!</strong>.
+      Tinsflash est la première plateforme météo au monde qui fusionne
+      <strong>les modèles numériques globaux</strong> (GFS, ECMWF, ICON…),
+      <strong>les dernières générations d’IA météorologiques</strong>
+      (GraphCast, CorrDiff, Pangu, NowcastNet),
+      et nos propres algorithmes <strong>J.E.A.N</strong>.
       <br /><br />
-      Conçu pour le grand public, mais aussi pour les
-      <strong>administrations</strong>, les <strong>agriculteurs</strong>,
-      et le <strong>secteur événementiel</strong>.
+      Notre moteur croise ces prévisions avec les
+      <strong>données de relief</strong>, le <strong>climat local</strong>,
+      les <strong>satellites</strong> et les <strong>facteurs
+      environnementaux</strong> (rivières, océans, anomalies saisonnières).
       <br /><br />
-      En version Premium : modèles exclusifs, futur radar 4D unique au monde,
-      et alertes encore plus rapides.
+      Résultat : des <strong>prévisions locales et nationales ultra-fiables</strong>,
+      et des <strong>alertes détectées avant tout le monde</strong>.
+      <br /><br />
+      Ce qui rend Tinsflash unique : sa capacité à
+      <strong>combiner physique + intelligence artificielle</strong> pour donner
+      des prévisions plus fiables que celles des plus grands calculateurs météo.
+      <br /><br />
+      🌍 Ouvert à tous, mais conçu aussi pour les
+      <strong>administrations</strong>, <strong>agriculteurs</strong>
+      et <strong>secteurs événementiels</strong>.
+      <br /><br />
+      🚀 En version Premium : modèles exclusifs,
+      <strong>radar 4D futur unique au monde</strong>,
+      et alertes encore plus précises et rapides.
     </p>
   </header>
 
   <main>
-    <!-- Formulaire recherche -->
+    <!-- Recherche -->
     <section>
       <h2>🔎 Rechercher une ville</h2>
       <input type="text" id="city" placeholder="Ville (ex: Paris)" />
@@ -132,6 +157,7 @@
     </section>
   </main>
 
+  <script src="js/animations.js" defer></script>
   <script>
     // 🔎 Prévisions
     document.getElementById("getForecast").onclick = async () => {
@@ -151,12 +177,17 @@
         return;
       }
 
-      // Exemple d'affichage simple (7 jours si dispo)
       let html = "";
       (data.days || []).forEach(d => {
+        let symbol = "☁️"; // défaut
+        if (d.condition?.toLowerCase().includes("soleil")) symbol = "☀️";
+        else if (d.condition?.toLowerCase().includes("pluie")) symbol = "🌧️";
+        else if (d.condition?.toLowerCase().includes("neige")) symbol = "❄️";
+        else if (d.condition?.toLowerCase().includes("orage")) symbol = "⛈️";
+
         html += `
           <div class="forecast-day">
-            <img src="/icons/${d.icon || "na"}.png" alt="${d.condition || ""}" />
+            <span class="weather-icon">${symbol}</span>
             <span><strong>${d.date}</strong> — ${d.condition || ""}, ${d.temp_min}°C / ${d.temp_max}°C</span>
           </div>
         `;
@@ -169,8 +200,21 @@
     fetch("/api/alerts")
       .then(r => r.json())
       .then(data => {
-        document.getElementById("alertsResult").innerText =
-          data.length ? JSON.stringify(data, null, 2) : "Aucune alerte active.";
+        if (!data || !data.length) {
+          document.getElementById("alertsResult").innerText = "Aucune alerte active.";
+          return;
+        }
+        let html = "";
+        data.forEach(a => {
+          html += `
+            <div class="alert-card">
+              <strong>${a.zone || "Zone inconnue"}</strong><br/>
+              ${a.type || "Phénomène"} — Fiabilité: ${a.reliability || "?"}%
+              <br/><em>${a.message || ""}</em>
+            </div>
+          `;
+        });
+        document.getElementById("alertsResult").innerHTML = html;
       });
 
     // 🔔 Notifications
