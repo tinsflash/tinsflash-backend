@@ -21,10 +21,10 @@
     @keyframes blink { 50% { opacity:0; } }
 
     .button { margin:5px; padding:10px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; min-width:220px; }
-    .idle { background:#cc0; color:#000; }    /* orange par défaut */
-    .running { background:#09f; color:#fff; } /* bleu en cours */
-    .ok { background:#2a2; color:#fff; }      /* vert OK */
-    .fail { background:#a22; color:#fff; }    /* rouge FAIL */
+    .idle { background:#cc0; color:#000; }    /* orange */
+    .running { background:#09f; color:#fff; } /* bleu */
+    .ok { background:#2a2; color:#fff; }      /* vert */
+    .fail { background:#a22; color:#fff; }    /* rouge */
 
     #logs { display:block; background:#000; color:#0f0; padding:10px; border-radius:6px; margin:10px; max-height:250px; overflow:auto; font-family:monospace; font-size:0.85em; }
 
@@ -104,12 +104,12 @@
 
 <section id="engineControls">
   <h2>🛠 Contrôle moteur</h2>
-  <button id="btnEurope" class="button idle" onclick="runProcess('/api/run-europe','btnEurope')">Run Prévisions Europe</button>
-  <button id="btnUSA" class="button idle" onclick="runProcess('/api/run-usa','btnUSA')">Run Prévisions USA</button>
-  <button id="btnAlertsEurope" class="button idle" onclick="runProcess('/api/run-alerts','btnAlertsEurope')">Run Alertes Europe</button>
-  <button id="btnAlertsContinental" class="button idle" onclick="runProcess('/api/run-alerts-continental','btnAlertsContinental')">Run Alertes Continentales</button>
-  <button id="btnAlertsWorld" class="button idle" onclick="runProcess('/api/run-alerts-world','btnAlertsWorld')">Run Alertes Mondiales</button>
-  <button id="btnOrchestrator" class="button idle" onclick="runProcess('/api/run-orchestrator','btnOrchestrator')">Run Orchestrateur IA</button>
+  <button id="btnEurope" class="button idle" data-label="Run Prévisions Europe" onclick="runProcess('/api/run-europe','btnEurope')">Run Prévisions Europe</button>
+  <button id="btnUSA" class="button idle" data-label="Run Prévisions USA" onclick="runProcess('/api/run-usa','btnUSA')">Run Prévisions USA</button>
+  <button id="btnAlertsEurope" class="button idle" data-label="Run Alertes Europe" onclick="runProcess('/api/run-alerts','btnAlertsEurope')">Run Alertes Europe</button>
+  <button id="btnAlertsContinental" class="button idle" data-label="Run Alertes Continentales" onclick="runProcess('/api/run-alerts-continental','btnAlertsContinental')">Run Alertes Continentales</button>
+  <button id="btnAlertsWorld" class="button idle" data-label="Run Alertes Mondiales" onclick="runProcess('/api/run-alerts-world','btnAlertsWorld')">Run Alertes Mondiales</button>
+  <button id="btnOrchestrator" class="button idle" data-label="Run Orchestrateur IA" onclick="runProcess('/api/run-orchestrator','btnOrchestrator')">Run Orchestrateur IA</button>
 </section>
 
 <h2>📜 Logs en direct</h2>
@@ -205,8 +205,11 @@
     if (!e.data) return;
     try {
       const obj = JSON.parse(e.data);
-      addLog(`[${obj.ts ? new Date(obj.ts).toLocaleTimeString() : new Date().toLocaleTimeString()}] ${obj.message}`);
-    } catch { addLog(e.data); }
+      const msg = `[${obj.ts ? new Date(obj.ts).toLocaleTimeString() : new Date().toLocaleTimeString()}] ${obj.type || ""} ${obj.message || ""}`;
+      addLog(msg);
+    } catch {
+      addLog(e.data);
+    }
   };
   function addLog(msg) {
     const logs = document.getElementById("logs");
@@ -217,6 +220,7 @@
   // === Boutons Run
   async function runProcess(url, btnId) {
     const btn = document.getElementById(btnId);
+    const defaultLabel = btn.getAttribute("data-label");
     btn.className = "button running"; btn.innerText = "⏳ En cours...";
     try {
       const res = await fetch(url, { method:"POST" });
@@ -229,7 +233,7 @@
     } catch (e) {
       btn.className = "button fail"; btn.innerText = "❌ Erreur";
     }
-    setTimeout(() => { btn.className = "button idle"; btn.innerText = btn.getAttribute("data-label") || btn.innerText; }, 5000);
+    setTimeout(() => { btn.className = "button idle"; btn.innerText = defaultLabel; }, 5000);
   }
 
   // === Chat
