@@ -11,15 +11,15 @@ import nasaSat from "./nasaSat.js";
 import copernicus from "./copernicusService.js";
 import trullemans from "./trullemans.js";
 import wetterzentrale from "./wetterzentrale.js";
-import hrrr from "./hrrr.js";          // 🇺🇸 HRRR (NOAA, USA only)
-import arome from "./arome.js";        // 🇫🇷🇧🇪 AROME (France/Belgique via Meteomatics)
+import hrrr from "./hrrr.js";
+import arome from "./arome.js";
 
 // === Nouvelles IA
-import aifs from "./aifs.js";              // ECMWF AI Forecast
-import graphcast from "./graphcast.js";    // Google DeepMind
-import pangu from "./pangu.js";            // CMA Pangu
-import nowcastnet from "./nowcastnet.js";  // Nowcasting IA
-import corrDiff from "./corrDiff.js";      // NVIDIA Earth-2
+import aifs from "./aifs.js";              
+import graphcast from "./graphcast.js";    
+import pangu from "./pangu.js";            
+import nowcastnet from "./nowcastnet.js";  
+import corrDiff from "./corrDiff.js";      
 
 // === Services internes
 import { askOpenAI } from "./openaiService.js";
@@ -35,11 +35,11 @@ import adjustWithLocalFactors from "./localFactors.js";
 import forecastVision from "./forecastVision.js";       
 
 // ✅ Export NOMMÉ uniquement
-export async function runSuperForecast({ lat, lon, country, region }) {
+export async function runSuperForecast({ lat, lon, country, region, horizon = 24 }) {
   const state = await getEngineState();
   try {
     addEngineLog(
-      `⚡ Lancement du SuperForecast pour ${country}${region ? " - " + region : ""} (${lat},${lon})`
+      `⚡ Lancement du SuperForecast pour ${country}${region ? " - " + region : ""} (${lat},${lon}), horizon=${horizon}h`
     );
 
     // === Étape 1 : préparer Copernicus ERA5
@@ -97,18 +97,25 @@ export async function runSuperForecast({ lat, lon, country, region }) {
     };
     addEngineLog("✅ Toutes sources météo collectées");
 
-    // === Étape 3 : Fusion pondérée multi-sources
+    // === Étape 3 : pondération dynamique par horizon
+    let wPhys = 0.35, wIA = 0.35, wNowcast = 0.25, wDownscale = 0.05;
+
+    if (horizon <= 6) {
+      wNowcast = 0.5; wPhys = 0.25; wIA = 0.2;
+    } else if (horizon <= 24) {
+      wNowcast = 0.2; wPhys = 0.35; wIA = 0.35;
+    } else {
+      wNowcast = 0.1; wPhys = 0.4; wIA = 0.45;
+    }
+
+    // === Étape 4 : Fusion pondérée multi-sources
     const fusion = {};
     try {
-      const weightedTemps = [];
-      const weightedPrecs = [];
+      const weightedTemps = [], weightedPrecs = [], weightedWinds = [];
 
       const pushVal = (arr, val, weight) => {
         if (typeof val === "number" && !isNaN(val)) arr.push(val * weight);
       };
-
-      // Poids par famille
-      const wIA = 0.35, wNowcast = 0.25, wPhys = 0.35, wDownscale = 0.05;
 
       // Températures
       pushVal(weightedTemps, sources.gfs?.temperature, wPhys);
@@ -138,30 +145,42 @@ export async function runSuperForecast({ lat, lon, country, region }) {
       pushVal(weightedPrecs, sources.nowcastnet?.precipitation, wNowcast);
       pushVal(weightedPrecs, sources.corrDiff?.precipitation, wDownscale);
 
+      // Vents
+      pushVal(weightedWinds, sources.gfs?.wind, wPhys);
+      pushVal(weightedWinds, sources.ecmwf?.wind, wPhys);
+      pushVal(weightedWinds, sources.icon?.wind, wPhys);
+      pushVal(weightedWinds, sources.meteomatics?.wind, wPhys);
+
+      pushVal(weightedWinds, sources.aifs?.wind, wIA);
+      pushVal(weightedWinds, sources.graphcast?.wind, wIA);
+      pushVal(weightedWinds, sources.pangu?.wind, wIA);
+
+      pushVal(weightedWinds, sources.nowcastnet?.wind, wNowcast);
+      pushVal(weightedWinds, sources.corrDiff?.wind, wDownscale);
+
       fusion.temperature = weightedTemps.length ? weightedTemps.reduce((a,b)=>a+b,0) / weightedTemps.length : null;
       fusion.precipitation = weightedPrecs.length ? weightedPrecs.reduce((a,b)=>a+b,0) / weightedPrecs.length : null;
-      fusion.reliability = Math.min(100, Math.round(((weightedTemps.length + weightedPrecs.length) / 15) * 100));
+      fusion.wind = weightedWinds.length ? weightedWinds.reduce((a,b)=>a+b,0) / weightedWinds.length : null;
+      fusion.reliability = Math.min(100, Math.round(((weightedTemps.length + weightedPrecs.length + weightedWinds.length) / 20) * 100));
     } catch (err) {
       addEngineError("⚠️ Erreur fusion pondérée: " + err.message);
     }
 
-    // === Étape 4 : ajustements globaux et locaux
+    // === Étape 5 : ajustements globaux et locaux
     let enriched = await applyGeoFactors(fusion, lat, lon, country);
     enriched = await adjustWithLocalFactors(enriched, country, lat, lon);
 
-    // === Étape 4bis : anomalies saisonnières
+    // === Étape 6 : anomalies saisonnières
     const anomaly = forecastVision.detectSeasonalAnomaly(
       sources.gfs || sources.ecmwf || null
     );
-    if (anomaly) {
-      enriched.anomaly = anomaly;
-    }
+    if (anomaly) enriched.anomaly = anomaly;
 
-    // === Étape 5 : analyse IA avec retour JSON
+    // === Étape 7 : analyse IA
     addEngineLog("🤖 Analyse IA multi-sources (physiques + IA)...");
     const prompt = `
 Prévisions météo enrichies pour un point précis.
-Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${region ? ", région=" + region : ""}
+Coordonnées: lat=${lat}, lon=${lon}, pays=${country}${region ? ", région=" + region : ""}, horizon=${horizon}h
 
 Fusion pondérée: ${JSON.stringify(fusion)}
 Ajustements: ${JSON.stringify(enriched)}
@@ -169,19 +188,6 @@ Sources principales: GFS, ECMWF, ICON, Meteomatics, Copernicus, NASA
 IA: AIFS, GraphCast, Pangu, NowcastNet, CorrDiff
 Compléments: HRRR (USA), AROME (FR/BE)
 Benchmarks: Trullemans, Wetterzentrale
-
-Consignes IA:
-1. Fournir un retour en JSON strict uniquement.
-2. Structure attendue :
-{
-  "resume": "...",
-  "temperature": "...",
-  "precipitation": "...",
-  "vent": "...",
-  "risques": ["..."],
-  "fiabilite": "...%",
-  "bulletin": "Texte simplifié grand public"
-}
 `;
 
     let aiFusion = await askOpenAI(
@@ -196,10 +202,10 @@ Consignes IA:
       parsedForecast = { raw: aiFusion };
     }
 
-    // === Étape 6 : sauvegarde
+    // === Étape 8 : sauvegarde
     state.superForecasts = state.superForecasts || [];
     state.superForecasts.push({
-      lat, lon, country, region,
+      lat, lon, country, region, horizon,
       forecast: parsedForecast,
       sources,
       enriched,
@@ -208,7 +214,7 @@ Consignes IA:
     await saveEngineState(state);
 
     addEngineLog("🏁 SuperForecast terminé avec succès");
-    return { lat, lon, country, region, forecast: parsedForecast, sources, enriched, fusion };
+    return { lat, lon, country, region, horizon, forecast: parsedForecast, sources, enriched, fusion };
   } catch (err) {
     await addEngineError(err.message || "Erreur inconnue SuperForecast");
     addEngineLog("❌ Erreur dans SuperForecast");
