@@ -1,13 +1,15 @@
 // services/corrDiff.js
-// ⚡ NVIDIA CorrDiff (Earth-2, downscaling haute résolution)
+// 🌍 NVIDIA CorrDiff via HuggingFace (Earth2Studio microservice)
 
 import fetch from "node-fetch";
 
-export default async function corrDiff({ lat, lon, country }) {
+export default async function corrDiff({ lat, lon }) {
   try {
-    const url = `https://api.earth2.nvidia.com/corrdiff?lat=${lat}&lon=${lon}`;
+    const url = `${process.env.CORRDIFF_API}/forecast`;
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${process.env.NVIDIA_KEY}` }
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat, lon })
     });
 
     if (!res.ok) throw new Error(`CorrDiff API error: ${res.statusText}`);
