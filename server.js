@@ -1,4 +1,4 @@
-// server.js
+// PATH: server.js
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -217,12 +217,10 @@ app.get("/api/podcast/:country", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    res.json({
-      success: true,
-      reply: await safeCall(chatService.askAI, message || ""),
-    });
+    const answer = await safeCall(chatService.askAI, message || "");
+    res.json({ reply: answer || "⚠️ Pas de réponse" });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ reply: "⚠️ Erreur serveur: " + e.message });
   }
 });
 
@@ -230,12 +228,10 @@ app.post("/api/chat", async (req, res) => {
 app.post("/api/chat/engine", async (req, res) => {
   try {
     const { message } = req.body;
-    res.json({
-      success: true,
-      reply: await safeCall(chatService.askAIEngine, message || ""),
-    });
+    const answer = await safeCall(chatService.askAIEngine, message || "");
+    res.json({ reply: answer || "⚠️ Pas de réponse moteur" });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ reply: "⚠️ Erreur serveur: " + e.message });
   }
 });
 
@@ -247,9 +243,9 @@ app.post("/api/textgen", async (req, res) => {
       return res.status(400).json({ success: false, error: "Prompt manquant" });
     }
     const result = await safeCall(textGenService.generateText, prompt);
-    res.json({ success: true, reply: result });
+    res.json({ reply: result || "⚠️ Pas de génération" });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ reply: "⚠️ Erreur serveur: " + e.message });
   }
 });
 
@@ -326,9 +322,9 @@ app.post("/api/jean", async (req, res) => {
       return res.status(400).json({ success: false, error: "Message manquant" });
     }
     const reply = await askCohere(message);
-    res.json({ success: true, reply });
+    res.json({ reply: reply || "⚠️ Jean n’a pas répondu" });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ reply: "⚠️ Erreur serveur: " + e.message });
   }
 });
 
