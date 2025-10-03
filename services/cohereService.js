@@ -19,20 +19,23 @@ export async function askCohere(question, category = "grand public") {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-plus", // ⚡ version cohérente et performante
+        model: "command-r-plus", // ⚡ modèle Cohere dernière génération
         messages: [
-          { role: "system", content: "Tu es J.E.A.N., conseiller météo public." },
+          { role: "system", content: "Tu es J.E.A.N., conseiller météo grand public, précis et clair." },
           { role: "user", content: `Catégorie: ${category}\nQuestion: ${question}` }
         ],
       }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Cohere API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Cohere API error: ${response.status} ${data.message || response.statusText}`);
     }
 
-    const data = await response.json();
-    return data?.text || data?.message?.content || "❌ Pas de réponse de J.E.A.N.";
+    // ✅ Nouveau format Cohere
+    const reply = data?.message?.content?.[0]?.text;
+    return reply || "❌ Pas de réponse de J.E.A.N.";
   } catch (err) {
     console.error("⚠️ Cohere error:", err.message);
     return `Erreur J.E.A.N.: ${err.message}`;
