@@ -13,7 +13,7 @@
     h2, h3 { margin:15px 0 10px; color:#0af; }
     .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin:10px 0; }
     .zone { background:#161b22; border-radius:6px; padding:10px; }
-    .zone button { margin-top:6px; padding:6px 10px; border:none; border-radius:4px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
+    button { margin:6px 0; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
     .status-ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; }
     .status-ball.pending { background:#cc0; }
     .status-ball.ok { background:#2a2; }
@@ -29,6 +29,9 @@
     #chatInput { display:flex; }
     #chatInput input { flex:1; padding:6px; border:none; border-radius:6px; }
     #chatInput button { padding:6px 10px; background:#0af; border:none; border-radius:6px; cursor:pointer; }
+    #runStatus { display:none; position:fixed; top:0; left:0; width:100%; padding:12px; text-align:center; font-weight:bold; font-size:18px; background:#111; color:#fff; z-index:9999; }
+    .country-row { display:flex; align-items:center; justify-content:space-between; background:#161b22; padding:6px 10px; margin:4px 0; border-radius:6px; }
+    .country-name { font-weight:bold; }
   </style>
 </head>
 <body>
@@ -40,7 +43,7 @@
   }
 </script>
 
-<header>⚡ Centrale Nucléaire Météo — Console Admin</header>
+<header>⚡ Centrale Météo Mondiale — Console Admin</header>
 <nav>
   <a href="/admin">Console</a>
   <a href="/admin-alerts">Alertes</a>
@@ -50,27 +53,46 @@
   <a href="/admin-users">Utilisateurs</a>
 </nav>
 
+<div id="runStatus"></div>
+
 <main style="padding:20px;">
-  <h2>🛰️ Étapes du moteur</h2>
-  <div id="engine-steps" class="grid"></div>
+  <h2>🛰️ Cockpit Global</h2>
 
-  <h2>📊 Prévisions — Zones couvertes</h2>
-  <div id="forecast-zones" class="grid"></div>
+  <h3>📊 Prévisions zones couvertes</h3>
+  <button onclick="runGlobalForecasts()">▶️ Lancer Prévisions</button>
 
-  <h2>🚨 Alertes — Zones couvertes</h2>
-  <div id="alert-zones" class="grid"></div>
+  <h3>🚨 Alertes zones couvertes</h3>
+  <button onclick="runGlobalAlerts()">▶️ Lancer Alertes</button>
 
-  <h2>🌍 Alertes continentales</h2>
-  <div id="continental-zones" class="grid"></div>
+  <h3>🌍 Alertes continentales</h3>
+  <button onclick="runContinentalAlerts()">▶️ Lancer Continental</button>
 
-  <h2>🤖 Fusion & Orchestration IA</h2>
+  <h3>🤖 Fusion & Orchestration IA</h3>
   <div id="fusion-ia" class="zone">
-    <span class="status-ball pending"></span> Fusion & Orchestration globale
-    <button onclick="runZone('fusion','/api/run-orchestrator')">Relancer</button>
+    <span class="status-ball pending"></span> Orchestration Globale
   </div>
+  <button onclick="runFusion()">▶️ Finalisation</button>
 
   <h2>📜 Logs moteur (live)</h2>
   <div id="logs">Connexion en cours…</div>
+
+  <h2>🛰️ Pompage des modèles</h2>
+  <div id="models-status" class="grid"></div>
+
+  <h2>⚡ Étapes du moteur</h2>
+  <div id="engine-steps" class="grid"></div>
+
+  <h2>🌍 Supervision par pays</h2>
+  <div id="zones-status" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+    <div>
+      <h3>📊 Prévisions</h3>
+      <div id="forecast-countries"></div>
+    </div>
+    <div>
+      <h3>🚨 Alertes</h3>
+      <div id="alert-countries"></div>
+    </div>
+  </div>
 </main>
 
 <!-- Chat bulle -->
@@ -85,132 +107,92 @@
 </div>
 
 <script>
-  // Étapes moteur fixes
-  const engineSteps = [
-    { id:"geo", name:"Import données géographiques" },
-    { id:"models", name:"Pompage modèles physiques & IA" },
-    { id:"forecast", name:"Prévisions zones couvertes" },
-    { id:"alerts", name:"Alertes zones couvertes" },
-    { id:"continental", name:"Alertes continentales" },
-    { id:"fusion-step", name:"Fusion IA finale" }
-  ];
-
-  function renderSteps() {
-    const c = document.getElementById("engine-steps");
-    c.innerHTML = "";
-    engineSteps.forEach(s=>{
-      const div = document.createElement("div");
-      div.className="zone";
-      div.id=s.id;
-      div.innerHTML=`<span class="status-ball pending"></span>${s.name}`;
-      c.appendChild(div);
-    });
+  // Bandeau visuel
+  function showRunStatus(msg, color){
+    const bar=document.getElementById("runStatus");
+    bar.style.display="block"; bar.style.background=color; bar.innerText=msg;
+    setTimeout(()=>{ bar.style.display="none"; },8000);
   }
-  renderSteps();
 
-  // Zones continentales
-  const continentalZones = [
-    { id:"africa", name:"Afrique", endpoint:"/api/run-alerts-continental?continent=Africa" },
-    { id:"asia", name:"Asie", endpoint:"/api/run-alerts-continental?continent=Asia" },
-    { id:"oceania", name:"Océanie", endpoint:"/api/run-alerts-continental?continent=Oceania" },
-    { id:"south-america", name:"Amérique du Sud", endpoint:"/api/run-alerts-continental?continent=SouthAmerica" }
-  ];
-  function renderContinental() {
-    const c=document.getElementById("continental-zones");
-    c.innerHTML="";
-    continentalZones.forEach(z=>{
-      const div=document.createElement("div");
-      div.className="zone"; div.id=z.id;
-      div.innerHTML=`<span class="status-ball pending"></span>${z.name}
-      <button onclick="runZone('${z.id}','${z.endpoint}')">Relancer</button>`;
-      c.appendChild(div);
-    });
-  }
-  renderContinental();
-
-  // Génération zones couvertes depuis /api/engine-state
-  async function buildCoveredZones() {
-    const res=await fetch("/api/engine-state");
-    const state=await res.json();
-    const f=document.getElementById("forecast-zones");
-    const a=document.getElementById("alert-zones");
+  // Zones
+  const zonesSupervision = ["France","Belgique","Allemagne","Espagne","Italie","États-Unis","Canada","Afrique","Asie","Océanie","Amérique du Sud"];
+  function buildCountriesStatus(){
+    const f=document.getElementById("forecast-countries");
+    const a=document.getElementById("alert-countries");
     f.innerHTML=""; a.innerHTML="";
-    if(state && state.checkup){
-      Object.keys(state.checkup).forEach(zone=>{
-        const divF=document.createElement("div");
-        divF.className="zone"; divF.id="forecast-"+zone;
-        divF.innerHTML=`<span class="status-ball pending"></span>${zone}
-        <button onclick="runZone('forecast-${zone}','/api/run-global?zone=${zone}')">Relancer</button>`;
-        f.appendChild(divF);
-
-        const divA=document.createElement("div");
-        divA.className="zone"; divA.id="alert-"+zone;
-        divA.innerHTML=`<span class="status-ball pending"></span>${zone}
-        <button onclick="runZone('alert-${zone}','/api/run-alerts?zone=${zone}')">Relancer</button>`;
-        a.appendChild(divA);
-      });
-    }
+    zonesSupervision.forEach(z=>{
+      f.innerHTML+=`<div id="forecast-${z}" class="country-row"><span class="country-name">${z}</span><span class="status-ball pending"></span></div>`;
+      a.innerHTML+=`<div id="alert-${z}" class="country-row"><span class="country-name">${z}</span><span class="status-ball pending"></span></div>`;
+    });
   }
-  buildCoveredZones();
+  buildCountriesStatus();
 
-  // Statuts
   function setStatus(zone,state){
     const el=document.querySelector(`#${zone} .status-ball`);
     if(el) el.className="status-ball "+state;
   }
 
-  async function runZone(zoneId,endpoint){
-    setStatus(zoneId,"pending");
-    try{
-      const res=await fetch(endpoint,{method:"POST"});
-      const data=await res.json();
-      setStatus(zoneId,data.success?"ok":"fail");
-    }catch{ setStatus(zoneId,"fail"); }
+  // Models
+  const models = ["ECMWF","GFS","ICON","Meteomatics","Copernicus ERA5","NOAA","NASA POWER","OpenWeather"];
+  function buildModels(){
+    const m=document.getElementById("models-status"); m.innerHTML="";
+    models.forEach(md=>{
+      m.innerHTML+=`<div id="model-${md}" class="zone"><span class="status-ball pending"></span>${md}</div>`;
+    });
+  }
+  buildModels();
+
+  // Steps
+  const steps = ["Pompage des modèles","Analyse relief & climat","Prévisions zones couvertes","Alertes zones couvertes","Alertes continentales","Fusion IA alertes & prévisions","Déploiement final"];
+  function buildEngineSteps(){
+    const s=document.getElementById("engine-steps"); s.innerHTML="";
+    steps.forEach(st=>{
+      const safeId=st.replace(/\s+/g,"-");
+      s.innerHTML+=`<div id="step-${safeId}" class="zone"><span class="status-ball pending"></span> ${st}</div>`;
+    });
+  }
+  buildEngineSteps();
+
+  function setStatusDynamic(type,zone,state){
+    const safeId = zone.replace(/\s+/g,"-");
+    const el=document.querySelector(`#${type}-${safeId} .status-ball`);
+    if(el) el.className="status-ball "+state;
   }
 
-  // Refresh auto
-  async function refreshStatus(){
-    const res=await fetch("/api/engine-state");
-    const state=await res.json();
-    if(state && state.checkup){
-      Object.entries(state.checkup).forEach(([zone,status])=>{
-        const f="forecast-"+zone, a="alert-"+zone;
-        if(status==="ok"){ setStatus(f,"ok"); setStatus(a,"ok"); }
-        else if(status==="fail"){ setStatus(f,"fail"); setStatus(a,"fail"); }
-        else { setStatus(f,"pending"); setStatus(a,"pending"); }
-      });
-    }
+  // Refresh details
+  async function refreshEngineDetails(){
+    try {
+      const res = await fetch("/api/checkup");
+      const data = await res.json();
+      if(data.models){ Object.entries(data.models).forEach(([m,s])=>setStatusDynamic("model",m,s)); }
+      if(data.steps){ Object.entries(data.steps).forEach(([st,s])=>setStatusDynamic("step",st,s)); }
+    } catch(e){ console.warn("Erreur refreshEngineDetails:", e.message); }
   }
-  setInterval(refreshStatus,10000);
+  setInterval(refreshEngineDetails,10000);
 
   // Logs live
   const logDiv=document.getElementById("logs");
   const evt=new EventSource("/api/logs/stream");
   evt.onmessage=(e)=>{
     const log=JSON.parse(e.data);
-    let cls="info";
-    if(log.message.includes("ERROR")) cls="error";
-    if(log.message.includes("WARN")) cls="warn";
+    let cls="info"; if(log.message.includes("ERROR")) cls="error"; if(log.message.includes("WARN")) cls="warn";
     logDiv.innerHTML+=`<div class="${cls}">[${new Date(log.ts).toLocaleTimeString()}] ${log.message}</div>`;
     logDiv.scrollTop=logDiv.scrollHeight;
   };
 
-  // Chat moteur
-  function toggleChat(){
-    const c=document.getElementById("chatBubble");
-    c.style.display=c.style.display==="flex"?"none":"flex";
-  }
+  // Runs
+  async function runGlobalForecasts(){ showRunStatus("▶️ Prévisions en cours...","#cc0"); await fetch("/api/run-global",{method:"POST"}); }
+  async function runGlobalAlerts(){ showRunStatus("▶️ Alertes en cours...","#cc0"); await fetch("/api/run-alerts",{method:"POST"}); }
+  async function runContinentalAlerts(){ showRunStatus("▶️ Continental en cours...","#cc0"); await fetch("/api/run-alerts-continental",{method:"POST"}); }
+  async function runFusion(){ showRunStatus("▶️ Fusion IA en cours...","#cc0"); await fetch("/api/run-orchestrator",{method:"POST"}); }
+
+  // Chat IA
+  function toggleChat(){ const c=document.getElementById("chatBubble"); c.style.display=c.style.display==="flex"?"none":"flex"; }
   async function sendChat(){
-    const input=document.getElementById("chatMsg");
-    const msg=input.value.trim();
-    if(!msg) return;
-    const log=document.getElementById("chatLog");
-    log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
-    input.value="";
+    const input=document.getElementById("chatMsg"); const msg=input.value.trim(); if(!msg) return;
+    const log=document.getElementById("chatLog"); log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`; input.value="";
     const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-    const data=await res.json();
-    log.innerHTML+=`<div><b>Moteur:</b> ${data.reply}</div>`;
-    log.scrollTop=log.scrollHeight;
+    const data=await res.json(); log.innerHTML+=`<div><b>Moteur:</b> ${data.reply}</div>`; log.scrollTop=log.scrollHeight;
   }
 </script>
 </body>
