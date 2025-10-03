@@ -4,82 +4,113 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Console Admin – Centrale nucléaire météo</title>
+  <title>⚡ Centrale Nucléaire Météo – Console Admin</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { background:#222; padding:10px; text-align:center; }
-    nav a { color:#0af; margin:0 10px; text-decoration:none; }
-    h2, h3 { margin-top:20px; }
-    #alertsSummary { background:#222; padding:12px; margin:12px; border-radius:8px; font-size:0.95em; }
-    .stat { margin:5px 0; }
-    .badge { padding:3px 8px; border-radius:6px; margin-left:6px; }
-    .exclusive { background:#a22; color:#fff; }
-    .confirmed { background:#2a2; color:#fff; }
-    .blinker { animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity:0; } }
-    .button { margin:5px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
-    .orange { background:#cc0; color:#000; }
-    .green { background:#2a2; color:#fff; }
-    .red { background:#a22; color:#fff; }
-    .purple { background:#639; color:#fff; }
-    #logs { display:none; background:#000; padding:10px; border-radius:6px; margin:10px; max-height:250px; overflow:auto; font-size:0.85em; }
-
+    body { font-family: Arial, sans-serif; background:#0b0f19; color:#eee; margin:0; }
+    header { background:#111831; padding:15px; text-align:center; font-size:22px; font-weight:bold; color:#4fc3f7; }
+    nav { background:#1a2238; padding:10px; display:flex; justify-content:center; gap:15px; }
+    nav a { color:#ccc; text-decoration:none; font-weight:bold; }
+    nav a:hover { color:#4fc3f7; }
+    h2 { margin:20px 0 10px; }
     .columns { display:flex; gap:20px; margin:20px; }
-    .zone { flex:1; background:#222; padding:10px; border-radius:8px; }
-    .zone h3 { margin:0 0 8px 0; }
+    .zone { flex:1; background:#161b22; padding:15px; border-radius:8px; }
+    .zone h3 { margin-top:0; color:#4fc3f7; }
     .row { display:flex; justify-content:space-between; margin:4px 0; }
     .ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-left:6px; }
     .ball.orange { background:#cc0; }
     .ball.green { background:#2a2; }
     .ball.red { background:#a22; }
     .ball.purple { background:#639; }
-
-    #chatButton {
-      position: fixed; bottom:20px; right:20px;
-      width:60px; height:60px; border-radius:50%;
-      background:#0af; color:#fff; font-size:24px; font-weight:bold;
-      border:none; cursor:pointer; z-index:9999;
-    }
-    #chatBubble {
-      position: fixed; bottom:90px; right:20px;
-      background:#222; border:2px solid #0af; border-radius:12px;
-      padding:10px; width:300px; height:400px;
-      display:none; flex-direction:column; z-index:9999;
-    }
+    #alertsSummary { background:#1f2937; padding:12px; margin:12px; border-radius:8px; font-size:0.95em; }
+    .button { margin:5px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
+    .orange { background:#cc0; color:#000; }
+    .green { background:#2a2; color:#fff; }
+    .red { background:#a22; color:#fff; }
+    .purple { background:#639; color:#fff; }
+    #logs { display:none; background:#000; padding:10px; border-radius:6px; margin:10px; max-height:250px; overflow:auto; font-size:0.85em; }
+    #chatButton { position: fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; background:#0af; color:#fff; font-size:24px; font-weight:bold; border:none; cursor:pointer; z-index:9999; }
+    #chatBubble { position: fixed; bottom:90px; right:20px; background:#222; border:2px solid #0af; border-radius:12px; padding:10px; width:320px; height:420px; display:none; flex-direction:column; z-index:9999; }
     #chatBubble header { font-weight:bold; text-align:center; margin-bottom:6px; }
     #chatLog { flex:1; overflow-y:auto; background:#000; padding:6px; border-radius:6px; }
     #chatInput { margin-top:6px; display:flex; }
     #chatInput input { flex:1; padding:4px; }
     #chatInput button { padding:4px 8px; }
   </style>
+</head>
+<body>
   <script>
     const pwd = prompt("Mot de passe ?");
     if (pwd !== "202679") {
       document.write("⛔ Accès refusé");
       throw new Error("Accès refusé");
     }
+  </script>
 
-    let lastExclusiveCount = 0;
-    let chart;
+  <header>⚡ Centrale Nucléaire Météo – Console Admin</header>
+  <nav>
+    <a href="/admin-pp.html">Console</a>
+    <a href="/admin-alerts.html">Alertes</a>
+    <a href="/admin-chat.html">Chat</a>
+    <a href="/admin-index.html">Vue Index</a>
+    <a href="/admin-radar.html">Radar & News</a>
+    <a href="/admin-users.html">Utilisateurs</a>
+  </nav>
+
+  <div id="alertsSummary">Chargement du résumé…</div>
+  <canvas id="alertsChart"></canvas>
+
+  <div class="columns">
+    <div class="zone">
+      <h3>🌍 Prévisions</h3>
+      <h4>Europe</h4>
+      <div id="europeForecast"></div>
+      <h4>USA</h4>
+      <div id="usaForecast"></div>
+    </div>
+    <div class="zone">
+      <h3>🚨 Alertes</h3>
+      <h4>Europe</h4>
+      <div id="europeAlerts"></div>
+      <h4>USA</h4>
+      <div id="usaAlerts"></div>
+    </div>
+  </div>
+
+  <section id="engineControls">
+    <h2>🛠 Contrôle moteur</h2>
+    <button class="button green" onclick="runProcess('/api/run-europe')">Run Prévisions Europe</button>
+    <button class="button green" onclick="runProcess('/api/run-usa')">Run Prévisions USA</button>
+    <button class="button orange" onclick="runProcess('/api/run-alerts')">Run Alertes Europe+USA</button>
+    <button class="button purple" onclick="runProcess('/api/run-alerts-continental')">Run Alertes Continentales</button>
+    <button class="button red" onclick="runProcess('/api/run-alerts-world')">Run Alertes Mondiales</button>
+    <button onclick="toggleLogs()">📜 Voir logs</button>
+    <div id="logs"></div>
+  </section>
+
+  <button id="chatButton" onclick="toggleChat()">💬</button>
+  <div id="chatBubble">
+    <header>🤖 ChatGPT5 – Moteur</header>
+    <div id="chatLog"></div>
+    <div id="chatInput">
+      <input type="text" id="chatMsg" placeholder="Demander au moteur..." onkeypress="if(event.key==='Enter') sendChat()">
+      <button onclick="sendChat()">Envoyer</button>
+    </div>
+  </div>
+
+  <script>
+    let chart, lastExclusiveCount = 0;
 
     async function fetchAlertsSummary() {
       const res = await fetch("/api/alerts/summary");
       if (!res.ok) return;
       const s = await res.json();
       const exclusiveCount = s.exclusives || 0;
-
-      let exclusiveBadge = `<span class="badge exclusive">${exclusiveCount}</span>`;
-      if (exclusiveCount > lastExclusiveCount) {
-        exclusiveBadge = `<span class="badge exclusive blinker">${exclusiveCount}</span>`;
-      }
-      lastExclusiveCount = exclusiveCount;
-
       document.getElementById("alertsSummary").innerHTML = `
-        <div class="stat">📊 <strong>Total alertes actives :</strong> ${s.total || 0}</div>
-        <div class="stat">🔵 Sous surveillance : ${s.byStatus?.["under-surveillance"] || 0}</div>
-        <div class="stat">🔴 Exclusives : ${exclusiveBadge}
-            🟢 Confirmées ailleurs : <span class="badge confirmed">${s.confirmedElsewhere || 0}</span></div>
+        <div>📊 Total alertes actives : ${s.total || 0}</div>
+        <div>✅ Publiées : ${s.byStatus?.published || 0} | ⏳ À valider : ${s.byStatus?.toValidate || 0}</div>
+        <div>🔵 Surveillance : ${s.byStatus?.["under-surveillance"] || 0}</div>
+        <div>🔴 Exclusives : ${exclusiveCount} | 🟢 Confirmées ailleurs : ${s.confirmedElsewhere || 0}</div>
       `;
       updateChart(s);
     }
@@ -87,48 +118,29 @@
     function updateChart(s) {
       const ctx = document.getElementById("alertsChart").getContext("2d");
       const data = {
-        labels: ["Publiées", "À valider", "Sous surveillance", "Ignorées", "Exclusives", "Confirmées"],
+        labels: ["Publiées", "À valider", "Surveillance", "Exclusives", "Confirmées"],
         datasets: [{
           data: [
-            s.byStatus?.["published"] || 0,
-            s.byStatus?.["toValidate"] || 0,
+            s.byStatus?.published || 0,
+            s.byStatus?.toValidate || 0,
             s.byStatus?.["under-surveillance"] || 0,
-            s.byStatus?.["ignored"] || 0,
             s.exclusives || 0,
             s.confirmedElsewhere || 0
           ],
-          backgroundColor: ["#2a2", "#cc0", "#335", "#633", "#a22", "#0af"]
+          backgroundColor: ["#2a2", "#cc0", "#335", "#a22", "#0af"]
         }]
       };
-      if (chart) {
-        chart.data = data;
-        chart.update();
-      } else {
-        chart = new Chart(ctx, {
-          type: "doughnut",
-          data,
-          options: {
-            plugins: {
-              legend: {
-                labels: { color: "#eee" }
-              }
-            }
-          }
-        });
-      }
+      if (chart) { chart.data = data; chart.update(); }
+      else { chart = new Chart(ctx, { type:"doughnut", data, options:{plugins:{legend:{labels:{color:"#eee"}}}}}); }
     }
 
     async function fetchCountries() {
       const res = await fetch("/api/checkup");
       const state = await res.json();
-      // Europe zones (pays)
-      const europeCountries = Object.keys(state.zonesCoveredEurope || {});
-      const usaStates = Object.keys(state.zonesCoveredUSA || {});
-
-      fillZone("europeForecast", europeCountries, state.checkupForecast);
-      fillZone("usaForecast", usaStates, state.checkupForecast);
-      fillZone("europeAlerts", europeCountries, state.checkupAlerts);
-      fillZone("usaAlerts", usaStates, state.checkupAlerts);
+      fillZone("europeForecast", Object.keys(state.zonesCoveredEurope || {}), state.checkupForecast);
+      fillZone("usaForecast", Object.keys(state.zonesCoveredUSA || {}), state.checkupForecast);
+      fillZone("europeAlerts", Object.keys(state.zonesCoveredEurope || {}), state.checkupAlerts);
+      fillZone("usaAlerts", Object.keys(state.zonesCoveredUSA || {}), state.checkupAlerts);
     }
 
     function fillZone(id, list, checkup) {
@@ -186,69 +198,7 @@
 
     setInterval(fetchAlertsSummary, 7000);
     setInterval(fetchCountries, 10000);
-    window.onload = () => {
-      fetchAlertsSummary();
-      fetchCountries();
-    };
+    window.onload = () => { fetchAlertsSummary(); fetchCountries(); };
   </script>
-</head>
-<body>
-  <header>
-    <h1>⚡ Centrale nucléaire météo – Console Admin</h1>
-    <nav>
-      <a href="/admin">Console</a>
-      <a href="/admin-alerts">Alertes</a>
-      <a href="/admin-chat">Chat</a>
-      <a href="/admin-index">Vue Index</a>
-      <a href="/admin-radar">Radar & News</a>
-      <a href="/admin-users">Utilisateurs</a>
-    </nav>
-  </header>
-
-  <div id="alertsSummary">Chargement du résumé…</div>
-  <canvas id="alertsChart"></canvas>
-
-  <div class="columns">
-    <div class="zone">
-      <h3>🌍 Prévisions Europe</h3>
-      <div id="europeForecast"></div>
-    </div>
-    <div class="zone">
-      <h3>🇺🇸 Prévisions USA</h3>
-      <div id="usaForecast"></div>
-    </div>
-  </div>
-  <div class="columns">
-    <div class="zone">
-      <h3>🚨 Alertes Europe</h3>
-      <div id="europeAlerts"></div>
-    </div>
-    <div class="zone">
-      <h3>🚨 Alertes USA</h3>
-      <div id="usaAlerts"></div>
-    </div>
-  </div>
-
-  <section id="engineControls">
-    <h2>🛠 Contrôle moteur</h2>
-    <button class="button" onclick="runProcess('/api/run-europe','btnEurope')">Run Prévisions Europe</button>
-    <button class="button" onclick="runProcess('/api/run-usa','btnUSA')">Run Prévisions USA</button>
-    <button class="button" onclick="runProcess('/api/run-alerts','btnAlertsEurope')">Run Alertes Europe</button>
-    <button class="button" onclick="runProcess('/api/run-alerts-continental','btnAlertsContinental')">Run Alertes Continentales</button>
-    <button class="button" onclick="runProcess('/api/run-alerts-world','btnAlertsWorld')">Run Alertes Mondiales</button>
-    <button class="button" onclick="runProcess('/api/run-orchestrator','btnOrchestrator')">Run Orchestrateur IA</button>
-    <button onclick="toggleLogs()">📜 Voir logs</button>
-    <div id="logs"></div>
-  </section>
-
-  <button id="chatButton" onclick="toggleChat()">💬</button>
-  <div id="chatBubble">
-    <header>🤖 ChatGPT5 – Moteur</header>
-    <div id="chatLog"></div>
-    <div id="chatInput">
-      <input type="text" id="chatMsg" placeholder="Demander au moteur..." onkeypress="if(event.key==='Enter') sendChat()">
-      <button onclick="sendChat()">Envoyer</button>
-    </div>
-  </div>
 </body>
 </html>
