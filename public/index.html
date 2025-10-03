@@ -1,224 +1,207 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>TINSFLASH – Prévisions et Alertes Météo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="index,follow">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tinsflash Météo</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body{margin:0;font-family:Arial,sans-serif;background:#0d1117;color:#eee;line-height:1.6;}
-    header{position:relative;height:40vh;overflow:hidden;}
-    header video{width:100%;height:100%;object-fit:cover;}
-    header .overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;}
-    header h1{font-size:2rem;color:#00d8ff;text-align:center;}
-    main{padding:20px;}
-    h2{color:#00d8ff;margin-top:20px;}
-    .forecast,.alerts{background:#161b22;padding:15px;border-radius:8px;margin:15px 0;}
-    .forecast-table{width:100%;border-collapse:collapse;margin-top:10px;}
-    .forecast-table th,.forecast-table td{border:1px solid #333;padding:8px;text-align:center;}
-    .forecast-table th{background:#222;color:#00d8ff;}
-    iframe{width:100%;height:400px;border:none;border-radius:8px;}
-    footer{text-align:center;font-size:.8rem;color:#888;padding:15px;background:#111;}
-    .ads{margin:20px 0;text-align:center;}
-    .input-box{text-align:center;margin:15px 0;}
-    input,button{padding:8px 12px;border-radius:6px;border:none;margin:5px;}
-    button{background:#00d8ff;color:#000;cursor:pointer;}
-    button:hover{background:#00aacc;}
-    .bulletin{background:#202530;padding:15px;border-radius:8px;margin-top:10px;font-style:italic;}
-    .alert-card{background:#222;padding:12px;margin:10px 0;border-radius:6px;}
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f8fc;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    header {
+      background: linear-gradient(135deg, #1a73e8, #0b3d91);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 1rem 0;
+      font-size: 2rem;
+    }
+    header p {
+      max-width: 800px;
+      margin: auto;
+      font-size: 1.1rem;
+    }
+    main {
+      padding: 1.5rem;
+      max-width: 900px;
+      margin: auto;
+    }
+    section {
+      margin-bottom: 2rem;
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    section h2 {
+      margin-top: 0;
+      color: #0b3d91;
+    }
+    input, button {
+      padding: 0.6rem;
+      margin: 0.3rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      cursor: pointer;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #0b3d91;
+    }
+    .forecast-day {
+      display: flex;
+      align-items: center;
+      margin: 0.5rem 0;
+    }
+    .forecast-day img {
+      width: 32px;
+      height: 32px;
+      margin-right: 10px;
+    }
+    #jeanReply {
+      margin-top: 1rem;
+      padding: 0.5rem;
+      background: #eef3ff;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
-
-<header>
-  <video autoplay muted loop id="introVideo">
-    <source src="intro-jean.mp4" type="video/mp4">
-  </video>
-  <div class="overlay"><h1>🌍 TINSFLASH – Les prévisions et alertes météo les plus précises du monde</h1></div>
-</header>
-
-<main>
-  <section>
+  <header>
+    <h1>🌍 Tinsflash — La météo la plus précise au monde</h1>
     <p>
-      Notre moteur <b>nucléaire météo</b> croise les modèles mondiaux, le relief, le climat et les anomalies saisonnières.  
-      Résultat : <b>les prévisions locales et nationales les plus fiables au monde</b>, avec des alertes <b>avant tout le monde</b>.  
+      Grâce à <strong>J.E.A.N</strong>, notre intelligence artificielle météo,
+      nous croisons les modèles physiques internationaux,les modèles IA également, les données de relief,
+      de climat et d’anomalies saisonnières, pour fournir
+      <strong>les prévisions locales et nationales les plus fiables au monde ainsi que les alertes avant les autres!</strong>.
+      <br /><br />
+      Conçu pour le grand public, mais aussi pour les
+      <strong>administrations</strong>, les <strong>agriculteurs</strong>,
+      et le <strong>secteur événementiel</strong>.
+      <br /><br />
+      En version Premium : modèles exclusifs, futur radar 4D unique au monde,
+      et alertes encore plus rapides.
     </p>
-  </section>
+  </header>
 
-  <div class="input-box">
-    <input type="text" id="cityInput" placeholder="Ville (ex: Paris)">
-    <input type="text" id="countryInput" placeholder="Pays (ex: FR)">
-    <button onclick="manualForecast()">🔍 Voir la météo</button>
-  </div>
+  <main>
+    <!-- Formulaire recherche -->
+    <section>
+      <h2>🔎 Rechercher une ville</h2>
+      <input type="text" id="city" placeholder="Ville (ex: Paris)" />
+      <input type="text" id="country" placeholder="Pays (ex: FR)" />
+      <button id="getForecast">Voir la météo</button>
+    </section>
 
-  <section class="forecast">
-    <h2>📊 Prévisions locales</h2>
-    <table class="forecast-table" id="forecastTable"></table>
-    <div class="bulletin" id="forecastBulletin">Chargement du bulletin météo...</div>
-  </section>
+    <!-- Notifications -->
+    <section>
+      <h2>🔔 Notifications météo</h2>
+      <button id="notifBtn">Activer les notifications</button>
+    </section>
 
-  <section class="alerts">
-    <h2>🚨 Alertes météo</h2>
-    <div id="alerts">Chargement...</div>
-    <button onclick="loadWorldAlerts()">🌍 Voir alertes mondiales</button>
-  </section>
+    <!-- Prévisions -->
+    <section id="forecast">
+      <h2>📊 Prévisions locales</h2>
+      <div id="forecastResult">Entrez une ville pour voir les prévisions...</div>
+    </section>
 
-  <h2>🛰️ Radar</h2>
-  <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4&zoom=5&level=surface&overlay=rain&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&detailLat=50&detailLon=4&metricWind=default&metricTemp=default&radarRange=-1"></iframe>
-</main>
+    <!-- Alertes -->
+    <section id="alerts">
+      <h2>🚨 Alertes météo</h2>
+      <div id="alertsResult">Chargement des alertes...</div>
+    </section>
 
-<footer>
-  © 2025 TINSFLASH – System J.E.A.N by Pydaris <br>
-  📧 skysnapia@gmail.com | 📱 WhatsApp +32 473 26 44 77
-</footer>
+    <!-- Chat Jean -->
+    <section id="chat-jean">
+      <h2>💬 Demander à J.E.A.N</h2>
+      <input type="text" id="jeanInput" placeholder="Posez une question météo..." />
+      <button id="askJean">Envoyer</button>
+      <div id="jeanReply"></div>
+    </section>
+  </main>
 
-<!-- Avatar J.E.A.N -->
-<script src="https://unpkg.com/lottie-web@latest/build/player/lottie.min.js"></script>
-<div id="avatar-jean" style="position: fixed; bottom: 20px; right: 20px; width: 120px; height: 120px; cursor: pointer; z-index: 9999;">
-  <lottie-player 
-    src="https://assets10.lottiefiles.com/packages/lf20_j1adxtyb.json"
-    background="transparent"
-    speed="1"
-    loop
-    autoplay>
-  </lottie-player>
-</div>
+  <script>
+    // 🔎 Prévisions
+    document.getElementById("getForecast").onclick = async () => {
+      const city = document.getElementById("city").value;
+      const country = document.getElementById("country").value;
 
-<script>
-document.getElementById("avatar-jean").addEventListener("click", async () => {
-  const q = prompt("Posez une question météo à J.E.A.N :");
-  if(!q) return;
-  const res = await fetch("/api/jean", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({message:q})
-  });
-  const data = await res.json();
-  alert("J.E.A.N : " + (data.reply || "Pas de réponse"));
-});
-
-// === Paramètres URL
-const params = new URLSearchParams(window.location.search);
-let city = params.get("city") || "Bruxelles";
-let country = params.get("country") || "BE";
-
-// Géocodage simplifié
-let lat=50.8503, lon=4.3517;
-function geo(city,country){
-  if(city.toLowerCase()==="paris"){return [48.8566,2.3522];}
-  if(city.toLowerCase()==="new york"){return [40.7128,-74.0060];}
-  return [50.8503,4.3517]; // défaut Bruxelles
-}
-[lat,lon]=geo(city,country);
-
-// Changement manuel
-function manualForecast(){
-  const c=document.getElementById("cityInput").value;
-  const p=document.getElementById("countryInput").value;
-  if(c&&p){window.location.search=`?city=${c}&country=${p}`;}
-}
-
-// Charger les prévisions
-async function loadForecast(){
-  try{
-    const res = await fetch("/api/superforecast",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({lat,lon,country,region:city})
-    });
-    const data = await res.json();
-
-    const table=document.getElementById("forecastTable");
-    table.innerHTML="";
-
-    let bulletin="Prévisions indisponibles.";
-    if(data && data.forecast){
-      // On tente d’analyser JSON IA
-      let f=data.forecast;
-      if(typeof f==="string"){
-        try{ f=JSON.parse(f); }catch(e){}
+      if (!country) {
+        alert("Veuillez indiquer un pays (code ISO ex: FR).");
+        return;
       }
-      if(f.resume || f.message_utilisateur){
-        bulletin=f.message_utilisateur || f.resume;
+
+      const res = await fetch(`/api/forecast/${country}`);
+      const data = await res.json();
+
+      if (!data || data.error) {
+        document.getElementById("forecastResult").innerText = "❌ Erreur de récupération.";
+        return;
       }
-      if(f.points_forts){
-        table.innerHTML="<tr><th>Points forts</th></tr>";
-        f.points_forts.forEach(pt=>{
-          const row=document.createElement("tr");
-          row.innerHTML=`<td>${pt}</td>`;
-          table.appendChild(row);
-        });
-      }
+
+      // Exemple d'affichage simple (7 jours si dispo)
+      let html = "";
+      (data.days || []).forEach(d => {
+        html += `
+          <div class="forecast-day">
+            <img src="/icons/${d.icon || "na"}.png" alt="${d.condition || ""}" />
+            <span><strong>${d.date}</strong> — ${d.condition || ""}, ${d.temp_min}°C / ${d.temp_max}°C</span>
+          </div>
+        `;
+      });
+
+      document.getElementById("forecastResult").innerHTML = html || "Aucune donnée disponible.";
+    };
+
+    // 🚨 Alertes
+    fetch("/api/alerts")
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById("alertsResult").innerText =
+          data.length ? JSON.stringify(data, null, 2) : "Aucune alerte active.";
+      });
+
+    // 🔔 Notifications
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.register("/sw.js").then(reg => {
+        document.getElementById("notifBtn").onclick = async () => {
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: "<%= VAPID_PUBLIC_KEY %>"
+          });
+          await fetch("/api/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sub)
+          });
+          alert("✅ Notifications météo activées !");
+        };
+      });
     }
-    document.getElementById("forecastBulletin").textContent=bulletin;
 
-    if("Notification" in window && Notification.permission==="granted"){
-      new Notification("Prévision TINSFLASH", { body: bulletin });
-    }
-  }catch(e){
-    document.getElementById("forecastBulletin").textContent="Erreur forecast: "+e.message;
-  }
-}
-
-// Charger alertes
-async function loadAlerts(){
-  try{
-    const res = await fetch("/api/alerts");
-    const data = await res.json();
-    if(!Array.isArray(data) || data.length===0){
-      document.getElementById("alerts").innerHTML="✅ Aucune alerte active.";
-      return;
-    }
-    renderAlerts(data);
-  }catch(e){
-    document.getElementById("alerts").textContent="Erreur alertes: "+e.message;
-  }
-}
-
-// Charger alertes mondiales
-async function loadWorldAlerts(){
-  try{
-    const res = await fetch("/api/alerts");
-    const data = await res.json();
-    const world = data.filter(a=>a.continent && !a.region); // continentales
-    if(!world || world.length===0){
-      document.getElementById("alerts").innerHTML="✅ Aucune alerte mondiale.";
-      return;
-    }
-    renderAlerts(world);
-  }catch(e){
-    document.getElementById("alerts").textContent="Erreur alertes mondiales: "+e.message;
-  }
-}
-
-// Rendu alertes
-function renderAlerts(list){
-  let html="";
-  list.forEach(a=>{
-    const d=a.data||{};
-    const fiab=d.fiabilite||0;
-    const color=fiab>90?"#0f0":fiab>70?"#ffa500":"#f00";
-    html+=`
-      <div class="alert-card">
-        <b>${a.country||""} ${a.region? "– "+a.region:""} (${a.continent||""})</b><br>
-        Type : ${d.type||"?"} – Intensité : ${d.intensite||"?"}<br>
-        Fiabilité : <span style="color:${color};">${fiab}%</span><br>
-        ⏱️ ${a.timestamp}<br>
-        ⚠️ Conséquences : ${d.consequences||"?"}<br>
-        ✅ Recommandations : ${d.recommandations||"?"}
-      </div>
-    `;
-  });
-  document.getElementById("alerts").innerHTML=html;
-}
-
-// Notifications navigateur
-if("Notification" in window && Notification.permission!=="granted"){
-  Notification.requestPermission();
-}
-
-loadForecast();
-loadAlerts();
-</script>
+    // 💬 Chat Jean
+    document.getElementById("askJean").onclick = async () => {
+      const message = document.getElementById("jeanInput").value;
+      const res = await fetch("/api/jean", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      document.getElementById("jeanReply").innerText = data.reply;
+    };
+  </script>
 </body>
 </html>
