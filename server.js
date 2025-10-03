@@ -48,6 +48,9 @@ app.use("/api/verify", verifyRouter);
 // ✅ Cohere service (J.E.A.N. public)
 import { askCohere } from "./services/cohereService.js";
 
+// ✅ Push notifications
+import { addSubscription, sendNotification } from "./services/pushService.js";
+
 // Helper safeCall
 const safeCall = async (fn, ...args) =>
   typeof fn === "function" ? await fn(...args) : null;
@@ -57,7 +60,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// === Runs générique ===
+// === Runs ===
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
@@ -69,7 +72,6 @@ app.post("/api/run-global", async (req, res) => {
   }
 });
 
-// === Alias pour boutons séparés ===
 app.post("/api/run-europe", async (req, res) => {
   try {
     await checkSourcesFreshness();
@@ -166,7 +168,7 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Nouveau résumé de surveillance pour admin
+// ✅ Résumé surveillance
 app.get("/api/alerts/summary", async (req, res) => {
   try {
     const summary = await safeCall(alertsService.getSurveillanceSummary);
@@ -213,7 +215,7 @@ app.get("/api/podcast/:country", async (req, res) => {
   }
 });
 
-// === Chat IA général ===
+// === Chat IA ===
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -224,7 +226,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// === Chat IA moteur ===
 app.post("/api/chat/engine", async (req, res) => {
   try {
     const { message } = req.body;
@@ -235,7 +236,7 @@ app.post("/api/chat/engine", async (req, res) => {
   }
 });
 
-// === TextGen (IA console admin) ===
+// === TextGen ===
 app.post("/api/textgen", async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -249,7 +250,7 @@ app.post("/api/textgen", async (req, res) => {
   }
 });
 
-// === Logs & Engine state ===
+// === Logs ===
 app.get("/api/logs", async (req, res) => {
   try {
     const { cycle } = req.query; 
@@ -296,7 +297,7 @@ app.get("/api/checkup", async (req, res) => {
   }
 });
 
-// === Infos météo mondiales ===
+// === News ===
 app.get("/api/news", async (req, res) => {
   try {
     res.json({ success: true, news: await safeCall(newsService.getNews) });
@@ -305,7 +306,7 @@ app.get("/api/news", async (req, res) => {
   }
 });
 
-// === Utilisateurs ===
+// === Users ===
 app.get("/api/users", async (req, res) => {
   try {
     res.json({ success: true, users: await safeCall(userService.getUsers) });
@@ -314,7 +315,7 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-// === Chat public J.E.A.N. ===
+// === J.E.A.N ===
 app.post("/api/jean", async (req, res) => {
   try {
     const { message } = req.body;
@@ -326,6 +327,22 @@ app.post("/api/jean", async (req, res) => {
   } catch (e) {
     res.status(500).json({ reply: "⚠️ Erreur serveur: " + e.message });
   }
+});
+
+// === Notifications Push ===
+app.post("/api/subscribe", (req, res) => {
+  const sub = req.body;
+  addSubscription(sub);
+  res.json({ success: true, message: "Abonnement push enregistré" });
+});
+
+app.post("/api/send-notif", async (req, res) => {
+  const { title, message } = req.body;
+  const result = await sendNotification(
+    title || "🌍 Tinsflash Météo",
+    message || "Nouvelle alerte météo disponible"
+  );
+  res.json({ success: true, result });
 });
 
 // === Admin pages ===
