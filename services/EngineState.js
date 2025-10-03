@@ -17,16 +17,17 @@ const EngineStateSchema = new mongoose.Schema({
   checkup: { type: Object, default: {} },
   errors: { type: [ErrorSchema], default: [] },
   logs: { type: [LogSchema], default: [] },
+  currentCycleId: { type: String, default: null },
 });
 
-// ✅ On force toujours la présence de checkup avec un engineStatus
+// ✅ Préserver un minimum de cohérence
 EngineStateSchema.pre("save", function (next) {
   if (!this.checkup) this.checkup = {};
   if (!this.checkup.engineStatus) this.checkup.engineStatus = "IDLE";
   next();
 });
 
-// ✅ Helpers centralisés
+// ✅ Méthodes internes (instance)
 EngineStateSchema.methods.addLog = function (msg) {
   this.logs.unshift({ message: msg, timestamp: new Date() });
   if (this.logs.length > 200) this.logs.pop(); // limite mémoire
@@ -37,4 +38,41 @@ EngineStateSchema.methods.addError = function (msg) {
   if (this.errors.length > 200) this.errors.pop();
 };
 
-export default mongoose.model("EngineState", EngineStateSchema);
+// ✅ Modèle
+const EngineState = mongoose.model("EngineState", EngineStateSchema);
+
+// === Helpers exports pour adminLogs.js ===
+export async function addEngineLog(message) {
+  let state = await EngineState.findOne();
+  if (!state) state = new EngineState();
+
+  state.addLog(message);
+  await state.save();
+
+  return { ts: Date.now(), type: "INFO", message };
+}
+
+export async function addEngineError(message) {
+  let state = await EngineState.findOne();
+  if (!state) state = new EngineState();
+
+  state.addError(message);
+  await state.save();
+
+  return { ts: Date.now(), type: "ERROR", message };
+}
+
+export async function getEngineState() {
+  let state = await EngineState.findOne();
+  if (!state) {
+    state = new EngineState();
+    await state.save();
+  }
+  return state;
+}
+
+export async function saveEngineState(state) {
+  return state.save();
+}
+
+export default EngineState;
