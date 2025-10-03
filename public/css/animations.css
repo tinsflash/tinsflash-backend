@@ -1,0 +1,59 @@
+/* Soleil qui pulse légèrement */
+.sun-anim {
+  display: inline-block;
+  animation: sunPulse 3s infinite ease-in-out;
+}
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px gold); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 15px orange); }
+}
+
+/* Nuages qui flottent */
+.cloud-anim {
+  display: inline-block;
+  animation: cloudMove 6s infinite ease-in-out;
+}
+@keyframes cloudMove {
+  0%, 100% { transform: translateX(0px); }
+  50% { transform: translateX(10px); }
+}
+
+/* Pluie qui tombe */
+.rain-anim {
+  position: relative;
+}
+.rain-anim::after {
+  content: "💧💧💧";
+  display: block;
+  font-size: 0.8em;
+  animation: rainFall 1s infinite linear;
+}
+@keyframes rainFall {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+
+/* Neige qui tombe doucement */
+.snow-anim {
+  position: relative;
+}
+.snow-anim::after {
+  content: "❄️❄️";
+  display: block;
+  font-size: 0.8em;
+  animation: snowFall 2.5s infinite ease-in-out;
+}
+@keyframes snowFall {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(12px); }
+}
+
+/* Orage qui clignote */
+.storm-anim {
+  display: inline-block;
+  animation: stormFlash 1.2s infinite;
+}
+@keyframes stormFlash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(2.5); }
+}
