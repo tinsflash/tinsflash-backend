@@ -4,11 +4,13 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Console Admin – Alertes</title>
+  <title>🚨 Console Admin – Alertes</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; margin:0; }
-    header { background:#222; padding:10px; text-align:center; }
-    nav a { color:#0af; margin:0 10px; text-decoration:none; }
+    body { font-family: Arial, sans-serif; background:#0b0f19; color:#eee; margin:0; }
+    header { background:#111831; padding:15px; text-align:center; font-size:22px; font-weight:bold; color:#4fc3f7; }
+    nav { background:#1a2238; padding:10px; display:flex; justify-content:center; gap:15px; }
+    nav a { color:#ccc; text-decoration:none; font-weight:bold; }
+    nav a:hover { color:#4fc3f7; }
     h2 { margin-top:20px; }
     .alert-block { padding:15px; margin:10px; border-radius:8px; }
     .published { background:#163; }
@@ -22,7 +24,8 @@
     .badge { padding:2px 6px; border-radius:4px; font-size:0.8em; margin-left:6px; }
     .exclusive { background:#a22; color:#fff; }
     .confirmed { background:#2a2; color:#fff; }
-    #summary { background:#222; padding:10px; margin:10px; border-radius:8px; }
+    #summary { background:#1f2937; padding:12px; margin:12px; border-radius:8px; }
+    .news-box { background:#161b22; margin:12px; padding:10px; border-radius:6px; }
   </style>
   <script>
     const pwd = prompt("Mot de passe ?");
@@ -99,22 +102,37 @@
       fetchAlerts();
     }
 
+    async function loadNews(){
+      const res=await fetch("/api/news");
+      if(!res.ok) return;
+      const data=await res.json();
+      const box=document.getElementById("news");
+      box.innerHTML="";
+      (data.articles||[]).forEach(n=>{
+        box.innerHTML+=`
+          <div class="news-box">
+            <h3>${n.title}</h3>
+            <p>${n.summary}</p>
+            <a href="${n.url}" target="_blank">🌍 Lire l’article</a>
+          </div>`;
+      });
+    }
+
     setInterval(fetchAlerts, 5000);
-    window.onload = fetchAlerts;
+    setInterval(loadNews, 120000);
+    window.onload = () => { fetchAlerts(); loadNews(); };
   </script>
 </head>
 <body>
-  <header>
-    <h1>🚨 Console Admin – Alertes</h1>
-    <nav>
-      <a href="/admin">Console</a>
-      <a href="/admin-alerts">Alertes</a>
-      <a href="/admin-chat">Chat</a>
-      <a href="/admin-index">Vue Index</a>
-      <a href="/admin-radar">Radar & News</a>
-      <a href="/admin-users">Utilisateurs</a>
-    </nav>
-  </header>
+  <header>🚨 Console Admin – Alertes</header>
+  <nav>
+    <a href="/admin-pp.html">Console</a>
+    <a href="/admin-alerts.html">Alertes</a>
+    <a href="/admin-chat.html">Chat</a>
+    <a href="/admin-index.html">Vue Index</a>
+    <a href="/admin-radar.html">Radar & News</a>
+    <a href="/admin-users.html">Utilisateurs</a>
+  </nav>
 
   <div id="summary"></div>
 
@@ -126,5 +144,8 @@
 
   <h2>🔵 Sous surveillance (&lt;70%)</h2>
   <div id="surveillance"></div>
+
+  <h2>📰 News Météo</h2>
+  <div id="news">Chargement...</div>
 </body>
 </html>
