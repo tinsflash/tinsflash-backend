@@ -13,10 +13,9 @@
     nav a:hover { color:#4fc3f7; }
     h2 { margin-top:20px; }
     .alert-block { padding:15px; margin:10px; border-radius:8px; }
-    .published { background:#163; }            /* vert */
-    .tovalidate { background:#663; }           /* orange */
-    .under-surveillance { background:#335; }   /* bleu/gris */
-    .low-confidence { background:#611; }       /* rouge sombre */
+    .published { background:#163; }
+    .tovalidate { background:#663; }
+    .surveillance { background:#335; }
     pre { white-space:pre-wrap; background:#000; padding:10px; border-radius:6px; }
     button { margin:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; }
     button.validate { background:#2a2; color:white; }
@@ -27,133 +26,190 @@
     .confirmed { background:#2a2; color:#fff; }
     #summary { background:#1f2937; padding:12px; margin:12px; border-radius:8px; }
     .news-box { background:#161b22; margin:12px; padding:10px; border-radius:6px; }
+    #map { height:450px; width:95%; margin:15px auto; border-radius:8px; }
   </style>
-  <script>
-    const pwd = prompt("Mot de passe ?");
-    if (pwd !== "202679") {
-      document.write("⛔ Accès refusé");
-      throw new Error("Accès refusé");
-    }
 
-    async function fetchSummary() {
-      const res = await fetch("/api/alerts/summary");
-      if (!res.ok) return {};
-      return await res.json();
-    }
-
-    async function fetchAlerts() {
-      const [alertsRes, summary] = await Promise.all([
-        fetch("/api/alerts").then(r => r.json()),
-        fetchSummary()
-      ]);
-
-      const publishedDiv = document.getElementById("published");
-      const toValidateDiv = document.getElementById("tovalidate");
-      const surveillanceDiv = document.getElementById("surveillance");
-      const lowDiv = document.getElementById("lowconfidence");
-
-      publishedDiv.innerHTML = "";
-      toValidateDiv.innerHTML = "";
-      surveillanceDiv.innerHTML = "";
-      lowDiv.innerHTML = "";
-
-      // 🔎 Résumé global
-      if (summary && summary.total != null) {
-        document.getElementById("summary").innerHTML = `
-          <strong>Total alertes :</strong> ${summary.total}<br>
-          🟢 Publiées : ${summary.byStatus.published} | 
-          🟡 À valider : ${summary.byStatus.toValidate} | 
-          🔵 Surveillance : ${summary.byStatus["under-surveillance"]} | 
-          🔴 Faible crédibilité : ${summary.byStatus["low-confidence"]} | 
-          ⚪ Archivées : ${summary.byStatus.archived}<br>
-          🔴 Exclusives : ${summary.exclusives} | 
-          🟢 Confirmées ailleurs : ${summary.confirmedElsewhere}
-        `;
-      }
-
-      alertsRes.forEach(alert => {
-        const fiab = alert?.data?.confidence || 0;
-        const status = alert?.data?.status || "under-surveillance";
-        let block;
-        if (status === "published") block = publishedDiv;
-        else if (status === "toValidate") block = toValidateDiv;
-        else if (status === "low-confidence") block = lowDiv;
-        else block = surveillanceDiv;
-
-        // Badge exclusivité
-        let badge = "";
-        const ex = alert?.data?.external?.exclusivity;
-        if (ex === "exclusive") badge = `<span class="badge exclusive">TINSFLASH Exclusif</span>`;
-        if (ex === "confirmed-elsewhere") badge = `<span class="badge confirmed">Confirmé ailleurs</span>`;
-
-        const el = document.createElement("div");
-        el.className = `alert-block ${status}`;
-        el.innerHTML = `
-          <strong>${alert.country} ${alert.region || ""}</strong> – ${alert.continent} ${badge}<br>
-          <em>Confiance : ${fiab}%</em><br>
-          <pre>${JSON.stringify(alert.data, null, 2)}</pre>
-          ${status === "toValidate" ? `
-            <button class="validate" onclick="updateStatus('${alert.id}','published')">Valider</button>
-            <button class="reject" onclick="updateStatus('${alert.id}','under-surveillance')">Rejeter</button>
-            <button class="pending" onclick="updateStatus('${alert.id}','pending')">En attente</button>
-          ` : ""}
-        `;
-        block.appendChild(el);
-      });
-    }
-
-    async function updateStatus(id, action) {
-      await fetch(`/api/alerts/${id}/${action}`, { method:"POST" });
-      fetchAlerts();
-    }
-
-    async function loadNews(){
-      const res=await fetch("/api/news");
-      if(!res.ok) return;
-      const data=await res.json();
-      const box=document.getElementById("news");
-      box.innerHTML="";
-      (data.articles||[]).forEach(n=>{
-        box.innerHTML+=`
-          <div class="news-box">
-            <h3>${n.title}</h3>
-            <p>${n.summary}</p>
-            <a href="${n.url}" target="_blank">🌍 Lire l’article</a>
-          </div>`;
-      });
-    }
-
-    setInterval(fetchAlerts, 5000);
-    setInterval(loadNews, 120000);
-    window.onload = () => { fetchAlerts(); loadNews(); };
-  </script>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-  <header>🚨 Console Admin – Alertes</header>
-  <nav>
-    <a href="/admin-pp.html">Console</a>
-    <a href="/admin-alerts.html">Alertes</a>
-    <a href="/admin-chat.html">Chat</a>
-    <a href="/admin-index.html">Vue Index</a>
-    <a href="/admin-radar.html">Radar & News</a>
-    <a href="/admin-users.html">Utilisateurs</a>
-  </nav>
+<script>
+  const pwd = prompt("Mot de passe ?");
+  if (pwd !== "202679") {
+    document.write("⛔ Accès refusé");
+    throw new Error("Accès refusé");
+  }
+</script>
 
-  <div id="summary"></div>
+<header>🚨 Console Admin – Alertes</header>
+<nav>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-index.html">Vue Index</a>
+  <a href="/admin-radar.html">Radar & News</a>
+  <a href="/admin-users.html">Utilisateurs</a>
+</nav>
 
-  <h2>✅ Auto-publiées (&gt;90%)</h2>
-  <div id="published"></div>
+<div id="summary"></div>
 
-  <h2>⏳ À valider (70–90%)</h2>
-  <div id="tovalidate"></div>
+<h2>🌍 Carte des alertes</h2>
+<div id="map"></div>
 
-  <h2>🔵 Sous surveillance (50–69%)</h2>
-  <div id="surveillance"></div>
+<h2>✅ Auto-publiées (&gt;90%)</h2>
+<div id="published"></div>
 
-  <h2>🔴 Faible crédibilité (&lt;50%)</h2>
-  <div id="lowconfidence"></div>
+<h2>⏳ À valider (70–90%)</h2>
+<div id="tovalidate"></div>
 
-  <h2>📰 News Météo</h2>
-  <div id="news">Chargement...</div>
+<h2>🔵 Sous surveillance (&lt;70%)</h2>
+<div id="surveillance"></div>
+
+<h2>📰 News Météo</h2>
+<div id="news">Chargement...</div>
+
+<script>
+  let geoLayer, alertsData = [];
+
+  // Init carte
+  const map = L.map("map").setView([20,0], 2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 6, minZoom: 2, attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  async function loadWorld(){
+    const res = await fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson");
+    const world = await res.json();
+    geoLayer = L.geoJSON(world, {
+      style: { color:"#222", weight:1, fillColor:"#444", fillOpacity:0.7 },
+      onEachFeature: (feature, layer) => {
+        layer.bindTooltip(feature.properties.ADMIN);
+        layer.on("click", () => showAlertDetails(feature.properties.ISO_A2));
+      }
+    }).addTo(map);
+  }
+  loadWorld();
+
+  function colorCountry(layer, iso){
+    let color="#444";
+    const alert = alertsData.find(a => (a.countryCode||a.country)===iso);
+    if(alert){
+      if(alert.data?.status==="published") color="#2a2";
+      else if(alert.data?.status==="toValidate") color="#cc0";
+      else if(alert.data?.status==="under-surveillance") color="#339";
+      else color="#a22";
+    }
+    layer.setStyle({ fillColor:color });
+  }
+
+  async function fetchSummary() {
+    const res = await fetch("/api/alerts/summary");
+    if (!res.ok) return {};
+    return await res.json();
+  }
+
+  async function fetchAlerts() {
+    const [alertsRes, summary] = await Promise.all([
+      fetch("/api/alerts").then(r => r.json()),
+      fetchSummary()
+    ]);
+    alertsData = alertsRes || [];
+
+    // 🔎 Résumé global
+    if (summary && summary.total != null) {
+      document.getElementById("summary").innerHTML = `
+        <strong>Total alertes :</strong> ${summary.total}<br>
+        🟢 Publiées : ${summary.byStatus.published} | 
+        🟡 À valider : ${summary.byStatus.toValidate} | 
+        🔵 Surveillance : ${summary.byStatus["under-surveillance"]} | 
+        ⚪ Archivées : ${summary.byStatus.archived}<br>
+        🔴 Exclusives : ${summary.exclusives} | 
+        🟢 Confirmées ailleurs : ${summary.confirmedElsewhere}
+      `;
+    }
+
+    // Injection liste
+    const publishedDiv = document.getElementById("published");
+    const toValidateDiv = document.getElementById("tovalidate");
+    const surveillanceDiv = document.getElementById("surveillance");
+
+    publishedDiv.innerHTML = "";
+    toValidateDiv.innerHTML = "";
+    surveillanceDiv.innerHTML = "";
+
+    alertsData.forEach(alert => {
+      const fiab = alert?.data?.confidence || 0;
+      const status = alert?.data?.status || "under-surveillance";
+      let block;
+      if (status === "published") block = publishedDiv;
+      else if (status === "toValidate") block = toValidateDiv;
+      else block = surveillanceDiv;
+
+      // Badge exclusivité
+      let badge = "";
+      const ex = alert?.data?.external?.exclusivity;
+      if (ex === "exclusive") badge = `<span class="badge exclusive">TINSFLASH Exclusif</span>`;
+      if (ex === "confirmed-elsewhere") badge = `<span class="badge confirmed">Confirmé ailleurs</span>`;
+
+      const el = document.createElement("div");
+      el.className = `alert-block ${status}`;
+      el.innerHTML = `
+        <strong>${alert.country} ${alert.region || ""}</strong> – ${alert.continent} ${badge}<br>
+        <em>Confiance : ${fiab}%</em><br>
+        <pre>${JSON.stringify(alert.data, null, 2)}</pre>
+        ${status === "toValidate" ? `
+          <button class="validate" onclick="updateStatus('${alert.id}','published')">Valider</button>
+          <button class="reject" onclick="updateStatus('${alert.id}','under-surveillance')">Rejeter</button>
+          <button class="pending" onclick="updateStatus('${alert.id}','pending')">En attente</button>
+        ` : ""}
+      `;
+      block.appendChild(el);
+    });
+
+    // 🔄 Update map colors
+    if(geoLayer){
+      geoLayer.eachLayer(layer => {
+        const iso = layer.feature.properties.ISO_A2;
+        colorCountry(layer, iso);
+      });
+    }
+  }
+
+  async function updateStatus(id, action) {
+    await fetch(`/api/alerts/${id}/${action}`, { method:"POST" });
+    fetchAlerts();
+  }
+
+  async function loadNews(){
+    const res=await fetch("/api/news");
+    if(!res.ok) return;
+    const data=await res.json();
+    const box=document.getElementById("news");
+    box.innerHTML="";
+    (data.articles||[]).forEach(n=>{
+      box.innerHTML+=`
+        <div class="news-box">
+          <h3>${n.title}</h3>
+          <p>${n.summary}</p>
+          <a href="${n.url}" target="_blank">🌍 Lire l’article</a>
+        </div>`;
+    });
+  }
+
+  function showAlertDetails(iso){
+    const countryAlerts = alertsData.filter(a => (a.countryCode||a.country)===iso);
+    if(countryAlerts.length===0){ alert("Aucune alerte pour "+iso); return; }
+    let txt=`🚨 ${countryAlerts.length} alerte(s) pour ${iso}\n\n`;
+    countryAlerts.forEach(a=>{
+      txt+=`- ${a.country} ${a.region||""} (${a.data?.status||"?"})\nConfiance ${a.data?.confidence||0}%\n\n`;
+    });
+    alert(txt);
+  }
+
+  setInterval(fetchAlerts, 10000);
+  setInterval(loadNews, 120000);
+  window.onload = () => { fetchAlerts(); loadNews(); };
+</script>
 </body>
 </html>
