@@ -8,75 +8,98 @@
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268" crossorigin="anonymous"></script>
 
-  <!-- Weather Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- Lottie -->
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
   <style>
-    body { margin:0; font-family:"Segoe UI", sans-serif; background:#f4f9ff; color:#222; }
+    body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
     header { text-align:center; padding:20px; background:#0077cc; color:#fff; }
     h1 { margin:0; font-size:1.8rem; }
-    p.intro { max-width:900px; margin:10px auto 0; line-height:1.5; font-size:1rem; color:#f0f0f0; }
     .container { max-width:1200px; margin:auto; padding:20px; display:grid; gap:20px; }
-    .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
-    h2 { margin-top:0; color:#0077cc; }
+    .card { background:#1b2735; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.4); }
+    h2 { margin-top:0; color:#00bfff; }
     .forecast-grid { display:flex; gap:15px; flex-wrap:wrap; }
-    .forecast-item { flex:1 1 120px; background:#eef6ff; border-radius:10px; padding:10px; text-align:center; }
-    #radar-map { height:400px; border-radius:10px; }
-    .alert { background:#ffe5e5; border-left:5px solid #cc0000; padding:10px; margin:5px 0; border-radius:8px; }
+    .forecast-item { flex:1 1 120px; background:#223447; border-radius:10px; padding:10px; text-align:center; }
     .video-container { position:relative; max-width:100%; margin-bottom:20px; }
     video { width:100%; border-radius:12px; }
     .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
     footer { text-align:center; padding:20px; margin-top:20px; background:#0077cc; color:white; }
     footer a { color:yellow; text-decoration:none; }
+    #avatar-jean { position:fixed; bottom:20px; right:20px; width:120px; height:120px; cursor:pointer; z-index:9999; }
+    #chat-jean { position:fixed; bottom:150px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:12px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
+    #chat-header { background:#0077cc; color:#fff; padding:8px; border-radius:12px 12px 0 0; }
+    #chat-messages { flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; }
+    #chat-input { display:flex; }
+    #chat-input input { flex:1; border:none; padding:8px; }
+    #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 12px; cursor:pointer; }
+    .lottie-icon { width:60px; height:60px; margin:auto; }
+    input[type=text] { padding:8px; border-radius:6px; border:none; width:70%; }
+    button { padding:8px 12px; border:none; border-radius:6px; background:#00bfff; color:white; cursor:pointer; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🌤️ TINSFLASH – Vos prévisions météo</h1>
-    <p class="intro">
-      Notre moteur nucléaire météo fusionne les <strong>modèles mondiaux</strong>, l’<strong>IA J.E.A.N.</strong>, 
-      le relief, les satellites et les facteurs climatiques pour générer les prévisions les plus fiables du monde.<br>
-      ➡️ <strong>Zones couvertes (Europe élargie + USA)</strong> : prévisions locales & nationales ultra-précises + alertes en temps réel.<br>
-      ➡️ <strong>Zones non couvertes</strong> : prévisions Open Data + alertes continentales calculées par notre IA.<br>
-      Résultat : des <strong>prévisions locales et nationales ultra-fiables</strong>, et des alertes détectées <strong>avant tout le monde</strong>.
-    </p>
+    <h1>🌤️ TINSFLASH – La météo la plus précise au monde</h1>
   </header>
 
   <main class="container">
 
-    <!-- Vidéo intro -->
+    <!-- Bandeau vidéo -->
     <div class="video-container">
       <video id="introVideo" autoplay muted loop>
-        <source src="intro.mp4" type="video/mp4">
+        <source src="intro-jean.mp4" type="video/mp4">
       </video>
-      <button class="video-btn" onclick="toggleVideo()">⏯️ Pause</button>
+      <button class="video-btn" onclick="toggleVideo()">🔊 Son</button>
     </div>
 
-    <!-- Pub -->
-    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6828365665232268" data-ad-slot="123456" data-ad-format="auto"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-
-    <!-- Prévisions locales -->
+    <!-- Introduction -->
     <div class="card">
-      <h2>📍 Prévisions locales</h2>
-      <div id="local-content">⏳ Chargement...</div>
+      <h2>🔎 À propos de TINSFLASH</h2>
+      <p>
+        TINSFLASH est le <strong>système météo le plus évolué au monde</strong>.  
+        Notre moteur croise les <strong>modèles météorologiques internationaux</strong>,  
+        les <strong>données de relief</strong>, le climat, les anomalies saisonnières et  
+        les dernières générations de <strong>modèles d’intelligence artificielle</strong>.  
+        <br><br>
+        Le résultat : <strong>des prévisions locales et nationales ultra-fiables</strong>  
+        dans les zones couvertes (Europe étendue + USA) et des  
+        <strong>alertes mondiales anticipées</strong> plus rapides que celles des systèmes classiques.  
+        <br><br>
+        Conçu pour le <strong>grand public</strong>, mais aussi pour les  
+        <strong>administrations</strong>, <strong>agriculteurs</strong>, et  
+        <strong>secteurs événementiels</strong>.
+      </p>
     </div>
 
-    <!-- Prévisions nationales -->
+    <!-- Adresse manuelle -->
     <div class="card">
-      <h2>🇧🇪 Prévisions nationales</h2>
-      <div id="national-content">⏳ Chargement...</div>
+      <h2>📍 Entrez votre adresse</h2>
+      <input type="text" id="address" placeholder="Rue + Ville">
+      <button onclick="loadForecastFromAddress()">Voir la météo</button>
     </div>
 
-    <!-- 7 jours -->
+    <!-- Prévision du jour -->
+    <div class="card">
+      <h2>☀️ Météo du jour</h2>
+      <div id="today-forecast">⏳ Chargement...</div>
+    </div>
+
+    <!-- Prévisions 7 jours -->
     <div class="card">
       <h2>📅 Prévisions 7 jours</h2>
       <div id="days-container" class="forecast-grid">⏳ Chargement...</div>
     </div>
 
-    <!-- Bulletin texte -->
+    <!-- Alertes -->
+    <div class="card">
+      <h2>⚠️ Alertes météo</h2>
+      <details>
+        <summary>Voir les alertes locales, nationales et mondiales</summary>
+        <div id="alerts-content">⏳ Chargement...</div>
+      </details>
+    </div>
+
+    <!-- Texte météo -->
     <div class="card">
       <h2>📰 Bulletin météo</h2>
       <div id="forecast-text">⏳ Génération...</div>
@@ -85,47 +108,40 @@
     <!-- Radar -->
     <div class="card">
       <h2>🛰️ Radar en direct</h2>
-      <div id="radar-map"></div>
+      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation&menu=&message=true&marker=true" 
+        width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
     </div>
-
-    <!-- Alertes -->
-    <div class="card">
-      <h2>⚠️ Alertes météo</h2>
-      <div id="alerts-content">⏳ Chargement...</div>
-    </div>
-
-    <!-- Podcast -->
-    <div class="card">
-      <h2>🎙️ Podcast météo</h2>
-      <div id="podcast-container">⏳ Génération...</div>
-    </div>
-
-    <!-- Pub bas -->
-    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6828365665232268" data-ad-slot="7891011" data-ad-format="auto"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
   </main>
 
+  <!-- Avatar JEAN -->
+  <div id="avatar-jean">
+    <img src="jean-avatar.png" alt="JEAN" style="width:100%;border-radius:50%;">
+  </div>
+
+  <!-- Chat JEAN -->
+  <div id="chat-jean">
+    <div id="chat-header">💬 Chat avec J.E.A.N</div>
+    <div id="chat-messages"></div>
+    <div id="chat-input">
+      <input type="text" id="userMessage" placeholder="Votre question météo...">
+      <button onclick="sendMessage()">Envoyer</button>
+    </div>
+  </div>
+
   <footer>
     <p>© <span id="year"></span> TINSFLASH – La météo la plus précise au monde 🌍</p>
-    <p>📧 <a href="mailto:info@tinsflash.com">info@tinsflash.com</a> | 📱 <a href="https://wa.me/324XXXXXXXX" target="_blank">WhatsApp Direct</a></p>
+    <p>📧 <a href="mailto:info@tinsflash.com">info@tinsflash.com</a> | 📱 <a href="https://wa.me/32473264477" target="_blank">WhatsApp Direct</a></p>
   </footer>
 
   <script src="app.js"></script>
   <script>
     function toggleVideo() {
       const video = document.getElementById("introVideo");
-      const btn = document.querySelector(".video-btn");
-      if (video.paused) { video.play(); btn.innerText="⏯️ Pause"; }
-      else { video.pause(); btn.innerText="▶️ Lecture"; }
+      video.muted = !video.muted;
+      alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
     }
     document.getElementById("year").textContent = new Date().getFullYear();
-
-    // Radar Leaflet
-    var map = L.map('radar-map').setView([50.45, 4.85], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18
-    }).addTo(map);
   </script>
 </body>
 </html>
