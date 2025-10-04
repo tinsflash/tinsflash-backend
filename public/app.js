@@ -2,7 +2,9 @@
 // app.js - TINSFLASH Front
 // ---------------------------
 
-// 🌍 Geolocalisation ou fallback sur encodage manuel
+console.log("🌍 TINSFLASH app.js chargé");
+
+// 🌍 Détection GPS ou fallback encodage manuel
 async function getLocationOrManual() {
   return new Promise((resolve) => {
     if (navigator.geolocation) {
@@ -20,7 +22,7 @@ async function getLocationOrManual() {
   });
 }
 
-// 🎨 Avatar J.E.A.N.
+// 🎨 Avatar J.E.A.N (Lottie)
 function updateJeanAvatar(type = "default") {
   const player = document.getElementById("jean-player");
   if (!player) return;
@@ -37,7 +39,7 @@ function updateJeanAvatar(type = "default") {
   player.load(map[type] || map["default"]);
 }
 
-// 🎭 Appliquer icône/Jean selon condition
+// 🎭 Appliquer avatar selon condition
 function applyForecastIcon(condition) {
   condition = (condition || "").toLowerCase();
   if (condition.includes("sun") || condition.includes("clear")) updateJeanAvatar("sun");
@@ -47,6 +49,20 @@ function applyForecastIcon(condition) {
   else updateJeanAvatar("default");
 }
 
+// 🔄 Icône météo Lottie selon condition
+function getLottieByCondition(condition) {
+  condition = (condition || "").toLowerCase();
+  if (condition.includes("sun") || condition.includes("clear"))
+    return "https://assets10.lottiefiles.com/packages/lf20_jtbfg2nb.json";
+  if (condition.includes("rain"))
+    return "https://assets10.lottiefiles.com/packages/lf20_rp9zjhnc.json";
+  if (condition.includes("snow"))
+    return "https://assets10.lottiefiles.com/packages/lf20_RbLd9R.json";
+  if (condition.includes("storm") || condition.includes("thunder"))
+    return "https://assets10.lottiefiles.com/packages/lf20_HhXgdh.json";
+  return "https://assets10.lottiefiles.com/packages/lf20_jtbfg2nb.json"; // par défaut soleil
+}
+
 // 📊 Charger prévisions météo
 async function loadForecast(country = "FR") {
   try {
@@ -54,40 +70,48 @@ async function loadForecast(country = "FR") {
     const data = await res.json();
 
     if (!data || data.error) {
-      document.getElementById("local-content").innerText = "❌ Erreur prévisions.";
+      document.getElementById("today-forecast").innerText = "❌ Erreur prévisions.";
       return;
     }
 
     // Jour actuel
     const today = data.days?.[0];
     if (today) {
-      document.getElementById("local-content").innerHTML = `
-        <h3>${today.date}</h3>
-        <p>${today.condition}, ${today.temp_min}°C / ${today.temp_max}°C</p>
+      document.getElementById("today-forecast").innerHTML = `
+        <div class="forecast-item">
+          <lottie-player src="${getLottieByCondition(today.condition)}"
+            background="transparent" speed="1" style="width:60px;height:60px;" loop autoplay></lottie-player>
+          <p><strong>${today.date}</strong></p>
+          <p>${today.condition}</p>
+          <p>${today.temp_min}°C / ${today.temp_max}°C</p>
+        </div>
       `;
       applyForecastIcon(today.condition);
     }
 
     // 7 jours
-    let html = "";
-    (data.days || []).forEach((d) => {
-      html += `
+    document.getElementById("days-container").innerHTML = (data.days || [])
+      .map(d => `
         <div class="forecast-item">
-          <i class="wi wi-day-sunny"></i>
-          <p><b>${d.date}</b><br>${d.condition}<br>${d.temp_min}° / ${d.temp_max}°</p>
+          <lottie-player src="${getLottieByCondition(d.condition)}"
+            background="transparent" speed="1" style="width:50px;height:50px;" loop autoplay></lottie-player>
+          <p><b>${d.date}</b></p>
+          <p>${d.condition}</p>
+          <p>${d.temp_min}°C / ${d.temp_max}°C</p>
         </div>
-      `;
-    });
-    document.getElementById("days-container").innerHTML = html;
+      `).join("");
 
-    // Bulletin texte
+    // Bulletin texte enrichi
     const txt = await fetch("/api/textgen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "Fais un bulletin météo clair basé sur les prévisions actuelles." })
+      body: JSON.stringify({
+        prompt: `Rédige un bulletin météo clair, style radio/TV, basé sur les prévisions actuelles pour ${country}.`
+      })
     });
     const tdata = await txt.json();
-    document.getElementById("forecast-text").innerText = tdata.reply || "❌ Pas de bulletin.";
+    document.getElementById("forecast-text").innerText =
+      tdata.reply || "❌ Pas de bulletin.";
   } catch (err) {
     console.error("Forecast error:", err);
   }
@@ -109,7 +133,7 @@ async function loadAlerts() {
       (a) => `<div class="alert"><b>${a.country || a.continent}</b>: ${a.title} (${a.level}%)</div>`
     ).join("");
 
-    // Si alerte importante → avatar passe en "alert"
+    // Avatar mode "alert" si nécessaire
     if (data.some(a => a.level >= 80)) {
       updateJeanAvatar("alert");
     }
@@ -118,13 +142,13 @@ async function loadAlerts() {
   }
 }
 
-// 🛰️ Radar Windy
+// 🛰️ Radar Windy (embed)
 function loadRadar() {
-  const map = L.map("radar-map").setView([50.5, 4.5], 5);
-  L.tileLayer(
-    "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=demo", 
-    { attribution: "Radar", maxZoom: 18 }
-  ).addTo(map);
+  const radar = document.getElementById("radar-map");
+  radar.innerHTML = `
+    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation&menu=&message=true&marker=true" 
+      width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
+  `;
 }
 
 // 🎙️ Podcast météo
@@ -141,48 +165,32 @@ async function loadPodcast(country = "FR") {
 
 // 💬 Chat Cohere (J.E.A.N.)
 function setupJeanChat() {
-  const avatar = document.getElementById("jean-avatar");
+  const avatar = document.getElementById("avatar-jean");
   avatar.addEventListener("click", () => {
-    if (document.getElementById("jean-chat")) return;
-    const chatBox = document.createElement("div");
-    chatBox.id = "jean-chat";
-    chatBox.style.position = "fixed";
-    chatBox.style.bottom = "190px";
-    chatBox.style.right = "20px";
-    chatBox.style.width = "300px";
-    chatBox.style.height = "400px";
-    chatBox.style.background = "#fff";
-    chatBox.style.border = "2px solid #0077cc";
-    chatBox.style.borderRadius = "12px";
-    chatBox.style.padding = "10px";
-    chatBox.style.zIndex = "10000";
-    chatBox.innerHTML = `
-      <h3 style="margin:0; color:#0077cc;">💬 J.E.A.N</h3>
-      <div id="jean-messages" style="overflow-y:auto; height:300px; margin:10px 0; font-size:14px;"></div>
-      <input type="text" id="jean-input" placeholder="Votre question..." style="width:75%;">
-      <button id="jean-send">Envoyer</button>
-    `;
-    document.body.appendChild(chatBox);
-
-    document.getElementById("jean-send").onclick = async () => {
-      const msg = document.getElementById("jean-input").value;
-      const box = document.getElementById("jean-messages");
-      box.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
-
-      const res = await fetch("/api/jean", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg })
-      });
-      const data = await res.json();
-
-      box.innerHTML += `<div style="color:#0077cc;"><b>J.E.A.N:</b> ${data.reply}</div>`;
-      document.getElementById("jean-input").value = "";
-      box.scrollTop = box.scrollHeight;
-
-      if (data.avatar) updateJeanAvatar(data.avatar);
-    };
+    const chat = document.getElementById("chat-jean");
+    chat.style.display = chat.style.display === "flex" ? "none" : "flex";
   });
+
+  document.getElementById("jean-send").onclick = async () => {
+    const msg = document.getElementById("jean-input").value;
+    const box = document.getElementById("jean-messages");
+    if (!msg) return;
+
+    box.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
+
+    const res = await fetch("/api/jean", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg })
+    });
+    const data = await res.json();
+
+    box.innerHTML += `<div style="color:#0077cc;"><b>J.E.A.N:</b> ${data.reply}</div>`;
+    document.getElementById("jean-input").value = "";
+    box.scrollTop = box.scrollHeight;
+
+    if (data.avatar) updateJeanAvatar(data.avatar);
+  };
 }
 
 // 🚀 Initialisation
