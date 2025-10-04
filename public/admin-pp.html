@@ -13,7 +13,7 @@
     h2, h3 { margin:15px 0 10px; color:#0af; }
     .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin:10px 0; }
     .zone { background:#161b22; border-radius:6px; padding:10px; }
-    button { margin:6px 0; padding:10px 14px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; font-size:15px; }
+    button { margin:6px 0; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
     .status-ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; }
     .status-ball.pending { background:#cc0; }
     .status-ball.ok { background:#2a2; }
@@ -30,11 +30,13 @@
     #chatInput input { flex:1; padding:6px; border:none; border-radius:6px; }
     #chatInput button { padding:6px 10px; background:#0af; border:none; border-radius:6px; cursor:pointer; }
     #runStatus { display:none; position:fixed; top:0; left:0; width:100%; padding:12px; text-align:center; font-weight:bold; font-size:18px; background:#111; color:#fff; z-index:9999; }
-    .progress-container { margin:20px 0; background:#1c1f26; border-radius:8px; overflow:hidden; }
-    .progress-bar { height:22px; background:#0af; width:0%; text-align:center; font-size:12px; font-weight:bold; color:#000; transition:width 0.5s ease; }
-    details { background:#161b22; margin:15px 0; padding:10px; border-radius:8px; }
-    summary { cursor:pointer; font-weight:bold; color:#0af; }
+    .country-row { display:flex; align-items:center; justify-content:space-between; background:#161b22; padding:6px 10px; margin:4px 0; border-radius:6px; }
+    .country-name { font-weight:bold; }
+    #map { height:500px; width:100%; margin:20px auto; border-radius:8px; overflow:hidden; }
   </style>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
 <script>
@@ -59,27 +61,10 @@
 
 <main style="padding:20px;">
   <h2>🛰️ Cockpit Global</h2>
-  <div id="engine-global-status"></div>
-  <div id="engine-coverage"></div>
+  <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL (prévisions + alertes + fusion)</button>
 
-  <!-- Barre de progression -->
-  <div class="progress-container">
-    <div id="progress-bar" class="progress-bar">0%</div>
-  </div>
-  <div><strong>Zones traitées :</strong> <span id="zones-progress">0/0</span></div>
-
-  <!-- Bouton principal -->
-  <h3>🚀 RUN GLOBAL</h3>
-  <button onclick="runGlobalAll()">🚀 Lancer RUN GLOBAL</button>
-
-  <!-- Mode manuel -->
-  <details>
-    <summary>🔧 Mode manuel (debug avancé)</summary>
-    <button onclick="runGlobalForecasts()">▶️ Prévisions</button>
-    <button onclick="runGlobalAlerts()">▶️ Alertes locales</button>
-    <button onclick="runContinentalAlerts()">▶️ Alertes continentales</button>
-    <button onclick="runFusion()">▶️ Fusion IA</button>
-  </details>
+  <h2>🌍 Carte de couverture</h2>
+  <div id="map"></div>
 
   <h2>📜 Logs moteur (live)</h2>
   <div id="logs">Connexion en cours…</div>
@@ -89,6 +74,18 @@
 
   <h2>⚡ Étapes du moteur</h2>
   <div id="engine-steps" class="grid"></div>
+
+  <h2>🌍 Supervision par pays</h2>
+  <div id="zones-status" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+    <div>
+      <h3>📊 Prévisions</h3>
+      <div id="forecast-countries"></div>
+    </div>
+    <div>
+      <h3>🚨 Alertes</h3>
+      <div id="alert-countries"></div>
+    </div>
+  </div>
 </main>
 
 <!-- Chat bulle -->
@@ -102,85 +99,22 @@
   </div>
 </div>
 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
+  // Bandeau visuel
   function showRunStatus(msg, color){
     const bar=document.getElementById("runStatus");
     bar.style.display="block"; bar.style.background=color; bar.innerText=msg;
     setTimeout(()=>{ bar.style.display="none"; },8000);
   }
 
-  // Models
-  const models = ["ECMWF","GFS","ICON","Meteomatics","Copernicus ERA5","NOAA","NASA POWER","OpenWeather"];
-  function buildModels(){
-    const m=document.getElementById("models-status"); m.innerHTML="";
-    models.forEach(md=>{
-      m.innerHTML+=`<div id="model-${md}" class="zone"><span class="status-ball pending"></span>${md}</div>`;
-    });
+  // === RUN GLOBAL ===
+  async function runGlobal(){
+    showRunStatus("▶️ RUN GLOBAL lancé...","#cc0");
+    await fetch("/api/run-orchestrator",{method:"POST"});
   }
-  buildModels();
-
-  // Steps
-  const steps = [
-    "Pompage des modèles",
-    "Analyse relief & climat",
-    "Prévisions zones couvertes",
-    "Alertes zones couvertes",
-    "Alertes continentales",
-    "Fusion IA alertes & prévisions",
-    "Déploiement final"
-  ];
-  function buildEngineSteps(){
-    const s=document.getElementById("engine-steps"); s.innerHTML="";
-    steps.forEach(st=>{
-      const safeId=st.replace(/\s+/g,"-");
-      s.innerHTML+=`<div id="step-${safeId}" class="zone"><span class="status-ball pending"></span> ${st}</div>`;
-    });
-  }
-  buildEngineSteps();
-
-  function setStatusDynamic(type,zone,state){
-    const safeId = zone.replace(/\s+/g,"-");
-    const el=document.querySelector(`#${type}-${safeId} .status-ball`);
-    if(el) el.className="status-ball "+state.toLowerCase();
-  }
-
-  // Refresh depuis /api/status
-  async function refreshEngineDetails(){
-    try {
-      const res = await fetch("/api/status");
-      const data = await res.json();
-
-      // Etat global
-      document.getElementById("engine-global-status").innerHTML = `
-        <strong>État :</strong> ${data.status} – Dernier run : ${data.lastRun ? new Date(data.lastRun).toLocaleString() : "jamais"}
-        <br>🔔 Alertes actives : ${data.alertsCount}
-      `;
-
-      // Pays couverts
-      const zones = new Set((data.alerts||[]).map(a=>a.country));
-      document.getElementById("engine-coverage").innerHTML = `
-        <strong>Pays couverts :</strong> ${zones.size > 0 ? [...zones].join(", ") : "aucun"}
-      `;
-
-      // Voyants étapes et modèles
-      if(data.steps){ Object.entries(data.steps).forEach(([st,s])=>setStatusDynamic("step",st,s)); }
-      if(data.models){ Object.entries(data.models).forEach(([m,s])=>setStatusDynamic("model",m,s)); }
-
-      // Barre de progression
-      const totalSteps = steps.length;
-      const okSteps = Object.values(data.steps||{}).filter(v => (v+"").toUpperCase()==="OK").length;
-      const progress = Math.round((okSteps/totalSteps)*100);
-      const bar = document.getElementById("progress-bar");
-      bar.style.width = progress+"%";
-      bar.textContent = progress+"%";
-
-      // Zones traitées
-      const zonesCount = zones.size;
-      const totalZones = (data.forecasts && Object.keys(data.forecasts).length) || 0;
-      document.getElementById("zones-progress").textContent = `${zonesCount}/${totalZones}`;
-    } catch(e){ console.warn("Erreur refreshEngineDetails:", e.message); }
-  }
-  setInterval(refreshEngineDetails,5000);
 
   // Logs live
   const logDiv=document.getElementById("logs");
@@ -192,17 +126,64 @@
     logDiv.scrollTop=logDiv.scrollHeight;
   };
 
-  // RUN GLOBAL principal
-  async function runGlobalAll(){
-    showRunStatus("🚀 RUN GLOBAL en cours…","#0af");
-    await fetch("/api/run-orchestrator",{method:"POST"});
+  // Models & Steps
+  const models = ["ECMWF","GFS","ICON","Meteomatics","Copernicus ERA5","NOAA","NASA POWER","OpenWeather"];
+  function buildModels(){
+    const m=document.getElementById("models-status"); m.innerHTML="";
+    models.forEach(md=>{
+      m.innerHTML+=`<div id="model-${md}" class="zone"><span class="status-ball pending"></span>${md}</div>`;
+    });
   }
+  buildModels();
 
-  // Mode manuel
-  async function runGlobalForecasts(){ showRunStatus("▶️ Prévisions en cours...","#cc0"); await fetch("/api/run-global",{method:"POST"}); }
-  async function runGlobalAlerts(){ showRunStatus("▶️ Alertes en cours...","#cc0"); await fetch("/api/run-alerts",{method:"POST"}); }
-  async function runContinentalAlerts(){ showRunStatus("▶️ Continental en cours...","#cc0"); await fetch("/api/run-alerts-continental",{method:"POST"}); }
-  async function runFusion(){ showRunStatus("▶️ Fusion IA en cours...","#cc0"); await fetch("/api/run-orchestrator",{method:"POST"}); }
+  const steps = ["Pompage des modèles","Analyse relief & climat","Prévisions zones couvertes","Alertes zones couvertes","Alertes continentales","Fusion IA","Déploiement final"];
+  function buildEngineSteps(){
+    const s=document.getElementById("engine-steps"); s.innerHTML="";
+    steps.forEach(st=>{
+      const safeId=st.replace(/\s+/g,"-");
+      s.innerHTML+=`<div id="step-${safeId}" class="zone"><span class="status-ball pending"></span> ${st}</div>`;
+    });
+  }
+  buildEngineSteps();
+
+  // === Leaflet Map ===
+  const map = L.map("map").setView([20,0], 2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 6, minZoom: 2, attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  let geoLayer;
+  async function loadWorld(){
+    const res = await fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson");
+    const world = await res.json();
+    geoLayer = L.geoJSON(world, {
+      style: { color:"#222", weight:1, fillColor:"#444", fillOpacity:0.7 },
+      onEachFeature: (feature, layer) => {
+        layer.bindTooltip(feature.properties.ADMIN);
+        layer.on("click", () => showCountryDetails(feature.properties.ISO_A2));
+      }
+    }).addTo(map);
+  }
+  loadWorld();
+
+  async function refreshMap(){
+    try {
+      const res = await fetch("/api/engine-state");
+      const data = await res.json();
+      geoLayer.eachLayer(layer => {
+        const iso = layer.feature.properties.ISO_A2;
+        let color = "#444"; // défaut
+        if (data?.alertsLocal?.some(a => (a.countryCode||a.country)===iso)) color="#a22";
+        else if (data?.forecasts?.[iso]) color="#2a2";
+        layer.setStyle({ fillColor: color });
+      });
+    } catch(e){ console.warn("Erreur refreshMap:", e.message); }
+  }
+  setInterval(refreshMap,10000);
+
+  function showCountryDetails(iso){
+    alert("📍 Détails pour " + iso + " (prévisions/alertes à récupérer côté API)");
+  }
 
   // Chat IA
   function toggleChat(){ const c=document.getElementById("chatBubble"); c.style.display=c.style.display==="flex"?"none":"flex"; }
