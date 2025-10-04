@@ -1,4 +1,4 @@
-// services/runGlobal.js
+// PATH: services/runGlobal.js
 // ⚡ Centrale nucléaire météo – Moteur atomique orchestral
 
 import { runGlobalEurope } from "./runGlobalEurope.js";
@@ -8,7 +8,10 @@ import { runWorldAlerts } from "./runWorldAlerts.js";
 
 import { generateAlerts, getActiveAlerts } from "./alertsService.js";
 import { askOpenAI } from "./openaiService.js";
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+
+// 🔥 logs doivent passer par adminLogs pour SSE
+import { addLog as addEngineLog, addError as addEngineError } from "./adminLogs.js";
+import { saveEngineState, getEngineState } from "./engineState.js";
 
 // Zones disponibles
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
@@ -23,7 +26,7 @@ export const ALL_ZONES = {
 export async function runGlobal(zone = "All") {
   const state = await getEngineState();
   try {
-    addEngineLog(`🌍 Lancement du RUN GLOBAL (${zone})…`);
+    await addEngineLog(`🌍 Lancement du RUN GLOBAL (${zone})…`);
     state.runTime = new Date().toISOString();
 
     // Sécurisation checkup
@@ -42,7 +45,7 @@ export async function runGlobal(zone = "All") {
     // =============================
     // 🔹 PHASE 1 : PRÉVISIONS ZONES COUVERTES
     // =============================
-    addEngineLog("📡 Phase 1 – Prévisions zones couvertes (Europe/USA)...");
+    await addEngineLog("📡 Phase 1 – Prévisions zones couvertes (Europe/USA)...");
     let forecasts = {};
 
     if (zone === "Europe") {
@@ -63,7 +66,7 @@ export async function runGlobal(zone = "All") {
     // 🔹 PHASE 2 : PRÉVISIONS CONTINENTALES (fallback)
     // =============================
     if (zone === "All") {
-      addEngineLog("🌐 Phase 2 – Prévisions Continentales (fallback)...");
+      await addEngineLog("🌐 Phase 2 – Prévisions Continentales (fallback)...");
       const cont = await runContinental();
       forecasts.Continental = cont?.forecasts || {};
       state.forecastsContinental = forecasts.Continental;
@@ -74,10 +77,9 @@ export async function runGlobal(zone = "All") {
     // =============================
     // 🔹 PHASE 3 : ALERTES LOCALES/NATIONALES
     // =============================
-    addEngineLog("🚨 Phase 3 – Génération alertes locales/nationales (zones couvertes)...");
+    await addEngineLog("🚨 Phase 3 – Génération alertes locales/nationales (zones couvertes)...");
     for (const [country, zones] of Object.entries(ALL_ZONES)) {
       for (const z of zones) {
-        // ✅ Sécurisation mapping coordonnées
         const lat = z.lat ?? z.latitude;
         const lon = z.lon ?? z.longitude;
         const region = z.region ?? z.name ?? null;
@@ -100,7 +102,7 @@ export async function runGlobal(zone = "All") {
     // 🔹 PHASE 4 : ALERTES CONTINENTALES
     // =============================
     if (zone === "All") {
-      addEngineLog("🚨 Phase 4 – Alertes Continentales (fallback)...");
+      await addEngineLog("🚨 Phase 4 – Alertes Continentales (fallback)...");
       const contAlerts = await runContinental();
       state.alertsContinental = contAlerts?.alerts || [];
       state.checkup.alertsContinental =
@@ -112,7 +114,7 @@ export async function runGlobal(zone = "All") {
     // 🔹 PHASE 5 : ALERTES MONDIALES
     // =============================
     if (zone === "All") {
-      addEngineLog("🌍 Phase 5 – Fusion mondiale des alertes...");
+      await addEngineLog("🌍 Phase 5 – Fusion mondiale des alertes...");
       const world = await runWorldAlerts();
       state.alertsWorld = world || [];
       state.checkup.alertsWorld = world ? "OK" : "FAIL";
@@ -122,7 +124,7 @@ export async function runGlobal(zone = "All") {
     // =============================
     // 🔹 PHASE 6 : IA CHEF D’ORCHESTRE (FusionNet Global)
     // =============================
-    addEngineLog("🤖 Phase 6 – IA Chef d’orchestre (FusionNet Global)…");
+    await addEngineLog("🤖 Phase 6 – IA Chef d’orchestre (FusionNet Global)…");
 
     const aiInput = { forecasts, alerts: state.alertsLocal, world: state.alertsWorld };
     let aiFusion;
@@ -132,7 +134,7 @@ export async function runGlobal(zone = "All") {
         JSON.stringify(aiInput)
       );
     } catch (e) {
-      addEngineError("⚠️ IA Chef d’orchestre non disponible : " + e.message);
+      await addEngineError("⚠️ IA Chef d’orchestre non disponible : " + e.message);
       aiFusion = "{}";
     }
 
@@ -147,7 +149,7 @@ export async function runGlobal(zone = "All") {
     state.checkup.engineStatus = "OK";
     await saveEngineState(state);
 
-    addEngineLog("✅ RUN GLOBAL terminé avec succès.");
+    await addEngineLog("✅ RUN GLOBAL terminé avec succès.");
     return {
       forecasts,
       alerts,
@@ -162,7 +164,7 @@ export async function runGlobal(zone = "All") {
     failedState.checkup.engineStatus = "FAIL";
     await saveEngineState(failedState);
 
-    addEngineLog(`❌ RUN GLOBAL échec (${zone})`);
+    await addEngineLog(`❌ RUN GLOBAL échec (${zone})`);
     return { error: err.message };
   }
 }
