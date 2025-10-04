@@ -84,17 +84,48 @@ app.get("/api/status", async (req, res) => {
 });
 
 // === Logs SSE (flux live) ===
-app.get("/api/logs/stream", (req, res) => {
+app.get("/api/logs/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
+  // 1) enregistrer client
   adminLogs.registerClient(res);
+
+  // 2) envoyer immédiatement derniers logs
+  const logs = await adminLogs.getLogs("current");
+  if (logs && logs.length) {
+    logs.forEach(l => res.write(`data: ${JSON.stringify(l)}\n\n`));
+  }
 
   req.on("close", () => {
     console.log("❌ Client SSE déconnecté");
   });
+});
+
+// === Chat public J.E.A.N (Cohere) ===
+app.post("/api/jean", async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ reply: "❌ Message manquant", avatar:"default" });
+    const { reply, avatar } = await askCohere(message);
+    res.json({ reply, avatar });
+  } catch (e) {
+    res.status(500).json({ reply: "⚠️ Erreur J.E.A.N", avatar:"default" });
+  }
+});
+
+// === Chat moteur (admin) ===
+app.post("/api/chat-engine", async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ reply: "❌ Message manquant" });
+    const reply = await chatService.askAIEngine(message);
+    res.json({ reply });
+  } catch (e) {
+    res.status(500).json({ reply: "⚠️ Erreur chat moteur: " + e.message });
+  }
 });
 
 // === Admin pages ===
@@ -104,7 +135,6 @@ app.get("/admin", (req, res) =>
 app.get("/admin-alerts", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-alerts.html"))
 );
-// … idem pour les autres pages
 
 // === Start server ===
 const PORT = process.env.PORT || 5000;
