@@ -1,27 +1,49 @@
-// service-worker.js
+// ---------------------------
+// Service Worker - TINSFLASH
+// ---------------------------
+
+// Dernier run connu
 let lastRunTimestamp = null;
 
-// Install & Activate
+// ✅ Installation
 self.addEventListener("install", () => {
   console.log("✅ Service Worker installé");
   self.skipWaiting();
 });
-self.addEventListener("activate", () => {
+
+// ✅ Activation
+self.addEventListener("activate", (event) => {
   console.log("🚀 Service Worker activé");
+  event.waitUntil(self.clients.claim());
 });
 
-// Vérifie toutes les minutes si un nouveau run est dispo
+// ✅ Notifications push (envoyées par le serveur avec /api/send-notif)
+self.addEventListener("push", (event) => {
+  try {
+    const data = event.data ? event.data.json() : {};
+    self.registration.showNotification(data.title || "🌍 TINSFLASH", {
+      body: data.message || "Nouvelle mise à jour météo disponible",
+      icon: "/avatar-jean.png",
+      badge: "/avatar-jean.png",
+      vibrate: [200, 100, 200],
+    });
+  } catch (err) {
+    console.error("❌ Erreur push:", err);
+  }
+});
+
+// ✅ Vérifie toutes les minutes si un nouveau run est dispo
 setInterval(async () => {
   try {
     const resState = await fetch("/api/engine-state");
     const state = await resState.json();
 
-    if (!state?.lastRunFinished) return;
+    if (!state?.lastRun) return;
 
-    if (lastRunTimestamp !== state.lastRunFinished) {
-      lastRunTimestamp = state.lastRunFinished;
+    if (lastRunTimestamp !== state.lastRun) {
+      lastRunTimestamp = state.lastRun;
 
-      // Récupère prévisions locales (défaut Bruxelles si pas de géoloc)
+      // 🔹 Prévisions locales (défaut Bruxelles si pas de géoloc)
       const resForecast = await fetch("/api/superforecast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -29,21 +51,21 @@ setInterval(async () => {
       });
       const forecast = await resForecast.json();
 
-      // Récupère alertes actives
+      // 🔹 Alertes actives
       const resAlerts = await fetch("/api/alerts");
       const alerts = await resAlerts.json();
 
       let alertText = "";
       if (alerts && alerts.length > 0) {
-        const important = alerts[0]; // prend la première comme prioritaire
-        alertText = `⚠️ ${important.data?.type || "Alerte"} – ${important.data?.intensité || "intensité inconnue"}`;
+        const important = alerts[0]; // première comme prioritaire
+        alertText = `⚠️ ${important.title || "Alerte"} – ${important.level || "intensité inconnue"}%`;
       }
 
       const text = forecast?.forecast
         ? `Prévisions : ${forecast.forecast}${alertText ? "\n" + alertText : ""}`
         : `Prévisions indisponibles.${alertText ? "\n" + alertText : ""}`;
 
-      // Notification
+      // 🔔 Notification auto
       self.registration.showNotification("🌍 J.E.A.N. – TINSFLASH", {
         body: text,
         icon: "/avatar-jean.png",
@@ -52,6 +74,6 @@ setInterval(async () => {
       });
     }
   } catch (err) {
-    console.error("❌ Erreur notifications:", err);
+    console.error("❌ Erreur notifications auto:", err);
   }
 }, 60000); // toutes les minutes
