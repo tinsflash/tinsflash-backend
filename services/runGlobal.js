@@ -77,7 +77,17 @@ export async function runGlobal(zone = "All") {
     addEngineLog("🚨 Phase 3 – Génération alertes locales/nationales (zones couvertes)...");
     for (const [country, zones] of Object.entries(ALL_ZONES)) {
       for (const z of zones) {
-        await generateAlerts(z.lat, z.lon, country, z.region, zone);
+        // ✅ Sécurisation mapping coordonnées
+        const lat = z.lat ?? z.latitude;
+        const lon = z.lon ?? z.longitude;
+        const region = z.region ?? z.name ?? null;
+
+        if (!lat || !lon) {
+          await addEngineError(`⚠️ Coordonnées manquantes pour ${country} - ${region || "???"}`);
+          continue;
+        }
+
+        await generateAlerts(lat, lon, country, region, zone);
       }
     }
 
@@ -141,7 +151,7 @@ export async function runGlobal(zone = "All") {
     return {
       forecasts,
       alerts,
-      fusionNet: fusionNetGlobal, // ✅ ajouté
+      fusionNet: fusionNetGlobal,
       finalReport: fusionNetGlobal,
     };
   } catch (err) {
