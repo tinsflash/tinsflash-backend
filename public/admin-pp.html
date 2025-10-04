@@ -192,7 +192,7 @@
     const input=document.getElementById("chatMsg"); const msg=input.value.trim(); if(!msg) return;
     const log=document.getElementById("chatLog"); log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`; input.value="";
     const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-    const data=await res.json(); log.innerHTML+=`<div><b>Moteur:</b> ${data.reply}</div>`; log.scrollTop=log.scrollHeight;
+    const data=await res.json(); log.innerHTML+=`<div style="color:#0af;"><b>Moteur:</b> ${data.reply}</div>`; log.scrollTop=log.scrollHeight;
   }
 </script>
 </body>
