@@ -75,7 +75,7 @@
       <h2>🔎 À propos de TINSFLASH</h2>
       <p>
         TINSFLASH est un <strong>moteur météo unique actuellement au monde</strong> :  
-        il combine modèles internationaux, modèles IA de dernière génération,  reliefs, climat et le tout orchestré par l'IA et l'humain pour fournir des  
+        il combine modèles internationaux, modèles IA de dernière génération, reliefs, climat et le tout orchestré par l'IA et l'humain pour fournir des  
         <strong>prévisions et alertes locales & nationales ultra-fiables</strong>  
         dans les zones couvertes (Europe + USA) et des alertes continentales pour les zones non couvertes par notre moteur.
         <br><br>
@@ -84,7 +84,7 @@
       </p>
     </div>
 
-    <!-- Adresse manuelle (fallback GPS) -->
+    <!-- Localisation -->
     <div class="card">
       <h2>📍 Localisation</h2>
       <button onclick="getLocationOrAddress()">📡 Activer la géolocalisation</button>
@@ -124,72 +124,4 @@
     <!-- Bulletin météo -->
     <div class="card">
       <h2>📰 Bulletin météo</h2>
-      <div id="forecast-text">⏳ Génération...</div>
-    </div>
-
-    <!-- Radar -->
-    <div class="card">
-      <h2>🛰️ Radar en direct</h2>
-      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation"
-        width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
-    </div>
-
-    <!-- PUB bas -->
-    <ins class="adsbygoogle" style="display:block; text-align:center;"
-      data-ad-client="ca-pub-6828365665232268"
-      data-ad-slot="3333333333"
-      data-ad-format="auto" data-full-width-responsive="true"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-
-    <!-- Notifications -->
-    <div class="card">
-      <h2>🔔 Notifications</h2>
-      <button onclick="subscribeNotif()">Activer notifications</button>
-      <button onclick="unsubscribeNotif()">Désactiver notifications</button>
-      <p id="notif-status">🔕 Inactives</p>
-    </div>
-  </main>
-
-  <!-- Avatar JEAN -->
-  <div id="avatar-jean">
-    <lottie-player id="jean-player"
-      src="/avatars/jean-default.json"
-      background="transparent"
-      speed="1"
-      style="width:100px; height:100px;">
-    </lottie-player>
-  </div>
-
-  <!-- Chat JEAN -->
-  <div id="chat-jean">
-    <div id="chat-header">💬 Chat avec J.E.A.N</div>
-    <div id="chat-messages"></div>
-    <div id="chat-input">
-      <input type="text" id="jean-input" placeholder="Votre question météo...">
-      <button id="jean-send">Envoyer</button>
-    </div>
-  </div>
-
-  <!-- Bandeau pub partenaire -->
-  <div id="partner-banner">
-    💧 Une fuite, problème d’humidité ou inspection canalisations ? 👉 
-    <a href="https://uman-detect.com" target="_blank">uman-detect.com (Belgique)</a>
-  </div>
-
-  <footer>
-    <p>© <span id="year"></span> TINSFLASH 🌍</p>
-    <p>📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 📱 
-       <a href="https://wa.me/32473264477" target="_blank">WhatsApp Direct</a></p>
-  </footer>
-
-  <script src="app.js"></script>
-  <script>
-    function toggleVideo() {
-      const video = document.getElementById("introVideo");
-      video.muted = !video.muted;
-      alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
-    }
-    document.getElementById("year").textContent = new Date().getFullYear();
-  </script>
-</body>
-</html>
+      <div id="forecast-text">⏳ Gén
