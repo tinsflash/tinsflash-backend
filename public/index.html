@@ -4,12 +4,20 @@
   <meta charset="UTF-8">
   <title>TINSFLASH – La météo ultime</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268" crossorigin="anonymous"></script>
+
+  <!-- Weather Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
   <style>
     body { margin:0; font-family:"Segoe UI", sans-serif; background:#f4f9ff; color:#222; }
     header { text-align:center; padding:20px; background:#0077cc; color:#fff; }
     h1 { margin:0; font-size:1.8rem; }
+    p.intro { max-width:900px; margin:10px auto 0; line-height:1.5; font-size:1rem; color:#f0f0f0; }
     .container { max-width:1200px; margin:auto; padding:20px; display:grid; gap:20px; }
     .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
     h2 { margin-top:0; color:#0077cc; }
@@ -20,14 +28,22 @@
     .video-container { position:relative; max-width:100%; margin-bottom:20px; }
     video { width:100%; border-radius:12px; }
     .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    footer { text-align:center; padding:20px; margin-top:20px; background:#0077cc; color:white; }
+    footer a { color:yellow; text-decoration:none; }
   </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
   <header>
     <h1>🌤️ TINSFLASH – Vos prévisions météo</h1>
+    <p class="intro">
+      Notre moteur nucléaire météo fusionne les <strong>modèles mondiaux</strong>, l’<strong>IA J.E.A.N.</strong>, 
+      le relief, les satellites et les facteurs climatiques pour générer les prévisions les plus fiables du monde.<br>
+      ➡️ <strong>Zones couvertes (Europe élargie + USA)</strong> : prévisions locales & nationales ultra-précises + alertes en temps réel.<br>
+      ➡️ <strong>Zones non couvertes</strong> : prévisions Open Data + alertes continentales calculées par notre IA.<br>
+      Résultat : des <strong>prévisions locales et nationales ultra-fiables</strong>, et des alertes détectées <strong>avant tout le monde</strong>.
+    </p>
   </header>
+
   <main class="container">
 
     <!-- Vidéo intro -->
@@ -37,6 +53,10 @@
       </video>
       <button class="video-btn" onclick="toggleVideo()">⏯️ Pause</button>
     </div>
+
+    <!-- Pub -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6828365665232268" data-ad-slot="123456" data-ad-format="auto"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
     <!-- Prévisions locales -->
     <div class="card">
@@ -65,7 +85,7 @@
     <!-- Radar -->
     <div class="card">
       <h2>🛰️ Radar en direct</h2>
-      <div id="radar-map">⏳ Radar...</div>
+      <div id="radar-map"></div>
     </div>
 
     <!-- Alertes -->
@@ -80,7 +100,16 @@
       <div id="podcast-container">⏳ Génération...</div>
     </div>
 
+    <!-- Pub bas -->
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6828365665232268" data-ad-slot="7891011" data-ad-format="auto"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
   </main>
+
+  <footer>
+    <p>© <span id="year"></span> TINSFLASH – La météo la plus précise au monde 🌍</p>
+    <p>📧 <a href="mailto:info@tinsflash.com">info@tinsflash.com</a> | 📱 <a href="https://wa.me/324XXXXXXXX" target="_blank">WhatsApp Direct</a></p>
+  </footer>
 
   <script src="app.js"></script>
   <script>
@@ -90,6 +119,13 @@
       if (video.paused) { video.play(); btn.innerText="⏯️ Pause"; }
       else { video.pause(); btn.innerText="▶️ Lecture"; }
     }
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    // Radar Leaflet
+    var map = L.map('radar-map').setView([50.45, 4.85], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18
+    }).addTo(map);
   </script>
 </body>
 </html>
