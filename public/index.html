@@ -11,6 +11,8 @@
 
   <!-- Lottie -->
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
     body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
@@ -26,7 +28,6 @@
       border-radius:10px;
       box-shadow:0 2px 8px rgba(0,0,0,0.25);
       text-align:center;
-      margin:0;
     }
     h2 { margin:2px 0 4px; font-size:1.05rem; color:#00bfff; }
     .forecast-grid { display:flex; gap:4px; flex-wrap:wrap; justify-content:center; }
@@ -35,34 +36,20 @@
     footer { text-align:center; padding:6px; margin-top:6px; background:#0077cc; color:white; font-size:0.75rem; }
     footer a { color:yellow; text-decoration:none; }
 
-    /* Vidéo bandeau */
     .video-container { position:relative; width:100%; height:120px; overflow:hidden; }
     video { width:100%; height:100%; object-fit:cover; }
     .video-btn { position:absolute; bottom:4px; right:6px; background:#0077cc; color:#fff; border:none; padding:3px 6px; border-radius:5px; cursor:pointer; font-size:0.7rem; }
 
     /* Avatar JEAN */
     #avatar-jean {
-      position:fixed;
-      bottom:80px;   /* remonte au-dessus du bandeau */
-      right:15px;
-      width:70px;
-      height:70px;
-      z-index:99999; /* toujours visible */
-      cursor:pointer;
+      position:fixed; bottom:80px; right:15px; width:70px; height:70px;
+      z-index:99999; cursor:pointer;
     }
     #chat-jean {
-      position:fixed;
-      bottom:160px;
-      right:12px;
-      width:250px;
-      height:300px;
-      background:#fff;
-      color:#000;
-      border-radius:10px;
-      display:none;
-      flex-direction:column;
-      box-shadow:0 2px 8px rgba(0,0,0,0.4);
-      z-index:100000;
+      position:fixed; bottom:160px; right:12px; width:250px; height:300px;
+      background:#fff; color:#000; border-radius:10px;
+      display:none; flex-direction:column;
+      box-shadow:0 2px 8px rgba(0,0,0,0.4); z-index:100000;
     }
     #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.8rem; border-radius:10px 10px 0 0; }
     #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
@@ -70,12 +57,10 @@
     #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
     #chat-input button { background:#0077cc; color:#fff; border:none; padding:5px 7px; cursor:pointer; font-size:0.8rem; }
 
-    /* Bandeau partenaire */
     #partner-banner {
       position:fixed; bottom:0; left:0; width:100%;
       background:#ffcc00; color:#000; text-align:center;
-      font-weight:bold; padding:2px;
-      z-index:9000; font-size:0.75rem;
+      font-weight:bold; padding:2px; z-index:9000; font-size:0.75rem;
     }
     #partner-banner a { color:#0077cc; text-decoration:none; }
   </style>
@@ -100,8 +85,7 @@
       <h2>🔎 À propos de TINSFLASH</h2>
       <p>
         <strong>TINSFLASH, la météo la plus précise.</strong><br>
-        Notre moteur combine modèles physiques, IA nouvelle génération, relief et satellites pour anticiper le temps avant tous les autres.<br>
-        Du particulier aux agriculteurs, jusqu’aux aérodromes et administrations, chacun reçoit des prévisions fiables et des alertes en avance.
+        Modèles physiques + IA + satellites + relief → anticipation météo avant tout le monde.
       </p>
     </div>
 
@@ -129,9 +113,15 @@
     <!-- Alertes -->
     <div class="card">
       <h2>⚠️ Alertes météo</h2>
+      <div id="alerts-local">⏳ Local...</div>
+      <div id="alerts-national">⏳ National...</div>
       <details>
-        <summary>Voir les alertes locales, nationales et mondiales</summary>
-        <div id="alerts-content">⏳ Chargement...</div>
+        <summary>🌍 Carte mondiale des alertes</summary>
+        <div id="map-alerts" style="height:400px; width:100%; margin:10px 0; border-radius:8px;"></div>
+        <div style="font-size:0.8rem; margin-top:5px;">
+          🟢 Publiées | 🟡 À valider | 🔵 Surveillance | 🔴 Autre/Erreur
+        </div>
+        <div id="alerts-world">⏳ Monde...</div>
       </details>
     </div>
 
@@ -161,13 +151,12 @@
   <div id="avatar-jean" onclick="toggleChat()">
     <lottie-player id="jean-player"
       src="/avatars/jean-default.json"
-      background="transparent"
-      speed="1"
+      background="transparent" speed="1"
       style="width:70px; height:70px;">
     </lottie-player>
   </div>
 
-  <!-- Chat JEAN -->
+  <!-- Chat -->
   <div id="chat-jean">
     <div id="chat-header">💬 Chat avec J.E.A.N</div>
     <div id="chat-messages"></div>
@@ -177,53 +166,119 @@
     </div>
   </div>
 
-  <!-- Bandeau partenaire -->
   <div id="partner-banner">
-    💧 Une fuite, problème d’humidité ou inspection canalisations ? 👉 
-    <a href="https://uman-detect.com" target="_blank">uman-detect.com (Belgique)</a>
+    💧 Une fuite ou problème d’humidité ? 👉 
+    <a href="https://uman-detect.com" target="_blank">uman-detect.com</a>
   </div>
 
   <footer>
     <p>© <span id="year"></span> TINSFLASH 🌍</p>
-    <p>📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 📱 
+    <p>📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 
        <a href="https://wa.me/32473264477" target="_blank">WhatsApp Direct</a></p>
   </footer>
 
   <script src="app.js"></script>
   <script>
-    function toggleVideo() {
-      const video = document.getElementById("introVideo");
-      video.muted = !video.muted;
-      alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
-    }
     document.getElementById("year").textContent = new Date().getFullYear();
+    function toggleVideo(){ const v=document.getElementById("introVideo"); v.muted=!v.muted; }
 
-    function toggleChat() {
-      const chat = document.getElementById("chat-jean");
-      chat.style.display = chat.style.display === "flex" ? "none" : "flex";
+    function toggleChat(){ const c=document.getElementById("chat-jean"); c.style.display=c.style.display==="flex"?"none":"flex"; }
+
+    // === GEOLOCALISATION AUTO ===
+    let userCountry="Belgique"; // par défaut
+    function getLocationOrAddress(){
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(async pos=>{
+          const {latitude,longitude}=pos.coords;
+          const res=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=fr`);
+          const data=await res.json();
+          userCountry=data.countryName||"Belgique";
+          refreshAlerts();
+        }, ()=>detectIPCountry());
+      } else detectIPCountry();
+    }
+    async function detectIPCountry(){
+      try{
+        const res=await fetch("https://ipapi.co/json/");
+        const data=await res.json();
+        userCountry=data.country_name||"Belgique";
+        refreshAlerts();
+      }catch{ userCountry="Belgique"; }
+    }
+    getLocationOrAddress();
+
+    // === ALERTES ===
+    let geoLayer, alertsData=[];
+    const mapAlerts = L.map("map-alerts").setView([20,0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 6, minZoom: 2
+    }).addTo(mapAlerts);
+
+    async function loadWorld(){
+      const res=await fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson");
+      const world=await res.json();
+      geoLayer=L.geoJSON(world,{
+        style:{ color:"#222", weight:1, fillColor:"#333", fillOpacity:0.6 },
+        onEachFeature:(f,layer)=>{ layer.bindTooltip(f.properties.ADMIN); layer.on("click",()=>showCountryAlerts(f.properties.ISO_A2)); }
+      }).addTo(mapAlerts);
+    }
+    loadWorld();
+
+    function colorCountry(layer,iso){
+      let color="#333";
+      const alert=alertsData.find(a=>(a.countryCode||a.country)===iso);
+      if(alert){
+        if(alert.data?.status==="published") color="#2a2";
+        else if(alert.data?.status==="toValidate") color="#cc0";
+        else if(alert.data?.status==="under-surveillance") color="#339";
+        else color="#a22";
+      }
+      layer.setStyle({ fillColor:color });
     }
 
-    // Chat J.E.A.N
-    document.getElementById("jean-send").addEventListener("click", async () => {
-      const msg = document.getElementById("jean-input").value;
-      if (!msg) return;
+    async function refreshAlerts(){
+      const res=await fetch("/api/alerts");
+      alertsData=await res.json();
+      const local=alertsData.filter(a=>a.country===userCountry);
+      document.getElementById("alerts-local").innerHTML=local.length?local.map(a=>`🚨 ${a.region||a.country} (${a.data?.confidence||0}%)`).join("<br>"):"✅ Aucune alerte locale";
+      const national=alertsData.filter(a=>a.country===userCountry);
+      document.getElementById("alerts-national").innerHTML=national.length?national.map(a=>`⚠️ ${a.country} (${a.data?.status})`).join("<br>"):"✅ Rien au niveau national";
+      document.getElementById("alerts-world").innerHTML=alertsData.slice(0,20).map(a=>`🌍 ${a.country} ${a.region||""} (${a.data?.confidence||0}%)`).join("<br>");
+      if(geoLayer){ geoLayer.eachLayer(l=>colorCountry(l,l.feature.properties.ISO_A2)); }
+    }
+    setInterval(refreshAlerts,10000); refreshAlerts();
 
-      const res = await fetch("/api/jean", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg }),
-      });
+    function showCountryAlerts(iso){
+      const ca=alertsData.filter(a=>(a.countryCode||a.country)===iso);
+      if(!ca.length){ alert("Aucune alerte pour "+iso); return; }
+      alert(ca.map(a=>`${a.country} ${a.region||""}: ${a.data?.status} (${a.data?.confidence||0}%)`).join("\n"));
+    }
 
-      const data = await res.json();
+    // === AVATAR METEO AUTO ===
+    async function updateAvatar(){
+      try{
+        const res=await fetch(`/api/forecast/${userCountry}`);
+        const forecast=await res.json();
+        let avatar="default"; const txt=JSON.stringify(forecast).toLowerCase();
+        if(/soleil|sun|clair/.test(txt)) avatar="sun";
+        else if(/pluie|rain/.test(txt)) avatar="rain";
+        else if(/neige|snow/.test(txt)) avatar="snow";
+        else if(/orage|storm|tonnerre/.test(txt)) avatar="storm";
+        document.getElementById("jean-player").load(`/avatars/jean-${avatar}.json`);
+      }catch{ document.getElementById("jean-player").load(`/avatars/jean-default.json`); }
+    }
+    updateAvatar(); setInterval(updateAvatar,600000);
 
-      const chat = document.getElementById("chat-messages");
-      chat.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
-      chat.innerHTML += `<div><b>J.E.A.N:</b> ${data.reply}</div>`;
-      chat.scrollTop = chat.scrollHeight;
-
-      // Avatar dynamique
-      const avatarPlayer = document.getElementById("jean-player");
-      avatarPlayer.load(`/avatars/jean-${data.avatar}.json`);
+    // === CHAT ===
+    document.getElementById("jean-send").addEventListener("click", async ()=>{
+      const msg=document.getElementById("jean-input").value; if(!msg) return;
+      const res=await fetch("/api/jean",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+      const data=await res.json();
+      const chat=document.getElementById("chat-messages");
+      chat.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
+      chat.innerHTML+=`<div><b>J.E.A.N:</b> ${data.reply}</div>`;
+      chat.scrollTop=chat.scrollHeight;
+      document.getElementById("jean-player").load(`/avatars/jean-${data.avatar}.json`);
     });
   </script>
 </body>
