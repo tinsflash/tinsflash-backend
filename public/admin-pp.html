@@ -16,12 +16,19 @@
     button { margin:6px 0; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
     .status-ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; }
     .status-ball.pending { background:#cc0; }
-    .status-ball.published { background:#2a2; }
-    .status-ball.tovalidate { background:#e69500; }
-    .status-ball.under-surveillance { background:#08f; }
-    .status-ball.low-confidence { background:#a22; }
-    .status-ball.archived { background:#555; }
+    .status-ball.ok { background:#2a2; }
+    .status-ball.fail { background:#a22; }
     #logs { background:#000; color:#eee; font-family:monospace; padding:10px; height:250px; overflow-y:auto; border-radius:8px; margin-top:10px; white-space:pre-wrap; }
+    .info { color:#0af; }
+    .warn { color:#cc0; }
+    .error { color:#f55; }
+    #chatButton { position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; background:#0af; color:#fff; font-size:22px; font-weight:bold; border:none; cursor:pointer; }
+    #chatBubble { position:fixed; bottom:90px; right:20px; width:320px; height:420px; background:#161b22; border:2px solid #0af; border-radius:10px; display:none; flex-direction:column; }
+    #chatBubble header { padding:8px; font-weight:bold; text-align:center; color:#0af; }
+    #chatLog { flex:1; overflow-y:auto; padding:8px; background:#0d1117; border-radius:6px; }
+    #chatInput { display:flex; }
+    #chatInput input { flex:1; padding:6px; border:none; border-radius:6px; }
+    #chatInput button { padding:6px 10px; background:#0af; border:none; border-radius:6px; cursor:pointer; }
     #runStatus { display:none; position:fixed; top:0; left:0; width:100%; padding:12px; text-align:center; font-weight:bold; font-size:18px; background:#111; color:#fff; z-index:9999; }
     .country-row { display:flex; align-items:center; justify-content:space-between; background:#161b22; padding:6px 10px; margin:4px 0; border-radius:6px; }
     .country-name { font-weight:bold; }
@@ -50,10 +57,23 @@
 
 <main style="padding:20px;">
   <h2>🛰️ Cockpit Global</h2>
-  <button onclick="runGlobalForecasts()">▶️ Prévisions zones couvertes</button>
-  <button onclick="runGlobalAlerts()">▶️ Alertes zones couvertes</button>
-  <button onclick="runContinentalAlerts()">▶️ Alertes continentales</button>
-  <button onclick="runFusion()">▶️ Fusion & Orchestration IA</button>
+  <div id="engine-global-status"></div>
+  <div id="engine-coverage"></div>
+
+  <h3>📊 Prévisions zones couvertes</h3>
+  <button onclick="runGlobalForecasts()">▶️ Lancer Prévisions</button>
+
+  <h3>🚨 Alertes zones couvertes</h3>
+  <button onclick="runGlobalAlerts()">▶️ Lancer Alertes</button>
+
+  <h3>🌍 Alertes continentales</h3>
+  <button onclick="runContinentalAlerts()">▶️ Lancer Continental</button>
+
+  <h3>🤖 Fusion & Orchestration IA</h3>
+  <div id="fusion-ia" class="zone">
+    <span class="status-ball pending"></span> Orchestration Globale
+  </div>
+  <button onclick="runFusion()">▶️ Finalisation</button>
 
   <h2>📜 Logs moteur (live)</h2>
   <div id="logs">Connexion en cours…</div>
@@ -63,31 +83,38 @@
 
   <h2>⚡ Étapes du moteur</h2>
   <div id="engine-steps" class="grid"></div>
-
-  <h2>🌍 Supervision des pays (Prévisions & Alertes)</h2>
-  <div id="zones-status"></div>
 </main>
 
+<!-- Chat bulle -->
+<button id="chatButton" onclick="toggleChat()">💬</button>
+<div id="chatBubble">
+  <header>🤖 Chat IA Moteur</header>
+  <div id="chatLog"></div>
+  <div id="chatInput">
+    <input type="text" id="chatMsg" placeholder="Demander au moteur..." onkeypress="if(event.key==='Enter') sendChat()">
+    <button onclick="sendChat()">Envoyer</button>
+  </div>
+</div>
+
 <script>
-  // Bandeau visuel
-  function showRunStatus(msg,color){
+  function showRunStatus(msg, color){
     const bar=document.getElementById("runStatus");
     bar.style.display="block"; bar.style.background=color; bar.innerText=msg;
-    setTimeout(()=>{ bar.style.display="none"; },5000);
+    setTimeout(()=>{ bar.style.display="none"; },8000);
   }
 
   // Models
-  const models=["ECMWF","GFS","ICON","Meteomatics","Copernicus ERA5","NOAA","NASA POWER","OpenWeather"];
+  const models = ["ECMWF","GFS","ICON","Meteomatics","Copernicus ERA5","NOAA","NASA POWER","OpenWeather"];
   function buildModels(){
     const m=document.getElementById("models-status"); m.innerHTML="";
     models.forEach(md=>{
-      m.innerHTML+=`<div id="model-${md}" class="zone"><span class="status-ball pending"></span> ${md}</div>`;
+      m.innerHTML+=`<div id="model-${md}" class="zone"><span class="status-ball pending"></span>${md}</div>`;
     });
   }
   buildModels();
 
   // Steps
-  const steps=["Pompage des modèles","Analyse relief & climat","Prévisions zones couvertes","Alertes zones couvertes","Alertes continentales","Fusion IA alertes & prévisions","Déploiement final"];
+  const steps = ["Pompage des modèles","Analyse relief & climat","Prévisions zones couvertes","Alertes zones couvertes","Alertes continentales","Fusion IA alertes & prévisions","Déploiement final"];
   function buildEngineSteps(){
     const s=document.getElementById("engine-steps"); s.innerHTML="";
     steps.forEach(st=>{
@@ -97,38 +124,58 @@
   }
   buildEngineSteps();
 
-  // Supervision par pays → basé sur /api/alerts/summary
-  async function refreshZones(){
-    const res=await fetch("/api/alerts/summary");
-    if(!res.ok) return;
-    const summary=await res.json();
-    const div=document.getElementById("zones-status");
-    div.innerHTML=`
-      <p>Total: ${summary.total} alertes</p>
-      🟢 Publiées: ${summary.byStatus.published} | 
-      🟡 À valider: ${summary.byStatus.toValidate} | 
-      🔵 Surveillance: ${summary.byStatus["under-surveillance"]} | 
-      🔴 Faible crédibilité: ${summary.byStatus["low-confidence"]} | 
-      ⚪ Archivées: ${summary.byStatus.archived}<br>
-      Exclusives: ${summary.exclusives} | Confirmées ailleurs: ${summary.confirmedElsewhere}
-    `;
+  function setStatusDynamic(type,zone,state){
+    const safeId = zone.replace(/\s+/g,"-");
+    const el=document.querySelector(`#${type}-${safeId} .status-ball`);
+    if(el) el.className="status-ball "+state.toLowerCase();
   }
-  setInterval(refreshZones,8000);
 
-  // Logs SSE
+  // Refresh details depuis /api/status
+  async function refreshEngineDetails(){
+    try {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+
+      document.getElementById("engine-global-status").innerHTML = `
+        <strong>État :</strong> ${data.status} – Dernier run : ${data.lastRun ? new Date(data.lastRun).toLocaleString() : "jamais"}
+        <br>🔔 Alertes actives : ${data.alertsCount}
+      `;
+
+      const zones = new Set((data.alerts||[]).map(a=>a.country));
+      document.getElementById("engine-coverage").innerHTML = `
+        <strong>Pays couverts :</strong> ${zones.size > 0 ? [...zones].join(", ") : "aucun"}
+      `;
+
+      if(data.steps){ Object.entries(data.steps).forEach(([st,s])=>setStatusDynamic("step",st,s)); }
+      if(data.models){ Object.entries(data.models).forEach(([m,s])=>setStatusDynamic("model",m,s)); }
+    } catch(e){ console.warn("Erreur refreshEngineDetails:", e.message); }
+  }
+  setInterval(refreshEngineDetails,10000);
+
+  // Logs live
   const logDiv=document.getElementById("logs");
   const evt=new EventSource("/api/logs/stream");
   evt.onmessage=(e)=>{
     const log=JSON.parse(e.data);
-    logDiv.innerHTML+=`<div>[${new Date(log.ts).toLocaleTimeString()}] ${log.message}</div>`;
+    let cls="info"; if(log.message.includes("ERROR")) cls="error"; if(log.message.includes("WARN")) cls="warn";
+    logDiv.innerHTML+=`<div class="${cls}">[${new Date(log.ts).toLocaleTimeString()}] ${log.message}</div>`;
     logDiv.scrollTop=logDiv.scrollHeight;
   };
 
   // Runs
-  async function runGlobalForecasts(){ showRunStatus("▶️ Prévisions...","#cc0"); await fetch("/api/run-global",{method:"POST"}); }
-  async function runGlobalAlerts(){ showRunStatus("▶️ Alertes...","#cc0"); await fetch("/api/run-alerts",{method:"POST"}); }
-  async function runContinentalAlerts(){ showRunStatus("▶️ Continental...","#cc0"); await fetch("/api/run-alerts-continental",{method:"POST"}); }
-  async function runFusion(){ showRunStatus("▶️ Fusion...","#cc0"); await fetch("/api/run-orchestrator",{method:"POST"}); }
+  async function runGlobalForecasts(){ showRunStatus("▶️ Prévisions en cours...","#cc0"); await fetch("/api/run-global",{method:"POST"}); }
+  async function runGlobalAlerts(){ showRunStatus("▶️ Alertes en cours...","#cc0"); await fetch("/api/run-alerts",{method:"POST"}); }
+  async function runContinentalAlerts(){ showRunStatus("▶️ Continental en cours...","#cc0"); await fetch("/api/run-alerts-continental",{method:"POST"}); }
+  async function runFusion(){ showRunStatus("▶️ Fusion IA en cours...","#cc0"); await fetch("/api/run-orchestrator",{method:"POST"}); }
+
+  // Chat IA
+  function toggleChat(){ const c=document.getElementById("chatBubble"); c.style.display=c.style.display==="flex"?"none":"flex"; }
+  async function sendChat(){
+    const input=document.getElementById("chatMsg"); const msg=input.value.trim(); if(!msg) return;
+    const log=document.getElementById("chatLog"); log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`; input.value="";
+    const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+    const data=await res.json(); log.innerHTML+=`<div style="color:#0af;"><b>Moteur:</b> ${data.reply}</div>`; log.scrollTop=log.scrollHeight;
+  }
 </script>
 </body>
 </html>
