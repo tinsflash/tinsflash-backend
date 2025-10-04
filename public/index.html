@@ -14,36 +14,40 @@
 
   <style>
     body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
-    header { text-align:center; padding:20px; background:#0077cc; color:#fff; }
-    h1 { margin:0; font-size:1.8rem; }
-    .container { max-width:1200px; margin:auto; padding:20px; display:grid; gap:20px; }
-    .card { background:#1b2735; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.4); }
-    h2 { margin-top:0; color:#00bfff; }
-    .forecast-grid { display:flex; gap:15px; flex-wrap:wrap; }
-    .forecast-item { flex:1 1 120px; background:#223447; border-radius:10px; padding:10px; text-align:center; }
-    footer { text-align:center; padding:20px; margin-top:80px; background:#0077cc; color:white; }
+    header { text-align:center; padding:12px; background:#0077cc; color:#fff; }
+    h1 { margin:0; font-size:1.4rem; }
+    .container { max-width:1000px; margin:auto; padding:12px; display:grid; gap:14px; }
+    .card { background:#1b2735; padding:14px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,0.3); }
+    h2 { margin:0 0 8px 0; color:#00bfff; font-size:1.1rem; }
+    .forecast-grid { display:flex; gap:8px; flex-wrap:wrap; }
+    .forecast-item { flex:1 1 110px; background:#223447; border-radius:8px; padding:8px; text-align:center; font-size:0.85rem; }
+    footer { text-align:center; padding:14px; margin-top:40px; background:#0077cc; color:white; font-size:0.85rem; }
     footer a { color:yellow; text-decoration:none; }
 
     /* Video bandeau */
-    .video-container { position:relative; max-width:100%; margin-bottom:20px; height:220px; overflow:hidden; }
-    video { width:100%; height:100%; object-fit:cover; border-radius:0; }
-    .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
+    .video-container { position:relative; max-width:100%; margin-bottom:12px; height:180px; overflow:hidden; }
+    video { width:100%; height:100%; object-fit:cover; }
+    .video-btn { position:absolute; bottom:6px; right:6px; background:#0077cc; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:0.8rem; }
 
     /* Avatar J.E.A.N */
-    #avatar-jean { position:fixed; bottom:80px; right:20px; width:100px; height:100px; z-index:9999; cursor:pointer; }
-    #chat-jean { position:fixed; bottom:190px; right:20px; width:300px; height:400px; background:#fff; color:#000;
-      border-radius:12px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10000; }
-    #chat-header { background:#0077cc; color:#fff; padding:8px; border-radius:12px 12px 0 0; }
-    #chat-messages { flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; }
+    #avatar-jean { position:fixed; bottom:70px; right:14px; width:70px; height:70px; z-index:9999; cursor:pointer; }
+    #chat-jean { position:fixed; bottom:150px; right:14px; width:300px; height:400px; background:#fff; color:#000;
+      border-radius:10px; display:none; flex-direction:column; box-shadow:0 4px 12px rgba(0,0,0,0.5); z-index:10000; font-size:0.9rem; }
+    #chat-header { background:#0077cc; color:#fff; padding:6px; border-radius:10px 10px 0 0; font-weight:bold; font-size:0.9rem; }
+    #chat-messages { flex:1; padding:8px; overflow-y:auto; }
     #chat-input { display:flex; }
-    #chat-input input { flex:1; border:none; padding:8px; }
-    #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 12px; cursor:pointer; }
+    #chat-input input { flex:1; border:none; padding:6px; font-size:0.85rem; }
+    #chat-input button { background:#0077cc; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
+
+    /* Icônes météo */
+    .forecast-icon { width:50px; height:50px; margin:auto; }
 
     /* Bandeau pub partenaire */
     #partner-banner {
+      display:none; /* masqué par défaut */
       position:fixed; bottom:0; left:0; width:100%;
       background:#ffcc00; color:#000; text-align:center;
-      font-weight:bold; padding:10px; z-index:9000; font-size:1rem;
+      font-weight:bold; padding:8px; z-index:9000; font-size:0.9rem;
     }
     #partner-banner a { color:#0077cc; text-decoration:none; }
   </style>
@@ -73,11 +77,10 @@
     <!-- Introduction -->
     <div class="card">
       <h2>🔎 À propos de TINSFLASH</h2>
-      <p>
+      <p style="margin:0; font-size:0.9rem; line-height:1.4;">
         TINSFLASH est un <strong>moteur météo unique actuellement au monde</strong> :  
         il combine modèles internationaux, modèles IA de dernière génération, reliefs, climat et le tout orchestré par l'IA et l'humain pour fournir des  
-        <strong>prévisions et alertes locales & nationales ultra-fiables</strong>  
-        dans les zones couvertes (Europe + USA) et des alertes continentales pour les zones non couvertes par notre moteur.
+        <strong>prévisions et alertes locales & nationales ultra-fiables</strong>.  
         <br><br>
         Avec l’option <strong>Premium / Pro+</strong>, accédez à nos outils  
         <strong>4D d’analyse avancée</strong> et des prévisions encore plus détaillées.
@@ -88,7 +91,7 @@
     <div class="card">
       <h2>📍 Localisation</h2>
       <button onclick="getLocationOrAddress()">📡 Activer la géolocalisation</button>
-      <p>ou entrez votre adresse :</p>
+      <br><br>
       <input type="text" id="address" placeholder="Rue + Ville">
       <button onclick="loadForecastFromAddress()">Voir la météo</button>
     </div>
@@ -124,4 +127,82 @@
     <!-- Bulletin météo -->
     <div class="card">
       <h2>📰 Bulletin météo</h2>
-      <div id="forecast-text">⏳ Gén
+      <div id="forecast-text">⏳ Génération...</div>
+    </div>
+
+    <!-- Radar -->
+    <div class="card">
+      <h2>🛰️ Radar en direct</h2>
+      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation"
+        width="100%" height="300" frameborder="0" style="border-radius:10px;"></iframe>
+    </div>
+
+    <!-- PUB bas -->
+    <ins class="adsbygoogle" style="display:block; text-align:center;"
+      data-ad-client="ca-pub-6828365665232268"
+      data-ad-slot="3333333333"
+      data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
+    <!-- Notifications -->
+    <div class="card">
+      <h2>🔔 Notifications</h2>
+      <button onclick="subscribeNotif()">Activer notifications</button>
+      <button onclick="unsubscribeNotif()">Désactiver notifications</button>
+      <p id="notif-status">🔕 Inactives</p>
+    </div>
+  </main>
+
+  <!-- Avatar JEAN -->
+  <div id="avatar-jean">
+    <lottie-player id="jean-player"
+      src="/avatars/jean-default.json"
+      background="transparent"
+      speed="1"
+      style="width:100%; height:100%;">
+    </lottie-player>
+  </div>
+
+  <!-- Chat JEAN -->
+  <div id="chat-jean">
+    <div id="chat-header">💬 Chat avec J.E.A.N</div>
+    <div id="chat-messages"></div>
+    <div id="chat-input">
+      <input type="text" id="jean-input" placeholder="Votre question météo...">
+      <button id="jean-send">Envoyer</button>
+    </div>
+  </div>
+
+  <!-- Bandeau pub partenaire (Belgique uniquement) -->
+  <div id="partner-banner">
+    💧 Une fuite, problème d’humidité ou inspection canalisations ? 👉 
+    <a href="https://uman-detect.com" target="_blank">uman-detect.com (Belgique)</a>
+  </div>
+
+  <footer>
+    <p>© <span id="year"></span> TINSFLASH 🌍</p>
+    <p>📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 📱 
+       <a href="https://wa.me/32473264477" target="_blank">WhatsApp Direct</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    function toggleVideo() {
+      const video = document.getElementById("introVideo");
+      video.muted = !video.muted;
+      alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
+    }
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    // 🇧🇪 Afficher bandeau partenaire uniquement pour la Belgique
+    fetch("https://ipapi.co/json/")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.country_code === "BE") {
+          document.getElementById("partner-banner").style.display = "block";
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>
