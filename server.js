@@ -322,10 +322,21 @@ app.post("/api/jean", async (req, res) => {
     if (!message) {
       return res.status(400).json({ success: false, error: "Message manquant" });
     }
+
     const reply = await askCohere(message);
-    res.json({ reply: reply || "⚠️ Jean n’a pas répondu" });
+
+    // 🔎 Détection avatar pour front
+    let avatar = "default";
+    const lower = (reply || "").toLowerCase();
+    if (/soleil|sun|clair/.test(lower)) avatar = "sun";
+    else if (/pluie|rain/.test(lower)) avatar = "rain";
+    else if (/neige|snow/.test(lower)) avatar = "snow";
+    else if (/orage|storm|tonnerre/.test(lower)) avatar = "storm";
+    else if (/alerte|danger|warning/.test(lower)) avatar = "alert";
+
+    res.json({ reply: reply || "⚠️ Jean n’a pas répondu", avatar });
   } catch (e) {
-    res.status(500).json({ reply: "⚠️ Erreur serveur: " + e.message });
+    res.status(500).json({ reply: "⚠️ Erreur J.E.A.N", avatar: "default" });
   }
 });
 
