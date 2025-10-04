@@ -1,6 +1,4 @@
 // PATH: services/chatService.js
-// Chat IA (général) + Chat IA moteur — sans passer de paramètres non supportés
-
 import { askOpenAI } from "./openaiService.js";
 import { getEngineState } from "./engineState.js";
 import { getLogs } from "./adminLogs.js";
@@ -13,41 +11,43 @@ Réponds en français, précisément, en t’appuyant d'abord sur nos résultats
 const SYSTEM_ENGINE = `
 Tu es l'expert "technicien moteur" + "météorologue" de la Centrale.
 Tu disposes de l'état moteur, des logs et des sorties IA (prévisions/alertes).
-Réponds de façon opérationnelle et concise.
+Réponds de façon opérationnelle, concise, factuelle.
 `;
 
-// Chat IA général (page publique ou utilitaire)
+// Chat IA général
 export async function askAI(message = "") {
   const prompt = `Question:\n${message}\n\nContexte: reste factuel.`;
-  // ⚠️ On n’envoie AUCUN réglage (temp/max_tokens), openaiService gère la compat.
   const reply = await askOpenAI(SYSTEM_GENERAL, prompt);
   return reply;
 }
 
-// Chat IA “moteur” (console admin)
+// Chat IA moteur
 export async function askAIEngine(message = "") {
-  const state = getEngineState();
+  // ⚡ IMPORTANT : on attend bien le state
+  const state = await getEngineState();  
   const logs = await getLogs();
 
   const context = {
     checkup: state?.checkup || {},
-    lastRun: state?.runTime,
+    lastRun: state?.runTime || state?.lastRun,
     zonesCovered: Object.keys(state?.zonesCovered || {}).length || 0,
+    alertsCount: state?.alerts?.length || 0,
     alerts: state?.alerts || [],
     logs: logs?.slice(-200) || [],
   };
 
   const prompt = `
-[QUESTION]
+[QUESTION UTILISATEUR]
 ${message}
 
-[CONTEXTE]
+[CONTEXTE MOTEUR]
 ${JSON.stringify(context, null, 2)}
 
 [INSTRUCTIONS]
-- Si la question concerne l’état du run, réponds avec un statut clair (OK/PENDING/FAIL) par point.
-- Si on demande une explication d’alerte/prévision, synthétise et précise l’incertitude.
-- Pas d'invention. Base-toi sur les données fournies.
+- Si la question concerne l’état du run → réponds avec un statut clair (OK / PENDING / FAIL) étape par étape.
+- Si on demande des prévisions ou alertes → synthétise avec fiabilité (%), intensité et durée.
+- Mentionne si des données manquent (sources externes down, etc).
+- Ne pas inventer, rester factuel basé sur CONTEXTE.
 `;
 
   const reply = await askOpenAI(SYSTEM_ENGINE, prompt);
