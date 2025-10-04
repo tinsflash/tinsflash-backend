@@ -5,16 +5,16 @@
   <title>TINSFLASH – la météo enfin ultra fiable</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
+    crossorigin="anonymous"></script>
+
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    :root{
-      /* position par défaut pour avatars avec sujet dans le coin bas-droit */
-      --avatar-obj-pos: 80% 80%;
-    }
-    body { margin:0; font-family:"Segoe UI", system-ui, -apple-system, sans-serif; background:#101820; color:#f4f9ff; }
+    body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
     header { text-align:center; padding:6px; background:#0077cc; color:#fff; }
     header h1 { margin:0; font-size:1.6rem; }
     header p { margin:2px 0 0; font-size:0.9rem; font-style:italic; color:#e0e0e0; }
@@ -36,53 +36,39 @@
     footer { text-align:center; padding:6px; margin-top:6px; background:#0077cc; color:white; font-size:0.75rem; }
     footer a { color:yellow; text-decoration:none; }
 
-    /* Vidéo bandeau */
-    .video-container { position:relative; width:100%; height:120px; overflow:hidden; }
-    video { width:100%; height:100%; object-fit:cover; }
-    .video-btn { position:absolute; bottom:4px; right:6px; background:#0077cc; color:#fff; border:none; padding:3px 6px; border-radius:5px; cursor:pointer; font-size:0.7rem; }
-
-    /* Avatar JEAN (PNG) */
+    /* Avatar JEAN */
     #avatar-jean {
       position:fixed;
       bottom:80px;
       right:15px;
       width:72px;
       height:72px;
-      z-index:99999;
-      cursor:pointer;
-    }
-    #avatar-jean img{
-      width:72px;
-      height:72px;
       border-radius:50%;
-      object-fit:cover;                /* on remplit le cercle */
-      object-position: var(--avatar-obj-pos);
+      background:#fff url('/avatars/jean-default.png') no-repeat center center;
+      background-size:cover;
       box-shadow:0 0 10px rgba(0,0,0,0.35);
-      background:#fff;                 /* pour PNG transparent */
-      display:block;
+      cursor:pointer;
+      z-index:99999;
     }
-
-    /* Chat */
     #chat-jean {
       position:fixed;
       bottom:160px;
       right:12px;
-      width:260px;
-      height:320px;
+      width:250px;
+      height:300px;
       background:#fff;
       color:#000;
-      border-radius:12px;
+      border-radius:10px;
       display:none;
       flex-direction:column;
-      box-shadow:0 8px 24px rgba(0,0,0,0.35);
+      box-shadow:0 2px 8px rgba(0,0,0,0.4);
       z-index:100000;
-      overflow:hidden;
     }
-    #chat-header { background:#0077cc; color:#fff; padding:6px 8px; font-size:0.9rem; font-weight:600; }
-    #chat-messages { flex:1; padding:8px; overflow-y:auto; font-size:0.85rem; }
-    #chat-input { display:flex; gap:6px; padding:8px; }
-    #chat-input input { flex:1; border:1px solid #e5e7eb; border-radius:8px; padding:8px; font-size:0.85rem; }
-    #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
+    #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.8rem; border-radius:10px 10px 0 0; }
+    #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
+    #chat-input { display:flex; }
+    #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
+    #chat-input button { background:#0077cc; color:#fff; border:none; padding:5px 7px; cursor:pointer; font-size:0.8rem; }
 
     /* Carte alertes */
     #map { width:100%; height:300px; border-radius:10px; margin-top:8px; }
@@ -102,14 +88,6 @@
     <h1>TINSFLASH</h1>
     <p>la météo enfin ultra fiable – Système J.E.A.N</p>
   </header>
-
-  <!-- Bandeau vidéo -->
-  <div class="video-container">
-    <video id="introVideo" autoplay muted loop>
-      <source src="intro-jean.mp4" type="video/mp4">
-    </video>
-    <button class="video-btn" onclick="toggleVideo()">🔊 Son</button>
-  </div>
 
   <main class="container">
     <!-- Intro -->
@@ -176,11 +154,8 @@
     </div>
   </main>
 
-  <!-- Avatar JEAN (PNG) -->
-  <div id="avatar-jean" onclick="toggleChat()">
-    <!-- IMPORTANT: mets bien tes PNG ici: /public/avatars/jean-*.png -->
-    <img id="jean-avatar" src="/avatars/jean-default.png" alt="J.E.A.N Avatar">
-  </div>
+  <!-- Avatar JEAN -->
+  <div id="avatar-jean" onclick="toggleChat()"></div>
 
   <!-- Chat JEAN -->
   <div id="chat-jean">
@@ -207,81 +182,29 @@
   <script>
     document.getElementById("year").textContent=new Date().getFullYear();
 
-    function toggleVideo(){
-      const video=document.getElementById("introVideo");
-      video.muted=!video.muted;
-      alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
-    }
-
     function toggleChat(){
       const chat=document.getElementById("chat-jean");
       chat.style.display=chat.style.display==="flex"?"none":"flex";
       chat.style.flexDirection="column";
     }
 
-    // === AVATAR J.E.A.N (PNG) ===
+    // === Avatar dynamique ===
     const AVATAR_POS = {
-      /* ajuste le cadrage si besoin par type */
-      default:  '80% 80%',   // bas-droit (ton PNG actuel)
-      sun:      '50% 60%',
-      rain:     '60% 70%',
-      snow:     '60% 65%',
-      storm:    '65% 70%',
-      alert:    '70% 75%'
+      default:"center center",
+      sun:"center center",
+      rain:"center center",
+      snow:"center center",
+      storm:"center center",
+      alert:"center center"
     };
-
     function setJeanAvatar(type="default"){
-      const el = document.getElementById("jean-avatar");
-      const pos = AVATAR_POS[type] || AVATAR_POS.default;
-
-      // anti-cache + fallback
-      el.onerror = function(){
-        this.onerror = null;
-        this.src = '/avatars/jean-default.png?v=' + Date.now();
-        document.documentElement.style.setProperty('--avatar-obj-pos', AVATAR_POS.default);
-      };
-
-      document.documentElement.style.setProperty('--avatar-obj-pos', pos);
-      el.src = `/avatars/jean-${type}.png?v=${Date.now()}`;
+      const el=document.getElementById("avatar-jean");
+      const pos=AVATAR_POS[type]||"center center";
+      el.style.backgroundImage=`url('/avatars/jean-${type}.png?v=${Date.now()}')`;
+      el.style.backgroundPosition=pos;
     }
 
-    // === Alertes ===
-    async function refreshAlerts(){
-      try{
-        const res=await fetch("/api/alerts");
-        const alerts=await res.json();
-
-        document.getElementById("alerts-local").innerText=
-          alerts.filter(a=>a.country==="Belgique").map(a=>`${a.country} ${a.region||""} → ${a.data?.status||""} (${a.data?.confidence||0}%)`).join("\n")||"Aucune alerte locale/nationale";
-
-        document.getElementById("alerts-world").innerText=
-          alerts.map(a=>`${a.country} ${a.region||""} → ${a.data?.status||""}`).join("\n")||"Aucune alerte mondiale";
-
-        updateMap(alerts);
-      }catch(e){ console.warn("Erreur alertes:",e.message); }
-    }
-
-    // === Carte Leaflet ===
-    let map, layers={};
-    function initMap(){
-      map=L.map('map').setView([20,0],2);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap'}).addTo(map);
-    }
-    function updateMap(alerts){
-      if(!map){initMap();}
-      Object.values(layers).forEach(l=>map.removeLayer(l));
-      layers={};
-      alerts.forEach(a=>{
-        if(!a.lat||!a.lon) return;
-        const c=a.data?.confidence||0;
-        let color="green"; if(c>=70&&c<90) color="orange"; if(c>=90) color="red";
-        const circle=L.circle([a.lat,a.lon],{radius:150000,color,fillOpacity:0.5}).addTo(map);
-        circle.bindPopup(`<b>${a.country} ${a.region||""}</b><br>Type: ${a.type}<br>Fiabilité: ${c}%`);
-        layers[a.id]=circle;
-      });
-    }
-
-    // === Chat (J.E.A.N via Cohere côté serveur) ===
+    // === Chat avec Cohere ===
     document.getElementById("jean-send").addEventListener("click", async ()=>{
       const msg=document.getElementById("jean-input").value;
       if(!msg) return;
@@ -294,10 +217,7 @@
       setJeanAvatar(data.avatar||"default");
     });
 
-    // Init
-    setJeanAvatar("default");   // charge l’avatar et positionne le cadrage
-    refreshAlerts();
-    setInterval(refreshAlerts,30000);
+    setJeanAvatar("default");
   </script>
 </body>
 </html>
