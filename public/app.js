@@ -9,14 +9,12 @@ async function getLocationOrAddress() {
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
         () => {
-          const addr = document.getElementById("address")?.value || 
-                       prompt("❌ Géolocalisation refusée.\nEntrez votre ville/pays (ex: Paris, FR) :");
+          const addr = prompt("❌ Géolocalisation refusée.\nEntrez votre ville/pays (ex: Paris, FR) :");
           resolve({ address: addr });
         }
       );
     } else {
-      const addr = document.getElementById("address")?.value || 
-                   prompt("Entrez votre ville/pays (ex: Paris, FR) :");
+      const addr = prompt("Entrez votre ville/pays (ex: Paris, FR) :");
       resolve({ address: addr });
     }
   });
@@ -39,14 +37,14 @@ function updateJeanAvatar(type = "default") {
   player.load(map[type] || map["default"]);
 }
 
-// 🎭 Appliquer avatar selon condition météo
-function applyForecastIcon(condition) {
+// 🎭 Mapping conditions -> icône animée
+function getIconByCondition(condition) {
   condition = (condition || "").toLowerCase();
-  if (condition.includes("sun") || condition.includes("clear")) updateJeanAvatar("sun");
-  else if (condition.includes("rain")) updateJeanAvatar("rain");
-  else if (condition.includes("snow")) updateJeanAvatar("snow");
-  else if (condition.includes("storm") || condition.includes("thunder")) updateJeanAvatar("storm");
-  else updateJeanAvatar("default");
+  if (condition.includes("sun") || condition.includes("clear") || condition.includes("soleil")) return "/avatars/jean-sun.json";
+  if (condition.includes("rain") || condition.includes("pluie")) return "/avatars/jean-rain.json";
+  if (condition.includes("snow") || condition.includes("neige")) return "/avatars/jean-snow.json";
+  if (condition.includes("storm") || condition.includes("orage") || condition.includes("thunder")) return "/avatars/jean-storm.json";
+  return "/avatars/jean-default.json";
 }
 
 // 📊 Charger prévisions météo
@@ -77,8 +75,10 @@ async function loadForecast(location = {}) {
       document.getElementById("today-forecast").innerHTML = `
         <h3>${today.date}</h3>
         <p>${today.condition}, ${today.temp_min}°C / ${today.temp_max}°C</p>
+        <lottie-player src="${getIconByCondition(today.condition)}"
+          background="transparent" speed="1" loop autoplay style="width:60px;height:60px;"></lottie-player>
       `;
-      applyForecastIcon(today.condition);
+      updateJeanAvatar(today.condition); // Avatar suit la météo du jour
     }
 
     // 7 jours
@@ -86,7 +86,10 @@ async function loadForecast(location = {}) {
     (data.days || []).forEach((d) => {
       html += `
         <div class="forecast-item">
-          <p><b>${d.date}</b><br>${d.condition}<br>${d.temp_min}° / ${d.temp_max}°</p>
+          <b>${d.date}</b><br>
+          <lottie-player src="${getIconByCondition(d.condition)}"
+            background="transparent" speed="1" loop autoplay style="width:50px;height:50px;"></lottie-player>
+          <p>${d.condition}<br>${d.temp_min}° / ${d.temp_max}°</p>
         </div>
       `;
     });
@@ -121,7 +124,6 @@ async function loadAlerts() {
       (a) => `<div class="alert"><b>${a.country || a.continent}</b>: ${a.title} (${a.level}%)</div>`
     ).join("");
 
-    // Si alerte forte → avatar passe en "alert"
     if (data.some(a => a.level >= 80)) {
       updateJeanAvatar("alert");
     }
@@ -150,12 +152,11 @@ async function subscribeNotif(zone = "GLOBAL") {
 
   document.getElementById("notif-status").innerText = `✅ Notifications activées (${zone}).`;
 }
-
 function unsubscribeNotif() {
   document.getElementById("notif-status").innerText = "🔕 Notifications désactivées.";
 }
 
-// 💬 Chat Cohere (J.E.A.N.)
+// 💬 Chat J.E.A.N (IA)
 function setupJeanChat() {
   const avatar = document.getElementById("avatar-jean");
   const chat = document.getElementById("chat-jean");
@@ -187,36 +188,11 @@ function setupJeanChat() {
   };
 }
 
-// 🖊️ Charger météo via adresse manuelle
-async function loadForecastFromAddress() {
-  const addr = document.getElementById("address").value;
-  if (!addr) {
-    alert("Veuillez entrer une adresse.");
-    return;
-  }
-  await loadForecast({ address: addr });
-}
-
 // 🚀 Initialisation
 (async function init() {
-  try {
-    // 1. Géolocalisation utilisateur
-    const loc = await getLocationOrAddress();
-    await loadForecast(loc);
-
-    // 2. Alertes météo
-    await loadAlerts();
-
-    // 3. Notifications push
-    const zone = loc.country || "GLOBAL";
-    // on n’active pas auto pour éviter spam → bouton user
-
-    // 4. Chat IA
-    setupJeanChat();
-
-    // 5. Avatar par défaut
-    updateJeanAvatar("default");
-  } catch (err) {
-    console.error("Init error:", err);
-  }
+  const loc = await getLocationOrAddress();
+  await loadForecast(loc);
+  await loadAlerts();
+  setupJeanChat();
+  updateJeanAvatar("default");
 })();
