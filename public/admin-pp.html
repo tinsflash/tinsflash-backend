@@ -13,7 +13,7 @@
     h2, h3 { margin:15px 0 10px; color:#0af; }
     .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin:10px 0; }
     .zone { background:#161b22; border-radius:6px; padding:10px; }
-    button { margin:6px 0; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
+    button { margin:6px 0; padding:10px 14px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; font-size:15px; }
     .status-ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; }
     .status-ball.pending { background:#cc0; }
     .status-ball.ok { background:#2a2; }
@@ -30,8 +30,10 @@
     #chatInput input { flex:1; padding:6px; border:none; border-radius:6px; }
     #chatInput button { padding:6px 10px; background:#0af; border:none; border-radius:6px; cursor:pointer; }
     #runStatus { display:none; position:fixed; top:0; left:0; width:100%; padding:12px; text-align:center; font-weight:bold; font-size:18px; background:#111; color:#fff; z-index:9999; }
-    .country-row { display:flex; align-items:center; justify-content:space-between; background:#161b22; padding:6px 10px; margin:4px 0; border-radius:6px; }
-    .country-name { font-weight:bold; }
+    .progress-container { margin:20px 0; background:#1c1f26; border-radius:8px; overflow:hidden; }
+    .progress-bar { height:22px; background:#0af; width:0%; text-align:center; font-size:12px; font-weight:bold; color:#000; transition:width 0.5s ease; }
+    details { background:#161b22; margin:15px 0; padding:10px; border-radius:8px; }
+    summary { cursor:pointer; font-weight:bold; color:#0af; }
   </style>
 </head>
 <body>
@@ -60,20 +62,24 @@
   <div id="engine-global-status"></div>
   <div id="engine-coverage"></div>
 
-  <h3>📊 Prévisions zones couvertes</h3>
-  <button onclick="runGlobalForecasts()">▶️ Lancer Prévisions</button>
-
-  <h3>🚨 Alertes zones couvertes</h3>
-  <button onclick="runGlobalAlerts()">▶️ Lancer Alertes</button>
-
-  <h3>🌍 Alertes continentales</h3>
-  <button onclick="runContinentalAlerts()">▶️ Lancer Continental</button>
-
-  <h3>🤖 Fusion & Orchestration IA</h3>
-  <div id="fusion-ia" class="zone">
-    <span class="status-ball pending"></span> Orchestration Globale
+  <!-- Barre de progression -->
+  <div class="progress-container">
+    <div id="progress-bar" class="progress-bar">0%</div>
   </div>
-  <button onclick="runFusion()">▶️ Finalisation</button>
+  <div><strong>Zones traitées :</strong> <span id="zones-progress">0/0</span></div>
+
+  <!-- Bouton principal -->
+  <h3>🚀 RUN GLOBAL</h3>
+  <button onclick="runGlobalAll()">🚀 Lancer RUN GLOBAL</button>
+
+  <!-- Mode manuel -->
+  <details>
+    <summary>🔧 Mode manuel (debug avancé)</summary>
+    <button onclick="runGlobalForecasts()">▶️ Prévisions</button>
+    <button onclick="runGlobalAlerts()">▶️ Alertes locales</button>
+    <button onclick="runContinentalAlerts()">▶️ Alertes continentales</button>
+    <button onclick="runFusion()">▶️ Fusion IA</button>
+  </details>
 
   <h2>📜 Logs moteur (live)</h2>
   <div id="logs">Connexion en cours…</div>
@@ -114,7 +120,15 @@
   buildModels();
 
   // Steps
-  const steps = ["Pompage des modèles","Analyse relief & climat","Prévisions zones couvertes","Alertes zones couvertes","Alertes continentales","Fusion IA alertes & prévisions","Déploiement final"];
+  const steps = [
+    "Pompage des modèles",
+    "Analyse relief & climat",
+    "Prévisions zones couvertes",
+    "Alertes zones couvertes",
+    "Alertes continentales",
+    "Fusion IA alertes & prévisions",
+    "Déploiement final"
+  ];
   function buildEngineSteps(){
     const s=document.getElementById("engine-steps"); s.innerHTML="";
     steps.forEach(st=>{
@@ -130,27 +144,43 @@
     if(el) el.className="status-ball "+state.toLowerCase();
   }
 
-  // Refresh details depuis /api/status
+  // Refresh depuis /api/status
   async function refreshEngineDetails(){
     try {
       const res = await fetch("/api/status");
       const data = await res.json();
 
+      // Etat global
       document.getElementById("engine-global-status").innerHTML = `
         <strong>État :</strong> ${data.status} – Dernier run : ${data.lastRun ? new Date(data.lastRun).toLocaleString() : "jamais"}
         <br>🔔 Alertes actives : ${data.alertsCount}
       `;
 
+      // Pays couverts
       const zones = new Set((data.alerts||[]).map(a=>a.country));
       document.getElementById("engine-coverage").innerHTML = `
         <strong>Pays couverts :</strong> ${zones.size > 0 ? [...zones].join(", ") : "aucun"}
       `;
 
+      // Voyants étapes et modèles
       if(data.steps){ Object.entries(data.steps).forEach(([st,s])=>setStatusDynamic("step",st,s)); }
       if(data.models){ Object.entries(data.models).forEach(([m,s])=>setStatusDynamic("model",m,s)); }
+
+      // Barre de progression
+      const totalSteps = steps.length;
+      const okSteps = Object.values(data.steps||{}).filter(v => (v+"").toUpperCase()==="OK").length;
+      const progress = Math.round((okSteps/totalSteps)*100);
+      const bar = document.getElementById("progress-bar");
+      bar.style.width = progress+"%";
+      bar.textContent = progress+"%";
+
+      // Zones traitées
+      const zonesCount = zones.size;
+      const totalZones = (data.forecasts && Object.keys(data.forecasts).length) || 0;
+      document.getElementById("zones-progress").textContent = `${zonesCount}/${totalZones}`;
     } catch(e){ console.warn("Erreur refreshEngineDetails:", e.message); }
   }
-  setInterval(refreshEngineDetails,10000);
+  setInterval(refreshEngineDetails,5000);
 
   // Logs live
   const logDiv=document.getElementById("logs");
@@ -162,7 +192,13 @@
     logDiv.scrollTop=logDiv.scrollHeight;
   };
 
-  // Runs
+  // RUN GLOBAL principal
+  async function runGlobalAll(){
+    showRunStatus("🚀 RUN GLOBAL en cours…","#0af");
+    await fetch("/api/run-orchestrator",{method:"POST"});
+  }
+
+  // Mode manuel
   async function runGlobalForecasts(){ showRunStatus("▶️ Prévisions en cours...","#cc0"); await fetch("/api/run-global",{method:"POST"}); }
   async function runGlobalAlerts(){ showRunStatus("▶️ Alertes en cours...","#cc0"); await fetch("/api/run-alerts",{method:"POST"}); }
   async function runContinentalAlerts(){ showRunStatus("▶️ Continental en cours...","#cc0"); await fetch("/api/run-alerts-continental",{method:"POST"}); }
