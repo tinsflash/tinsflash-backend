@@ -5,16 +5,16 @@
   <title>TINSFLASH – la météo enfin ultra fiable</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268"
-    crossorigin="anonymous"></script>
-
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
+    :root{
+      /* position par défaut pour avatars avec sujet dans le coin bas-droit */
+      --avatar-obj-pos: 80% 80%;
+    }
+    body { margin:0; font-family:"Segoe UI", system-ui, -apple-system, sans-serif; background:#101820; color:#f4f9ff; }
     header { text-align:center; padding:6px; background:#0077cc; color:#fff; }
     header h1 { margin:0; font-size:1.6rem; }
     header p { margin:2px 0 0; font-size:0.9rem; font-style:italic; color:#e0e0e0; }
@@ -41,23 +41,25 @@
     video { width:100%; height:100%; object-fit:cover; }
     .video-btn { position:absolute; bottom:4px; right:6px; background:#0077cc; color:#fff; border:none; padding:3px 6px; border-radius:5px; cursor:pointer; font-size:0.7rem; }
 
-    /* Avatar JEAN */
+    /* Avatar JEAN (PNG) */
     #avatar-jean {
       position:fixed;
       bottom:80px;
       right:15px;
-      width:70px;
-      height:70px;
+      width:72px;
+      height:72px;
       z-index:99999;
       cursor:pointer;
     }
-    #avatar-jean img {
-      width:70px;
-      height:70px;
+    #avatar-jean img{
+      width:72px;
+      height:72px;
       border-radius:50%;
-      object-fit:cover;
-      box-shadow:0 0 6px rgba(0,0,0,0.4);
-      background:#fff;
+      object-fit:cover;                /* on remplit le cercle */
+      object-position: var(--avatar-obj-pos);
+      box-shadow:0 0 10px rgba(0,0,0,0.35);
+      background:#fff;                 /* pour PNG transparent */
+      display:block;
     }
 
     /* Chat */
@@ -65,21 +67,22 @@
       position:fixed;
       bottom:160px;
       right:12px;
-      width:250px;
-      height:300px;
+      width:260px;
+      height:320px;
       background:#fff;
       color:#000;
-      border-radius:10px;
+      border-radius:12px;
       display:none;
       flex-direction:column;
-      box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      box-shadow:0 8px 24px rgba(0,0,0,0.35);
       z-index:100000;
+      overflow:hidden;
     }
-    #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.8rem; border-radius:10px 10px 0 0; }
-    #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
-    #chat-input { display:flex; }
-    #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
-    #chat-input button { background:#0077cc; color:#fff; border:none; padding:5px 7px; cursor:pointer; font-size:0.8rem; }
+    #chat-header { background:#0077cc; color:#fff; padding:6px 8px; font-size:0.9rem; font-weight:600; }
+    #chat-messages { flex:1; padding:8px; overflow-y:auto; font-size:0.85rem; }
+    #chat-input { display:flex; gap:6px; padding:8px; }
+    #chat-input input { flex:1; border:1px solid #e5e7eb; border-radius:8px; padding:8px; font-size:0.85rem; }
+    #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.85rem; }
 
     /* Carte alertes */
     #map { width:100%; height:300px; border-radius:10px; margin-top:8px; }
@@ -173,9 +176,10 @@
     </div>
   </main>
 
-  <!-- Avatar JEAN -->
+  <!-- Avatar JEAN (PNG) -->
   <div id="avatar-jean" onclick="toggleChat()">
-    <img id="jean-avatar" src="/avatars/jean-default.png" alt="J.E.A.N Avatar" onerror="this.src='/avatars/jean-default.png'">
+    <!-- IMPORTANT: mets bien tes PNG ici: /public/avatars/jean-*.png -->
+    <img id="jean-avatar" src="/avatars/jean-default.png" alt="J.E.A.N Avatar">
   </div>
 
   <!-- Chat JEAN -->
@@ -215,10 +219,30 @@
       chat.style.flexDirection="column";
     }
 
-    // === Avatar dynamique selon météo ===
+    // === AVATAR J.E.A.N (PNG) ===
+    const AVATAR_POS = {
+      /* ajuste le cadrage si besoin par type */
+      default:  '80% 80%',   // bas-droit (ton PNG actuel)
+      sun:      '50% 60%',
+      rain:     '60% 70%',
+      snow:     '60% 65%',
+      storm:    '65% 70%',
+      alert:    '70% 75%'
+    };
+
     function setJeanAvatar(type="default"){
-      const avatar=document.getElementById("jean-avatar");
-      avatar.src=`/avatars/jean-${type}.png`;
+      const el = document.getElementById("jean-avatar");
+      const pos = AVATAR_POS[type] || AVATAR_POS.default;
+
+      // anti-cache + fallback
+      el.onerror = function(){
+        this.onerror = null;
+        this.src = '/avatars/jean-default.png?v=' + Date.now();
+        document.documentElement.style.setProperty('--avatar-obj-pos', AVATAR_POS.default);
+      };
+
+      document.documentElement.style.setProperty('--avatar-obj-pos', pos);
+      el.src = `/avatars/jean-${type}.png?v=${Date.now()}`;
     }
 
     // === Alertes ===
@@ -257,7 +281,7 @@
       });
     }
 
-    // === Chat avec Cohere J.E.A.N ===
+    // === Chat (J.E.A.N via Cohere côté serveur) ===
     document.getElementById("jean-send").addEventListener("click", async ()=>{
       const msg=document.getElementById("jean-input").value;
       if(!msg) return;
@@ -271,7 +295,7 @@
     });
 
     // Init
-    setJeanAvatar("default");
+    setJeanAvatar("default");   // charge l’avatar et positionne le cadrage
     refreshAlerts();
     setInterval(refreshAlerts,30000);
   </script>
