@@ -59,13 +59,12 @@ app.post("/api/run-global", async (req, res) => {
     const result = await safeCall(runGlobal, zone || "Europe");
     res.json({ success: true, result });
   } catch (e) {
+    console.error("❌ Erreur run-global:", e);
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// … (tous tes autres endpoints déjà en place inchangés)
-
-// === NEW : Status global moteur ===
+// === Status global moteur ===
 app.get("/api/status", async (req, res) => {
   try {
     const state = await safeCall(engineStateService.getEngineState);
@@ -82,6 +81,20 @@ app.get("/api/status", async (req, res) => {
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
+});
+
+// === Logs SSE (flux live) ===
+app.get("/api/logs/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  adminLogs.registerClient(res);
+
+  req.on("close", () => {
+    console.log("❌ Client SSE déconnecté");
+  });
 });
 
 // === Admin pages ===
