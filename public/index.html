@@ -36,6 +36,11 @@
     footer { text-align:center; padding:6px; margin-top:6px; background:#0077cc; color:white; font-size:0.75rem; }
     footer a { color:yellow; text-decoration:none; }
 
+    /* Vidéo bandeau */
+    .video-container { position:relative; width:100%; height:160px; overflow:hidden; }
+    video { width:100%; height:100%; object-fit:cover; }
+    .video-btn { position:absolute; bottom:4px; right:6px; background:#0077cc; color:#fff; border:none; padding:3px 6px; border-radius:5px; cursor:pointer; font-size:0.7rem; }
+
     /* Avatar JEAN */
     #avatar-jean {
       position:fixed;
@@ -88,6 +93,26 @@
     <h1>TINSFLASH</h1>
     <p>la météo enfin ultra fiable – Système J.E.A.N</p>
   </header>
+
+  <!-- Bandeau vidéo -->
+  <div class="video-container">
+    <video id="introVideo" autoplay muted loop>
+      <source src="intro-jean.mp4" type="video/mp4">
+    </video>
+    <button class="video-btn" onclick="toggleVideo()">🔊 Son</button>
+  </div>
+
+  <!-- Pub Google -->
+  <div class="card">
+    <h2>💰 Publicité</h2>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-6828365665232268"
+         data-ad-slot="1234567890"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
 
   <main class="container">
     <!-- Intro -->
@@ -144,14 +169,6 @@
       <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation"
         width="100%" height="220" frameborder="0" style="border-radius:10px;"></iframe>
     </div>
-
-    <!-- Notifications -->
-    <div class="card">
-      <h2>🔔 Notifications</h2>
-      <button onclick="subscribeNotif()">Activer notifications</button>
-      <button onclick="unsubscribeNotif()">Désactiver notifications</button>
-      <p id="notif-status">🔕 Inactives</p>
-    </div>
   </main>
 
   <!-- Avatar JEAN -->
@@ -182,6 +199,12 @@
   <script>
     document.getElementById("year").textContent=new Date().getFullYear();
 
+    function toggleVideo(){
+      const video=document.getElementById("introVideo");
+      video.muted=!video.muted;
+      alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
+    }
+
     function toggleChat(){
       const chat=document.getElementById("chat-jean");
       chat.style.display=chat.style.display==="flex"?"none":"flex";
@@ -189,22 +212,67 @@
     }
 
     // === Avatar dynamique ===
-    const AVATAR_POS = {
-      default:"center center",
-      sun:"center center",
-      rain:"center center",
-      snow:"center center",
-      storm:"center center",
-      alert:"center center"
-    };
     function setJeanAvatar(type="default"){
       const el=document.getElementById("avatar-jean");
-      const pos=AVATAR_POS[type]||"center center";
       el.style.backgroundImage=`url('/avatars/jean-${type}.png?v=${Date.now()}')`;
-      el.style.backgroundPosition=pos;
+      el.style.backgroundPosition="center center";
+      el.style.backgroundSize="cover";
     }
 
-    // === Chat avec Cohere ===
+    // === Géolocalisation ===
+    let userCountry="Belgique"; let userLat=null, userLon=null;
+
+    async function getLocationOrAddress(){
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(async pos=>{
+          userLat=pos.coords.latitude; userLon=pos.coords.longitude;
+          try{
+            const res=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${userLat}&longitude=${userLon}&localityLanguage=fr`);
+            const data=await res.json();
+            userCountry=data.countryName||"Belgique";
+          }catch{ userCountry="Belgique"; }
+          refreshAll();
+        }, async()=>{ await detectIPCountry(); });
+      } else { await detectIPCountry(); }
+    }
+
+    async function detectIPCountry(){
+      try{
+        const res=await fetch("https://ipapi.co/json/");
+        const data=await res.json();
+        userCountry=data.country_name||"Belgique";
+      }catch{ userCountry="Belgique"; }
+      refreshAll();
+    }
+
+    async function refreshAll(){ refreshAlerts(); updateAvatar(); }
+
+    async function refreshAlerts(){
+      try{
+        const res=await fetch("/api/alerts");
+        const alerts=await res.json();
+        document.getElementById("alerts-local").innerText=
+          alerts.filter(a=>a.country===userCountry).map(a=>`${a.country} ${a.region||""} → ${a.data?.status||""} (${a.data?.confidence||0}%)`).join("\n")||"Aucune alerte locale/nationale";
+        document.getElementById("alerts-world").innerText=
+          alerts.map(a=>`${a.country} ${a.region||""} → ${a.data?.status||""}`).join("\n")||"Aucune alerte mondiale";
+      }catch(e){ console.warn("Erreur alertes:",e.message); }
+    }
+
+    async function updateAvatar(){
+      try{
+        const res=await fetch(`/api/forecast/${userCountry}`);
+        const forecast=await res.json();
+        let avatar="default"; const txt=JSON.stringify(forecast).toLowerCase();
+        if(/soleil|sun|clair/.test(txt)) avatar="sun";
+        else if(/pluie|rain/.test(txt)) avatar="rain";
+        else if(/neige|snow/.test(txt)) avatar="snow";
+        else if(/orage|storm|tonnerre/.test(txt)) avatar="storm";
+        else if(/alerte|danger|warning/.test(txt)) avatar="alert";
+        setJeanAvatar(avatar);
+      }catch{ setJeanAvatar("default"); }
+    }
+
+    // === Chat ===
     document.getElementById("jean-send").addEventListener("click", async ()=>{
       const msg=document.getElementById("jean-input").value;
       if(!msg) return;
@@ -218,6 +286,7 @@
     });
 
     setJeanAvatar("default");
+    setInterval(refreshAll,30000);
   </script>
 </body>
 </html>
