@@ -38,29 +38,26 @@
     footer { text-align:center; padding:6px; margin-top:6px; background:#0077cc; color:white; font-size:0.75rem; }
     footer a { color:yellow; text-decoration:none; }
 
-    /* Vidéo bandeau */
     .video-container { position:relative; width:100%; height:120px; overflow:hidden; }
     video { width:100%; height:100%; object-fit:cover; }
     .video-btn { position:absolute; bottom:4px; right:6px; background:#0077cc; color:#fff; border:none; padding:3px 6px; border-radius:5px; cursor:pointer; font-size:0.7rem; }
 
-    /* Avatar JEAN flottant */
+    /* Avatar JEAN */
     #avatar-jean {
       position:fixed;
-      bottom:20px;
-      right:20px;
+      bottom:80px;
+      right:15px;
       width:70px;
       height:70px;
       z-index:99999;
       cursor:pointer;
     }
-
-    /* Chat JEAN */
     #chat-jean {
       position:fixed;
-      bottom:100px;
-      right:20px;
-      width:280px;
-      height:320px;
+      bottom:160px;
+      right:12px;
+      width:250px;
+      height:300px;
       background:#fff;
       color:#000;
       border-radius:10px;
@@ -69,16 +66,14 @@
       box-shadow:0 2px 8px rgba(0,0,0,0.4);
       z-index:100000;
     }
-    #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.85rem; border-radius:10px 10px 0 0; }
+    #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.8rem; border-radius:10px 10px 0 0; }
     #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
     #chat-input { display:flex; }
     #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
     #chat-input button { background:#0077cc; color:#fff; border:none; padding:5px 7px; cursor:pointer; font-size:0.8rem; }
 
-    /* Carte alertes */
     #map { width:100%; height:300px; border-radius:10px; margin-top:8px; }
 
-    /* Bandeau partenaire */
     #partner-banner {
       position:fixed; bottom:0; left:0; width:100%;
       background:#ffcc00; color:#000; text-align:center;
@@ -103,17 +98,13 @@
   </div>
 
   <main class="container">
-    <!-- Intro -->
     <div class="card">
       <h2>🔎 À propos de TINSFLASH</h2>
-      <p>
-        <strong>TINSFLASH, la météo la plus précise.</strong><br>
-        Notre moteur combine modèles physiques, IA nouvelle génération, relief et satellites pour anticiper le temps avant tous les autres.<br>
-        Du particulier aux agriculteurs, jusqu’aux aérodromes et administrations, chacun reçoit des prévisions fiables et des alertes en avance.
-      </p>
+      <p><strong>TINSFLASH, la météo la plus précise.</strong><br>
+      Notre moteur combine modèles physiques, IA nouvelle génération, relief et satellites pour anticiper le temps avant tous les autres.<br>
+      Du particulier aux agriculteurs, jusqu’aux aérodromes et administrations, chacun reçoit des prévisions fiables et des alertes en avance.</p>
     </div>
 
-    <!-- Localisation -->
     <div class="card">
       <h2>📍 Localisation</h2>
       <button onclick="getLocationOrAddress()">📡 Activer la géolocalisation</button>
@@ -122,19 +113,16 @@
       <button onclick="loadForecastFromAddress()">Voir la météo</button>
     </div>
 
-    <!-- Prévision du jour -->
     <div class="card">
       <h2>☀️ Météo du jour</h2>
       <div id="today-forecast">⏳ Chargement...</div>
     </div>
 
-    <!-- Prévisions 7 jours -->
     <div class="card">
       <h2>📅 Prévisions 7 jours</h2>
       <div id="days-container" class="forecast-grid">⏳ Chargement...</div>
     </div>
 
-    <!-- Alertes -->
     <div class="card">
       <h2>⚠️ Alertes météo</h2>
       <div id="alerts-local">⏳ Chargement alertes locales/nationales...</div>
@@ -145,20 +133,17 @@
       </details>
     </div>
 
-    <!-- Bulletin -->
     <div class="card">
       <h2>📰 Bulletin météo</h2>
       <div id="forecast-text">⏳ Génération...</div>
     </div>
 
-    <!-- Radar -->
     <div class="card">
       <h2>🛰️ Radar en direct</h2>
       <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation"
         width="100%" height="220" frameborder="0" style="border-radius:10px;"></iframe>
     </div>
 
-    <!-- Notifications -->
     <div class="card">
       <h2>🔔 Notifications</h2>
       <button onclick="subscribeNotif()">Activer notifications</button>
@@ -167,13 +152,15 @@
     </div>
   </main>
 
-  <!-- Avatar JEAN flottant -->
+  <!-- Avatar JEAN -->
   <div id="avatar-jean" onclick="toggleChat()">
     <lottie-player id="jean-player"
       src="/avatars/jean-default.json"
       background="transparent" speed="1" loop autoplay
-      style="width:70px; height:70px;">
+      style="width:70px; height:70px; display:block;">
     </lottie-player>
+    <img id="jean-fallback" src="/avatars/jean-default.png" 
+         style="width:70px; height:70px; display:none; border-radius:50%;" />
   </div>
 
   <!-- Chat JEAN -->
@@ -186,7 +173,6 @@
     </div>
   </div>
 
-  <!-- Bandeau partenaire -->
   <div id="partner-banner">
     💧 Une fuite, problème d’humidité ou inspection canalisations ? 👉 
     <a href="https://uman-detect.com" target="_blank">uman-detect.com (Belgique)</a>
@@ -213,10 +199,29 @@
       chat.style.flexDirection="column";
     }
 
-    // === Avatar dynamique selon Cohere ===
+    // === Avatar dynamique avec fallback ===
+    const jeanPlayer = document.getElementById("jean-player");
+    const jeanFallback = document.getElementById("jean-fallback");
+
+    jeanPlayer.addEventListener("error", () => {
+      console.warn("⚠️ Lottie non chargé, fallback image activé.");
+      jeanPlayer.style.display = "none";
+      jeanFallback.style.display = "block";
+    });
+
     function setJeanAvatar(type="default"){
-      const player=document.getElementById("jean-player");
-      player.load(`/avatars/jean-${type}.json`);
+      const jsonPath = `/avatars/jean-${type}.json`;
+      const pngPath = `/avatars/jean-${type}.png`;
+
+      try {
+        jeanPlayer.load(jsonPath);
+        jeanPlayer.style.display="block";
+        jeanFallback.style.display="none";
+      } catch {
+        jeanPlayer.style.display="none";
+        jeanFallback.src=pngPath;
+        jeanFallback.style.display="block";
+      }
     }
 
     // === Alertes ===
@@ -235,8 +240,7 @@
       }catch(e){ console.warn("Erreur alertes:",e.message); }
     }
 
-    // === Carte Leaflet ===
-    let map, layers={};
+    let map,layers={};
     function initMap(){
       map=L.map('map').setView([20,0],2);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap'}).addTo(map);
@@ -255,7 +259,7 @@
       });
     }
 
-    // === Chat avec Cohere J.E.A.N ===
+    // === Chat avec J.E.A.N (Cohere) ===
     document.getElementById("jean-send").addEventListener("click", async ()=>{
       const msg=document.getElementById("jean-input").value;
       if(!msg) return;
@@ -266,10 +270,8 @@
       chat.innerHTML+=`<div><b>J.E.A.N:</b> ${data.reply}</div>`;
       chat.scrollTop=chat.scrollHeight;
       setJeanAvatar(data.avatar||"default");
-      document.getElementById("jean-input").value="";
     });
 
-    // Init
     setJeanAvatar("default");
     refreshAlerts();
     setInterval(refreshAlerts,30000);
