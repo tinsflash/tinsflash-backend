@@ -39,7 +39,7 @@ const EngineStateSchema = new mongoose.Schema({
     },
   },
 
-  errors: { type: [ErrorSchema], default: [] },
+  engineErrors: { type: [ErrorSchema], default: [] }, // ✅ renommé
   logs: { type: [LogSchema], default: [] },
   currentCycleId: { type: String, default: null },
 });
@@ -72,41 +72,34 @@ EngineStateSchema.pre("save", function (next) {
   next();
 });
 
-// ✅ Méthodes internes (instance)
-EngineStateSchema.methods.addLog = function (msg) {
-  this.logs.unshift({ message: msg, timestamp: new Date() });
-  if (this.logs.length > 200) this.logs.pop();
-};
-
-EngineStateSchema.methods.addError = function (msg) {
-  this.errors.unshift({ message: msg, timestamp: new Date() });
-  if (this.errors.length > 200) this.errors.pop();
-};
-
-// ✅ Modèle
+// === Modèle
 const EngineState = mongoose.model("EngineState", EngineStateSchema);
 
-// === Helpers exports pour adminLogs.js ===
+// === Fonctions utilitaires ===
+
+// Ajoute un log (atomique, pas de conflit)
 export async function addEngineLog(message) {
-  let state = await EngineState.findOne();
-  if (!state) state = new EngineState();
-
-  state.addLog(message);
-  await state.save();
-
+  const entry = { message, timestamp: new Date() };
+  await EngineState.findOneAndUpdate(
+    {},
+    { $push: { logs: { $each: [entry], $position: 0 } }, $slice: { logs: 200 } },
+    { new: true, upsert: true }
+  );
   return { ts: Date.now(), type: "INFO", message };
 }
 
+// Ajoute une erreur (atomique)
 export async function addEngineError(message) {
-  let state = await EngineState.findOne();
-  if (!state) state = new EngineState();
-
-  state.addError(message);
-  await state.save();
-
+  const entry = { message, timestamp: new Date() };
+  await EngineState.findOneAndUpdate(
+    {},
+    { $push: { engineErrors: { $each: [entry], $position: 0 } }, $slice: { engineErrors: 200 } },
+    { new: true, upsert: true }
+  );
   return { ts: Date.now(), type: "ERROR", message };
 }
 
+// Récupère l’état moteur
 export async function getEngineState() {
   let state = await EngineState.findOne();
   if (!state) {
@@ -116,20 +109,20 @@ export async function getEngineState() {
   return state;
 }
 
+// Sauvegarde atomique (merge)
 export async function saveEngineState(state) {
-  return state.save();
+  return await EngineState.findOneAndUpdate(
+    {},
+    state.toObject(),
+    { new: true, upsert: true }
+  );
 }
 
-// ✅ Helper universel pour mettre à jour un champ précis
+// Met à jour un champ précis
 export async function updateEngineState(path, value) {
-  let state = await EngineState.findOne();
-  if (!state) state = new EngineState();
-
-  // Exemple: path = "checkup.steps.superForecast"
-  state.set(path, value);
-
-  await state.save();
-  return state;
+  const update = {};
+  update[path] = value;
+  return await EngineState.findOneAndUpdate({}, { $set: update }, { new: true, upsert: true });
 }
 
 export default EngineState;
