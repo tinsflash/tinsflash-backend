@@ -1,4 +1,4 @@
-// services/engineState.js
+// PATH: services/engineState.js
 import mongoose from "mongoose";
 
 const ErrorSchema = new mongoose.Schema({
@@ -39,7 +39,7 @@ const EngineStateSchema = new mongoose.Schema({
     },
   },
 
-  engineErrors: { type: [ErrorSchema], default: [] }, // ✅ renommé
+  engineErrors: { type: [ErrorSchema], default: [] },
   logs: { type: [LogSchema], default: [] },
   currentCycleId: { type: String, default: null },
 });
@@ -77,7 +77,7 @@ const EngineState = mongoose.model("EngineState", EngineStateSchema);
 
 // === Fonctions utilitaires ===
 
-// Ajoute un log (atomique, pas de conflit)
+// Ajoute un log (atomique, max 200)
 export async function addEngineLog(message) {
   const entry = { message, timestamp: new Date() };
   await EngineState.findOneAndUpdate(
@@ -88,7 +88,7 @@ export async function addEngineLog(message) {
   return { ts: Date.now(), type: "INFO", message };
 }
 
-// Ajoute une erreur (atomique)
+// Ajoute une erreur (atomique, max 200)
 export async function addEngineError(message) {
   const entry = { message, timestamp: new Date() };
   await EngineState.findOneAndUpdate(
@@ -109,11 +109,12 @@ export async function getEngineState() {
   return state;
 }
 
-// Sauvegarde atomique (merge)
+// Sauvegarde atomique (merge, safe même si state est un objet brut)
 export async function saveEngineState(state) {
+  const obj = state?.toObject ? state.toObject() : state;
   return await EngineState.findOneAndUpdate(
     {},
-    state.toObject(),
+    obj,
     { new: true, upsert: true }
   );
 }
