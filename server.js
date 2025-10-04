@@ -39,7 +39,7 @@ import * as newsService from "./services/newsService.js";
 import * as userService from "./services/userService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import * as adminLogs from "./services/adminLogs.js";
-import { runWorldAlerts } from "./services/runWorldAlerts.js"; 
+import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import { askCohere } from "./services/cohereService.js";
 import { addSubscription, sendNotification } from "./services/pushService.js";
 
@@ -83,6 +83,16 @@ app.get("/api/status", async (req, res) => {
   }
 });
 
+// === Alertes exposées pour index ===
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const state = await engineStateService.getEngineState();
+    res.json(state.alerts || []);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // === Logs SSE (flux live) ===
 app.get("/api/logs/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -90,10 +100,10 @@ app.get("/api/logs/stream", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  // 1) enregistrer client
+  // enregistrer client
   adminLogs.registerClient(res);
 
-  // 2) envoyer immédiatement derniers logs
+  // envoyer logs du cycle en cours
   const logs = await adminLogs.getLogs("current");
   if (logs && logs.length) {
     logs.forEach(l => res.write(`data: ${JSON.stringify(l)}\n\n`));
@@ -108,15 +118,17 @@ app.get("/api/logs/stream", async (req, res) => {
 app.post("/api/jean", async (req, res) => {
   try {
     const { message } = req.body;
-    if (!message) return res.status(400).json({ reply: "❌ Message manquant", avatar:"default" });
+    if (!message)
+      return res.status(400).json({ reply: "❌ Message manquant", avatar: "default" });
+
     const { reply, avatar } = await askCohere(message);
     res.json({ reply, avatar });
   } catch (e) {
-    res.status(500).json({ reply: "⚠️ Erreur J.E.A.N", avatar:"default" });
+    res.status(500).json({ reply: "⚠️ Erreur J.E.A.N", avatar: "default" });
   }
 });
 
-// === Chat moteur (admin) ===
+// === Chat moteur (console admin) ===
 app.post("/api/chat-engine", async (req, res) => {
   try {
     const { message } = req.body;
@@ -135,6 +147,7 @@ app.get("/admin", (req, res) =>
 app.get("/admin-alerts", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-alerts.html"))
 );
+// autres pages admin si besoin…
 
 // === Start server ===
 const PORT = process.env.PORT || 5000;
