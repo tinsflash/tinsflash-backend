@@ -2,16 +2,14 @@
 // app.js - TINSFLASH Front
 // ---------------------------
 
-console.log("🌍 TINSFLASH app.js chargé");
-
-// 🌍 Détection GPS ou fallback encodage manuel
-async function getLocationOrManual() {
+// 🌍 Obtenir position GPS (fallback adresse manuelle)
+async function getLocationOrAddress() {
   return new Promise((resolve) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-        () => {
-          const addr = prompt("Entrez votre ville/pays (ex: Paris, FR) :");
+        async () => {
+          const addr = prompt("❌ Géolocalisation refusée.\nEntrez votre ville/pays (ex: Paris, FR) :");
           resolve({ address: addr });
         }
       );
@@ -22,7 +20,7 @@ async function getLocationOrManual() {
   });
 }
 
-// 🎨 Avatar J.E.A.N (Lottie)
+// 🎨 Avatar J.E.A.N dynamique
 function updateJeanAvatar(type = "default") {
   const player = document.getElementById("jean-player");
   if (!player) return;
@@ -39,7 +37,7 @@ function updateJeanAvatar(type = "default") {
   player.load(map[type] || map["default"]);
 }
 
-// 🎭 Appliquer avatar selon condition
+// 🎭 Appliquer icône/avatar selon condition météo
 function applyForecastIcon(condition) {
   condition = (condition || "").toLowerCase();
   if (condition.includes("sun") || condition.includes("clear")) updateJeanAvatar("sun");
@@ -49,28 +47,28 @@ function applyForecastIcon(condition) {
   else updateJeanAvatar("default");
 }
 
-// 🔄 Icône météo Lottie selon condition
-function getLottieByCondition(condition) {
-  condition = (condition || "").toLowerCase();
-  if (condition.includes("sun") || condition.includes("clear"))
-    return "https://assets10.lottiefiles.com/packages/lf20_jtbfg2nb.json";
-  if (condition.includes("rain"))
-    return "https://assets10.lottiefiles.com/packages/lf20_rp9zjhnc.json";
-  if (condition.includes("snow"))
-    return "https://assets10.lottiefiles.com/packages/lf20_RbLd9R.json";
-  if (condition.includes("storm") || condition.includes("thunder"))
-    return "https://assets10.lottiefiles.com/packages/lf20_HhXgdh.json";
-  return "https://assets10.lottiefiles.com/packages/lf20_jtbfg2nb.json"; // par défaut soleil
-}
-
 // 📊 Charger prévisions météo
-async function loadForecast(country = "FR") {
+async function loadForecast(location = {}) {
   try {
-    const res = await fetch(`/api/forecast/${country}`);
-    const data = await res.json();
+    let url = "";
+    if (location.lat && location.lon) {
+      url = `/api/superforecast`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(location)
+      });
+      var data = await res.json();
+    } else if (location.address) {
+      url = `/api/forecast/${encodeURIComponent(location.address)}`;
+      const res = await fetch(url);
+      var data = await res.json();
+    } else {
+      return;
+    }
 
     if (!data || data.error) {
-      document.getElementById("today-forecast").innerText = "❌ Erreur prévisions.";
+      document.getElementById("today-forecast").innerText = "❌ Erreur de récupération.";
       return;
     }
 
@@ -78,40 +76,31 @@ async function loadForecast(country = "FR") {
     const today = data.days?.[0];
     if (today) {
       document.getElementById("today-forecast").innerHTML = `
-        <div class="forecast-item">
-          <lottie-player src="${getLottieByCondition(today.condition)}"
-            background="transparent" speed="1" style="width:60px;height:60px;" loop autoplay></lottie-player>
-          <p><strong>${today.date}</strong></p>
-          <p>${today.condition}</p>
-          <p>${today.temp_min}°C / ${today.temp_max}°C</p>
-        </div>
+        <h3>${today.date}</h3>
+        <p>${today.condition}, ${today.temp_min}°C / ${today.temp_max}°C</p>
       `;
       applyForecastIcon(today.condition);
     }
 
     // 7 jours
-    document.getElementById("days-container").innerHTML = (data.days || [])
-      .map(d => `
+    let html = "";
+    (data.days || []).forEach((d) => {
+      html += `
         <div class="forecast-item">
-          <lottie-player src="${getLottieByCondition(d.condition)}"
-            background="transparent" speed="1" style="width:50px;height:50px;" loop autoplay></lottie-player>
-          <p><b>${d.date}</b></p>
-          <p>${d.condition}</p>
-          <p>${d.temp_min}°C / ${d.temp_max}°C</p>
+          <p><b>${d.date}</b><br>${d.condition}<br>${d.temp_min}° / ${d.temp_max}°</p>
         </div>
-      `).join("");
+      `;
+    });
+    document.getElementById("days-container").innerHTML = html;
 
-    // Bulletin texte enrichi
+    // Bulletin texte
     const txt = await fetch("/api/textgen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: `Rédige un bulletin météo clair, style radio/TV, basé sur les prévisions actuelles pour ${country}.`
-      })
+      body: JSON.stringify({ prompt: "Fais un bulletin météo clair basé sur les prévisions actuelles." })
     });
     const tdata = await txt.json();
-    document.getElementById("forecast-text").innerText =
-      tdata.reply || "❌ Pas de bulletin.";
+    document.getElementById("forecast-text").innerText = tdata.reply || "❌ Pas de bulletin.";
   } catch (err) {
     console.error("Forecast error:", err);
   }
@@ -133,7 +122,7 @@ async function loadAlerts() {
       (a) => `<div class="alert"><b>${a.country || a.continent}</b>: ${a.title} (${a.level}%)</div>`
     ).join("");
 
-    // Avatar mode "alert" si nécessaire
+    // Si alerte forte → avatar passe en "alert"
     if (data.some(a => a.level >= 80)) {
       updateJeanAvatar("alert");
     }
@@ -142,41 +131,48 @@ async function loadAlerts() {
   }
 }
 
-// 🛰️ Radar Windy (embed)
-function loadRadar() {
-  const radar = document.getElementById("radar-map");
-  radar.innerHTML = `
-    <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation&menu=&message=true&marker=true" 
-      width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
-  `;
+// 🔔 Notifications Push
+async function subscribeNotif() {
+  if (!("Notification" in window)) {
+    alert("❌ Ce navigateur ne supporte pas les notifications.");
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") {
+    document.getElementById("notif-status").innerText = "⚠️ Notifications refusées.";
+    return;
+  }
+
+  // Exemple simple (à brancher sur ton pushService)
+  await fetch("/api/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user: "browser" })
+  });
+
+  document.getElementById("notif-status").innerText = "✅ Notifications activées.";
 }
 
-// 🎙️ Podcast météo
-async function loadPodcast(country = "FR") {
-  try {
-    const res = await fetch(`/api/podcast/${country}`);
-    const data = await res.json();
-    const el = document.getElementById("podcast-container");
-    el.innerHTML = data?.podcast || "Pas de podcast dispo.";
-  } catch (err) {
-    console.error("Podcast error:", err);
-  }
+function unsubscribeNotif() {
+  document.getElementById("notif-status").innerText = "🔕 Notifications désactivées.";
 }
 
 // 💬 Chat Cohere (J.E.A.N.)
 function setupJeanChat() {
   const avatar = document.getElementById("avatar-jean");
+  const chat = document.getElementById("chat-jean");
+  const sendBtn = document.getElementById("jean-send");
+  const input = document.getElementById("jean-input");
+  const messages = document.getElementById("chat-messages");
+
   avatar.addEventListener("click", () => {
-    const chat = document.getElementById("chat-jean");
-    chat.style.display = chat.style.display === "flex" ? "none" : "flex";
+    chat.style.display = (chat.style.display === "flex") ? "none" : "flex";
   });
 
-  document.getElementById("jean-send").onclick = async () => {
-    const msg = document.getElementById("jean-input").value;
-    const box = document.getElementById("jean-messages");
+  sendBtn.onclick = async () => {
+    const msg = input.value.trim();
     if (!msg) return;
-
-    box.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
+    messages.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
 
     const res = await fetch("/api/jean", {
       method: "POST",
@@ -185,21 +181,17 @@ function setupJeanChat() {
     });
     const data = await res.json();
 
-    box.innerHTML += `<div style="color:#0077cc;"><b>J.E.A.N:</b> ${data.reply}</div>`;
-    document.getElementById("jean-input").value = "";
-    box.scrollTop = box.scrollHeight;
-
-    if (data.avatar) updateJeanAvatar(data.avatar);
+    messages.innerHTML += `<div style="color:#0077cc;"><b>J.E.A.N:</b> ${data.reply}</div>`;
+    input.value = "";
+    messages.scrollTop = messages.scrollHeight;
   };
 }
 
 // 🚀 Initialisation
 (async function init() {
-  const loc = await getLocationOrManual();
-  const country = loc.country || "FR";
-  await loadForecast(country);
+  const loc = await getLocationOrAddress();
+  await loadForecast(loc);
   await loadAlerts();
-  await loadPodcast(country);
-  loadRadar();
   setupJeanChat();
+  updateJeanAvatar("default");
 })();
