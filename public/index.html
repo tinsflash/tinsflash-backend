@@ -11,6 +11,9 @@
 
   <!-- Lottie -->
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
     body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
@@ -69,6 +72,9 @@
     #chat-input { display:flex; }
     #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
     #chat-input button { background:#0077cc; color:#fff; border:none; padding:5px 7px; cursor:pointer; font-size:0.8rem; }
+
+    /* Carte alertes */
+    #map { width:100%; height:300px; border-radius:10px; margin-top:8px; }
 
     /* Bandeau partenaire */
     #partner-banner {
@@ -133,6 +139,7 @@
       <details>
         <summary>🌍 Voir alertes mondiales</summary>
         <div id="alerts-world">⏳ Chargement...</div>
+        <div id="map"></div>
       </details>
     </div>
 
@@ -161,7 +168,7 @@
   <!-- Avatar JEAN -->
   <div id="avatar-jean" onclick="toggleChat()">
     <lottie-player id="jean-player"
-      src=""
+      src="/avatars/jean-default.json"
       background="transparent" speed="1" loop autoplay
       style="width:70px; height:70px;">
     </lottie-player>
@@ -190,86 +197,63 @@
   </footer>
 
   <script>
-    let userCountry="Belgique"; 
-    let userLat=null, userLon=null;
+    document.getElementById("year").textContent=new Date().getFullYear();
 
     function toggleVideo(){
       const video=document.getElementById("introVideo");
       video.muted=!video.muted;
       alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
     }
-    document.getElementById("year").textContent=new Date().getFullYear();
 
     function toggleChat(){
       const chat=document.getElementById("chat-jean");
       chat.style.display=chat.style.display==="flex"?"none":"flex";
+      chat.style.flexDirection="column";
     }
 
-    // Avatar J.E.A.N
+    // === Avatar dynamique selon Cohere ===
     function setJeanAvatar(type="default"){
       const player=document.getElementById("jean-player");
-      const url=window.location.origin+`/avatars/jean-${type}.json`;
-      player.load(url);
+      player.load(`/avatars/jean-${type}.json`);
     }
 
-    // Localisation
-    async function getLocationOrAddress(){
-      if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(async pos=>{
-          userLat=pos.coords.latitude;
-          userLon=pos.coords.longitude;
-          try{
-            const res=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${userLat}&longitude=${userLon}&localityLanguage=fr`);
-            const data=await res.json();
-            userCountry=data.countryName||"Belgique";
-          }catch{ userCountry="Belgique"; }
-          refreshAll();
-        }, async ()=>{ await detectIPCountry(); });
-      }else{ await detectIPCountry(); }
-    }
-
-    async function detectIPCountry(){
-      try{
-        const res=await fetch("https://ipapi.co/json/");
-        const data=await res.json();
-        userCountry=data.country_name||"Belgique";
-      }catch{ userCountry="Belgique"; }
-      refreshAll();
-    }
-
-    // Rafraîchir données
-    async function refreshAll(){
-      refreshAlerts();
-      updateAvatar();
-    }
-
+    // === Alertes ===
     async function refreshAlerts(){
       try{
         const res=await fetch("/api/alerts");
         const alerts=await res.json();
+
         document.getElementById("alerts-local").innerText=
-          alerts.filter(a=>a.country===userCountry).map(a=>`${a.country} ${a.region||""} → ${a.data?.status||""} (${a.data?.confidence||0}%)`).join("\n")||"Aucune alerte locale/nationale";
+          alerts.filter(a=>a.country==="Belgique").map(a=>`${a.country} ${a.region||""} → ${a.data?.status||""} (${a.data?.confidence||0}%)`).join("\n")||"Aucune alerte locale/nationale";
+
         document.getElementById("alerts-world").innerText=
           alerts.map(a=>`${a.country} ${a.region||""} → ${a.data?.status||""}`).join("\n")||"Aucune alerte mondiale";
+
+        updateMap(alerts);
       }catch(e){ console.warn("Erreur alertes:",e.message); }
     }
 
-    async function updateAvatar(){
-      try{
-        const res=await fetch(`/api/forecast/${userCountry}`);
-        const forecast=await res.json();
-        let avatar="default"; 
-        const txt=JSON.stringify(forecast).toLowerCase();
-        if(/soleil|sun|clair/.test(txt)) avatar="sun";
-        else if(/pluie|rain/.test(txt)) avatar="rain";
-        else if(/neige|snow/.test(txt)) avatar="snow";
-        else if(/orage|storm|tonnerre/.test(txt)) avatar="storm";
-        else if(/alerte|danger|warning/.test(txt)) avatar="alert";
-        setJeanAvatar(avatar);
-      }catch{ setJeanAvatar("default"); }
+    // === Carte Leaflet ===
+    let map, layers={};
+    function initMap(){
+      map=L.map('map').setView([20,0],2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap'}).addTo(map);
+    }
+    function updateMap(alerts){
+      if(!map){initMap();}
+      Object.values(layers).forEach(l=>map.removeLayer(l));
+      layers={};
+      alerts.forEach(a=>{
+        if(!a.lat||!a.lon) return;
+        const c=a.data?.confidence||0;
+        let color="green"; if(c>=70&&c<90) color="orange"; if(c>=90) color="red";
+        const circle=L.circle([a.lat,a.lon],{radius:150000,color,fillOpacity:0.5}).addTo(map);
+        circle.bindPopup(`<b>${a.country} ${a.region||""}</b><br>Type: ${a.type}<br>Fiabilité: ${c}%`);
+        layers[a.id]=circle;
+      });
     }
 
-    // Chat J.E.A.N
+    // === Chat avec Cohere J.E.A.N ===
     document.getElementById("jean-send").addEventListener("click", async ()=>{
       const msg=document.getElementById("jean-input").value;
       if(!msg) return;
@@ -282,12 +266,10 @@
       setJeanAvatar(data.avatar||"default");
     });
 
-    // Rafraîchissement auto toutes les 30s
-    setInterval(()=>{ refreshAll(); },30000);
-
     // Init
     setJeanAvatar("default");
-    refreshAll();
+    refreshAlerts();
+    setInterval(refreshAlerts,30000);
   </script>
 </body>
 </html>
