@@ -43,22 +43,24 @@
     video { width:100%; height:100%; object-fit:cover; }
     .video-btn { position:absolute; bottom:4px; right:6px; background:#0077cc; color:#fff; border:none; padding:3px 6px; border-radius:5px; cursor:pointer; font-size:0.7rem; }
 
-    /* Avatar JEAN */
+    /* Avatar JEAN flottant */
     #avatar-jean {
       position:fixed;
-      bottom:80px;
-      right:15px;
+      bottom:20px;
+      right:20px;
       width:70px;
       height:70px;
       z-index:99999;
       cursor:pointer;
     }
+
+    /* Chat JEAN */
     #chat-jean {
       position:fixed;
-      bottom:160px;
-      right:12px;
-      width:250px;
-      height:300px;
+      bottom:100px;
+      right:20px;
+      width:280px;
+      height:320px;
       background:#fff;
       color:#000;
       border-radius:10px;
@@ -66,9 +68,8 @@
       flex-direction:column;
       box-shadow:0 2px 8px rgba(0,0,0,0.4);
       z-index:100000;
-      max-height:60vh;
     }
-    #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.8rem; border-radius:10px 10px 0 0; }
+    #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.85rem; border-radius:10px 10px 0 0; }
     #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
     #chat-input { display:flex; }
     #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
@@ -166,7 +167,7 @@
     </div>
   </main>
 
-  <!-- Avatar JEAN -->
+  <!-- Avatar JEAN flottant -->
   <div id="avatar-jean" onclick="toggleChat()">
     <lottie-player id="jean-player"
       src="/avatars/jean-default.json"
@@ -212,7 +213,7 @@
       chat.style.flexDirection="column";
     }
 
-    // === Avatar dynamique Cohere ===
+    // === Avatar dynamique selon Cohere ===
     function setJeanAvatar(type="default"){
       const player=document.getElementById("jean-player");
       player.load(`/avatars/jean-${type}.json`);
@@ -255,12 +256,7 @@
     }
 
     // === Chat avec Cohere J.E.A.N ===
-    document.getElementById("jean-send").addEventListener("click", sendJeanMessage);
-    document.getElementById("jean-input").addEventListener("keyup", e=>{
-      if(e.key==="Enter") sendJeanMessage();
-    });
-
-    async function sendJeanMessage(){
+    document.getElementById("jean-send").addEventListener("click", async ()=>{
       const msg=document.getElementById("jean-input").value;
       if(!msg) return;
       const res=await fetch("/api/jean",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
@@ -270,7 +266,8 @@
       chat.innerHTML+=`<div><b>J.E.A.N:</b> ${data.reply}</div>`;
       chat.scrollTop=chat.scrollHeight;
       setJeanAvatar(data.avatar||"default");
-    }
+      document.getElementById("jean-input").value="";
+    });
 
     // Init
     setJeanAvatar("default");
