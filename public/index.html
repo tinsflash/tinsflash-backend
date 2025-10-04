@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>TINSFLASH – La météo la plus précise - Système J.E.A.N</title>
+  <title>TINSFLASH – La météo enfin ultra fiable - Système J.E.A.N</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
@@ -14,36 +14,45 @@
 
   <style>
     body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
-    header { text-align:center; padding:20px; background:#0077cc; color:#fff; }
-    h1 { margin:0; font-size:1.8rem; }
-    .container { max-width:1200px; margin:auto; padding:20px; display:grid; gap:20px; }
-    .card { background:#1b2735; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.4); text-align:center; }
-    h2 { margin-top:0; color:#00bfff; }
-    .forecast-grid { display:flex; gap:15px; flex-wrap:wrap; justify-content:center; }
-    .forecast-item { flex:1 1 120px; background:#223447; border-radius:10px; padding:10px; text-align:center; }
-    footer { text-align:center; padding:20px; margin-top:80px; background:#0077cc; color:white; }
+    header { text-align:center; padding:15px; background:#0077cc; color:#fff; }
+    h1 { margin:0; font-size:1.6rem; }
+    .container { max-width:1200px; margin:auto; padding:10px; display:grid; gap:12px; }
+
+    .card {
+      background:#1b2735;
+      padding:12px 15px;
+      border-radius:10px;
+      box-shadow:0 3px 10px rgba(0,0,0,0.35);
+      text-align:center;
+      margin:0;
+    }
+    h2 { margin:5px 0 10px; font-size:1.2rem; color:#00bfff; }
+    .forecast-grid { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .forecast-item { flex:1 1 110px; background:#223447; border-radius:8px; padding:8px; text-align:center; }
+
+    footer { text-align:center; padding:15px; margin-top:40px; background:#0077cc; color:white; }
     footer a { color:yellow; text-decoration:none; }
 
-    /* Video bandeau */
-    .video-container { position:relative; max-width:100%; margin-bottom:20px; height:220px; overflow:hidden; }
-    video { width:100%; height:100%; object-fit:cover; border-radius:0; }
-    .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
+    /* Vidéo compacte */
+    .video-container { position:relative; max-width:100%; margin-bottom:10px; height:180px; overflow:hidden; }
+    video { width:100%; height:100%; object-fit:cover; }
+    .video-btn { position:absolute; bottom:8px; right:8px; background:#0077cc; color:#fff; border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.8rem; }
 
-    /* Avatar J.E.A.N */
-    #avatar-jean { position:fixed; bottom:80px; right:20px; width:100px; height:100px; z-index:9999; cursor:pointer; }
-    #chat-jean { position:fixed; bottom:190px; right:20px; width:300px; height:400px; background:#fff; color:#000;
-      border-radius:12px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10000; }
-    #chat-header { background:#0077cc; color:#fff; padding:8px; border-radius:12px 12px 0 0; }
-    #chat-messages { flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; }
+    /* Avatar JEAN */
+    #avatar-jean { position:fixed; bottom:65px; right:15px; width:80px; height:80px; z-index:9999; cursor:pointer; }
+    #chat-jean { position:fixed; bottom:150px; right:15px; width:280px; height:360px; background:#fff; color:#000;
+      border-radius:10px; display:none; flex-direction:column; box-shadow:0 3px 12px rgba(0,0,0,0.45); z-index:10000; }
+    #chat-header { background:#0077cc; color:#fff; padding:6px; font-size:0.9rem; border-radius:10px 10px 0 0; }
+    #chat-messages { flex:1; padding:8px; overflow-y:auto; font-size:0.85rem; }
     #chat-input { display:flex; }
-    #chat-input input { flex:1; border:none; padding:8px; }
-    #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 12px; cursor:pointer; }
+    #chat-input input { flex:1; border:none; padding:6px; font-size:0.85rem; }
+    #chat-input button { background:#0077cc; color:#fff; border:none; padding:6px 10px; cursor:pointer; font-size:0.85rem; }
 
-    /* Bandeau pub partenaire */
+    /* Bandeau partenaire */
     #partner-banner {
       position:fixed; bottom:0; left:0; width:100%;
       background:#ffcc00; color:#000; text-align:center;
-      font-weight:bold; padding:10px; z-index:9000; font-size:1rem;
+      font-weight:bold; padding:6px 4px; z-index:9000; font-size:0.9rem;
     }
     #partner-banner a { color:#0077cc; text-decoration:none; }
   </style>
@@ -127,7 +136,7 @@
     <div class="card">
       <h2>🛰️ Radar en direct</h2>
       <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation"
-        width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
+        width="100%" height="300" frameborder="0" style="border-radius:10px;"></iframe>
     </div>
 
     <!-- PUB bas -->
@@ -147,12 +156,12 @@
   </main>
 
   <!-- Avatar JEAN -->
-  <div id="avatar-jean">
+  <div id="avatar-jean" onclick="toggleChat()">
     <lottie-player id="jean-player"
       src="/avatars/jean-default.json"
       background="transparent"
       speed="1"
-      style="width:100px; height:100px;">
+      style="width:80px; height:80px;">
     </lottie-player>
   </div>
 
@@ -186,6 +195,35 @@
       alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
     }
     document.getElementById("year").textContent = new Date().getFullYear();
+
+    function toggleChat() {
+      const chat = document.getElementById("chat-jean");
+      chat.style.display = chat.style.display === "flex" ? "none" : "flex";
+    }
+
+    // Chat J.E.A.N avec avatar dynamique
+    document.getElementById("jean-send").addEventListener("click", async () => {
+      const msg = document.getElementById("jean-input").value;
+      if (!msg) return;
+
+      const res = await fetch("/api/jean", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+
+      const data = await res.json();
+
+      // Afficher le message
+      const chat = document.getElementById("chat-messages");
+      chat.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
+      chat.innerHTML += `<div><b>J.E.A.N:</b> ${data.reply}</div>`;
+      chat.scrollTop = chat.scrollHeight;
+
+      // Changer avatar dynamiquement
+      const avatarPlayer = document.getElementById("jean-player");
+      avatarPlayer.load(`/avatars/jean-${data.avatar}.json`);
+    });
   </script>
 </body>
 </html>
