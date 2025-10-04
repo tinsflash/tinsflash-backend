@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – La météo ultime</title>
+  <title>TINSFLASH – La météo unique au monde</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
@@ -25,21 +25,41 @@
     .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
     footer { text-align:center; padding:20px; margin-top:20px; background:#0077cc; color:white; }
     footer a { color:yellow; text-decoration:none; }
-    #avatar-jean { position:fixed; bottom:20px; right:20px; width:120px; height:120px; cursor:pointer; z-index:9999; opacity:0; transform:scale(0.5); animation: fadeZoomIn 1.5s forwards; }
+    
+    /* Avatar JEAN */
+    #avatar-jean {
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      width:120px;
+      height:120px;
+      cursor:pointer;
+      z-index:9999;
+    }
     #jean-player { width:100%; height:100%; }
-    #chat-jean { position:fixed; bottom:150px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:12px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10000; }
+
+    /* Chat JEAN */
+    #chat-jean {
+      position:fixed;
+      bottom:150px;
+      right:20px;
+      width:300px;
+      height:400px;
+      background:#fff;
+      color:#000;
+      border-radius:12px;
+      display:none;
+      flex-direction:column;
+      box-shadow:0 4px 15px rgba(0,0,0,0.5);
+      z-index:10000;
+    }
     #chat-header { background:#0077cc; color:#fff; padding:8px; border-radius:12px 12px 0 0; }
     #chat-messages { flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; }
     #chat-input { display:flex; }
     #chat-input input { flex:1; border:none; padding:8px; }
     #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 12px; cursor:pointer; }
-    input[type=text] { padding:8px; border-radius:6px; border:none; width:70%; }
-    button { padding:8px 12px; border:none; border-radius:6px; background:#00bfff; color:white; cursor:pointer; }
+    
     .alert { background:#ffe5e5; border-left:5px solid #cc0000; padding:10px; margin:5px 0; border-radius:8px; color:#000; }
-
-    @keyframes fadeZoomIn {
-      to { opacity:1; transform:scale(1); }
-    }
   </style>
 </head>
 <body>
@@ -68,11 +88,10 @@
         <strong>IA de dernière génération</strong>.  
         <br><br>
         Ce croisement de données permet de délivrer des <strong>prévisions locales et nationales fiables</strong>  
-        dans les zones couvertes (Europe étendue + USA) et des <strong>alertes mondiales anticipées</strong>  
-        en dehors des zones couvertes.  
+        dans les zones couvertes (Europe étendue + USA) et des <strong>alertes mondiales anticipées</strong>.  
         <br><br>
         Avec nos formules <strong>Premium</strong> et <strong>Pro+</strong>, vous accédez bientôt à notre  
-        <strong>outil 4D exclusif</strong>, permettant de visualiser la météo dans l’espace et dans le temps  
+        <strong>outil 4D exclusif</strong>, permettant de visualiser la météo dans l’espace et le temps  
         comme jamais auparavant.
       </p>
     </div>
@@ -135,9 +154,12 @@
 
   <!-- Avatar JEAN -->
   <div id="avatar-jean">
-    <lottie-player id="jean-player" 
-      src="/avatars/jean-default.json" 
-      background="transparent" speed="1" loop autoplay>
+    <lottie-player id="jean-player"
+      src="/avatars/jean-default.json"
+      background="transparent"
+      speed="1"
+      loop
+      autoplay>
     </lottie-player>
   </div>
 
@@ -164,26 +186,6 @@
       alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
     }
     document.getElementById("year").textContent = new Date().getFullYear();
-
-    // Encodage manuel adresse
-    async function loadForecastFromAddress() {
-      const addr = document.getElementById("address").value.trim();
-      if (!addr) return alert("Veuillez entrer une adresse");
-      await loadForecast("FR"); 
-    }
-
-    // Notifications
-    async function subscribeNotif() {
-      const res = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint: "dummy-client" }) // à remplacer par vrai endpoint push
-      });
-      document.getElementById("notif-status").innerText = "✅ Notifications activées";
-    }
-    function unsubscribeNotif() {
-      document.getElementById("notif-status").innerText = "❌ Notifications désactivées";
-    }
   </script>
 </body>
 </html>
