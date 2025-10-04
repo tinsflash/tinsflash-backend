@@ -2,156 +2,187 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Console Admin – TINSFLASH</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body { margin:0; font-family:"Segoe UI", sans-serif; background:#0d1117; color:#f0f6fc; }
-    header { background:#161b22; padding:10px; text-align:center; }
-    header h1 { margin:0; color:#58a6ff; }
-
-    .container { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:12px; }
-    .card { background:#1c2128; padding:10px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
-
-    h2 { margin-top:0; font-size:1rem; color:#58a6ff; }
-    button { background:#238636; border:none; padding:6px 12px; border-radius:6px; color:white; cursor:pointer; }
-    button:hover { background:#2ea043; }
-
-    #logs { background:black; color:#00ff00; padding:6px; font-family:monospace; height:220px; overflow-y:auto; border-radius:8px; }
-
-    /* Carte */
-    #map { width:100%; height:260px; border-radius:10px; margin-top:8px; }
-
-    /* Chat bulle */
-    #chat-bubble {
-      position:fixed; bottom:80px; right:20px; width:60px; height:60px;
-      border-radius:50%; background:#58a6ff; display:flex; justify-content:center; align-items:center;
-      cursor:pointer; font-size:28px; color:white; z-index:1000;
-      box-shadow:0 2px 6px rgba(0,0,0,0.5);
-    }
-    #chat-window {
-      position:fixed; bottom:150px; right:20px; width:280px; height:320px;
-      background:#161b22; border:1px solid #30363d; border-radius:12px;
-      display:none; flex-direction:column; z-index:1001;
-    }
-    #chat-header { background:#21262d; padding:6px; border-radius:12px 12px 0 0; color:#58a6ff; font-weight:bold; }
-    #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.85rem; }
-    #chat-input { display:flex; }
-    #chat-input input { flex:1; border:none; padding:6px; background:#0d1117; color:white; }
-    #chat-input button { background:#238636; border:none; padding:6px 10px; cursor:pointer; }
-  </style>
+  <title>🛰️ TINSFLASH – Console Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Lottie -->
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+
+  <style>
+    body { margin:0; font-family:"Segoe UI",sans-serif; background:#0d1117; color:#e6edf3; }
+    header { background:#161b22; padding:10px; text-align:center; }
+    header h1 { margin:0; color:#58a6ff; }
+
+    .container { display:grid; gap:12px; padding:12px; max-width:1200px; margin:auto; }
+
+    .card {
+      background:#161b22;
+      padding:12px;
+      border-radius:8px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.4);
+    }
+    h2 { margin:0 0 6px; color:#79c0ff; font-size:1.1rem; }
+
+    button {
+      background:#238636;
+      color:white; border:none; padding:8px 12px;
+      border-radius:6px; cursor:pointer; font-weight:bold;
+    }
+    button:hover { background:#2ea043; }
+
+    #status { font-size:0.9rem; }
+
+    #logs { background:#0d1117; border:1px solid #30363d; padding:8px; height:250px; overflow-y:auto; font-size:0.85rem; }
+    #map { width:100%; height:300px; border-radius:8px; }
+
+    /* Avatar / Chat moteur */
+    #avatar-engine {
+      position:fixed;
+      bottom:80px;
+      right:15px;
+      width:70px;
+      height:70px;
+      z-index:9999;
+      cursor:pointer;
+    }
+    #chat-engine {
+      position:fixed;
+      bottom:160px;
+      right:12px;
+      width:280px;
+      height:320px;
+      background:#fff;
+      color:#000;
+      border-radius:10px;
+      display:none;
+      flex-direction:column;
+      box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      z-index:10000;
+    }
+    #chat-header { background:#238636; color:#fff; padding:4px; font-size:0.85rem; border-radius:10px 10px 0 0; }
+    #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
+    #chat-input { display:flex; }
+    #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
+    #chat-input button { background:#238636; color:#fff; border:none; padding:5px 7px; cursor:pointer; font-size:0.8rem; }
+  </style>
 </head>
 <body>
   <header>
-    <h1>🚨 Console Admin – TINSFLASH</h1>
+    <h1>🛰️ Console Admin TINSFLASH</h1>
+    <p>🚀 Cockpit de commande météo nucléaire</p>
   </header>
 
   <main class="container">
-    <!-- Orchestration -->
+    <!-- Bouton RUN -->
     <div class="card">
-      <h2>⚡ Orchestration</h2>
-      <button onclick="runGlobal()">▶️ Run Global (Orchestre)</button>
-      <p id="status">⏳ En attente…</p>
+      <h2>⚡ Lancement moteur</h2>
+      <button onclick="launchRun()">▶️ Lancer RUN GLOBAL</button>
+      <div id="status">⏳ En attente…</div>
     </div>
 
-    <!-- Carte -->
+    <!-- Carte zones -->
     <div class="card">
-      <h2>🌍 Carte des prévisions & alertes</h2>
+      <h2>🌍 Zones & Alertes</h2>
       <div id="map"></div>
-    </div>
-
-    <!-- Phases -->
-    <div class="card">
-      <h2>⚡ Phases du moteur</h2>
-      <ul id="phases">
-        <li>📡 Modèles</li>
-        <li>📊 Prévisions locales/nationales</li>
-        <li>🌐 Prévisions continentales</li>
-        <li>🚨 Alertes locales/nationales</li>
-        <li>🌍 Alertes continentales</li>
-        <li>🌎 Alertes mondiales</li>
-        <li>🤖 Fusion IA globale</li>
-      </ul>
     </div>
 
     <!-- Logs -->
     <div class="card">
-      <h2>📜 Logs moteur (live)</h2>
-      <div id="logs">Connexion en cours…</div>
+      <h2>📡 Logs en direct</h2>
+      <div id="logs">⏳ En attente logs...</div>
     </div>
   </main>
 
-  <!-- Bulle Chat -->
-  <div id="chat-bubble">💬</div>
-  <div id="chat-window">
+  <!-- Avatar moteur -->
+  <div id="avatar-engine" onclick="toggleChat()">
+    <lottie-player id="engine-player"
+      src="/avatars/jean-default.json"
+      background="transparent" speed="1" loop autoplay
+      style="width:70px; height:70px;">
+    </lottie-player>
+  </div>
+
+  <!-- Chat moteur -->
+  <div id="chat-engine">
     <div id="chat-header">💬 Chat moteur</div>
     <div id="chat-messages"></div>
     <div id="chat-input">
-      <input id="chat-msg" type="text" placeholder="Votre question…"/>
-      <button onclick="sendChat()">Envoyer</button>
+      <input type="text" id="engine-input" placeholder="Demandez à J.E.A.N. moteur...">
+      <button id="engine-send">Envoyer</button>
     </div>
   </div>
 
   <script>
-    // === Carte Leaflet ===
-    const map = L.map("map").setView([20,0], 2);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:"© OpenStreetMap",
-    }).addTo(map);
-
-    // === Run Global ===
-    async function runGlobal() {
-      document.getElementById("status").innerText = "🚀 Run Global lancé...";
-      try {
-        const res = await fetch("/api/run-global", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ zone:"All" }) });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById("status").innerText = "✅ Run Global terminé.";
-        } else {
-          document.getElementById("status").innerText = "❌ Erreur Run Global";
+    // === RUN GLOBAL ===
+    async function launchRun(){
+      document.getElementById("status").innerText="🚀 RUN GLOBAL en cours...";
+      try{
+        const res=await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})});
+        const data=await res.json();
+        if(data.success){
+          document.getElementById("status").innerText="✅ RUN GLOBAL lancé avec succès.";
+        }else{
+          document.getElementById("status").innerText="❌ Erreur RUN GLOBAL: "+(data.error||"inconnue");
         }
-      } catch (e) {
-        document.getElementById("status").innerText = "❌ Erreur réseau: "+e.message;
+      }catch(e){
+        document.getElementById("status").innerText="❌ Exception: "+e.message;
       }
     }
 
-    // === SSE Logs ===
-    const logBox = document.getElementById("logs");
-    const evtSource = new EventSource("/api/logs/stream");
-    evtSource.onmessage = function(event) {
-      const data = JSON.parse(event.data);
-      logBox.innerText += `\n[${new Date(data.ts).toLocaleTimeString()}] ${data.message}`;
-      logBox.scrollTop = logBox.scrollHeight;
+    // === Logs SSE ===
+    const logBox=document.getElementById("logs");
+    const evtSource=new EventSource("/api/logs/stream");
+    evtSource.onmessage=function(e){
+      const log=JSON.parse(e.data);
+      logBox.innerHTML+=`<div>[${new Date(log.ts).toLocaleTimeString()}] ${log.type} → ${log.message}</div>`;
+      logBox.scrollTop=logBox.scrollHeight;
     };
-    evtSource.onerror = function() {
-      logBox.innerText += "\n⚠️ Perte connexion logs";
-    };
+
+    // === Carte Leaflet ===
+    let map=L.map("map").setView([20,0],2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap'}).addTo(map);
+
+    async function refreshMap(){
+      try{
+        const res=await fetch("/api/alerts");
+        const alerts=await res.json();
+        alerts.forEach(a=>{
+          if(!a.lat||!a.lon) return;
+          const c=a.data?.confidence||0;
+          let color="green"; if(c>=70&&c<90) color="orange"; if(c>=90) color="red";
+          const circle=L.circle([a.lat,a.lon],{radius:120000,color,fillOpacity:0.5}).addTo(map);
+          circle.bindPopup(`<b>${a.country} ${a.region||""}</b><br>Fiabilité: ${c}%`);
+        });
+      }catch(e){ console.warn("Erreur map:",e.message); }
+    }
+    refreshMap();
+    setInterval(refreshMap,60000);
 
     // === Chat moteur ===
-    const bubble = document.getElementById("chat-bubble");
-    const chatWin = document.getElementById("chat-window");
-    const chatMsgs = document.getElementById("chat-messages");
+    function toggleChat(){
+      const chat=document.getElementById("chat-engine");
+      chat.style.display=chat.style.display==="flex"?"none":"flex";
+    }
 
-    bubble.onclick = () => {
-      chatWin.style.display = chatWin.style.display==="flex" ? "none" : "flex";
-      chatWin.style.flexDirection = "column";
-    };
+    document.getElementById("engine-send").addEventListener("click",sendEngineMsg);
+    document.getElementById("engine-input").addEventListener("keyup",e=>{
+      if(e.key==="Enter") sendEngineMsg();
+    });
 
-    async function sendChat() {
-      const msg = document.getElementById("chat-msg").value;
-      if (!msg) return;
-      chatMsgs.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
-      document.getElementById("chat-msg").value = "";
-      const res = await fetch("/api/chat-engine", {
-        method:"POST", headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ message: msg })
-      });
-      const data = await res.json();
-      chatMsgs.innerHTML += `<div><b>Moteur:</b> ${data.reply}</div>`;
-      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    async function sendEngineMsg(){
+      const msg=document.getElementById("engine-input").value;
+      if(!msg) return;
+      const res=await fetch("/api/chat-engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+      const data=await res.json();
+      const chat=document.getElementById("chat-messages");
+      chat.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
+      chat.innerHTML+=`<div><b>Moteur:</b> ${data.reply}</div>`;
+      chat.scrollTop=chat.scrollHeight;
+      document.getElementById("engine-input").value="";
     }
   </script>
 </body>
