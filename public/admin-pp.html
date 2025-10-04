@@ -9,9 +9,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- Lottie -->
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-
   <style>
     body { margin:0; font-family:"Segoe UI",sans-serif; background:#0d1117; color:#e6edf3; }
     header { background:#161b22; padding:10px; text-align:center; }
@@ -46,8 +43,11 @@
       right:15px;
       width:70px;
       height:70px;
-      z-index:9999;
+      border-radius:50%;
+      background:#fff url('/avatars/jean-default.png') center/cover no-repeat;
+      box-shadow:0 0 8px rgba(0,0,0,0.5);
       cursor:pointer;
+      z-index:9999;
     }
     #chat-engine {
       position:fixed;
@@ -98,13 +98,7 @@
   </main>
 
   <!-- Avatar moteur -->
-  <div id="avatar-engine" onclick="toggleChat()">
-    <lottie-player id="engine-player"
-      src="/avatars/jean-default.json"
-      background="transparent" speed="1" loop autoplay
-      style="width:70px; height:70px;">
-    </lottie-player>
-  </div>
+  <div id="avatar-engine" onclick="toggleChat()"></div>
 
   <!-- Chat moteur -->
   <div id="chat-engine">
@@ -145,17 +139,20 @@
     // === Carte Leaflet ===
     let map=L.map("map").setView([20,0],2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap'}).addTo(map);
+    let markersLayer=L.layerGroup().addTo(map);
 
     async function refreshMap(){
       try{
         const res=await fetch("/api/alerts");
         const alerts=await res.json();
+        markersLayer.clearLayers();
         alerts.forEach(a=>{
           if(!a.lat||!a.lon) return;
           const c=a.data?.confidence||0;
           let color="green"; if(c>=70&&c<90) color="orange"; if(c>=90) color="red";
-          const circle=L.circle([a.lat,a.lon],{radius:120000,color,fillOpacity:0.5}).addTo(map);
+          const circle=L.circle([a.lat,a.lon],{radius:120000,color,fillOpacity:0.5});
           circle.bindPopup(`<b>${a.country} ${a.region||""}</b><br>Fiabilité: ${c}%`);
+          markersLayer.addLayer(circle);
         });
       }catch(e){ console.warn("Erreur map:",e.message); }
     }
