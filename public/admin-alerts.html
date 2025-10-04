@@ -13,9 +13,10 @@
     nav a:hover { color:#4fc3f7; }
     h2 { margin-top:20px; }
     .alert-block { padding:15px; margin:10px; border-radius:8px; }
-    .published { background:#163; }
-    .tovalidate { background:#663; }
-    .surveillance { background:#335; }
+    .published { background:#163; }            /* vert */
+    .tovalidate { background:#663; }           /* orange */
+    .under-surveillance { background:#335; }   /* bleu/gris */
+    .low-confidence { background:#611; }       /* rouge sombre */
     pre { white-space:pre-wrap; background:#000; padding:10px; border-radius:6px; }
     button { margin:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; }
     button.validate { background:#2a2; color:white; }
@@ -49,10 +50,12 @@
       const publishedDiv = document.getElementById("published");
       const toValidateDiv = document.getElementById("tovalidate");
       const surveillanceDiv = document.getElementById("surveillance");
+      const lowDiv = document.getElementById("lowconfidence");
 
       publishedDiv.innerHTML = "";
       toValidateDiv.innerHTML = "";
       surveillanceDiv.innerHTML = "";
+      lowDiv.innerHTML = "";
 
       // 🔎 Résumé global
       if (summary && summary.total != null) {
@@ -61,6 +64,7 @@
           🟢 Publiées : ${summary.byStatus.published} | 
           🟡 À valider : ${summary.byStatus.toValidate} | 
           🔵 Surveillance : ${summary.byStatus["under-surveillance"]} | 
+          🔴 Faible crédibilité : ${summary.byStatus["low-confidence"]} | 
           ⚪ Archivées : ${summary.byStatus.archived}<br>
           🔴 Exclusives : ${summary.exclusives} | 
           🟢 Confirmées ailleurs : ${summary.confirmedElsewhere}
@@ -73,6 +77,7 @@
         let block;
         if (status === "published") block = publishedDiv;
         else if (status === "toValidate") block = toValidateDiv;
+        else if (status === "low-confidence") block = lowDiv;
         else block = surveillanceDiv;
 
         // Badge exclusivité
@@ -142,8 +147,11 @@
   <h2>⏳ À valider (70–90%)</h2>
   <div id="tovalidate"></div>
 
-  <h2>🔵 Sous surveillance (&lt;70%)</h2>
+  <h2>🔵 Sous surveillance (50–69%)</h2>
   <div id="surveillance"></div>
+
+  <h2>🔴 Faible crédibilité (&lt;50%)</h2>
+  <div id="lowconfidence"></div>
 
   <h2>📰 News Météo</h2>
   <div id="news">Chargement...</div>
