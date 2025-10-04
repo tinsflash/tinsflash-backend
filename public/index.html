@@ -55,9 +55,12 @@
       width:70px;
       height:70px;
       border-radius:50%;
-      box-shadow:0 0 8px rgba(0,0,0,0.5);
+      object-fit:cover;
+      box-shadow:0 0 6px rgba(0,0,0,0.4);
       background:#fff;
     }
+
+    /* Chat */
     #chat-jean {
       position:fixed;
       bottom:160px;
@@ -111,7 +114,7 @@
       <h2>🔎 À propos de TINSFLASH</h2>
       <p>
         <strong>TINSFLASH, la météo la plus précise.</strong><br>
-        Notre moteur combine modèles physiques, modèles IA nouvelle génération, relief et satellites pour anticiper le temps avant tous les autres.<br>
+        Notre moteur combine modèles physiques, IA nouvelle génération, relief et satellites pour anticiper le temps avant tous les autres.<br>
         Du particulier aux agriculteurs, jusqu’aux aérodromes et administrations, chacun reçoit des prévisions fiables et des alertes en avance.
       </p>
     </div>
@@ -172,7 +175,7 @@
 
   <!-- Avatar JEAN -->
   <div id="avatar-jean" onclick="toggleChat()">
-    <img id="jean-avatar" src="/avatars/jean-default.png" alt="J.E.A.N Avatar">
+    <img id="jean-avatar" src="/avatars/jean-default.png" alt="J.E.A.N Avatar" onerror="this.src='/avatars/jean-default.png'">
   </div>
 
   <!-- Chat JEAN -->
@@ -212,7 +215,7 @@
       chat.style.flexDirection="column";
     }
 
-    // === Avatar dynamique avec PNG ===
+    // === Avatar dynamique selon météo ===
     function setJeanAvatar(type="default"){
       const avatar=document.getElementById("jean-avatar");
       avatar.src=`/avatars/jean-${type}.png`;
