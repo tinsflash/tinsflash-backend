@@ -22,7 +22,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
   try {
     await addEngineLog(`🚨 Analyse alertes pour ${country}${region ? " - " + region : ""}`);
 
-    // 1️⃣ Détection brute (multi-modèles simplifiée)
+    // 1️⃣ Détection brute
     const detectorResults = await detectAlerts({ lat, lon, country }, { scope: continent, country });
 
     // 2️⃣ Modules spécialisés
@@ -33,7 +33,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       fetchStationData(lat, lon, country, region),
     ]);
 
-    // 2️⃣ bis HRRR / AROME (haute résolution)
+    // 2️⃣ bis HRRR / AROME
     let hiRes = null;
     if (country === "USA") {
       hiRes = await hrrr(lat, lon);
@@ -53,15 +53,15 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
     const anomaly = forecastVision.detectSeasonalAnomaly(base);
     if (anomaly) base.anomaly = anomaly;
 
-    // 4️⃣ IA moteur d’alerte (JSON strict attendu)
+    // 4️⃣ IA moteur d’alerte (JSON strict)
     const prompt = `
 Analyse des risques météo pour ${country}${region ? " - " + region : ""}, continent=${continent}.
-Sources enrichies :
+Sources enrichies (résumées):
 - Neige: ${JSON.stringify(snow)}
 - Pluie: ${JSON.stringify(rain)}
 - Vent: ${JSON.stringify(wind)}
 - Détecteur brut: ${JSON.stringify(detectorResults)}
-- Stations: ${JSON.stringify(stations?.summary || {})}
+- Stations (résumé): ${JSON.stringify(stations?.summary || {})}
 - Haute résolution: ${JSON.stringify(hiRes || {})}
 - Anomalies: ${JSON.stringify(anomaly)}
 
@@ -70,38 +70,19 @@ Consignes :
 - Si USA → intégrer HRRR. Si FR/BE → intégrer AROME.
 - Ajuster selon relief, climat, altitude et saison.
 - Déterminer si une alerte doit être générée.
-- Format JSON strict : { "type": "...", "zone": "...", "confidence": 0–100, "intensity": "...", "consequences": "...", "recommendations": "...", "duration": "..." }
+- classer: { type, zone, confidence(0–100), intensité, conséquences, recommandations, durée }
+- Répondre en JSON strict UNIQUEMENT.
 `;
     const aiResult = await askOpenAI("Tu es un moteur d’alerte météo nucléaire", prompt);
 
     let parsed;
     try {
       parsed = JSON.parse(aiResult);
-    } catch (e) {
-      try {
-        // tentative de correction JSON basique
-        const fixed = aiResult
-          .replace(/(\w+):/g, '"$1":') // ajoute guillemets aux clés simples
-          .replace(/'/g, '"'); // uniformise les quotes
-        parsed = JSON.parse(fixed);
-      } catch {
-        parsed = { type: "unknown", confidence: 0, note: "JSON invalide", raw: aiResult };
-      }
+    } catch {
+      parsed = { type: "unknown", confidence: 0, note: "JSON invalide", raw: aiResult };
     }
 
-    // Harmonisation des champs
-    if (parsed.fiabilite && !parsed.confidence) parsed.confidence = parsed.fiabilite;
-    if (!parsed.status) {
-      if (parsed.confidence >= 90) parsed.status = "published";
-      else if (parsed.confidence >= 70) parsed.status = "toValidate";
-      else parsed.status = "under-surveillance";
-    }
-
-    // Log pour debug
-    await addEngineLog(`Alerte brute générée: ${aiResult}`);
-    await addEngineLog(`Alerte parsée: ${JSON.stringify(parsed)}`);
-
-    // 5️⃣ Classification (statut + historique)
+    // 5️⃣ Classification
     let classified = classifyAlerts(parsed);
 
     // 6️⃣ Vérification externes (exclusivité vs confirmé ailleurs)
@@ -132,7 +113,7 @@ Consignes :
           : "Sources standard (multi-modèles + stations)",
     };
 
-    // 8️⃣ Fusion / mise à jour continue
+    // 8️⃣ Fusion / Suivi
     const prev = activeAlerts.find(
       (a) =>
         a.country === country &&
@@ -150,9 +131,7 @@ Consignes :
         disappearedRunsCount: 0,
         firstExclusivity:
           prev.data.firstExclusivity ||
-          (newAlert.data.external?.exclusivity === "exclusive"
-            ? "exclusive"
-            : "non-exclusive"),
+          (newAlert.data.external?.exclusivity === "exclusive" ? "exclusive" : "non-exclusive"),
         lastExclusivity: newAlert.data.external?.exclusivity,
       };
       prev.timestamp = newAlert.timestamp;
@@ -196,7 +175,7 @@ export async function updateAlertStatus(id, action) {
 export async function getSurveillanceSummary() {
   const summary = {
     total: activeAlerts.length,
-    byStatus: { published: 0, toValidate: 0, "under-surveillance": 0, archived: 0 },
+    byStatus: { published: 0, toValidate: 0, "under-surveillance": 0, "low-confidence": 0, archived: 0 },
     byConfidence: { "0-49": 0, "50-69": 0, "70-89": 0, "90-100": 0 },
     exclusives: 0,
     confirmedElsewhere: 0,
@@ -220,10 +199,7 @@ export async function getSurveillanceSummary() {
   return summary;
 }
 
-/**
- * 🔁 Marquer comme “disparues” les alertes non vues pendant ce run.
- * Si une alerte atteint 6 runs consécutifs disparue → archived.
- */
+/** 🔁 Marquer comme “disparues” les alertes non vues */
 export async function markDisappearedSince(lastRunSeenIds = []) {
   const seen = new Set(lastRunSeenIds);
   let changed = false;
