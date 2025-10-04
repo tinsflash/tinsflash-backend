@@ -1,198 +1,185 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="robots" content="noindex,nofollow">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ Console Admin — Centrale Météo Mondiale</title>
+  <meta charset="UTF-8" />
+  <title>🚨 Console Admin – TINSFLASH</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial, sans-serif; background:#0d1117; color:#e6edf3; margin:0; }
-    header { background:#111; padding:12px; text-align:center; font-size:22px; font-weight:bold; color:#0af; }
-    nav { background:#1c1f26; padding:10px; text-align:center; }
-    nav a { color:#0af; margin:0 12px; text-decoration:none; }
-    h2, h3 { margin:15px 0 10px; color:#0af; }
-    .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin:10px 0; }
-    .zone { background:#161b22; border-radius:6px; padding:10px; }
-    button { margin:6px 0; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
-    .status-ball { width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; }
-    .status-ball.pending { background:#cc0; }
-    .status-ball.ok { background:#2a2; }
-    .status-ball.fail { background:#a22; }
-    #logs { background:#000; color:#eee; font-family:monospace; padding:10px; height:250px; overflow-y:auto; border-radius:8px; margin-top:10px; white-space:pre-wrap; }
-    .info { color:#0af; }
-    .warn { color:#cc0; }
-    .error { color:#f55; }
-    #chatButton { position:fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%; background:#0af; color:#fff; font-size:22px; font-weight:bold; border:none; cursor:pointer; }
-    #chatBubble { position:fixed; bottom:90px; right:20px; width:320px; height:420px; background:#161b22; border:2px solid #0af; border-radius:10px; display:none; flex-direction:column; }
-    #chatBubble header { padding:8px; font-weight:bold; text-align:center; color:#0af; }
-    #chatLog { flex:1; overflow-y:auto; padding:8px; background:#0d1117; border-radius:6px; }
-    #chatInput { display:flex; }
-    #chatInput input { flex:1; padding:6px; border:none; border-radius:6px; }
-    #chatInput button { padding:6px 10px; background:#0af; border:none; border-radius:6px; cursor:pointer; }
-    #runStatus { display:none; position:fixed; top:0; left:0; width:100%; padding:12px; text-align:center; font-weight:bold; font-size:18px; background:#111; color:#fff; z-index:9999; }
-    .country-row { display:flex; align-items:center; justify-content:space-between; background:#161b22; padding:6px 10px; margin:4px 0; border-radius:6px; }
-    .country-name { font-weight:bold; }
-    #map { height:500px; width:100%; margin:20px auto; border-radius:8px; overflow:hidden; }
-  </style>
+    body { margin:0; font-family:"Segoe UI", sans-serif; background:#0d1117; color:#e6edf3; }
+    header { background:#161b22; padding:8px; text-align:center; }
+    header h1 { margin:0; font-size:1.5rem; color:#00bfff; }
+    main { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:10px; }
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    .card {
+      background:#1c2128; border-radius:10px; padding:10px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.4);
+    }
+    h2 { font-size:1.1rem; margin-top:0; color:#00bfff; }
+    button { background:#00bfff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; margin:2px; }
+    button:hover { background:#008ccc; }
+
+    /* Chat moteur */
+    #chatBubble {
+      position:fixed; bottom:80px; right:15px;
+      width:320px; height:380px;
+      display:none; flex-direction:column;
+      background:#1c2128; border-radius:10px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.5);
+      z-index:1000;
+    }
+    #chatHeader {
+      background:#00bfff; color:#fff;
+      padding:6px; border-radius:10px 10px 0 0;
+      font-size:0.9rem; font-weight:bold;
+    }
+    #chatLog {
+      flex:1; padding:6px; overflow-y:auto;
+      font-size:0.85rem; line-height:1.3;
+    }
+    #chatInput { display:flex; }
+    #chatMsg {
+      flex:1; border:none; padding:6px; font-size:0.85rem;
+    }
+    #chatSend {
+      background:#00bfff; color:#fff;
+      border:none; padding:6px 10px; cursor:pointer;
+    }
+    #chatToggle {
+      position:fixed; bottom:20px; right:20px;
+      width:55px; height:55px;
+      background:#00bfff; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.5rem; color:#fff; cursor:pointer;
+      box-shadow:0 2px 6px rgba(0,0,0,0.5);
+    }
+  </style>
 </head>
 <body>
-<script>
-  const pass = prompt("Code d'accès ?");
-  if (pass !== "202679") {
-    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
-    throw new Error("Accès refusé");
-  }
-</script>
+  <header>
+    <h1>🚨 Console Admin – TINSFLASH</h1>
+  </header>
 
-<header>⚡ Centrale Météo Mondiale — Console Admin</header>
-<nav>
-  <a href="/admin">Console</a>
-  <a href="/admin-alerts">Alertes</a>
-  <a href="/admin-chat">Chat IA</a>
-  <a href="/admin-index">Vue Index</a>
-  <a href="/admin-radar">Radar & News</a>
-  <a href="/admin-users">Utilisateurs</a>
-</nav>
-
-<div id="runStatus"></div>
-
-<main style="padding:20px;">
-  <h2>🛰️ Cockpit Global</h2>
-  <button onclick="runGlobal()">🚀 Lancer RUN GLOBAL (prévisions + alertes + fusion)</button>
-
-  <h2>🌍 Carte de couverture</h2>
-  <div id="map"></div>
-
-  <h2>📜 Logs moteur (live)</h2>
-  <div id="logs">Connexion en cours…</div>
-
-  <h2>🛰️ Pompage des modèles</h2>
-  <div id="models-status" class="grid"></div>
-
-  <h2>⚡ Étapes du moteur</h2>
-  <div id="engine-steps" class="grid"></div>
-
-  <h2>🌍 Supervision par pays</h2>
-  <div id="zones-status" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-    <div>
-      <h3>📊 Prévisions</h3>
-      <div id="forecast-countries"></div>
+  <main>
+    <div class="card">
+      <h2>⚡ Lancement moteur</h2>
+      <button onclick="runGlobal('Europe')">🌍 Run Europe</button>
+      <button onclick="runGlobal('USA')">🇺🇸 Run USA</button>
+      <button onclick="runGlobal('All')">🌐 Run Global (Orchestre)</button>
     </div>
-    <div>
-      <h3>🚨 Alertes</h3>
-      <div id="alert-countries"></div>
+
+    <div class="card">
+      <h2>📊 État du moteur</h2>
+      <pre id="statusBox">⏳ Chargement...</pre>
+    </div>
+
+    <div class="card" style="grid-column:span 2;">
+      <h2>🚨 Alertes actives</h2>
+      <div id="alertsBox">⏳ Chargement...</div>
+    </div>
+  </main>
+
+  <!-- Chat IA Moteur -->
+  <div id="chatBubble">
+    <div id="chatHeader">🤖 Chat IA Moteur</div>
+    <div id="chatLog"></div>
+    <div id="chatInput">
+      <input type="text" id="chatMsg" placeholder="Demander au moteur..."/>
+      <button id="chatSend">Envoyer</button>
     </div>
   </div>
-</main>
+  <div id="chatToggle" onclick="toggleChat()">💬</div>
 
-<!-- Chat bulle -->
-<button id="chatButton" onclick="toggleChat()">💬</button>
-<div id="chatBubble">
-  <header>🤖 Chat IA Moteur</header>
-  <div id="chatLog"></div>
-  <div id="chatInput">
-    <input type="text" id="chatMsg" placeholder="Demander au moteur..." onkeypress="if(event.key==='Enter') sendChat()">
-    <button onclick="sendChat()">Envoyer</button>
-  </div>
-</div>
+  <!-- Audio alerte -->
+  <audio id="alertSound">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+  </audio>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Toggle chat
+    function toggleChat(){
+      const c=document.getElementById("chatBubble");
+      c.style.display=c.style.display==="flex"?"none":"flex";
+    }
 
-<script>
-  // Bandeau visuel
-  function showRunStatus(msg, color){
-    const bar=document.getElementById("runStatus");
-    bar.style.display="block"; bar.style.background=color; bar.innerText=msg;
-    setTimeout(()=>{ bar.style.display="none"; },8000);
-  }
+    // Envoi au moteur
+    async function sendChat(){
+      const input=document.getElementById("chatMsg");
+      const msg=input.value.trim();
+      if(!msg) return;
 
-  // === RUN GLOBAL ===
-  async function runGlobal(){
-    showRunStatus("▶️ RUN GLOBAL lancé...","#cc0");
-    await fetch("/api/run-orchestrator",{method:"POST"});
-  }
+      const log=document.getElementById("chatLog");
+      log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
+      input.value="";
 
-  // Logs live
-  const logDiv=document.getElementById("logs");
-  const evt=new EventSource("/api/logs/stream");
-  evt.onmessage=(e)=>{
-    const log=JSON.parse(e.data);
-    let cls="info"; if(log.message.includes("ERROR")) cls="error"; if(log.message.includes("WARN")) cls="warn";
-    logDiv.innerHTML+=`<div class="${cls}">[${new Date(log.ts).toLocaleTimeString()}] ${log.message}</div>`;
-    logDiv.scrollTop=logDiv.scrollHeight;
-  };
+      try {
+        const res=await fetch("/api/chat/engine",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({message:msg})
+        });
+        const data=await res.json();
+        let reply=data.reply||"⚠️ Pas de réponse moteur";
 
-  // Models & Steps
-  const models = ["ECMWF","GFS","ICON","Meteomatics","Copernicus ERA5","NOAA","NASA POWER","OpenWeather"];
-  function buildModels(){
-    const m=document.getElementById("models-status"); m.innerHTML="";
-    models.forEach(md=>{
-      m.innerHTML+=`<div id="model-${md}" class="zone"><span class="status-ball pending"></span>${md}</div>`;
-    });
-  }
-  buildModels();
+        // Détection statut
+        let css="color:#0af;";
+        if(/fail/i.test(reply)){ css="color:#f55; font-weight:bold;"; playAlert(); }
+        else if(/pending/i.test(reply)) css="color:#ff9900; font-weight:bold;";
+        else if(/ok/i.test(reply)) css="color:#2ecc71; font-weight:bold;";
 
-  const steps = ["Pompage des modèles","Analyse relief & climat","Prévisions zones couvertes","Alertes zones couvertes","Alertes continentales","Fusion IA","Déploiement final"];
-  function buildEngineSteps(){
-    const s=document.getElementById("engine-steps"); s.innerHTML="";
-    steps.forEach(st=>{
-      const safeId=st.replace(/\s+/g,"-");
-      s.innerHTML+=`<div id="step-${safeId}" class="zone"><span class="status-ball pending"></span> ${st}</div>`;
-    });
-  }
-  buildEngineSteps();
-
-  // === Leaflet Map ===
-  const map = L.map("map").setView([20,0], 2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 6, minZoom: 2, attribution: "© OpenStreetMap"
-  }).addTo(map);
-
-  let geoLayer;
-  async function loadWorld(){
-    const res = await fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson");
-    const world = await res.json();
-    geoLayer = L.geoJSON(world, {
-      style: { color:"#222", weight:1, fillColor:"#444", fillOpacity:0.7 },
-      onEachFeature: (feature, layer) => {
-        layer.bindTooltip(feature.properties.ADMIN);
-        layer.on("click", () => showCountryDetails(feature.properties.ISO_A2));
+        log.innerHTML+=`<div style="${css}"><b>Moteur:</b> ${reply}</div>`;
+        log.scrollTop=log.scrollHeight;
+      } catch(e){
+        log.innerHTML+=`<div style="color:#f55;"><b>Moteur:</b> ⚠️ Erreur serveur: ${e.message}</div>`;
       }
-    }).addTo(map);
-  }
-  loadWorld();
+    }
+    document.getElementById("chatSend").addEventListener("click", sendChat);
+    document.getElementById("chatMsg").addEventListener("keypress", e=>{ if(e.key==="Enter") sendChat(); });
 
-  async function refreshMap(){
-    try {
-      const res = await fetch("/api/engine-state");
-      const data = await res.json();
-      geoLayer.eachLayer(layer => {
-        const iso = layer.feature.properties.ISO_A2;
-        let color = "#444"; // défaut
-        if (data?.alertsLocal?.some(a => (a.countryCode||a.country)===iso)) color="#a22";
-        else if (data?.forecasts?.[iso]) color="#2a2";
-        layer.setStyle({ fillColor: color });
-      });
-    } catch(e){ console.warn("Erreur refreshMap:", e.message); }
-  }
-  setInterval(refreshMap,10000);
+    // Son alerte
+    function playAlert(){
+      const snd=document.getElementById("alertSound");
+      snd.currentTime=0;
+      snd.play().catch(()=>{});
+    }
 
-  function showCountryDetails(iso){
-    alert("📍 Détails pour " + iso + " (prévisions/alertes à récupérer côté API)");
-  }
+    // Run global
+    async function runGlobal(zone){
+      const box=document.getElementById("statusBox");
+      box.textContent=`⏳ Run ${zone} en cours...`;
+      try{
+        const res=await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone})});
+        const data=await res.json();
+        box.textContent=JSON.stringify(data.result?.checkup||data.result||data,null,2);
+      }catch(e){
+        box.textContent="❌ Erreur run: "+e.message;
+      }
+    }
 
-  // Chat IA
-  function toggleChat(){ const c=document.getElementById("chatBubble"); c.style.display=c.style.display==="flex"?"none":"flex"; }
-  async function sendChat(){
-    const input=document.getElementById("chatMsg"); const msg=input.value.trim(); if(!msg) return;
-    const log=document.getElementById("chatLog"); log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`; input.value="";
-    const res=await fetch("/api/chat/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-    const data=await res.json(); log.innerHTML+=`<div style="color:#0af;"><b>Moteur:</b> ${data.reply}</div>`; log.scrollTop=log.scrollHeight;
-  }
-</script>
+    // Auto refresh état moteur et alertes
+    async function refreshStatus(){
+      try{
+        const res=await fetch("/api/status");
+        const data=await res.json();
+        document.getElementById("statusBox").textContent=JSON.stringify(data,null,2);
+      }catch(e){
+        document.getElementById("statusBox").textContent="❌ Erreur status";
+      }
+    }
+
+    async function refreshAlerts(){
+      try{
+        const res=await fetch("/api/alerts");
+        const data=await res.json();
+        document.getElementById("alertsBox").textContent=JSON.stringify(data,null,2);
+      }catch(e){
+        document.getElementById("alertsBox").textContent="❌ Erreur alerts";
+      }
+    }
+
+    setInterval(refreshStatus, 10000);
+    setInterval(refreshAlerts, 12000);
+    refreshStatus();
+    refreshAlerts();
+  </script>
 </body>
 </html>
