@@ -8,7 +8,7 @@ async function getLocationOrAddress() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-        async () => {
+        () => {
           const addr = prompt("❌ Géolocalisation refusée.\nEntrez votre ville/pays (ex: Paris, FR) :");
           resolve({ address: addr });
         }
@@ -37,7 +37,7 @@ function updateJeanAvatar(type = "default") {
   player.load(map[type] || map["default"]);
 }
 
-// 🎭 Appliquer icône/avatar selon condition météo
+// 🎭 Appliquer avatar selon condition météo
 function applyForecastIcon(condition) {
   condition = (condition || "").toLowerCase();
   if (condition.includes("sun") || condition.includes("clear")) updateJeanAvatar("sun");
@@ -50,21 +50,18 @@ function applyForecastIcon(condition) {
 // 📊 Charger prévisions météo
 async function loadForecast(location = {}) {
   try {
-    let url = "";
+    let data = null;
+
     if (location.lat && location.lon) {
-      url = `/api/superforecast`;
-      const res = await fetch(url, {
+      const res = await fetch("/api/superforecast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(location)
       });
-      var data = await res.json();
+      data = await res.json();
     } else if (location.address) {
-      url = `/api/forecast/${encodeURIComponent(location.address)}`;
-      const res = await fetch(url);
-      var data = await res.json();
-    } else {
-      return;
+      const res = await fetch(`/api/forecast/${encodeURIComponent(location.address)}`);
+      data = await res.json();
     }
 
     if (!data || data.error) {
@@ -97,7 +94,7 @@ async function loadForecast(location = {}) {
     const txt = await fetch("/api/textgen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "Fais un bulletin météo clair basé sur les prévisions actuelles." })
+      body: JSON.stringify({ prompt: "Rédige un bulletin météo clair et concis basé sur les prévisions actuelles." })
     });
     const tdata = await txt.json();
     document.getElementById("forecast-text").innerText = tdata.reply || "❌ Pas de bulletin.";
@@ -106,7 +103,7 @@ async function loadForecast(location = {}) {
   }
 }
 
-// 🚨 Charger alertes
+// 🚨 Charger alertes météo
 async function loadAlerts() {
   try {
     const res = await fetch("/api/alerts");
@@ -132,7 +129,7 @@ async function loadAlerts() {
 }
 
 // 🔔 Notifications Push
-async function subscribeNotif() {
+async function subscribeNotif(zone = "GLOBAL") {
   if (!("Notification" in window)) {
     alert("❌ Ce navigateur ne supporte pas les notifications.");
     return;
@@ -143,14 +140,13 @@ async function subscribeNotif() {
     return;
   }
 
-  // Exemple simple (à brancher sur ton pushService)
   await fetch("/api/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user: "browser" })
+    body: JSON.stringify({ user: "browser", zone })
   });
 
-  document.getElementById("notif-status").innerText = "✅ Notifications activées.";
+  document.getElementById("notif-status").innerText = `✅ Notifications activées (${zone}).`;
 }
 
 function unsubscribeNotif() {
@@ -189,9 +185,20 @@ function setupJeanChat() {
 
 // 🚀 Initialisation
 (async function init() {
+  // 1. Géolocalisation utilisateur
   const loc = await getLocationOrAddress();
   await loadForecast(loc);
+
+  // 2. Alertes météo
   await loadAlerts();
+
+  // 3. Notifications push (demande zone utilisateur si GPS dispo)
+  const zone = loc.country || "GLOBAL";
+  subscribeNotif(zone);
+
+  // 4. Chat IA
   setupJeanChat();
+
+  // 5. Avatar par défaut
   updateJeanAvatar("default");
 })();
