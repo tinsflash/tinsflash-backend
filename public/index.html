@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – La météo unique au monde</title>
+  <title>TINSFLASH – La météo la plus avancée</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
@@ -25,7 +25,7 @@
     .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
     footer { text-align:center; padding:20px; margin-top:20px; background:#0077cc; color:white; }
     footer a { color:yellow; text-decoration:none; }
-    
+
     /* Avatar JEAN */
     #avatar-jean {
       position:fixed;
@@ -58,13 +58,11 @@
     #chat-input { display:flex; }
     #chat-input input { flex:1; border:none; padding:8px; }
     #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 12px; cursor:pointer; }
-    
-    .alert { background:#ffe5e5; border-left:5px solid #cc0000; padding:10px; margin:5px 0; border-radius:8px; color:#000; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🌤️ TINSFLASH – La météo unique au monde</h1>
+    <h1>🌤️ TINSFLASH – La météo la plus avancée</h1>
   </header>
 
   <main class="container">
@@ -82,25 +80,17 @@
       <h2>🔎 À propos de TINSFLASH</h2>
       <p>
         TINSFLASH repose sur un <strong>algorithme météo inédit</strong> et un  
-        <strong>moteur météo unique au monde</strong>.  
-        Il combine <strong>modèles internationaux</strong>, <strong>données de relief</strong>,  
+        <strong>moteur météo</strong> nouvelle génération.  
+        Il combine <strong>modèles internationaux</strong>, <strong>relief</strong>,  
         <strong>facteurs environnementaux</strong>, <strong>anomalies saisonnières</strong> et  
-        <strong>IA de dernière génération</strong>.  
+        <strong>IA</strong>.  
         <br><br>
-        Ce croisement de données permet de délivrer des <strong>prévisions locales et nationales fiables</strong>  
-        dans les zones couvertes (Europe étendue + USA) et des <strong>alertes mondiales anticipées</strong>.  
+        Résultat : <strong>prévisions locales/nationales fiables</strong> dans les zones couvertes  
+        (Europe étendue + USA) et <strong>alertes mondiales anticipées</strong>.  
         <br><br>
-        Avec nos formules <strong>Premium</strong> et <strong>Pro+</strong>, vous accédez bientôt à notre  
-        <strong>outil 4D exclusif</strong>, permettant de visualiser la météo dans l’espace et le temps  
-        comme jamais auparavant.
+        Avec nos formules <strong>Premium</strong> et <strong>Pro+</strong>, vous accédez bientôt  
+        à notre <strong>outil 4D</strong> exclusif pour explorer la météo dans l’espace et le temps.
       </p>
-    </div>
-
-    <!-- Adresse manuelle -->
-    <div class="card">
-      <h2>📍 Entrez votre adresse</h2>
-      <input type="text" id="address" placeholder="Rue + Ville">
-      <button onclick="loadForecastFromAddress()">Voir la météo</button>
     </div>
 
     <!-- Prévision du jour -->
@@ -129,7 +119,7 @@
       <h2>🔔 Notifications météo</h2>
       <button onclick="subscribeNotif()">Activer les notifications</button>
       <button onclick="unsubscribeNotif()">Désactiver</button>
-      <p id="notif-status">⏳ État inconnu</p>
+      <p id="notif-status">⏳ En attente</p>
     </div>
 
     <!-- Texte météo -->
@@ -141,13 +131,8 @@
     <!-- Radar -->
     <div class="card">
       <h2>🛰️ Radar en direct</h2>
-      <div id="radar-map">⏳ Radar...</div>
-    </div>
-
-    <!-- Podcast -->
-    <div class="card">
-      <h2>🎙️ Podcast météo</h2>
-      <div id="podcast-container">⏳ Génération...</div>
+      <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation&menu=&message=true&marker=true" 
+        width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
     </div>
 
   </main>
@@ -174,8 +159,8 @@
   </div>
 
   <footer>
-    <p>© <span id="year"></span> TINSFLASH – La météo unique au monde 🌍</p>
-    <p>📧 <a href="mailto:info@tinsflash.com">info@tinsflash.com</a> | 📱 <a href="https://wa.me/32473264477" target="_blank">WhatsApp Direct</a></p>
+    <p>© <span id="year"></span> TINSFLASH – La météo la plus avancée 🌍</p>
+    <p>📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 📱 <a href="https://wa.me/32473264477" target="_blank">WhatsApp Direct</a></p>
   </footer>
 
   <script src="app.js"></script>
