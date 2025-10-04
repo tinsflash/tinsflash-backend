@@ -66,6 +66,7 @@
       flex-direction:column;
       box-shadow:0 2px 8px rgba(0,0,0,0.4);
       z-index:100000;
+      max-height:60vh;
     }
     #chat-header { background:#0077cc; color:#fff; padding:4px; font-size:0.8rem; border-radius:10px 10px 0 0; }
     #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
@@ -211,7 +212,7 @@
       chat.style.flexDirection="column";
     }
 
-    // === Avatar dynamique selon Cohere ===
+    // === Avatar dynamique Cohere ===
     function setJeanAvatar(type="default"){
       const player=document.getElementById("jean-player");
       player.load(`/avatars/jean-${type}.json`);
@@ -254,7 +255,12 @@
     }
 
     // === Chat avec Cohere J.E.A.N ===
-    document.getElementById("jean-send").addEventListener("click", async ()=>{
+    document.getElementById("jean-send").addEventListener("click", sendJeanMessage);
+    document.getElementById("jean-input").addEventListener("keyup", e=>{
+      if(e.key==="Enter") sendJeanMessage();
+    });
+
+    async function sendJeanMessage(){
       const msg=document.getElementById("jean-input").value;
       if(!msg) return;
       const res=await fetch("/api/jean",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
@@ -264,7 +270,7 @@
       chat.innerHTML+=`<div><b>J.E.A.N:</b> ${data.reply}</div>`;
       chat.scrollTop=chat.scrollHeight;
       setJeanAvatar(data.avatar||"default");
-    });
+    }
 
     // Init
     setJeanAvatar("default");
