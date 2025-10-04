@@ -2,144 +2,157 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow">
-  <title>🚨 Console Admin – TINSFLASH</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Console Admin – TINSFLASH</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { margin:0; font-family:Arial, sans-serif; background:#0d1117; color:#e6edf3; }
-    header { background:#111; padding:12px; text-align:center; font-size:22px; font-weight:bold; color:#0af; }
-    nav { background:#1c1f26; padding:10px; text-align:center; }
-    nav a { color:#0af; margin:0 12px; text-decoration:none; }
-    h2 { margin:15px 0 10px; color:#0af; }
-    button { margin:6px 0; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; background:#0af; color:#000; font-weight:bold; }
-    #status-message { margin-top:8px; font-weight:bold; }
-    #logs { background:#000; color:#eee; font-family:monospace; padding:10px; height:250px; overflow-y:auto; border-radius:8px; margin-top:10px; white-space:pre-wrap; }
-    .phase-list { list-style:none; padding:0; margin:0; }
-    .phase-list li { padding:4px 0; }
-    .ok { color:lime; }
-    .fail { color:red; }
-    .pending { color:orange; }
-    #map { height:400px; border-radius:8px; margin-top:10px; }
+    body { margin:0; font-family:"Segoe UI", sans-serif; background:#0d1117; color:#f0f6fc; }
+    header { background:#161b22; padding:10px; text-align:center; }
+    header h1 { margin:0; color:#58a6ff; }
+
+    .container { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:12px; }
+    .card { background:#1c2128; padding:10px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+
+    h2 { margin-top:0; font-size:1rem; color:#58a6ff; }
+    button { background:#238636; border:none; padding:6px 12px; border-radius:6px; color:white; cursor:pointer; }
+    button:hover { background:#2ea043; }
+
+    #logs { background:black; color:#00ff00; padding:6px; font-family:monospace; height:220px; overflow-y:auto; border-radius:8px; }
+
+    /* Carte */
+    #map { width:100%; height:260px; border-radius:10px; margin-top:8px; }
+
+    /* Chat bulle */
+    #chat-bubble {
+      position:fixed; bottom:80px; right:20px; width:60px; height:60px;
+      border-radius:50%; background:#58a6ff; display:flex; justify-content:center; align-items:center;
+      cursor:pointer; font-size:28px; color:white; z-index:1000;
+      box-shadow:0 2px 6px rgba(0,0,0,0.5);
+    }
+    #chat-window {
+      position:fixed; bottom:150px; right:20px; width:280px; height:320px;
+      background:#161b22; border:1px solid #30363d; border-radius:12px;
+      display:none; flex-direction:column; z-index:1001;
+    }
+    #chat-header { background:#21262d; padding:6px; border-radius:12px 12px 0 0; color:#58a6ff; font-weight:bold; }
+    #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.85rem; }
+    #chat-input { display:flex; }
+    #chat-input input { flex:1; border:none; padding:6px; background:#0d1117; color:white; }
+    #chat-input button { background:#238636; border:none; padding:6px 10px; cursor:pointer; }
   </style>
+
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-<script>
-  const pass = prompt("Code d'accès ?");
-  if (pass !== "202679") {
-    document.body.innerHTML = "<h1 style='color:red;text-align:center;'>⛔ Accès refusé</h1>";
-    throw new Error("Accès refusé");
-  }
-</script>
+  <header>
+    <h1>🚨 Console Admin – TINSFLASH</h1>
+  </header>
 
-<header>🚨 Console Admin – TINSFLASH</header>
-<nav>
-  <a href="/admin">Console</a>
-  <a href="/admin-alerts">Alertes</a>
-  <a href="/admin-chat">Chat IA</a>
-  <a href="/admin-index">Vue Index</a>
-  <a href="/admin-radar">Radar & News</a>
-  <a href="/admin-users">Utilisateurs</a>
-</nav>
+  <main class="container">
+    <!-- Orchestration -->
+    <div class="card">
+      <h2>⚡ Orchestration</h2>
+      <button onclick="runGlobal()">▶️ Run Global (Orchestre)</button>
+      <p id="status">⏳ En attente…</p>
+    </div>
 
-<main style="padding:20px;">
-  <h2>⚡ Orchestration</h2>
-  <button onclick="runGlobal()">▶️ Run Global (Orchestre)</button>
-  <div id="status-message">⏳ En attente lancement...</div>
+    <!-- Carte -->
+    <div class="card">
+      <h2>🌍 Carte des prévisions & alertes</h2>
+      <div id="map"></div>
+    </div>
 
-  <h2>🌍 Carte des prévisions & alertes</h2>
-  <div id="map"></div>
+    <!-- Phases -->
+    <div class="card">
+      <h2>⚡ Phases du moteur</h2>
+      <ul id="phases">
+        <li>📡 Modèles</li>
+        <li>📊 Prévisions locales/nationales</li>
+        <li>🌐 Prévisions continentales</li>
+        <li>🚨 Alertes locales/nationales</li>
+        <li>🌍 Alertes continentales</li>
+        <li>🌎 Alertes mondiales</li>
+        <li>🤖 Fusion IA globale</li>
+      </ul>
+    </div>
 
-  <h2>⚡ Phases du moteur</h2>
-  <ul class="phase-list">
-    <li id="phase-models" class="pending">🛰️ Modèles</li>
-    <li id="phase-localForecasts" class="pending">📊 Prévisions locales/nationales</li>
-    <li id="phase-forecastsContinental" class="pending">🌐 Prévisions continentales</li>
-    <li id="phase-aiAlerts" class="pending">🚨 Alertes locales/nationales</li>
-    <li id="phase-alertsContinental" class="pending">🌍 Alertes continentales</li>
-    <li id="phase-alertsWorld" class="pending">🌎 Alertes mondiales</li>
-    <li id="phase-fusionIA" class="pending">🤖 Fusion IA globale</li>
-  </ul>
+    <!-- Logs -->
+    <div class="card">
+      <h2>📜 Logs moteur (live)</h2>
+      <div id="logs">Connexion en cours…</div>
+    </div>
+  </main>
 
-  <h2>📜 Logs moteur (live)</h2>
-  <div id="logs">Connexion en cours…</div>
-</main>
+  <!-- Bulle Chat -->
+  <div id="chat-bubble">💬</div>
+  <div id="chat-window">
+    <div id="chat-header">💬 Chat moteur</div>
+    <div id="chat-messages"></div>
+    <div id="chat-input">
+      <input id="chat-msg" type="text" placeholder="Votre question…"/>
+      <button onclick="sendChat()">Envoyer</button>
+    </div>
+  </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-  // =============================
-  // 🚀 Lancement Run Global
-  // =============================
-  async function runGlobal(){
-    const statusDiv=document.getElementById("status-message");
-    statusDiv.innerText="🚀 Run Global lancé...";
-    statusDiv.style.color="orange";
-    try{
-      const res=await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})});
-      const data=await res.json();
-      if(data.success){
-        statusDiv.innerText="✅ Run Global en cours (orchestration active)";
-        statusDiv.style.color="lime";
-      } else {
-        statusDiv.innerText="❌ Erreur lancement run global";
-        statusDiv.style.color="red";
+  <script>
+    // === Carte Leaflet ===
+    const map = L.map("map").setView([20,0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:"© OpenStreetMap",
+    }).addTo(map);
+
+    // === Run Global ===
+    async function runGlobal() {
+      document.getElementById("status").innerText = "🚀 Run Global lancé...";
+      try {
+        const res = await fetch("/api/run-global", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ zone:"All" }) });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById("status").innerText = "✅ Run Global terminé.";
+        } else {
+          document.getElementById("status").innerText = "❌ Erreur Run Global";
+        }
+      } catch (e) {
+        document.getElementById("status").innerText = "❌ Erreur réseau: "+e.message;
       }
-    }catch(e){
-      statusDiv.innerText="❌ Erreur serveur: "+e.message;
-      statusDiv.style.color="red";
     }
-  }
 
-  // =============================
-  // 📡 Logs moteur live (SSE)
-  // =============================
-  const logDiv=document.getElementById("logs");
-  const evt=new EventSource("/api/logs/stream");
-  evt.onmessage=(e)=>{
-    const log=JSON.parse(e.data);
-    logDiv.innerHTML+=`<div>[${new Date(log.ts).toLocaleTimeString()}] ${log.message}</div>`;
-    logDiv.scrollTop=logDiv.scrollHeight;
-  };
-  evt.onerror=()=>{ logDiv.innerHTML+="<div style='color:red'>⚠️ Perte connexion logs</div>"; };
+    // === SSE Logs ===
+    const logBox = document.getElementById("logs");
+    const evtSource = new EventSource("/api/logs/stream");
+    evtSource.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      logBox.innerText += `\n[${new Date(data.ts).toLocaleTimeString()}] ${data.message}`;
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+    evtSource.onerror = function() {
+      logBox.innerText += "\n⚠️ Perte connexion logs";
+    };
 
-  // =============================
-  // ⚡ Phases moteur (checkup)
-  // =============================
-  async function refreshPhases(){
-    try{
-      const res=await fetch("/api/checkup");
-      const data=await res.json();
-      for(const key in data){
-        const el=document.getElementById("phase-"+key);
-        if(el){
-          el.className=data[key]==="OK"?"ok":data[key]==="FAIL"?"fail":"pending";
-        }
-      }
-    }catch(e){ console.warn("Erreur phases:",e.message); }
-  }
-  setInterval(refreshPhases,5000);
+    // === Chat moteur ===
+    const bubble = document.getElementById("chat-bubble");
+    const chatWin = document.getElementById("chat-window");
+    const chatMsgs = document.getElementById("chat-messages");
 
-  // =============================
-  // 🗺️ Carte Leaflet
-  // =============================
-  const map=L.map("map").setView([20,0],2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6}).addTo(map);
+    bubble.onclick = () => {
+      chatWin.style.display = chatWin.style.display==="flex" ? "none" : "flex";
+      chatWin.style.flexDirection = "column";
+    };
 
-  let countryLayers={};
-  async function refreshMap(){
-    try{
-      const res=await fetch("/api/alerts");
-      const alerts=await res.json();
-      alerts.forEach(a=>{
-        if(a.lat && a.lon){
-          const color=a.data?.status==="published"?"red":a.data?.status==="toValidate"?"orange":"blue";
-          if(countryLayers[a.country]) map.removeLayer(countryLayers[a.country]);
-          countryLayers[a.country]=L.circleMarker([a.lat,a.lon],{radius:6,color:color,fillColor:color,fillOpacity:0.8}).bindPopup(`${a.country} ${a.region||""}<br>${a.data?.status} (${a.data?.confidence||0}%)`).addTo(map);
-        }
+    async function sendChat() {
+      const msg = document.getElementById("chat-msg").value;
+      if (!msg) return;
+      chatMsgs.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
+      document.getElementById("chat-msg").value = "";
+      const res = await fetch("/api/chat-engine", {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ message: msg })
       });
-    }catch(e){ console.warn("Erreur map:",e.message); }
-  }
-  setInterval(refreshMap,10000);
-</script>
+      const data = await res.json();
+      chatMsgs.innerHTML += `<div><b>Moteur:</b> ${data.reply}</div>`;
+      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    }
+  </script>
 </body>
 </html>
