@@ -21,25 +21,25 @@
     .forecast-grid { display:flex; gap:15px; flex-wrap:wrap; }
     .forecast-item { flex:1 1 120px; background:#223447; border-radius:10px; padding:10px; text-align:center; }
     .video-container { position:relative; max-width:100%; margin-bottom:20px; }
-    video { width:100%; border-radius:12px; }
+    video { width:100%; border-radius:12px; max-height:260px; object-fit:cover; }
     .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
     footer { text-align:center; padding:20px; margin-top:20px; background:#0077cc; color:white; }
     footer a { color:yellow; text-decoration:none; }
-    #avatar-jean { position:fixed; bottom:20px; right:20px; width:120px; height:120px; cursor:pointer; z-index:9999; }
-    #chat-jean { position:fixed; bottom:150px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:12px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
+    #avatar-jean { position:fixed; bottom:20px; right:20px; width:100px; height:100px; cursor:pointer; z-index:9999; }
+    #chat-jean { position:fixed; bottom:130px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:12px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
     #chat-header { background:#0077cc; color:#fff; padding:8px; border-radius:12px 12px 0 0; }
     #chat-messages { flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; }
     #chat-input { display:flex; }
     #chat-input input { flex:1; border:none; padding:8px; }
     #chat-input button { background:#0077cc; color:#fff; border:none; padding:8px 12px; cursor:pointer; }
-    .lottie-icon { width:60px; height:60px; margin:auto; }
     input[type=text] { padding:8px; border-radius:6px; border:none; width:70%; }
     button { padding:8px 12px; border:none; border-radius:6px; background:#00bfff; color:white; cursor:pointer; }
+    .ad-block { text-align:center; margin:20px 0; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🌤️ TINSFLASH – La météo la plus précise au monde</h1>
+    <h1>🌤️ TINSFLASH – Prévisions et alertes météo les plus précises rendues possibles grâce à un moteur unique au monde</h1>
   </header>
 
   <main class="container">
@@ -52,23 +52,31 @@
       <button class="video-btn" onclick="toggleVideo()">🔊 Son</button>
     </div>
 
-    <!-- Introduction -->
+    <!-- Intro -->
     <div class="card">
-      <h2>🔎 À propos de TINSFLASH</h2>
       <p>
-        TINSFLASH est le <strong>système météo le plus évolué au monde</strong>.  
-        Notre moteur croise les <strong>modèles météorologiques internationaux</strong>,  
-        les <strong>données de relief</strong>, le climat, les anomalies saisonnières et  
-        les dernières générations de <strong>modèles d’intelligence artificielle</strong>.  
+        TINSFLASH croise <strong>les modèles mondiaux de dernière génération</strong>,  
+        le <strong>relief</strong>, le climat, les anomalies saisonnières et  
+        l’<strong>IA J.E.A.N.</strong> pour délivrer  
+        <strong>les prévisions locales et nationales les plus fiables</strong>  
+        dans les zones couvertes (Europe étendue + USA).  Notre algorithme et notre moteur sont actuellement uniques.
         <br><br>
-        Le résultat : <strong>des prévisions locales et nationales ultra-fiables</strong>  
-        dans les zones couvertes (Europe étendue + USA) et des  
-        <strong>alertes mondiales anticipées</strong> plus rapides que celles des systèmes classiques.  
+        Pour les zones non couvertes : prévisions Open Data et  
+        <strong>alertes continentales exclusives</strong>, détectées par notre moteur.  
         <br><br>
-        Conçu pour le <strong>grand public</strong>, mais aussi pour les  
-        <strong>administrations</strong>, <strong>agriculteurs</strong>, et  
-        <strong>secteurs événementiels</strong>.
+        Conçu pour le <strong>grand public</strong>, les <strong>administrations</strong>,  
+        les <strong>agriculteurs</strong> et le <strong>secteur événementiel</strong>.
       </p>
+    </div>
+
+    <!-- Pub -->
+    <div class="ad-block">
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-6828365665232268"
+        data-ad-slot="1234567890"
+        data-ad-format="auto"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
     </div>
 
     <!-- Adresse manuelle -->
@@ -112,6 +120,16 @@
         width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
     </div>
 
+    <!-- Pub -->
+    <div class="ad-block">
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-6828365665232268"
+        data-ad-slot="9876543210"
+        data-ad-format="auto"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
   </main>
 
   <!-- Avatar JEAN -->
@@ -130,7 +148,7 @@
   </div>
 
   <footer>
-    <p>© <span id="year"></span> TINSFLASH – La météo la plus précise au monde 🌍</p>
+    <p>© <span id="year"></span> TINSFLASH – Prévisions et alertes météo ultra-précises 🌍</p>
     <p>📧 <a href="mailto:info@tinsflash.com">info@tinsflash.com</a> | 📱 <a href="https://wa.me/32473264477" target="_blank">WhatsApp Direct</a></p>
   </footer>
 
@@ -142,6 +160,21 @@
       alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
     }
     document.getElementById("year").textContent = new Date().getFullYear();
+
+    // ✅ Détection GPS
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const res = await fetch("/api/superforecast", {
+          method:"POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ lat, lon })
+        });
+        const data = await res.json();
+        console.log("🌍 Prévisions par GPS:", data);
+      }, err => console.warn("❌ GPS refusé ou indisponible:", err));
+    }
   </script>
 </body>
 </html>
