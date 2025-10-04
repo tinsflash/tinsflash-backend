@@ -9,12 +9,14 @@ async function getLocationOrAddress() {
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
         () => {
-          const addr = prompt("❌ Géolocalisation refusée.\nEntrez votre ville/pays (ex: Paris, FR) :");
+          const addr = document.getElementById("address")?.value || 
+                       prompt("❌ Géolocalisation refusée.\nEntrez votre ville/pays (ex: Paris, FR) :");
           resolve({ address: addr });
         }
       );
     } else {
-      const addr = prompt("Entrez votre ville/pays (ex: Paris, FR) :");
+      const addr = document.getElementById("address")?.value || 
+                   prompt("Entrez votre ville/pays (ex: Paris, FR) :");
       resolve({ address: addr });
     }
   });
@@ -180,25 +182,41 @@ function setupJeanChat() {
     messages.innerHTML += `<div style="color:#0077cc;"><b>J.E.A.N:</b> ${data.reply}</div>`;
     input.value = "";
     messages.scrollTop = messages.scrollHeight;
+
+    if (data.avatar) updateJeanAvatar(data.avatar);
   };
+}
+
+// 🖊️ Charger météo via adresse manuelle
+async function loadForecastFromAddress() {
+  const addr = document.getElementById("address").value;
+  if (!addr) {
+    alert("Veuillez entrer une adresse.");
+    return;
+  }
+  await loadForecast({ address: addr });
 }
 
 // 🚀 Initialisation
 (async function init() {
-  // 1. Géolocalisation utilisateur
-  const loc = await getLocationOrAddress();
-  await loadForecast(loc);
+  try {
+    // 1. Géolocalisation utilisateur
+    const loc = await getLocationOrAddress();
+    await loadForecast(loc);
 
-  // 2. Alertes météo
-  await loadAlerts();
+    // 2. Alertes météo
+    await loadAlerts();
 
-  // 3. Notifications push (demande zone utilisateur si GPS dispo)
-  const zone = loc.country || "GLOBAL";
-  subscribeNotif(zone);
+    // 3. Notifications push
+    const zone = loc.country || "GLOBAL";
+    // on n’active pas auto pour éviter spam → bouton user
 
-  // 4. Chat IA
-  setupJeanChat();
+    // 4. Chat IA
+    setupJeanChat();
 
-  // 5. Avatar par défaut
-  updateJeanAvatar("default");
+    // 5. Avatar par défaut
+    updateJeanAvatar("default");
+  } catch (err) {
+    console.error("Init error:", err);
+  }
 })();
