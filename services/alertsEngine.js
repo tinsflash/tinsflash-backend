@@ -1,6 +1,6 @@
 // services/alertsEngine.js
 // ✅ Classement final des alertes
-// Règle nucléaire : >90% publié, 70–90% à valider, <70% sous surveillance
+// Règle nucléaire : >90% publié, 70–90% à valider, 50–70% sous surveillance, <50% faible crédibilité
 
 /**
  * Classe une alerte météo en fonction de sa fiabilité
@@ -20,11 +20,13 @@ export function classifyAlerts(alertData) {
 
   let status;
   if (confidence >= 90) {
-    status = "published";
+    status = "published"; // ✅ auto publiée
   } else if (confidence >= 70) {
-    status = "toValidate";
+    status = "toValidate"; // ⚠️ demande validation admin
+  } else if (confidence >= 50) {
+    status = "under-surveillance"; // 👁️ suivi continu
   } else {
-    status = "under-surveillance"; // ✅ suivi continu
+    status = "low-confidence"; // 🔴 très faible crédibilité
   }
 
   return {
@@ -33,8 +35,8 @@ export function classifyAlerts(alertData) {
     status,
     disappearedRunsCount: alertData.disappearedRunsCount ?? 0,
     history: Array.isArray(alertData.history)
-      ? [...alertData.history, { run: Date.now(), confidence }]
-      : [{ run: Date.now(), confidence }],
+      ? [...alertData.history, { run: Date.now(), confidence, status }]
+      : [{ run: Date.now(), confidence, status }],
     classifiedAt: new Date().toISOString(),
   };
 }
