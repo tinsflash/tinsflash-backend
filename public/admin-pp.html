@@ -18,6 +18,13 @@
     button { background:#00bfff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; margin:2px; }
     button:hover { background:#008ccc; }
 
+    table { width:100%; border-collapse:collapse; margin-top:6px; font-size:0.9rem; }
+    th, td { border:1px solid #333; padding:6px; text-align:left; }
+    th { background:#222; }
+    .ok { color:#2ecc71; font-weight:bold; }
+    .fail { color:#f55; font-weight:bold; }
+    .pending { color:#ff9900; font-weight:bold; }
+
     /* Chat moteur */
     #chatBubble {
       position:fixed; bottom:80px; right:15px;
@@ -69,12 +76,18 @@
 
     <div class="card">
       <h2>📊 État du moteur</h2>
-      <pre id="statusBox">⏳ Chargement...</pre>
+      <p>Dernier run : <span id="lastRun">—</span></p>
+      <table id="statusTable">
+        <thead>
+          <tr><th>Phase</th><th>Statut</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
 
     <div class="card" style="grid-column:span 2;">
       <h2>🚨 Alertes actives</h2>
-      <div id="alertsBox">⏳ Chargement...</div>
+      <ul id="alertsList">⏳ Chargement...</ul>
     </div>
   </main>
 
@@ -101,26 +114,23 @@
       c.style.display=c.style.display==="flex"?"none":"flex";
     }
 
-    // Envoi au moteur
+    // Envoi au moteur IA
     async function sendChat(){
       const input=document.getElementById("chatMsg");
       const msg=input.value.trim();
       if(!msg) return;
-
       const log=document.getElementById("chatLog");
       log.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
       input.value="";
 
       try {
         const res=await fetch("/api/chat/engine",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
+          method:"POST", headers:{"Content-Type":"application/json"},
           body:JSON.stringify({message:msg})
         });
         const data=await res.json();
         let reply=data.reply||"⚠️ Pas de réponse moteur";
 
-        // Détection statut
         let css="color:#0af;";
         if(/fail/i.test(reply)){ css="color:#f55; font-weight:bold;"; playAlert(); }
         else if(/pending/i.test(reply)) css="color:#ff9900; font-weight:bold;";
@@ -138,41 +148,47 @@
     // Son alerte
     function playAlert(){
       const snd=document.getElementById("alertSound");
-      snd.currentTime=0;
-      snd.play().catch(()=>{});
+      snd.currentTime=0; snd.play().catch(()=>{});
     }
 
     // Run global
     async function runGlobal(zone){
-      const box=document.getElementById("statusBox");
-      box.textContent=`⏳ Run ${zone} en cours...`;
       try{
-        const res=await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone})});
-        const data=await res.json();
-        box.textContent=JSON.stringify(data.result?.checkup||data.result||data,null,2);
-      }catch(e){
-        box.textContent="❌ Erreur run: "+e.message;
-      }
+        await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone})});
+      }catch(e){ alert("❌ Erreur run: "+e.message); }
     }
 
-    // Auto refresh état moteur et alertes
+    // Auto refresh état moteur
     async function refreshStatus(){
       try{
         const res=await fetch("/api/status");
         const data=await res.json();
-        document.getElementById("statusBox").textContent=JSON.stringify(data,null,2);
+        document.getElementById("lastRun").textContent=data.lastRun || "—";
+
+        const tbody=document.querySelector("#statusTable tbody");
+        tbody.innerHTML="";
+        Object.entries(data.steps||{}).forEach(([phase,stat])=>{
+          let cls=""; if(/fail/i.test(stat)) cls="fail"; else if(/pending/i.test(stat)) cls="pending"; else if(/ok/i.test(stat)) cls="ok";
+          tbody.innerHTML+=`<tr><td>${phase}</td><td class="${cls}">${stat}</td></tr>`;
+        });
       }catch(e){
-        document.getElementById("statusBox").textContent="❌ Erreur status";
+        document.getElementById("lastRun").textContent="❌ Erreur";
       }
     }
 
+    // Auto refresh alertes
     async function refreshAlerts(){
       try{
         const res=await fetch("/api/alerts");
         const data=await res.json();
-        document.getElementById("alertsBox").textContent=JSON.stringify(data,null,2);
+        const list=document.getElementById("alertsList");
+        list.innerHTML="";
+        if(!data || data.length===0){ list.innerHTML="<li>Aucune alerte active</li>"; return; }
+        data.forEach(a=>{
+          list.innerHTML+=`<li>[${a.country||"?"}] ${a.type||"?"} – ${a.data?.status||"?"} (${a.data?.confidence||0}%)</li>`;
+        });
       }catch(e){
-        document.getElementById("alertsBox").textContent="❌ Erreur alerts";
+        document.getElementById("alertsList").innerHTML="❌ Erreur alerts";
       }
     }
 
