@@ -1,140 +1,197 @@
-// app.js
-// Gestion de l'index public TINSFLASH
+// ---------------------------
+// app.js - TINSFLASH Front
+// ---------------------------
 
-// 🎬 Fonction d'affichage d'une icône animée selon la condition météo
-function renderWeatherIcon(condition = "") {
-  const c = condition.toLowerCase();
-  if (c.includes("soleil") || c.includes("sun")) {
-    return `<lottie-player class="lottie-icon" src="https://assets2.lottiefiles.com/packages/lf20_q6yccw6s.json" background="transparent" speed="1" loop autoplay></lottie-player>`;
-  }
-  if (c.includes("nuage") || c.includes("cloud")) {
-    return `<lottie-player class="lottie-icon" src="https://assets2.lottiefiles.com/packages/lf20_puciaact.json" background="transparent" speed="1" loop autoplay></lottie-player>`;
-  }
-  if (c.includes("pluie") || c.includes("rain")) {
-    return `<lottie-player class="lottie-icon" src="https://assets2.lottiefiles.com/packages/lf20_jmgekfqg.json" background="transparent" speed="1" loop autoplay></lottie-player>`;
-  }
-  if (c.includes("neige") || c.includes("snow")) {
-    return `<lottie-player class="lottie-icon" src="https://assets2.lottiefiles.com/packages/lf20_rsa2lqdz.json" background="transparent" speed="1" loop autoplay></lottie-player>`;
-  }
-  if (c.includes("orage") || c.includes("storm") || c.includes("thunder")) {
-    return `<lottie-player class="lottie-icon" src="https://assets2.lottiefiles.com/packages/lf20_hqfyzxey.json" background="transparent" speed="1" loop autoplay></lottie-player>`;
-  }
-  return `<lottie-player class="lottie-icon" src="https://assets2.lottiefiles.com/packages/lf20_puciaact.json" background="transparent" speed="1" loop autoplay></lottie-player>`;
-}
-
-// 📍 Charger prévisions par adresse
-async function loadForecastFromAddress() {
-  const address = document.getElementById("address").value;
-  if (!address) return alert("Veuillez entrer une adresse.");
-
-  try {
-    const res = await fetch(`/api/forecast?address=${encodeURIComponent(address)}`);
-    const data = await res.json();
-    renderForecast(data);
-  } catch (err) {
-    console.error("Erreur API Forecast:", err);
-    document.getElementById("today-forecast").innerText = "❌ Erreur de récupération";
-  }
-}
-
-// 📡 Fonction d’affichage des prévisions
-function renderForecast(data) {
-  if (!data) return;
-
-  // --- Aujourd'hui ---
-  const today = data.days?.[0];
-  if (today) {
-    document.getElementById("today-forecast").innerHTML = `
-      <div style="text-align:center">
-        ${renderWeatherIcon(today.condition || "")}
-        <h3>${today.date}</h3>
-        <p><strong>${today.condition}</strong></p>
-        <p>🌡️ ${today.temp_min}°C / ${today.temp_max}°C</p>
-      </div>
-    `;
-  }
-
-  // --- 7 jours ---
-  let daysHTML = "";
-  (data.days || []).slice(0, 7).forEach(day => {
-    daysHTML += `
-      <div class="forecast-item">
-        ${renderWeatherIcon(day.condition || "")}
-        <strong>${day.date}</strong><br>
-        ${day.condition}<br>
-        🌡️ ${day.temp_min}°C / ${day.temp_max}°C
-      </div>
-    `;
+// 🌍 Geolocalisation ou fallback sur encodage manuel
+async function getLocationOrManual() {
+  return new Promise((resolve) => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => {
+          const addr = prompt("Entrez votre ville/pays (ex: Paris, FR) :");
+          resolve({ address: addr });
+        }
+      );
+    } else {
+      const addr = prompt("Entrez votre ville/pays (ex: Paris, FR) :");
+      resolve({ address: addr });
+    }
   });
-  document.getElementById("days-container").innerHTML = daysHTML;
-
-  // --- Bulletin texte ---
-  document.getElementById("forecast-text").innerText =
-    data.bulletin || "❌ Bulletin météo non disponible.";
 }
 
-// ⚠️ Charger les alertes
+// 🎨 Avatar J.E.A.N.
+function updateJeanAvatar(type = "default") {
+  const player = document.getElementById("jean-player");
+  if (!player) return;
+
+  const map = {
+    "default": "/avatars/jean-default.json",
+    "sun": "/avatars/jean-sun.json",
+    "rain": "/avatars/jean-rain.json",
+    "snow": "/avatars/jean-snow.json",
+    "storm": "/avatars/jean-storm.json",
+    "alert": "/avatars/jean-alert.json"
+  };
+
+  player.load(map[type] || map["default"]);
+}
+
+// 🎭 Appliquer icône/Jean selon condition
+function applyForecastIcon(condition) {
+  condition = (condition || "").toLowerCase();
+  if (condition.includes("sun") || condition.includes("clear")) updateJeanAvatar("sun");
+  else if (condition.includes("rain")) updateJeanAvatar("rain");
+  else if (condition.includes("snow")) updateJeanAvatar("snow");
+  else if (condition.includes("storm") || condition.includes("thunder")) updateJeanAvatar("storm");
+  else updateJeanAvatar("default");
+}
+
+// 📊 Charger prévisions météo
+async function loadForecast(country = "FR") {
+  try {
+    const res = await fetch(`/api/forecast/${country}`);
+    const data = await res.json();
+
+    if (!data || data.error) {
+      document.getElementById("local-content").innerText = "❌ Erreur prévisions.";
+      return;
+    }
+
+    // Jour actuel
+    const today = data.days?.[0];
+    if (today) {
+      document.getElementById("local-content").innerHTML = `
+        <h3>${today.date}</h3>
+        <p>${today.condition}, ${today.temp_min}°C / ${today.temp_max}°C</p>
+      `;
+      applyForecastIcon(today.condition);
+    }
+
+    // 7 jours
+    let html = "";
+    (data.days || []).forEach((d) => {
+      html += `
+        <div class="forecast-item">
+          <i class="wi wi-day-sunny"></i>
+          <p><b>${d.date}</b><br>${d.condition}<br>${d.temp_min}° / ${d.temp_max}°</p>
+        </div>
+      `;
+    });
+    document.getElementById("days-container").innerHTML = html;
+
+    // Bulletin texte
+    const txt = await fetch("/api/textgen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: "Fais un bulletin météo clair basé sur les prévisions actuelles." })
+    });
+    const tdata = await txt.json();
+    document.getElementById("forecast-text").innerText = tdata.reply || "❌ Pas de bulletin.";
+  } catch (err) {
+    console.error("Forecast error:", err);
+  }
+}
+
+// 🚨 Charger alertes
 async function loadAlerts() {
   try {
     const res = await fetch("/api/alerts");
-    const alerts = await res.json();
-    if (!alerts || alerts.length === 0) {
-      document.getElementById("alerts-content").innerText = "✅ Aucune alerte active.";
+    const data = await res.json();
+
+    const el = document.getElementById("alerts-content");
+    if (!data || data.length === 0) {
+      el.innerText = "✅ Aucune alerte active.";
       return;
     }
-    document.getElementById("alerts-content").innerHTML = alerts.map(a => `
-      <div class="alert">
-        <strong>${a.zone}</strong> : ${a.type} <br>
-        ⏰ ${a.start} → ${a.end}<br>
-        ${a.description}
-      </div>
-    `).join("");
-  } catch (err) {
-    console.error("Erreur API Alerts:", err);
-    document.getElementById("alerts-content").innerText = "❌ Erreur chargement alertes";
-  }
-}
 
-// 🎙️ Charger le podcast météo
-async function loadPodcast() {
-  try {
-    const res = await fetch("/api/podcast");
-    const data = await res.json();
-    if (data?.url) {
-      document.getElementById("podcast-container").innerHTML = `
-        <audio controls>
-          <source src="${data.url}" type="audio/mpeg">
-          Votre navigateur ne supporte pas l’audio.
-        </audio>
-      `;
-    } else {
-      document.getElementById("podcast-container").innerText = "❌ Podcast non disponible.";
+    el.innerHTML = data.map(
+      (a) => `<div class="alert"><b>${a.country || a.continent}</b>: ${a.title} (${a.level}%)</div>`
+    ).join("");
+
+    // Si alerte importante → avatar passe en "alert"
+    if (data.some(a => a.level >= 80)) {
+      updateJeanAvatar("alert");
     }
   } catch (err) {
-    console.error("Erreur API Podcast:", err);
-    document.getElementById("podcast-container").innerText = "❌ Erreur podcast";
+    console.error("Alerts error:", err);
   }
 }
 
-// 🚀 Initialisation auto au chargement
-window.addEventListener("DOMContentLoaded", async () => {
-  await loadAlerts();
-  await loadPodcast();
+// 🛰️ Radar Windy
+function loadRadar() {
+  const map = L.map("radar-map").setView([50.5, 4.5], 5);
+  L.tileLayer(
+    "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=demo", 
+    { attribution: "Radar", maxZoom: 18 }
+  ).addTo(map);
+}
 
-  // Essayer géolocalisation
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const { latitude, longitude } = pos.coords;
-      try {
-        const res = await fetch(`/api/forecast?lat=${latitude}&lon=${longitude}`);
-        const data = await res.json();
-        renderForecast(data);
-      } catch (err) {
-        console.error("Erreur géoloc forecast:", err);
-        document.getElementById("today-forecast").innerText = "❌ Erreur géolocalisation";
-      }
-    }, err => {
-      console.warn("⚠️ Géolocalisation refusée, utilisez l’adresse manuelle.");
-    });
+// 🎙️ Podcast météo
+async function loadPodcast(country = "FR") {
+  try {
+    const res = await fetch(`/api/podcast/${country}`);
+    const data = await res.json();
+    const el = document.getElementById("podcast-container");
+    el.innerHTML = data?.podcast || "Pas de podcast dispo.";
+  } catch (err) {
+    console.error("Podcast error:", err);
   }
-});
+}
+
+// 💬 Chat Cohere (J.E.A.N.)
+function setupJeanChat() {
+  const avatar = document.getElementById("jean-avatar");
+  avatar.addEventListener("click", () => {
+    if (document.getElementById("jean-chat")) return;
+    const chatBox = document.createElement("div");
+    chatBox.id = "jean-chat";
+    chatBox.style.position = "fixed";
+    chatBox.style.bottom = "190px";
+    chatBox.style.right = "20px";
+    chatBox.style.width = "300px";
+    chatBox.style.height = "400px";
+    chatBox.style.background = "#fff";
+    chatBox.style.border = "2px solid #0077cc";
+    chatBox.style.borderRadius = "12px";
+    chatBox.style.padding = "10px";
+    chatBox.style.zIndex = "10000";
+    chatBox.innerHTML = `
+      <h3 style="margin:0; color:#0077cc;">💬 J.E.A.N</h3>
+      <div id="jean-messages" style="overflow-y:auto; height:300px; margin:10px 0; font-size:14px;"></div>
+      <input type="text" id="jean-input" placeholder="Votre question..." style="width:75%;">
+      <button id="jean-send">Envoyer</button>
+    `;
+    document.body.appendChild(chatBox);
+
+    document.getElementById("jean-send").onclick = async () => {
+      const msg = document.getElementById("jean-input").value;
+      const box = document.getElementById("jean-messages");
+      box.innerHTML += `<div><b>Vous:</b> ${msg}</div>`;
+
+      const res = await fetch("/api/jean", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+
+      box.innerHTML += `<div style="color:#0077cc;"><b>J.E.A.N:</b> ${data.reply}</div>`;
+      document.getElementById("jean-input").value = "";
+      box.scrollTop = box.scrollHeight;
+
+      if (data.avatar) updateJeanAvatar(data.avatar);
+    };
+  });
+}
+
+// 🚀 Initialisation
+(async function init() {
+  const loc = await getLocationOrManual();
+  const country = loc.country || "FR";
+  await loadForecast(country);
+  await loadAlerts();
+  await loadPodcast(country);
+  loadRadar();
+  setupJeanChat();
+})();
