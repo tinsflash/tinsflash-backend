@@ -168,7 +168,6 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ✅ Résumé surveillance
 app.get("/api/alerts/summary", async (req, res) => {
   try {
     const summary = await safeCall(alertsService.getSurveillanceSummary);
@@ -348,10 +347,11 @@ app.post("/api/subscribe", (req, res) => {
 });
 
 app.post("/api/send-notif", async (req, res) => {
-  const { title, message } = req.body;
+  const { title, message, zone } = req.body;
   const result = await sendNotification(
     title || "🌍 Tinsflash Météo",
-    message || "Nouvelle alerte météo disponible"
+    message || "Nouvelle alerte météo disponible",
+    zone || "GLOBAL"
   );
   res.json({ success: true, result });
 });
