@@ -19,9 +19,9 @@ export async function askCohere(question, category = "grand public") {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "command-r-plus", // ⚡ modèle Cohere dernière génération
+        model: "command-r-plus", // ✅ modèle Cohere septembre 2025
         messages: [
-          { role: "system", content: "Tu es J.E.A.N., conseiller météo grand public, précis et clair." },
+          { role: "system", content: "Tu es J.E.A.N., conseiller météo grand public, clair, précis et pédagogique." },
           { role: "user", content: `Catégorie: ${category}\nQuestion: ${question}` }
         ],
       }),
@@ -33,8 +33,10 @@ export async function askCohere(question, category = "grand public") {
       throw new Error(`Cohere API error: ${response.status} ${data.message || response.statusText}`);
     }
 
-    // ✅ Nouveau format Cohere
-    const reply = data?.message?.content?.[0]?.text;
+    // ✅ Nouveau format Cohere septembre 2025
+    // data.message.content est un tableau [{ type: "text", text: "..." }]
+    const reply = data?.message?.content?.map(c => c.text).join(" ") || null;
+
     return reply || "❌ Pas de réponse de J.E.A.N.";
   } catch (err) {
     console.error("⚠️ Cohere error:", err.message);
