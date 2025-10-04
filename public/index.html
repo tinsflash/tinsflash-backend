@@ -13,44 +13,73 @@
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
   <style>
-    body { margin:0; font-family:"Segoe UI",sans-serif; background:#101820; color:#f4f9ff; }
-    header { text-align:center; padding:15px; background:#0077cc; color:#fff; }
-    h1 { margin:0; font-size:1.6rem; }
-    .container { max-width:1100px; margin:auto; padding:15px; display:grid; gap:15px; }
-    .card { background:#1b2735; padding:15px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.4); }
-    h2 { margin-top:0; color:#00bfff; font-size:1.2rem; text-align:center; }
-    .forecast-grid { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
-    .forecast-item { flex:1 1 120px; background:#223447; border-radius:10px; padding:8px; text-align:center; }
-    footer { text-align:center; padding:15px; margin-top:40px; background:#0077cc; color:white; }
-    footer a { color:yellow; text-decoration:none; }
-    .video-container { position:relative; max-width:100%; margin-bottom:10px; height:200px; overflow:hidden; }
+    body { margin:0; font-family:"Segoe UI",sans-serif; background:#0d1117; color:#f4f9ff; }
+    header { position:absolute; top:0; left:0; width:100%; padding:20px; text-align:center; color:#fff;
+             background:linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); z-index:2; }
+    header h1 { margin:0; font-size:1.8rem; }
+
+    /* Bandeau vidéo */
+    .video-container { position:relative; height:260px; overflow:hidden; }
     video { width:100%; height:100%; object-fit:cover; }
-    .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; }
-    #avatar-jean { position:fixed; bottom:70px; right:20px; width:80px; height:80px; z-index:9999; cursor:pointer; }
-    #chat-jean { position:fixed; bottom:160px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:10px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10000; }
-    #chat-header { background:#0077cc; color:#fff; padding:6px; border-radius:10px 10px 0 0; font-weight:bold; text-align:center; }
-    #chat-messages { flex:1; padding:8px; overflow-y:auto; font-size:0.9rem; }
+    .video-btn { position:absolute; bottom:15px; right:15px; background:#0077cc; color:#fff;
+                 border:none; padding:6px 10px; border-radius:8px; cursor:pointer; z-index:3; }
+
+    main { max-width:1200px; margin:auto; padding:20px; display:grid; gap:20px; }
+
+    .card { background:#1b2735; padding:20px; border-radius:14px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.5); }
+    h2 { margin:0 0 12px; font-size:1.2rem; text-align:center; color:#00bfff; }
+
+    /* Forecast jour */
+    #today-forecast { display:flex; flex-direction:column; align-items:center; gap:8px; font-size:1.1rem; }
+    #today-forecast .temp { font-size:2rem; font-weight:bold; }
+
+    /* Prévisions 7 jours */
+    .forecast-grid { display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; }
+    .forecast-item { flex:0 0 120px; background:#223447; border-radius:12px; padding:10px; text-align:center; }
+    .forecast-item h4 { margin:5px 0; font-size:0.9rem; }
+
+    /* Alertes */
+    #alerts-content .alert { padding:10px; margin:8px 0; border-radius:8px; font-weight:bold; }
+    .alert.yellow { background:#ffeb3b; color:#000; }
+    .alert.orange { background:#ff9800; color:#000; }
+    .alert.red { background:#f44336; color:#fff; }
+
+    /* Chat & avatar */
+    #avatar-jean { position:fixed; bottom:80px; right:20px; width:80px; height:80px; z-index:9999; cursor:pointer;
+                   border-radius:50%; box-shadow:0 4px 15px rgba(0,0,0,0.6); }
+    #chat-jean { position:fixed; bottom:170px; right:20px; width:320px; height:420px;
+                 background:#161b22; color:#fff; border-radius:12px; display:none; flex-direction:column;
+                 box-shadow:0 4px 20px rgba(0,0,0,0.7); z-index:10000; }
+    #chat-header { background:#0077cc; padding:8px; border-radius:12px 12px 0 0; font-weight:bold; text-align:center; }
+    #chat-messages { flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; }
     #chat-input { display:flex; }
-    #chat-input input { flex:1; border:none; padding:6px; }
-    #chat-input button { background:#0077cc; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
-    #partner-banner { position:fixed; bottom:0; left:0; width:100%; background:#ffcc00; color:#000; text-align:center; font-weight:bold; padding:8px; z-index:9000; font-size:0.9rem; display:none; }
+    #chat-input input { flex:1; border:none; padding:8px; border-radius:0 0 0 12px; }
+    #chat-input button { background:#0077cc; border:none; color:#fff; padding:8px 12px; cursor:pointer;
+                         border-radius:0 0 12px 0; }
+
+    /* Partner banner */
+    #partner-banner { position:fixed; bottom:0; left:0; width:100%; background:#ffcc00; color:#000;
+                      text-align:center; font-weight:bold; padding:8px; z-index:9000; font-size:0.9rem; display:none; }
     #partner-banner a { color:#0077cc; text-decoration:none; }
+
+    footer { text-align:center; padding:20px; margin-top:30px; background:#0077cc; color:white; }
+    footer a { color:yellow; text-decoration:none; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🌤️ TINSFLASH – Prévisions & Alertes avec J.E.A.N.</h1>
-  </header>
-
   <!-- Bandeau vidéo -->
   <div class="video-container">
     <video id="introVideo" autoplay muted loop>
       <source src="intro-jean.mp4" type="video/mp4">
     </video>
-    <button class="video-btn" onclick="toggleVideo()">🔊</button>
+    <header>
+      <h1>🌤️ TINSFLASH – Prévisions & Alertes avec J.E.A.N.</h1>
+    </header>
+    <button class="video-btn" onclick="toggleVideo()">🔊 Son</button>
   </div>
 
-  <main class="container">
+  <main>
     <!-- PUB haut -->
     <ins class="adsbygoogle" style="display:block; text-align:center;"
       data-ad-client="ca-pub-6828365665232268"
@@ -69,7 +98,9 @@
     <!-- Prévision du jour -->
     <div class="card">
       <h2>☀️ Météo du jour</h2>
-      <div id="today-forecast">⏳ Chargement...</div>
+      <div id="today-forecast">
+        ⏳ Chargement...
+      </div>
     </div>
 
     <!-- PUB milieu -->
@@ -87,10 +118,7 @@
     <!-- Alertes -->
     <div class="card">
       <h2>⚠️ Alertes météo</h2>
-      <details>
-        <summary>Voir les alertes</summary>
-        <div id="alerts-content">⏳ Chargement...</div>
-      </details>
+      <div id="alerts-content">⏳ Chargement...</div>
     </div>
 
     <!-- Bulletin météo -->
@@ -122,8 +150,9 @@
   </main>
 
   <!-- Avatar JEAN -->
-  <div id="avatar-jean">
-    <lottie-player id="jean-player" src="/avatars/jean-default.json" background="transparent" speed="1" style="width:80px; height:80px;"></lottie-player>
+  <div id="avatar-jean" onclick="toggleChat()">
+    <lottie-player id="jean-player" src="/avatars/jean-default.json" background="transparent" speed="1"
+      style="width:80px; height:80px;" loop autoplay></lottie-player>
   </div>
 
   <!-- Chat JEAN -->
@@ -150,11 +179,10 @@
 
   <script src="app.js"></script>
   <script>
-    function toggleVideo(){
-      const video=document.getElementById("introVideo");
-      video.muted=!video.muted;
-    }
+    function toggleVideo(){ const video=document.getElementById("introVideo"); video.muted=!video.muted; }
     document.getElementById("year").textContent=new Date().getFullYear();
+
+    function toggleChat(){ const chat=document.getElementById("chat-jean"); chat.style.display=chat.style.display==="flex"?"none":"flex"; }
 
     // Affiche pub Uman Detect seulement si BE
     fetch("https://ipapi.co/json").then(r=>r.json()).then(d=>{
