@@ -26,25 +26,11 @@ if (process.env.MONGO_URI) {
 
 // === Services ===
 import { runGlobal } from "./services/runGlobal.js";
-import * as runContinental from "./services/runContinental.js";
-import * as superForecast from "./services/superForecast.js";
-import * as forecastService from "./services/forecastService.js";
-import * as radarService from "./services/radarService.js";
-import * as podcastService from "./services/podcastService.js";
-import * as chatService from "./services/chatService.js";
 import * as engineStateService from "./services/engineState.js";
-import * as alertsService from "./services/alertsService.js";
-import * as textGenService from "./services/textGenService.js";
-import * as newsService from "./services/newsService.js";
-import * as userService from "./services/userService.js";
-import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import * as adminLogs from "./services/adminLogs.js";
-import { runWorldAlerts } from "./services/runWorldAlerts.js";
+import * as chatService from "./services/chatService.js";
+import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { askCohere } from "./services/cohereService.js";
-import { addSubscription, sendNotification } from "./services/pushService.js";
-
-const safeCall = async (fn, ...args) =>
-  typeof fn === "function" ? await fn(...args) : null;
 
 // === Page d'accueil ===
 app.get("/", (req, res) => {
@@ -56,7 +42,7 @@ app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
     const { zone } = req.body;
-    const result = await safeCall(runGlobal, zone || "Europe");
+    const result = await runGlobal(zone || "Europe");
     res.json({ success: true, result });
   } catch (e) {
     console.error("❌ Erreur run-global:", e);
@@ -67,7 +53,7 @@ app.post("/api/run-global", async (req, res) => {
 // === Status global moteur ===
 app.get("/api/status", async (req, res) => {
   try {
-    const state = await safeCall(engineStateService.getEngineState);
+    const state = await engineStateService.getEngineState();
     res.json({
       status: state?.checkup?.engineStatus || "IDLE",
       lastRun: state?.lastRun,
@@ -83,7 +69,7 @@ app.get("/api/status", async (req, res) => {
   }
 });
 
-// === Alertes exposées pour index ===
+// === Alertes exposées pour index et console ===
 app.get("/api/alerts", async (req, res) => {
   try {
     const state = await engineStateService.getEngineState();
@@ -93,7 +79,30 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// === Logs SSE (flux live) ===
+// === Prévisions par pays (pour avatar météo index) ===
+app.get("/api/forecast/:country", async (req, res) => {
+  try {
+    const { country } = req.params;
+    const state = await engineStateService.getEngineState();
+    let forecast = null;
+
+    if (state?.finalReport?.forecasts) {
+      forecast = state.finalReport.forecasts[country] || null;
+    }
+    if (!forecast && state?.forecastsContinental) {
+      forecast = state.forecastsContinental[country] || null;
+    }
+
+    if (!forecast) {
+      return res.json({ country, message: "❌ Aucune prévision disponible" });
+    }
+    res.json({ country, forecast });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// === Logs SSE (flux live pour admin) ===
 app.get("/api/logs/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -147,7 +156,6 @@ app.get("/admin", (req, res) =>
 app.get("/admin-alerts", (req, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-alerts.html"))
 );
-// autres pages admin si besoin…
 
 // === Start server ===
 const PORT = process.env.PORT || 5000;
