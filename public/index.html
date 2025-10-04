@@ -25,7 +25,7 @@
     .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
     footer { text-align:center; padding:20px; margin-top:20px; background:#0077cc; color:white; }
     footer a { color:yellow; text-decoration:none; }
-    #avatar-jean { position:fixed; bottom:20px; right:20px; width:120px; height:120px; cursor:pointer; z-index:9999; }
+    #avatar-jean { position:fixed; bottom:20px; right:20px; width:120px; height:120px; cursor:pointer; z-index:9999; opacity:0; transform:scale(0.5); animation: fadeZoomIn 1.5s forwards; }
     #jean-player { width:100%; height:100%; }
     #chat-jean { position:fixed; bottom:150px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:12px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10000; }
     #chat-header { background:#0077cc; color:#fff; padding:8px; border-radius:12px 12px 0 0; }
@@ -36,6 +36,10 @@
     input[type=text] { padding:8px; border-radius:6px; border:none; width:70%; }
     button { padding:8px 12px; border:none; border-radius:6px; background:#00bfff; color:white; cursor:pointer; }
     .alert { background:#ffe5e5; border-left:5px solid #cc0000; padding:10px; margin:5px 0; border-radius:8px; color:#000; }
+
+    @keyframes fadeZoomIn {
+      to { opacity:1; transform:scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -101,6 +105,14 @@
       </details>
     </div>
 
+    <!-- Notifications -->
+    <div class="card">
+      <h2>🔔 Notifications météo</h2>
+      <button onclick="subscribeNotif()">Activer les notifications</button>
+      <button onclick="unsubscribeNotif()">Désactiver</button>
+      <p id="notif-status">⏳ État inconnu</p>
+    </div>
+
     <!-- Texte météo -->
     <div class="card">
       <h2>📰 Bulletin météo</h2>
@@ -123,7 +135,10 @@
 
   <!-- Avatar JEAN -->
   <div id="avatar-jean">
-    <lottie-player id="jean-player" src="/avatars/jean-default.json" background="transparent" speed="1" loop autoplay></lottie-player>
+    <lottie-player id="jean-player" 
+      src="/avatars/jean-default.json" 
+      background="transparent" speed="1" loop autoplay>
+    </lottie-player>
   </div>
 
   <!-- Chat JEAN -->
@@ -154,8 +169,20 @@
     async function loadForecastFromAddress() {
       const addr = document.getElementById("address").value.trim();
       if (!addr) return alert("Veuillez entrer une adresse");
-      // ⚡ Ici tu pourras brancher un service de géocodage
       await loadForecast("FR"); 
+    }
+
+    // Notifications
+    async function subscribeNotif() {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: "dummy-client" }) // à remplacer par vrai endpoint push
+      });
+      document.getElementById("notif-status").innerText = "✅ Notifications activées";
+    }
+    function unsubscribeNotif() {
+      document.getElementById("notif-status").innerText = "❌ Notifications désactivées";
     }
   </script>
 </body>
