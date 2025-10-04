@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>TINSFLASH – La météo la plus précise - Système J.E.A.N</title>
+  <title>TINSFLASH – Système J.E.A.N.</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google AdSense -->
@@ -13,48 +13,33 @@
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
   <style>
-    body { margin:0; font-family:"Segoe UI", sans-serif; background:#101820; color:#f4f9ff; }
-    header { text-align:center; padding:12px; background:#0077cc; color:#fff; }
-    h1 { margin:0; font-size:1.4rem; }
-    .container { max-width:1000px; margin:auto; padding:12px; display:grid; gap:14px; }
-    .card { background:#1b2735; padding:14px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,0.3); }
-    h2 { margin:0 0 8px 0; color:#00bfff; font-size:1.1rem; }
-    .forecast-grid { display:flex; gap:8px; flex-wrap:wrap; }
-    .forecast-item { flex:1 1 110px; background:#223447; border-radius:8px; padding:8px; text-align:center; font-size:0.85rem; }
-    footer { text-align:center; padding:14px; margin-top:40px; background:#0077cc; color:white; font-size:0.85rem; }
+    body { margin:0; font-family:"Segoe UI",sans-serif; background:#101820; color:#f4f9ff; }
+    header { text-align:center; padding:15px; background:#0077cc; color:#fff; }
+    h1 { margin:0; font-size:1.6rem; }
+    .container { max-width:1100px; margin:auto; padding:15px; display:grid; gap:15px; }
+    .card { background:#1b2735; padding:15px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.4); }
+    h2 { margin-top:0; color:#00bfff; font-size:1.2rem; text-align:center; }
+    .forecast-grid { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+    .forecast-item { flex:1 1 120px; background:#223447; border-radius:10px; padding:8px; text-align:center; }
+    footer { text-align:center; padding:15px; margin-top:40px; background:#0077cc; color:white; }
     footer a { color:yellow; text-decoration:none; }
-
-    /* Video bandeau */
-    .video-container { position:relative; max-width:100%; margin-bottom:12px; height:180px; overflow:hidden; }
+    .video-container { position:relative; max-width:100%; margin-bottom:10px; height:200px; overflow:hidden; }
     video { width:100%; height:100%; object-fit:cover; }
-    .video-btn { position:absolute; bottom:6px; right:6px; background:#0077cc; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:0.8rem; }
-
-    /* Avatar J.E.A.N */
-    #avatar-jean { position:fixed; bottom:70px; right:14px; width:70px; height:70px; z-index:9999; cursor:pointer; }
-    #chat-jean { position:fixed; bottom:150px; right:14px; width:300px; height:400px; background:#fff; color:#000;
-      border-radius:10px; display:none; flex-direction:column; box-shadow:0 4px 12px rgba(0,0,0,0.5); z-index:10000; font-size:0.9rem; }
-    #chat-header { background:#0077cc; color:#fff; padding:6px; border-radius:10px 10px 0 0; font-weight:bold; font-size:0.9rem; }
-    #chat-messages { flex:1; padding:8px; overflow-y:auto; }
+    .video-btn { position:absolute; bottom:10px; right:10px; background:#0077cc; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; }
+    #avatar-jean { position:fixed; bottom:70px; right:20px; width:80px; height:80px; z-index:9999; cursor:pointer; }
+    #chat-jean { position:fixed; bottom:160px; right:20px; width:300px; height:400px; background:#fff; color:#000; border-radius:10px; display:none; flex-direction:column; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10000; }
+    #chat-header { background:#0077cc; color:#fff; padding:6px; border-radius:10px 10px 0 0; font-weight:bold; text-align:center; }
+    #chat-messages { flex:1; padding:8px; overflow-y:auto; font-size:0.9rem; }
     #chat-input { display:flex; }
-    #chat-input input { flex:1; border:none; padding:6px; font-size:0.85rem; }
+    #chat-input input { flex:1; border:none; padding:6px; }
     #chat-input button { background:#0077cc; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
-
-    /* Icônes météo */
-    .forecast-icon { width:50px; height:50px; margin:auto; }
-
-    /* Bandeau pub partenaire */
-    #partner-banner {
-      display:none; /* masqué par défaut */
-      position:fixed; bottom:0; left:0; width:100%;
-      background:#ffcc00; color:#000; text-align:center;
-      font-weight:bold; padding:8px; z-index:9000; font-size:0.9rem;
-    }
+    #partner-banner { position:fixed; bottom:0; left:0; width:100%; background:#ffcc00; color:#000; text-align:center; font-weight:bold; padding:8px; z-index:9000; font-size:0.9rem; display:none; }
     #partner-banner a { color:#0077cc; text-decoration:none; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🌤️ TINSFLASH – La météo la plus précise - Système J.E.A.N</h1>
+    <h1>🌤️ TINSFLASH – Prévisions & Alertes avec J.E.A.N.</h1>
   </header>
 
   <!-- Bandeau vidéo -->
@@ -62,36 +47,21 @@
     <video id="introVideo" autoplay muted loop>
       <source src="intro-jean.mp4" type="video/mp4">
     </video>
-    <button class="video-btn" onclick="toggleVideo()">🔊 Son</button>
+    <button class="video-btn" onclick="toggleVideo()">🔊</button>
   </div>
 
   <main class="container">
-
     <!-- PUB haut -->
     <ins class="adsbygoogle" style="display:block; text-align:center;"
       data-ad-client="ca-pub-6828365665232268"
-      data-ad-slot="1111111111"
-      data-ad-format="auto" data-full-width-responsive="true"></ins>
+      data-ad-slot="1111111111" data-ad-format="auto" data-full-width-responsive="true"></ins>
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-
-    <!-- Introduction -->
-    <div class="card">
-      <h2>🔎 À propos de TINSFLASH</h2>
-      <p style="margin:0; font-size:0.9rem; line-height:1.4;">
-        TINSFLASH est un <strong>moteur météo unique actuellement au monde</strong> :  
-        il combine modèles internationaux, modèles IA de dernière génération, reliefs, climat et le tout orchestré par l'IA et l'humain pour fournir des  
-        <strong>prévisions et alertes locales & nationales ultra-fiables</strong>.  
-        <br><br>
-        Avec l’option <strong>Premium / Pro+</strong>, accédez à nos outils  
-        <strong>4D d’analyse avancée</strong> et des prévisions encore plus détaillées.
-      </p>
-    </div>
 
     <!-- Localisation -->
     <div class="card">
       <h2>📍 Localisation</h2>
       <button onclick="getLocationOrAddress()">📡 Activer la géolocalisation</button>
-      <br><br>
+      <p>ou entrez votre adresse :</p>
       <input type="text" id="address" placeholder="Rue + Ville">
       <button onclick="loadForecastFromAddress()">Voir la météo</button>
     </div>
@@ -105,8 +75,7 @@
     <!-- PUB milieu -->
     <ins class="adsbygoogle" style="display:block; text-align:center;"
       data-ad-client="ca-pub-6828365665232268"
-      data-ad-slot="2222222222"
-      data-ad-format="auto" data-full-width-responsive="true"></ins>
+      data-ad-slot="2222222222" data-ad-format="auto" data-full-width-responsive="true"></ins>
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
     <!-- Prévisions 7 jours -->
@@ -119,7 +88,7 @@
     <div class="card">
       <h2>⚠️ Alertes météo</h2>
       <details>
-        <summary>Voir les alertes locales, nationales et mondiales</summary>
+        <summary>Voir les alertes</summary>
         <div id="alerts-content">⏳ Chargement...</div>
       </details>
     </div>
@@ -134,14 +103,13 @@
     <div class="card">
       <h2>🛰️ Radar en direct</h2>
       <iframe src="https://embed.windy.com/embed2.html?lat=50&lon=4.8&zoom=6&level=surface&overlay=precipitation"
-        width="100%" height="300" frameborder="0" style="border-radius:10px;"></iframe>
+        width="100%" height="400" frameborder="0" style="border-radius:12px;"></iframe>
     </div>
 
     <!-- PUB bas -->
     <ins class="adsbygoogle" style="display:block; text-align:center;"
       data-ad-client="ca-pub-6828365665232268"
-      data-ad-slot="3333333333"
-      data-ad-format="auto" data-full-width-responsive="true"></ins>
+      data-ad-slot="3333333333" data-ad-format="auto" data-full-width-responsive="true"></ins>
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
     <!-- Notifications -->
@@ -155,12 +123,7 @@
 
   <!-- Avatar JEAN -->
   <div id="avatar-jean">
-    <lottie-player id="jean-player"
-      src="/avatars/jean-default.json"
-      background="transparent"
-      speed="1"
-      style="width:100%; height:100%;">
-    </lottie-player>
+    <lottie-player id="jean-player" src="/avatars/jean-default.json" background="transparent" speed="1" style="width:80px; height:80px;"></lottie-player>
   </div>
 
   <!-- Chat JEAN -->
@@ -173,7 +136,7 @@
     </div>
   </div>
 
-  <!-- Bandeau pub partenaire (Belgique uniquement) -->
+  <!-- Bandeau pub partenaire -->
   <div id="partner-banner">
     💧 Une fuite, problème d’humidité ou inspection canalisations ? 👉 
     <a href="https://uman-detect.com" target="_blank">uman-detect.com (Belgique)</a>
@@ -187,22 +150,16 @@
 
   <script src="app.js"></script>
   <script>
-    function toggleVideo() {
-      const video = document.getElementById("introVideo");
-      video.muted = !video.muted;
-      alert(video.muted ? "🔇 Son coupé" : "🔊 Son activé");
+    function toggleVideo(){
+      const video=document.getElementById("introVideo");
+      video.muted=!video.muted;
     }
-    document.getElementById("year").textContent = new Date().getFullYear();
+    document.getElementById("year").textContent=new Date().getFullYear();
 
-    // 🇧🇪 Afficher bandeau partenaire uniquement pour la Belgique
-    fetch("https://ipapi.co/json/")
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.country_code === "BE") {
-          document.getElementById("partner-banner").style.display = "block";
-        }
-      })
-      .catch(() => {});
+    // Affiche pub Uman Detect seulement si BE
+    fetch("https://ipapi.co/json").then(r=>r.json()).then(d=>{
+      if(d.country_code==="BE"){ document.getElementById("partner-banner").style.display="block"; }
+    });
   </script>
 </body>
 </html>
