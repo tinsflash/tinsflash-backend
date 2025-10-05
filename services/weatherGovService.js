@@ -1,86 +1,59 @@
 // PATH: services/weatherGovService.js
-// 🌎 Intégration Weather.gov (NOAA) — module d’analyse pour USA
-// Utilisé uniquement en interne pour renforcer les prévisions TINSFLASH
-// ⚠️ Jamais affiché publiquement (source complémentaire IA interne)
+// 🇺🇸 Service d’interfaçage avec Weather.gov (NWS) — Cross-check interne TINSFLASH
 
 import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
 
 /**
- * Récupère les prévisions NOAA (Weather.gov)
- * @param {number} lat - latitude
- * @param {number} lon - longitude
- * @returns {Promise<Object>} Données de prévision ou erreur
+ * 🔍 Récupère les prévisions officielles du NWS pour une position
  */
-export async function getWeatherGovForecast(lat, lon) {
-  const baseUrl = `https://api.weather.gov/points/${lat},${lon}`;
+export async function getNwsForecast(lat, lon) {
   try {
-    await addEngineLog(`📡 NOAA → Initialisation (${lat},${lon})`);
-    const meta = await axios.get(baseUrl, {
-      headers: { "User-Agent": "Tinsflash Meteorological Engine (contact@tinsflash.ai)" },
-      timeout: 10000,
-    });
-
-    const forecastUrl = meta.data?.properties?.forecast;
-    if (!forecastUrl) throw new Error("Forecast URL manquante (NOAA metadata invalide)");
-
-    const forecastData = await axios.get(forecastUrl, {
-      headers: { "User-Agent": "Tinsflash Engine" },
-      timeout: 10000,
-    });
-
-    const periods = forecastData.data?.properties?.periods || [];
-    await addEngineLog(`✅ NOAA → ${periods.length} périodes récupérées (${lat},${lon})`);
-
-    return {
-      source: "NOAA / Weather.gov",
-      status: "ok",
-      periods,
-    };
+    const res = await axios.get(`https://api.weather.gov/points/${lat},${lon}`);
+    const forecastUrl = res.data?.properties?.forecast;
+    if (!forecastUrl) throw new Error("URL forecast absente");
+    const forecastRes = await axios.get(forecastUrl);
+    return forecastRes.data?.properties?.periods || [];
   } catch (err) {
-    await addEngineError(`❌ NOAA fetch error (${lat},${lon}) : ${err.message}`);
-    return {
-      source: "NOAA / Weather.gov",
-      status: "error",
-      error: err.message,
-      periods: [],
-    };
+    await addEngineError(`❌ NWS forecast error (${lat},${lon}): ${err.message}`);
+    return [];
   }
 }
 
 /**
- * Récupère les alertes actives de Weather.gov (pour USA uniquement)
- * @returns {Promise<Object>} Liste d’alertes actives NOAA
+ * ⚙️ Compare les prévisions locales TINSFLASH avec celles du NWS
+ * @param {Object} tinsflashForecasts Prévisions locales internes (runGlobalUSA)
+ * @param {Array} tinsflashAlerts Alertes internes générées par le moteur
  */
-export async function getWeatherGovAlerts() {
-  const alertsUrl = "https://api.weather.gov/alerts/active";
+export async function crossCheck(tinsflashForecasts = {}, tinsflashAlerts = []) {
   try {
-    await addEngineLog("🚨 NOAA → Lecture des alertes actives...");
-    const res = await axios.get(alertsUrl, {
-      headers: { "User-Agent": "Tinsflash Meteorological Engine" },
-      timeout: 15000,
-    });
+    let compared = 0;
+    let differences = 0;
+    let aheadCount = 0;
 
-    const alerts = res.data?.features?.map((a) => ({
-      id: a.id,
-      zone: a.properties?.areaDesc,
-      event: a.properties?.event,
-      severity: a.properties?.severity,
-      certainty: a.properties?.certainty,
-      urgency: a.properties?.urgency,
-      start: a.properties?.onset,
-      end: a.properties?.ends,
-      headline: a.properties?.headline,
-      description: a.properties?.description,
-      instruction: a.properties?.instruction,
-    })) || [];
+    for (const [region, data] of Object.entries(tinsflashForecasts || {})) {
+      const { lat, lon } = data;
+      if (!lat || !lon) continue;
+      const nws = await getNwsForecast(lat, lon);
 
-    await addEngineLog(`✅ NOAA → ${alerts.length} alertes actives chargées`);
-    return { source: "NOAA / Weather.gov", status: "ok", alerts };
+      // On compare simplement la tendance et le timing des alertes
+      if (nws?.length && data?.forecast) {
+        compared++;
+        const nwsSummary = nws[0]?.shortForecast?.toLowerCase() || "";
+        const tins = JSON.stringify(data.forecast).toLowerCase();
+        if (!tins.includes(nwsSummary)) differences++;
+        if (tins.includes("storm") && !nwsSummary.includes("storm")) aheadCount++;
+      }
+    }
+
+    const summary = `Comparé ${compared} régions, différences ${differences}, TINSFLASH en avance ${aheadCount}`;
+    await addEngineLog(`📊 Cross-check NWS : ${summary}`);
+
+    return { compared, differences, aheadCount, summary };
   } catch (err) {
-    await addEngineError(`❌ NOAA alert fetch error : ${err.message}`);
-    return { source: "NOAA / Weather.gov", status: "error", alerts: [], error: err.message };
+    await addEngineError(`⚠️ Erreur crossCheck Weather.gov : ${err.message}`);
+    return { compared: 0, differences: 0, aheadCount: 0, summary: err.message };
   }
 }
 
-export default { getWeatherGovForecast, getWeatherGovAlerts };
+export default { getNwsForecast, crossCheck };
