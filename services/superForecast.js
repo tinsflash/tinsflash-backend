@@ -2,7 +2,7 @@
 import { addEngineLog, addEngineError, updateEngineState, saveEngineState } from "./engineState.js";
 import forecastService from "./forecastService.js";
 import * as alertsService from "./alertsService.js";
-import aiFusionService from "./aiFusionService.js"; // fusion IA (GraphCast / Pangu / Gemini / GPT5)
+import aiFusionService from "./aiFusionService.js"; // Fusion IA (GraphCast / Pangu / Gemini / GPT5)
 import { getGlobalTimestamp } from "./timeUtils.js";
 
 /**
@@ -20,7 +20,18 @@ export async function superForecast(zone = "Europe") {
   await updateEngineState("checkup.engineStatus", "RUNNING");
   await updateEngineState("currentCycleId", cycleId);
 
-  const models = ["ECMWF", "GFS", "ICON", "Meteomatics", "Copernicus", "NASA", "OpenWeather"];
+  // Ajout Wetter3 à la liste des modèles actifs
+  const models = [
+    "ECMWF",
+    "GFS",
+    "ICON",
+    "Meteomatics",
+    "Copernicus",
+    "NASA",
+    "OpenWeather",
+    "Wetter3", // <--- Nouveau modèle interne
+  ];
+
   const modelResults = {};
   const errors = [];
 
@@ -29,6 +40,7 @@ export async function superForecast(zone = "Europe") {
     try {
       await addEngineLog(`📡 Chargement modèle ${model}...`);
       const data = await forecastService.getModelForecast(model, zone);
+
       if (data && Object.keys(data).length > 0) {
         modelResults[model] = data;
         await updateEngineState(`checkup.models.${model}`, "ok");
@@ -83,7 +95,7 @@ export async function superForecast(zone = "Europe") {
     lastRun: new Date(),
     checkup: {
       engineStatus: errors.length > 0 ? "FAIL" : "OK",
-      zonesCovered: zone === "Europe" ? 30 : 1, // MAJ: plus de 27 pays
+      zonesCovered: zone === "Europe" ? 30 : 1, // MAJ: >27 pays
       models: Object.fromEntries(models.map(m => [m, modelResults[m] ? "ok" : "fail"])),
       steps: {
         superForecast: "ok",
@@ -108,7 +120,7 @@ export async function superForecast(zone = "Europe") {
   return { ok: errors.length === 0, errors, modelsLoaded: Object.keys(modelResults).length };
 }
 
-// ✅ Compatibilité rétro pour forecastService et autres modules
+// ✅ Compatibilité rétro
 export const runSuperForecast = superForecast;
 
 export default { superForecast, runSuperForecast };
