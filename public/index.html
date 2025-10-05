@@ -1,244 +1,152 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
-  <title>TINSFLASH – Prévisions & Alertes IA</title>
-
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-82049476791352732" crossorigin="anonymous"></script>
-
+  <title>TINSFLASH – Météo intelligente IA</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
-      background: #0b0f19;
-      color: #ddd;
-      text-align: center;
-    }
-    video {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-    }
-    section {
-      margin: 15px auto;
-      padding: 15px;
-      border-radius: 10px;
-      background: #111831;
-      max-width: 850px;
-      text-align: left;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-    h2 {
-      color: #4fc3f7;
-      margin-top: 0;
-    }
-    p { text-align: justify; line-height: 1.6; }
-    .forecast-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-around;
-      gap: 10px;
-    }
-    .day-box {
-      background: #1a2238;
-      border-radius: 8px;
-      padding: 10px;
-      width: 110px;
-      text-align: center;
-      color: #fff;
-    }
-    .day-box img { width: 50px; height: 50px; }
-    #mapForecast, #mapAlerts {
-      height: 250px;
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
-    iframe {
-      border: none;
-      width: 100%;
-      height: 260px;
-      border-radius: 10px;
-    }
-    footer {
-      text-align: center;
-      padding: 15px;
-      font-size: 14px;
-      background: #111831;
-      color: #aaa;
-      margin-top: 20px;
-    }
-    footer a { color: #4fc3f7; text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-
-    /* === Avatar Jean === */
-    #jean-chat {
-      position: fixed;
-      bottom: 25px;
-      right: 25px;
-      text-align: center;
-      z-index: 9999;
-    }
-    #jean-avatar {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      box-shadow: 0 0 20px rgba(79,195,247,0.7);
-      cursor: pointer;
-      object-fit: cover;
-      background: radial-gradient(circle at 30% 30%, #3b4b70, #0b0f19);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    #jean-avatar:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 25px rgba(79,195,247,1);
-    }
-    #chat-label {
-      margin-top: 6px;
-      background: #1a2238;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      display: inline-block;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    #chat-box {
-      display: none;
-      position: fixed;
-      bottom: 130px;
-      right: 20px;
-      width: 320px;
-      height: 420px;
-      background: #1a2238;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 10px rgba(0,0,0,0.6);
-      z-index: 10000;
-    }
-    #chat-messages {
-      flex: 1;
-      padding: 10px;
-      overflow-y: auto;
-      font-size: 13px;
-    }
-    .msg { margin:5px 0; padding:6px 10px; border-radius:6px; max-width:70%; }
-    .user { background:#4fc3f7; color:#000; margin-left:auto; text-align:right; }
-    .bot { background:#333; color:#fff; margin-right:auto; text-align:left; }
-    .input-row { display:flex; gap:5px; padding:8px; }
-    .input-row input { flex:1; padding:5px; border-radius:6px; border:1px solid #555; }
-    .input-row button { background:#4fc3f7; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; }
+    body { margin:0; font-family: 'Segoe UI', sans-serif; background:#0b0f19; color:#fff; }
+    h2 { color:#4fc3f7; margin-top:20px; }
+    section { background:#111831; padding:15px; border-radius:10px; margin:15px; }
+    video { width:100%; height:200px; object-fit:cover; border-bottom:3px solid #4fc3f7; }
+    .forecast-container { display:flex; overflow-x:auto; gap:10px; padding:10px 0; }
+    .forecast-card { background:#1a2238; padding:10px; border-radius:8px; min-width:90px; text-align:center; }
+    .forecast-card img { width:40px; }
+    iframe { width:100%; height:320px; border:none; border-radius:8px; }
+    footer { background:#111831; padding:20px; text-align:center; font-size:13px; color:#bbb; margin-top:30px; }
+    footer a { color:#4fc3f7; text-decoration:none; }
+    #jean-avatar { position:fixed; bottom:80px; right:20px; width:90px; cursor:pointer; z-index:1000; transition:transform 0.3s; }
+    #jean-avatar:hover { transform:scale(1.1); }
+    #chat-box { display:none; position:fixed; bottom:160px; right:20px; background:#111831; width:300px; border-radius:10px; border:1px solid #4fc3f7; box-shadow:0 0 20px rgba(79,195,247,0.3); }
+    #chat-box header { background:#4fc3f7; color:#000; padding:8px; text-align:center; font-weight:bold; border-radius:10px 10px 0 0; }
+    #chat-messages { height:200px; overflow-y:auto; padding:8px; font-size:14px; }
+    .msg { margin:5px 0; padding:6px; border-radius:6px; }
+    .user { background:#4fc3f7; color:#000; text-align:right; }
+    .bot { background:#222; color:#fff; text-align:left; }
+    #chat-input { display:flex; border-top:1px solid #333; }
+    #chat-input input { flex:1; padding:8px; border:none; outline:none; background:#0b0f19; color:#fff; }
+    #chat-input button { background:#4fc3f7; border:none; padding:8px 12px; font-weight:bold; cursor:pointer; }
   </style>
 </head>
 <body>
 
-  <video autoplay muted loop>
-    <source src="/intro-jean.mp4" type="video/mp4">
+  <!-- 🎬 Vidéo bandeau -->
+  <video autoplay muted loop playsinline>
+    <source src="intro-jean.mp4" type="video/mp4">
   </video>
 
+  <!-- 🌍 Introduction -->
   <section>
     <h2>🌍 Bienvenue sur TINSFLASH</h2>
-    <p>
-      TINSFLASH croise les modèles météorologiques internationaux et notre moteur IA
-      multi-sources de nouvelle génération pour fournir <b>des prévisions fiables, locales et nationales</b>,
-      adaptées à ta position. Reçois aussi <b>des alertes anticipées</b> détectées par notre système d’analyse
-      climatique mondial.
+    <p style="text-align:justify;">
+      TINSFLASH croise les modèles météorologiques internationaux avec son
+      <strong>système J.E.A.N.</strong>, une intelligence artificielle multi-sources
+      de nouvelle génération dédiée à l’analyse météo-climatique.
+      Grâce à lui, tu bénéficies de <strong>prévisions locales et nationales ultra-fiables</strong>,
+      ajustées en temps réel à ta position, ainsi que <strong>d’alertes anticipées</strong>
+      détectées avant les autres.  
+      TINSFLASH, c’est la nouvelle référence de la météo assistée par IA.
     </p>
   </section>
 
+  <!-- 📍 Prévisions locales -->
   <section>
     <h2>📍 Prévisions locales du jour</h2>
-    <div class="forecast-grid" id="localForecast"></div>
+    <div id="local-today" class="forecast-container"></div>
   </section>
 
+  <!-- 📡 Prévisions nationales -->
   <section>
     <h2>🌦️ Prévisions nationales du jour</h2>
-    <div class="forecast-grid" id="nationalForecast"></div>
+    <div id="national-today" class="forecast-container"></div>
+  </section>
+
+  <!-- 🗓️ Prévisions sur 7 jours -->
+  <section>
+    <h2>🗓️ Prévisions locales – 7 jours</h2>
+    <div id="local-week" class="forecast-container"></div>
   </section>
 
   <section>
-    <h2>🧭 Prévisions locales – 7 jours</h2>
-    <div class="forecast-grid" id="local7d"></div>
+    <h2>🗓️ Prévisions nationales – 7 jours</h2>
+    <div id="national-week" class="forecast-container"></div>
+  </section>
+
+  <!-- 🌍 Cartes du monde -->
+  <section>
+    <h2>🗺️ Carte mondiale des prévisions</h2>
+    <div id="map-forecast" style="height:300px;border-radius:8px;"></div>
   </section>
 
   <section>
-    <h2>🌐 Prévisions nationales – 7 jours</h2>
-    <div class="forecast-grid" id="national7d"></div>
+    <h2>⚠️ Carte mondiale des alertes</h2>
+    <div id="map-alerts" style="height:300px;border-radius:8px;"></div>
   </section>
 
-  <section>
-    <h2>🚨 Alertes locales & nationales</h2>
-    <div id="alerts">Chargement des alertes...</div>
-  </section>
-
-  <section>
-    <h2>🌎 Carte mondiale – Prévisions</h2>
-    <div id="mapForecast"></div>
-  </section>
-
-  <section>
-    <h2>🌪️ Carte mondiale – Alertes</h2>
-    <div id="mapAlerts"></div>
-  </section>
-
+  <!-- 🌦️ Radar Windy -->
   <section>
     <h2>📡 Radar en direct</h2>
-    <iframe src="https://embed.windy.com/embed2.html?lat=50.5&lon=4.5&zoom=5&level=surface&overlay=rain&menu=true"></iframe>
+    <iframe src="https://embed.windy.com/embed2.html?lat=50.5&lon=4.5&zoom=5&level=surface&overlay=rain&menu=false&message=true&marker=true" loading="lazy"></iframe>
   </section>
 
-  <footer>
-    <p>© 2025 TINSFLASH – Tous droits réservés</p>
-    <p>Contact : <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | WhatsApp : <a href="https://wa.me/32473264477">+32 473 26 44 77</a></p>
-    <p>Intéressé par un partenariat ou l’acquisition de notre moteur météo ? Parlons-en.</p>
-  </footer>
+  <!-- 🤖 Avatar J.E.A.N -->
+  <img id="jean-avatar" src="avatars/jean-default.png" alt="Assistant J.E.A.N" onclick="toggleChat()" />
 
-  <!-- === AVATAR JEAN === -->
-  <div id="jean-chat">
-    <img id="jean-avatar" src="/avatars/jean-default.png" alt="Jean, assistant IA">
-    <div id="chat-label">💬 Discuter avec moi</div>
-  </div>
-
+  <!-- 💬 Chat Cohere -->
   <div id="chat-box">
+    <header>💬 J.E.A.N – Assistant météo</header>
     <div id="chat-messages"></div>
-    <div class="input-row">
-      <input type="text" id="chatInput" placeholder="Votre message...">
-      <button onclick="sendChat()">Envoyer</button>
+    <div id="chat-input">
+      <input type="text" id="user-input" placeholder="Pose ta question..." />
+      <button onclick="sendMessage()">Envoyer</button>
     </div>
   </div>
 
-  <script>
-    // === AVATAR ===
-    const jeanAvatar = document.getElementById("jean-avatar");
-    const chatLabel = document.getElementById("chat-label");
-    const chatBox = document.getElementById("chat-box");
+  <!-- 📜 Footer -->
+  <footer>
+    © 2025 TINSFLASH – Tous droits réservés<br>
+    📩 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
+    📱 <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a><br>
+    Partenariats & acquisitions bienvenus.
+  </footer>
 
+  <script>
+    // === CARTES MONDIALES ===
+    const mapForecast = L.map('map-forecast').setView([20,0], 2);
+    const mapAlerts = L.map('map-alerts').setView([20,0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(mapForecast);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(mapAlerts);
+
+    // === AVATAR CHAT ===
     function toggleChat() {
-      chatBox.style.display = chatBox.style.display === "flex" ? "none" : "flex";
+      const box = document.getElementById("chat-box");
+      box.style.display = (box.style.display === "block") ? "none" : "block";
     }
-    jeanAvatar.addEventListener("click", toggleChat);
-    chatLabel.addEventListener("click", toggleChat);
 
     function addMsg(text, type="bot") {
-      const msg = document.createElement("div");
-      msg.className = "msg " + type;
-      msg.innerText = text;
-      document.getElementById("chat-messages").appendChild(msg);
-      document.getElementById("chat-messages").scrollTop = document.getElementById("chat-messages").scrollHeight;
+      const box = document.getElementById("chat-messages");
+      const div = document.createElement("div");
+      div.className = "msg " + type;
+      div.textContent = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
     }
 
-    async function sendChat() {
-      const input = document.getElementById("chatInput");
+    async function sendMessage() {
+      const input = document.getElementById("user-input");
       const text = input.value.trim();
       if (!text) return;
       addMsg(text, "user");
       input.value = "";
+
       try {
         const res = await fetch("/api/jean", {
           method: "POST",
@@ -248,16 +156,9 @@
         const data = await res.json();
         addMsg(data.reply || "⚠️ Pas de réponse", "bot");
       } catch (e) {
-        addMsg("Erreur: " + e.message, "bot");
+        addMsg("⚠️ Erreur : " + e.message, "bot");
       }
     }
-
-    // === CARTES MONDIALES ===
-    const mapForecast = L.map("mapForecast").setView([20,0], 2);
-    const mapAlerts = L.map("mapAlerts").setView([20,0], 2);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
   </script>
-
 </body>
 </html>
