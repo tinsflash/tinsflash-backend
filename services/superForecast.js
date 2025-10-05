@@ -1,17 +1,22 @@
-// PATH: services/superForecast.js
-import { addEngineLog, addEngineError, updateEngineState, saveEngineState } from "./engineState.js";
+// ✅ PATH: services/superForecast.js
+import {
+  addEngineLog,
+  addEngineError,
+  updateEngineState,
+  saveEngineState,
+} from "./engineState.js";
 import forecastService from "./forecastService.js";
 import alertsService from "./alertsService.js";
-import aiFusionService from "./aiFusionService.js"; // fusion IA (GraphCast / Pangu / Gemini / GPT5)
+import aiFusionService from "./aiFusionService.js"; // Fusion IA (GraphCast / Pangu / Gemini / GPT-5)
 import { getGlobalTimestamp } from "./timeUtils.js";
 
 /**
- * 🔥 Fonction principale : superForecast()
- * Lance un cycle complet de prévision et d'analyse
- * - Récupération des modèles météo
- * - Fusion IA
- * - Détection d'alertes
- * - Sauvegarde dans l'état moteur
+ * ⚙️ SUPERFORECAST
+ * Cycle complet :
+ *  1️⃣ Télécharge les modèles météo
+ *  2️⃣ Fait la fusion IA
+ *  3️⃣ Génère les alertes locales & continentales
+ *  4️⃣ Sauvegarde l’état moteur complet
  */
 export async function superForecast(zone = "Europe") {
   const cycleId = getGlobalTimestamp();
@@ -20,11 +25,11 @@ export async function superForecast(zone = "Europe") {
   await updateEngineState("checkup.engineStatus", "RUNNING");
   await updateEngineState("currentCycleId", cycleId);
 
+  // === 1️⃣ Chargement des modèles météo ===
   const models = ["ECMWF", "GFS", "ICON", "Meteomatics", "Copernicus", "NASA", "OpenWeather"];
   const modelResults = {};
   const errors = [];
 
-  // === 1️⃣ Chargement des modèles météo ===
   for (const model of models) {
     try {
       await addEngineLog(`📡 Chargement modèle ${model}...`);
@@ -45,9 +50,10 @@ export async function superForecast(zone = "Europe") {
   }
 
   // === 2️⃣ Fusion IA ===
+  let fused = null;
   try {
     await addEngineLog("🧠 Fusion IA des modèles...");
-    const fused = await aiFusionService.fuseModels(modelResults, zone);
+    fused = await aiFusionService.fuseModels(modelResults, zone);
     if (!fused) throw new Error("Résultat IA vide ou invalide.");
     await updateEngineState("checkup.steps.fusionIA", "ok");
     await addEngineLog("✅ Fusion IA terminée avec succès.");
@@ -58,18 +64,19 @@ export async function superForecast(zone = "Europe") {
   }
 
   // === 3️⃣ Génération des alertes ===
+  let alerts = [];
+  let continentalAlerts = [];
   try {
     await addEngineLog("🚨 Génération des alertes pour zones couvertes...");
-    const alerts = await alertsService.generateAlerts(zone, modelResults);
+    alerts = await alertsService.generateAlerts(zone, modelResults);
     await updateEngineState("checkup.steps.alertsCovered", "ok");
     await addEngineLog(`✅ ${alerts.length} alertes générées (zones couvertes).`);
 
-    // Génération des alertes continentales
     if (zone === "Europe" || zone === "USA") {
       await addEngineLog("🌍 Génération des alertes continentales...");
-      const cont = await alertsService.generateContinentalAlerts(zone);
+      continentalAlerts = await alertsService.generateContinentalAlerts(zone);
       await updateEngineState("checkup.steps.alertsContinental", "ok");
-      await addEngineLog(`✅ ${cont.length} alertes continentales générées.`);
+      await addEngineLog(`✅ ${continentalAlerts.length} alertes continentales générées.`);
     }
   } catch (err) {
     await updateEngineState("checkup.steps.alertsCovered", "fail");
@@ -78,23 +85,35 @@ export async function superForecast(zone = "Europe") {
   }
 
   // === 4️⃣ Finalisation & sauvegarde ===
+  const zonesCount =
+    zone === "Europe"
+      ? 33 // Europe élargie (UE27 + UK + CH + NO + SE + UA)
+      : zone === "USA"
+      ? 51 // 50 États + District of Columbia
+      : 0;
+
   const state = {
     status: errors.length > 0 ? "fail" : "ok",
     lastRun: new Date(),
     checkup: {
       engineStatus: errors.length > 0 ? "FAIL" : "OK",
-      zonesCovered: zone === "Europe" ? 27 : 1,
-      models: Object.fromEntries(models.map(m => [m, modelResults[m] ? "ok" : "fail"])),
+      zonesCovered: zonesCount,
+      models: Object.fromEntries(models.map((m) => [m, modelResults[m] ? "ok" : "fail"])),
       steps: {
         superForecast: "ok",
-        fusionIA: errors.find(e => e.includes("FusionIA")) ? "fail" : "ok",
-        alertsCovered: errors.find(e => e.includes("Alertes")) ? "fail" : "ok",
+        fusionIA: errors.find((e) => e.includes("FusionIA")) ? "fail" : "ok",
+        alertsCovered: errors.find((e) => e.includes("Alertes")) ? "fail" : "ok",
         alertsContinental: "ok",
         deploy: "pending",
       },
     },
-    finalReport: { forecasts: modelResults },
-    engineErrors: errors.map(e => ({ message: e, timestamp: new Date() })),
+    finalReport: {
+      forecasts: modelResults,
+      fused,
+      alerts,
+      continentalAlerts,
+    },
+    engineErrors: errors.map((e) => ({ message: e, timestamp: new Date() })),
   };
 
   await saveEngineState(state);
@@ -105,7 +124,12 @@ export async function superForecast(zone = "Europe") {
     await addEngineLog("✅ SuperForecast terminé avec succès complet.");
   }
 
-  return { ok: errors.length === 0, errors, modelsLoaded: Object.keys(modelResults).length };
+  return {
+    ok: errors.length === 0,
+    errors,
+    modelsLoaded: Object.keys(modelResults).length,
+    alertsCount: alerts.length + continentalAlerts.length,
+  };
 }
 
 export default { superForecast };
