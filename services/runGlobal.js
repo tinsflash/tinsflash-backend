@@ -11,6 +11,7 @@ import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, getEngineState, saveEngineState } from "./engineState.js";
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
+import weatherGovService from "./weatherGovService.js"; // ✅ nouveau
 
 export const ALL_ZONES = { ...EUROPE_ZONES, ...USA_ZONES };
 
@@ -112,6 +113,19 @@ export async function runGlobal(zone = "All") {
       await addEngineLog("✅ Fusion IA J.E.A.N terminée");
     } catch (err) {
       await addEngineError("⚠️ IA J.E.A.N indisponible : " + err.message);
+    }
+
+    // === PHASE 7 : Cross-check Weather.gov (USA) ===
+    if (zone === "USA" || zone === "All") {
+      await addEngineLog("🇺🇸 Vérification en temps réel avec Weather.gov (NWS)...");
+      try {
+        const nwsCheck = await weatherGovService.crossCheck(forecasts.USA, state.alertsLocal);
+        state.checkup.nwsComparison = nwsCheck;
+        await addEngineLog(`✅ NWS cross-check terminé : ${nwsCheck.summary}`);
+      } catch (e) {
+        await addEngineError("⚠️ Erreur NWS cross-check : " + e.message);
+      }
+      await saveEngineState(state);
     }
 
     // === Finalisation ===
