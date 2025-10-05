@@ -1,7 +1,7 @@
 // PATH: services/superForecast.js
 import { addEngineLog, addEngineError, updateEngineState, saveEngineState } from "./engineState.js";
 import forecastService from "./forecastService.js";
-import alertsService from "./alertsService.js";
+import * as alertsService from "./alertsService.js";
 import aiFusionService from "./aiFusionService.js"; // fusion IA (GraphCast / Pangu / Gemini / GPT5)
 import { getGlobalTimestamp } from "./timeUtils.js";
 
