@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💬 Admin Chat – Centrale Nucléaire Météo</title>
+  <title>💬 Admin Chat – TINSFLASH</title>
   <style>
     body { font-family: Arial, sans-serif; background:#0b0f19; color:#eee; margin:0; }
     header { background:#111831; padding:15px; text-align:center; font-size:22px; font-weight:bold; color:#4fc3f7; }
@@ -25,12 +25,14 @@
 </head>
 <body>
   <script>
+    // 🔐 Accès protégé
     const pin = prompt("Code d'accès admin ?");
     if (pin !== "202679") {
       alert("⛔ Accès refusé");
       window.location.href = "/";
     }
 
+    // 💬 Utilitaire d'affichage messages
     function addMsg(chatId, text, type="bot") {
       const div = document.getElementById(chatId);
       const msg = document.createElement("div");
@@ -40,6 +42,7 @@
       div.scrollTop = div.scrollHeight;
     }
 
+    // ⚙️ Chat moteur (GPT-5)
     async function sendEngine() {
       const input = document.getElementById("engineInput");
       const text = input.value.trim();
@@ -47,7 +50,7 @@
       addMsg("engineChat", text, "user");
       input.value = "";
       try {
-        const res = await fetch("/api/chat/engine", {
+        const res = await fetch("/api/chat-engine", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text }),
@@ -59,6 +62,7 @@
       }
     }
 
+    // 🌦️ Chat climat/météo (GPT-3.5)
     async function sendClimat() {
       const input = document.getElementById("climatInput");
       const text = input.value.trim();
@@ -66,10 +70,10 @@
       addMsg("climatChat", text, "user");
       input.value = "";
       try {
-        const res = await fetch("/api/chat", {
+        const res = await fetch("/api/chat-admin", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text }),
+          body: JSON.stringify({ message: text, mode: "meteo" }),
         });
         const data = await res.json();
         addMsg("climatChat", data.reply || "⚠️ Pas de réponse", "bot");
@@ -78,14 +82,14 @@
       }
     }
 
-    // Enter pour envoyer
+    // Entrée clavier pour envoyer
     document.addEventListener("keypress", e => {
       if (e.key==="Enter" && document.activeElement.id==="engineInput") sendEngine();
       if (e.key==="Enter" && document.activeElement.id==="climatInput") sendClimat();
     });
   </script>
 
-  <header>💬 Chat Admin – Centrale Nucléaire Météo</header>
+  <header>💬 Chat Admin – TINSFLASH</header>
   <nav>
     <a href="/admin-pp.html">Console</a>
     <a href="/admin-alerts.html">Alertes</a>
@@ -96,14 +100,14 @@
   </nav>
 
   <div class="container">
-    <h3>⚙️ Chat Moteur IA (Jean)</h3>
+    <h3>⚙️ Chat Moteur IA (GPT-5)</h3>
     <div class="chat-box" id="engineChat"></div>
     <div class="input-row">
-      <input type="text" id="engineInput" placeholder="Pose ta question au moteur nucléaire météo..." />
+      <input type="text" id="engineInput" placeholder="Pose ta question au moteur météo..." />
       <button onclick="sendEngine()">Envoyer</button>
     </div>
 
-    <h3>🌦️ Chat Spécialiste Météorologique & Climatologique</h3>
+    <h3>🌦️ Chat Spécialiste Météo & Climat (GPT-3.5)</h3>
     <div class="chat-box" id="climatChat"></div>
     <div class="input-row">
       <input type="text" id="climatInput" placeholder="Pose ta question météo/climat..." />
