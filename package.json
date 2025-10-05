@@ -4,9 +4,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-  "start": "node server.js",
-  "dev": "nodemon server.js"
-},
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
   "engines": {
     "node": "22.x"
   },
@@ -22,7 +22,8 @@
     "body-parser": "^1.20.2",
     "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
-    "web-push": "^3.6.6"
+    "web-push": "^3.6.6",
+    "geoip-lite": "^1.4.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
