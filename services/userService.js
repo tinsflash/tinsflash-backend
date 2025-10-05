@@ -11,10 +11,11 @@ export async function registerUser(data) {
   try {
     if (!data.email) throw new Error("Email manquant");
 
-    const existing = await User.findOne({ email: data.email });
-    if (existing) return { success: true, message: "Déjà inscrit ✅", user: existing };
+    const existing = await User.findOne({ email: data.email.toLowerCase() });
+    if (existing)
+      return { success: true, message: "Déjà inscrit ✅", user: existing };
 
-    // Détection localisation automatique (fallback IP)
+    // 🌍 Détection automatique localisation (fallback IP)
     let geo = {};
     if (data.ip) {
       const g = geoip.lookup(data.ip);
@@ -32,6 +33,8 @@ export async function registerUser(data) {
         date: data.consent?.date || new Date(),
         ip: data.ip || null,
       },
+      zone: data.zone || "non-covered",
+      type: data.plan?.toLowerCase() || "free",
       createdAt: new Date(),
     });
 
@@ -61,7 +64,7 @@ export async function unregisterUser(email) {
 }
 
 /**
- * ✅ Liste des utilisateurs (admin)
+ * ✅ Liste complète (pour console admin)
  */
 export async function getAllUsers() {
   try {
@@ -74,7 +77,7 @@ export async function getAllUsers() {
 }
 
 /**
- * ✅ Statistiques globales
+ * ✅ Statistiques globales (Dashboard admin)
  */
 export async function getUserStats() {
   try {
