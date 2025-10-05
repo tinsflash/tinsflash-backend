@@ -1,46 +1,111 @@
-// ✅ services/superForecast.js
-// Moteur principal TINSFLASH – Fusion modèles + IA (J.E.A.N.)
+// PATH: services/superForecast.js
+import { addEngineLog, addEngineError, updateEngineState, saveEngineState } from "./engineState.js";
+import forecastService from "./forecastService.js";
+import alertsService from "./alertsService.js";
+import aiFusionService from "./aiFusionService.js"; // fusion IA (GraphCast / Pangu / Gemini / GPT5)
+import { getGlobalTimestamp } from "./timeUtils.js";
 
-import modelsFetcher from "./modelsFetcher.js";
-import EngineState from "../models/EngineState.js";
-import axios from "axios";
+/**
+ * 🔥 Fonction principale : superForecast()
+ * Lance un cycle complet de prévision et d'analyse
+ * - Récupération des modèles météo
+ * - Fusion IA
+ * - Détection d'alertes
+ * - Sauvegarde dans l'état moteur
+ */
+export async function superForecast(zone = "Europe") {
+  const cycleId = getGlobalTimestamp();
+  await addEngineLog(`🌀 Démarrage SuperForecast pour la zone ${zone} [${cycleId}]`);
+  await updateEngineState("status", "running");
+  await updateEngineState("checkup.engineStatus", "RUNNING");
+  await updateEngineState("currentCycleId", cycleId);
 
-export default async function superForecast(lat = 50.5, lon = 4.7) {
-  console.log("⚙️ Lancement du moteur J.E.A.N...");
-  const engine = await EngineState.findOne() || new EngineState();
+  const models = ["ECMWF", "GFS", "ICON", "Meteomatics", "Copernicus", "NASA", "OpenWeather"];
+  const modelResults = {};
+  const errors = [];
 
-  engine.status = "running";
-  engine.lastRun = new Date();
-  engine.logs.push({ message: "Démarrage du moteur", timestamp: new Date() });
-  await engine.save();
-
-  const { okModels, failed } = await modelsFetcher.testAllModels(lat, lon);
-  engine.checkup = {
-    models_ok: okModels.map((m) => m.name),
-    models_fail: failed.map((m) => m.name),
-    time: new Date(),
-  };
-
-  // Simulation de fusion IA (réel dans version prod : pondération par modèle)
-  const forecasts = [];
-  for (const model of okModels) {
+  // === 1️⃣ Chargement des modèles météo ===
+  for (const model of models) {
     try {
-      const res = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
-      );
-      forecasts.push({ model: model.name, data: res.data });
+      await addEngineLog(`📡 Chargement modèle ${model}...`);
+      const data = await forecastService.getModelForecast(model, zone);
+      if (data && Object.keys(data).length > 0) {
+        modelResults[model] = data;
+        await updateEngineState(`checkup.models.${model}`, "ok");
+        await addEngineLog(`✅ ${model} chargé (${Object.keys(data).length} points).`);
+      } else {
+        await updateEngineState(`checkup.models.${model}`, "fail");
+        throw new Error(`${model} a renvoyé des données vides.`);
+      }
     } catch (err) {
-      engine.errors.push({ message: `Erreur fusion ${model.name}: ${err.message}`, timestamp: new Date() });
+      errors.push(`[${model}] ${err.message}`);
+      await updateEngineState(`checkup.models.${model}`, "fail");
+      await addEngineError(`❌ ${model}: ${err.message}`);
     }
   }
 
-  engine.status = failed.length === 0 ? "ok" : "partial";
-  engine.logs.push({
-    message: `Prévisions fusionnées avec ${okModels.length} modèles réussis / ${failed.length} en échec.`,
-    timestamp: new Date(),
-  });
-  await engine.save();
+  // === 2️⃣ Fusion IA ===
+  try {
+    await addEngineLog("🧠 Fusion IA des modèles...");
+    const fused = await aiFusionService.fuseModels(modelResults, zone);
+    if (!fused) throw new Error("Résultat IA vide ou invalide.");
+    await updateEngineState("checkup.steps.fusionIA", "ok");
+    await addEngineLog("✅ Fusion IA terminée avec succès.");
+  } catch (err) {
+    await updateEngineState("checkup.steps.fusionIA", "fail");
+    await addEngineError(`❌ Fusion IA: ${err.message}`);
+    errors.push(`[FusionIA] ${err.message}`);
+  }
 
-  console.log("✅ Moteur terminé : ", engine.status);
-  return forecasts;
+  // === 3️⃣ Génération des alertes ===
+  try {
+    await addEngineLog("🚨 Génération des alertes pour zones couvertes...");
+    const alerts = await alertsService.generateAlerts(zone, modelResults);
+    await updateEngineState("checkup.steps.alertsCovered", "ok");
+    await addEngineLog(`✅ ${alerts.length} alertes générées (zones couvertes).`);
+
+    // Génération des alertes continentales
+    if (zone === "Europe" || zone === "USA") {
+      await addEngineLog("🌍 Génération des alertes continentales...");
+      const cont = await alertsService.generateContinentalAlerts(zone);
+      await updateEngineState("checkup.steps.alertsContinental", "ok");
+      await addEngineLog(`✅ ${cont.length} alertes continentales générées.`);
+    }
+  } catch (err) {
+    await updateEngineState("checkup.steps.alertsCovered", "fail");
+    await addEngineError(`❌ Erreur génération alertes: ${err.message}`);
+    errors.push(`[Alertes] ${err.message}`);
+  }
+
+  // === 4️⃣ Finalisation & sauvegarde ===
+  const state = {
+    status: errors.length > 0 ? "fail" : "ok",
+    lastRun: new Date(),
+    checkup: {
+      engineStatus: errors.length > 0 ? "FAIL" : "OK",
+      zonesCovered: zone === "Europe" ? 27 : 1,
+      models: Object.fromEntries(models.map(m => [m, modelResults[m] ? "ok" : "fail"])),
+      steps: {
+        superForecast: "ok",
+        fusionIA: errors.find(e => e.includes("FusionIA")) ? "fail" : "ok",
+        alertsCovered: errors.find(e => e.includes("Alertes")) ? "fail" : "ok",
+        alertsContinental: "ok",
+        deploy: "pending",
+      },
+    },
+    finalReport: { forecasts: modelResults },
+    engineErrors: errors.map(e => ({ message: e, timestamp: new Date() })),
+  };
+
+  await saveEngineState(state);
+
+  if (errors.length > 0) {
+    await addEngineLog("⚠️ SuperForecast terminé avec erreurs. Voir engineErrors.");
+  } else {
+    await addEngineLog("✅ SuperForecast terminé avec succès complet.");
+  }
+
+  return { ok: errors.length === 0, errors, modelsLoaded: Object.keys(modelResults).length };
 }
+
+export default { superForecast };
