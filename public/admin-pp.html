@@ -2,19 +2,20 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>🛰️ TINSFLASH – Console Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
+  <title>🛰️ Console Admin – TINSFLASH</title>
 
-  <!-- Leaflet -->
+  <!-- Leaflet CDN -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    body { margin:0; font-family:"Segoe UI",sans-serif; background:#0d1117; color:#e6edf3; }
-    header { background:#161b22; padding:10px; text-align:center; }
-    header h1 { margin:0; color:#58a6ff; }
+    body { margin:0; font-family:"Segoe UI",sans-serif; background:#0b0f19; color:#e6edf3; }
+    header { background:#111831; padding:10px; text-align:center; }
+    header h1 { margin:0; color:#4fc3f7; font-size:1.3rem; }
 
-    .container { display:grid; gap:12px; padding:12px; max-width:1200px; margin:auto; }
+    .container { display:flex; flex-direction:column; gap:14px; padding:14px; }
 
     .card {
       background:#161b22;
@@ -22,164 +23,198 @@
       border-radius:8px;
       box-shadow:0 2px 6px rgba(0,0,0,0.4);
     }
-    h2 { margin:0 0 6px; color:#79c0ff; font-size:1.1rem; }
+    h2 { margin:0 0 8px; color:#4fc3f7; font-size:1.05rem; }
 
     button {
       background:#238636;
-      color:white; border:none; padding:8px 12px;
+      color:white; border:none; padding:8px 14px;
       border-radius:6px; cursor:pointer; font-weight:bold;
     }
     button:hover { background:#2ea043; }
 
-    #status { font-size:0.9rem; }
+    #status { font-size:0.9rem; margin-top:6px; }
 
-    #logs { background:#0d1117; border:1px solid #30363d; padding:8px; height:250px; overflow-y:auto; font-size:0.85rem; }
-    #map { width:100%; height:300px; border-radius:8px; }
+    #logs { background:#0d1117; border:1px solid #30363d; padding:8px;
+      height:230px; overflow-y:auto; font-size:0.8rem; font-family:monospace; }
 
-    /* Avatar / Chat moteur */
-    #avatar-engine {
-      position:fixed;
-      bottom:80px;
-      right:15px;
-      width:70px;
-      height:70px;
-      border-radius:50%;
-      background:#fff url('/avatars/jean-default.png') center/cover no-repeat;
-      box-shadow:0 0 8px rgba(0,0,0,0.5);
-      cursor:pointer;
-      z-index:9999;
+    #mapForecast,#mapAlerts { width:100%; height:300px; border-radius:8px; }
+
+    /* Checklist */
+    .checklist { display:flex; flex-wrap:wrap; gap:10px; }
+    .check-item {
+      background:#0d1117; padding:8px 10px; border-radius:6px;
+      display:flex; align-items:center; gap:6px; font-size:0.85rem;
     }
-    #chat-engine {
-      position:fixed;
-      bottom:160px;
-      right:12px;
-      width:280px;
-      height:320px;
-      background:#fff;
-      color:#000;
-      border-radius:10px;
-      display:none;
-      flex-direction:column;
-      box-shadow:0 2px 8px rgba(0,0,0,0.4);
-      z-index:10000;
+    .circle { width:10px; height:10px; border-radius:50%; background:orange; }
+
+    /* Chat moteur */
+    #chatBtn {
+      position:fixed; bottom:18px; right:18px;
+      width:64px; height:64px;
+      background:url('/avatars/jean-default.png') center/cover no-repeat;
+      border-radius:50%; cursor:pointer; z-index:1000;
+      box-shadow:0 0 8px rgba(79,195,247,0.8);
+      animation:pulse 2s infinite;
     }
-    #chat-header { background:#238636; color:#fff; padding:4px; font-size:0.85rem; border-radius:10px 10px 0 0; }
-    #chat-messages { flex:1; padding:6px; overflow-y:auto; font-size:0.8rem; }
-    #chat-input { display:flex; }
-    #chat-input input { flex:1; border:none; padding:5px; font-size:0.8rem; }
-    #chat-input button { background:#238636; color:#fff; border:none; padding:5px 7px; cursor:pointer; font-size:0.8rem; }
+    @keyframes pulse {
+      0%{box-shadow:0 0 8px rgba(79,195,247,0.6);}
+      50%{box-shadow:0 0 16px rgba(79,195,247,1);}
+      100%{box-shadow:0 0 8px rgba(79,195,247,0.6);}
+    }
+    #chatBox {
+      position:fixed; bottom:90px; right:18px; width:300px; height:360px;
+      background:#161b22; border-radius:10px; display:none; flex-direction:column;
+      box-shadow:0 2px 10px rgba(0,0,0,0.6); z-index:1001;
+    }
+    #chatHeader { background:#238636; color:#fff; padding:6px; font-weight:bold; border-radius:10px 10px 0 0; font-size:0.9rem; text-align:center; }
+    #chatMessages { flex:1; padding:8px; overflow-y:auto; font-size:0.85rem; }
+    #chatInput { display:flex; border-top:1px solid #30363d; }
+    #chatInput input { flex:1; border:none; padding:8px; font-size:0.85rem; background:#0d1117; color:#fff; }
+    #chatInput button { background:#238636; border:none; color:#fff; padding:8px 10px; cursor:pointer; }
+
+    @media (max-width:700px){
+      #mapForecast,#mapAlerts { height:240px; }
+      #chatBox { width:90%; right:5%; }
+    }
   </style>
 </head>
+
 <body>
   <header>
-    <h1>🛰️ Console Admin TINSFLASH</h1>
-    <p>🚀 Cockpit de commande météo nucléaire</p>
+    <h1>🛰️ Console TINSFLASH – Moteur IA</h1>
+    <div id="status">⏳ Chargement état moteur...</div>
   </header>
 
   <main class="container">
     <!-- Bouton RUN -->
     <div class="card">
-      <h2>⚡ Lancement moteur</h2>
+      <h2>⚡ Lancement du moteur</h2>
       <button onclick="launchRun()">▶️ Lancer RUN GLOBAL</button>
-      <div id="status">⏳ En attente…</div>
+      <div id="runStatus">En attente...</div>
     </div>
 
-    <!-- Carte zones -->
+    <!-- Checklist moteur -->
     <div class="card">
-      <h2>🌍 Zones & Alertes</h2>
-      <div id="map"></div>
+      <h2>✅ Checklist du moteur</h2>
+      <div class="checklist" id="checklist">
+        <div class="check-item"><div class="circle" id="c_engine"></div> Moteur principal</div>
+        <div class="check-item"><div class="circle" id="c_models"></div> Modèles météo</div>
+        <div class="check-item"><div class="circle" id="c_ai"></div> Intelligence IA</div>
+        <div class="check-item"><div class="circle" id="c_alerts"></div> Alertes</div>
+        <div class="check-item"><div class="circle" id="c_db"></div> Base MongoDB</div>
+      </div>
+    </div>
+
+    <!-- Carte Prévisions -->
+    <div class="card">
+      <h2>🌍 Carte Prévisions</h2>
+      <div id="mapForecast"></div>
+    </div>
+
+    <!-- Carte Alertes -->
+    <div class="card">
+      <h2>🚨 Carte Alertes</h2>
+      <div id="mapAlerts"></div>
     </div>
 
     <!-- Logs -->
     <div class="card">
       <h2>📡 Logs en direct</h2>
-      <div id="logs">⏳ En attente logs...</div>
+      <div id="logs">⏳ Connexion flux logs...</div>
     </div>
   </main>
 
-  <!-- Avatar moteur -->
-  <div id="avatar-engine" onclick="toggleChat()"></div>
-
   <!-- Chat moteur -->
-  <div id="chat-engine">
-    <div id="chat-header">💬 Chat moteur</div>
-    <div id="chat-messages"></div>
-    <div id="chat-input">
-      <input type="text" id="engine-input" placeholder="Demandez à J.E.A.N. moteur...">
-      <button id="engine-send">Envoyer</button>
+  <div id="chatBtn" title="Parler à Jean moteur IA" onclick="toggleChat()"></div>
+  <div id="chatBox">
+    <div id="chatHeader">💬 Jean (Moteur IA)</div>
+    <div id="chatMessages"></div>
+    <div id="chatInput">
+      <input type="text" id="msgInput" placeholder="Demandez à Jean..." />
+      <button onclick="sendMsg()">➤</button>
     </div>
   </div>
 
   <script>
-    // === RUN GLOBAL ===
+    // === LANCEMENT RUN ===
     async function launchRun(){
-      document.getElementById("status").innerText="🚀 RUN GLOBAL en cours...";
+      document.getElementById("runStatus").innerText="🚀 Lancement en cours...";
       try{
         const res=await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})});
         const data=await res.json();
-        if(data.success){
-          document.getElementById("status").innerText="✅ RUN GLOBAL lancé avec succès.";
-        }else{
-          document.getElementById("status").innerText="❌ Erreur RUN GLOBAL: "+(data.error||"inconnue");
-        }
-      }catch(e){
-        document.getElementById("status").innerText="❌ Exception: "+e.message;
-      }
+        document.getElementById("runStatus").innerText=data.success?"✅ Run lancé avec succès.":"❌ Erreur: "+data.error;
+      }catch(e){document.getElementById("runStatus").innerText="❌ Exception: "+e.message;}
     }
 
-    // === Logs SSE ===
+    // === CHECKLIST LIVE ===
+    async function refreshStatus(){
+      try{
+        const res=await fetch("/api/status");
+        const st=await res.json();
+        document.getElementById("status").innerText=`État: ${st.status} | Dernier run: ${new Date(st.lastRun).toLocaleString()} | Alertes: ${st.alertsCount}`;
+        const setColor=(id,c)=>document.getElementById(id).style.background=c;
+        setColor("c_engine",st.status==="OK"?"green":"orange");
+        setColor("c_models",st.models!=="unknown"?"green":"orange");
+        setColor("c_ai",st.steps?.ai?"green":"orange");
+        setColor("c_alerts",st.alertsCount>0?"green":"orange");
+        setColor("c_db","green");
+      }catch(e){console.warn("refreshStatus:",e.message);}
+    }
+    setInterval(refreshStatus,10000);
+    refreshStatus();
+
+    // === MAPS ===
+    const map1=L.map("mapForecast").setView([20,0],2);
+    const map2=L.map("mapAlerts").setView([20,0],2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map1);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map2);
+
+    async function refreshMaps(){
+      try{
+        const res=await fetch("/api/alerts");
+        const alerts=await res.json();
+        map1.eachLayer(l=>l instanceof L.Circle && l.remove());
+        map2.eachLayer(l=>l instanceof L.Circle && l.remove());
+        alerts.forEach(a=>{
+          if(!a.lat||!a.lon)return;
+          const conf=a.data?.confidence||50;
+          const color=conf>90?"red":conf>70?"orange":"green";
+          L.circle([a.lat,a.lon],{radius:120000,color,fillOpacity:0.4}).addTo(map1).bindPopup(`<b>${a.country||"?"}</b><br>Fiabilité ${conf}%`);
+          if(a.type==="alert")L.circle([a.lat,a.lon],{radius:200000,color,fillOpacity:0.5}).addTo(map2).bindPopup(`<b>${a.country}</b><br>${a.title||"Alerte"}`);
+        });
+      }catch(e){console.warn("refreshMaps:",e.message);}
+    }
+    refreshMaps();
+    setInterval(refreshMaps,60000);
+
+    // === LOGS SSE ===
     const logBox=document.getElementById("logs");
     const evtSource=new EventSource("/api/logs/stream");
-    evtSource.onmessage=function(e){
+    evtSource.onmessage=e=>{
       const log=JSON.parse(e.data);
       logBox.innerHTML+=`<div>[${new Date(log.ts).toLocaleTimeString()}] ${log.type} → ${log.message}</div>`;
       logBox.scrollTop=logBox.scrollHeight;
     };
 
-    // === Carte Leaflet ===
-    let map=L.map("map").setView([20,0],2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap'}).addTo(map);
-    let markersLayer=L.layerGroup().addTo(map);
-
-    async function refreshMap(){
-      try{
-        const res=await fetch("/api/alerts");
-        const alerts=await res.json();
-        markersLayer.clearLayers();
-        alerts.forEach(a=>{
-          if(!a.lat||!a.lon) return;
-          const c=a.data?.confidence||0;
-          let color="green"; if(c>=70&&c<90) color="orange"; if(c>=90) color="red";
-          const circle=L.circle([a.lat,a.lon],{radius:120000,color,fillOpacity:0.5});
-          circle.bindPopup(`<b>${a.country} ${a.region||""}</b><br>Fiabilité: ${c}%`);
-          markersLayer.addLayer(circle);
-        });
-      }catch(e){ console.warn("Erreur map:",e.message); }
-    }
-    refreshMap();
-    setInterval(refreshMap,60000);
-
-    // === Chat moteur ===
+    // === CHAT MOTEUR (GPT-3.5) ===
     function toggleChat(){
-      const chat=document.getElementById("chat-engine");
-      chat.style.display=chat.style.display==="flex"?"none":"flex";
+      const box=document.getElementById("chatBox");
+      box.style.display=box.style.display==="flex"?"none":"flex";
     }
 
-    document.getElementById("engine-send").addEventListener("click",sendEngineMsg);
-    document.getElementById("engine-input").addEventListener("keyup",e=>{
-      if(e.key==="Enter") sendEngineMsg();
-    });
-
-    async function sendEngineMsg(){
-      const msg=document.getElementById("engine-input").value;
-      if(!msg) return;
-      const res=await fetch("/api/chat-engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-      const data=await res.json();
-      const chat=document.getElementById("chat-messages");
-      chat.innerHTML+=`<div><b>Moi:</b> ${msg}</div>`;
-      chat.innerHTML+=`<div><b>Moteur:</b> ${data.reply}</div>`;
-      chat.scrollTop=chat.scrollHeight;
-      document.getElementById("engine-input").value="";
+    async function sendMsg(){
+      const input=document.getElementById("msgInput");
+      const text=input.value.trim();
+      if(!text)return;
+      const chat=document.getElementById("chatMessages");
+      chat.innerHTML+=`<div><b>Moi:</b> ${text}</div>`;
+      input.value="";
+      try{
+        const res=await fetch("/api/chat-engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text})});
+        const data=await res.json();
+        chat.innerHTML+=`<div><b>Jean:</b> ${data.reply}</div>`;
+        chat.scrollTop=chat.scrollHeight;
+      }catch(e){chat.innerHTML+=`<div>⚠️ Erreur: ${e.message}</div>`;}
     }
   </script>
 </body>
