@@ -1,5 +1,6 @@
 // PATH: services/runGlobal.js
 // ⚙️ Moteur orchestral TINSFLASH – Run Global réel et connecté
+// Aucun export modifié — structure identique
 
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
@@ -11,7 +12,9 @@ import { askOpenAI } from "./openaiService.js";
 import { addEngineLog, addEngineError, getEngineState, saveEngineState } from "./engineState.js";
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
-import weatherGovService from "./weatherGovService.js"; // ✅ nouveau
+
+import weatherGovService from "./weatherGovService.js"; // 🇺🇸 NWS
+import euroMeteoService from "./euroMeteoService.js";   // 🇪🇺 MeteoAlarm
 
 export const ALL_ZONES = { ...EUROPE_ZONES, ...USA_ZONES };
 
@@ -124,6 +127,19 @@ export async function runGlobal(zone = "All") {
         await addEngineLog(`✅ NWS cross-check terminé : ${nwsCheck.summary}`);
       } catch (e) {
         await addEngineError("⚠️ Erreur NWS cross-check : " + e.message);
+      }
+      await saveEngineState(state);
+    }
+
+    // === PHASE 8 : Cross-check MeteoAlarm (Europe) ===
+    if (zone === "Europe" || zone === "All") {
+      await addEngineLog("🇪🇺 Vérification en temps réel avec MeteoAlarm (EUMETNET)...");
+      try {
+        const euroCheck = await euroMeteoService.crossCheck(forecasts.Europe, state.alertsLocal);
+        state.checkup.euComparison = euroCheck;
+        await addEngineLog(`✅ MeteoAlarm cross-check terminé : ${euroCheck.summary}`);
+      } catch (e) {
+        await addEngineError("⚠️ Erreur MeteoAlarm cross-check : " + e.message);
       }
       await saveEngineState(state);
     }
