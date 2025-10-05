@@ -6,6 +6,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// === Services ===
 import { runGlobal } from "./services/runGlobal.js";
 import * as engineStateService from "./services/engineState.js";
 import * as adminLogs from "./services/adminLogs.js";
@@ -24,12 +25,12 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
-// === DB ===
+// === DATABASE ===
 if (process.env.MONGO_URI) {
   mongoose
     .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("✅ MongoDB connected"))
-    .catch((err) => console.error("❌ MongoDB error:", err));
+    .catch((err) => console.error("❌ MongoDB connection error:", err));
 }
 
 // === PAGE ACCUEIL ===
@@ -87,13 +88,14 @@ app.get("/api/logs/stream", async (req, res) => {
   res.flushHeaders();
 
   adminLogs.registerClient(res);
+
   const logs = await adminLogs.getLogs("current");
-  if (logs?.length) logs.forEach(l => res.write(`data: ${JSON.stringify(l)}\n\n`));
+  if (logs?.length) logs.forEach((l) => res.write(`data: ${JSON.stringify(l)}\n\n`));
 
   req.on("close", () => console.log("❌ Client SSE déconnecté"));
 });
 
-// === CHAT PUBLIC (Cohere / J.E.A.N) ===
+// === CHAT PUBLIC J.E.A.N (Cohere) ===
 app.post("/api/jean", async (req, res) => {
   try {
     const { message } = req.body;
@@ -103,39 +105,55 @@ app.post("/api/jean", async (req, res) => {
     const { reply, avatar } = await askCohere(message);
     res.json({ reply, avatar });
   } catch (e) {
-    res.status(500).json({ reply: "⚠️ Erreur J.E.A.N", avatar: "default" });
+    console.error("⚠️ Erreur J.E.A.N:", e.message);
+    res.status(500).json({ reply: "⚠️ Erreur interne", avatar: "default" });
   }
 });
 
-// === CHAT MOTEUR (ADMIN) ===
+// === CHAT MOTEUR (ADMIN CONSOLE) ===
 app.post("/api/chat-engine", async (req, res) => {
   try {
     const { message } = req.body;
     if (!message) return res.status(400).json({ reply: "❌ Message manquant" });
+
     const reply = await chatService.askAIEngine(message);
     res.json({ reply });
   } catch (e) {
-    res.status(500).json({ reply: "⚠️ Erreur chat moteur: " + e.message });
+    console.error("⚠️ Chat moteur:", e.message);
+    res.status(500).json({ reply: "⚠️ Erreur moteur: " + e.message });
   }
 });
 
-// === INSCRIPTION FAN CLUB ===
-app.post("/api/register", async (req, res) => {
+// === INSCRIPTION FAN CLUB (TINS’Fan Club) ===
+app.post("/api/register-fan", async (req, res) => {
   try {
-    const data = req.body;
-    if (!data.email) return res.status(400).json({ success: false, message: "Email requis" });
-    const user = await userService.registerUser(data);
+    const { email, geo } = req.body;
+    if (!email)
+      return res.status(400).json({ success: false, message: "Email requis" });
+
+    const user = await userService.registerUser({
+      email,
+      zone: geo || "unknown",
+      type: "Free",
+    });
+
     res.json({ success: true, user });
   } catch (e) {
-    console.error("❌ register:", e.message);
+    console.error("❌ Erreur /api/register-fan:", e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// === ADMIN PAGES ===
-app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-pp.html")));
-app.get("/admin-alerts", (req, res) => res.sendFile(path.join(__dirname, "public", "admin-alerts.html")));
+// === PAGES ADMIN ===
+app.get("/admin", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-pp.html"))
+);
+app.get("/admin-alerts", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-alerts.html"))
+);
 
-// === START SERVER ===
+// === LANCEMENT SERVEUR ===
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 TINSFLASH Server running on port ${PORT}`)
+);
