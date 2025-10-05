@@ -3,346 +3,223 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌦️ TINSFLASH – Prévisions & Alertes météo mondiales</title>
+  <meta name="robots" content="index,follow">
+  <title>🌦️ TINSFLASH – Prévisions & Alertes météo IA</title>
 
-  <!-- ✅ Google AdSense (Auto Ads gérés par Google) -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268" crossorigin="anonymous"></script>
-
-  <!-- ✅ Lottie -->
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-
-  <!-- ✅ Leaflet (carte radar Windy) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+  <!-- Google Ads (script uniquement) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6828365665232268" crossorigin="anonymous"></script>
+
   <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: linear-gradient(180deg, #eaf3ff, #cce0ff);
-      color: #002b5c;
-    }
-    header {
-      text-align: center;
-      padding: 10px 0;
-    }
-    header h1 {
-      font-size: 1.8rem;
-      color: #004b91;
-      margin: 0;
-    }
-    video {
-      width: 100%;
-      border: none;
-      border-radius: 0;
-    }
-    .container {
-      max-width: 900px;
-      margin: auto;
-      padding: 10px;
-    }
-    h2 {
-      color: #004b91;
-      font-size: 1.2rem;
-      margin-top: 20px;
-    }
-    input, button, select {
-      padding: 8px;
-      font-size: 1rem;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #0078d7;
-      color: #fff;
-      cursor: pointer;
-    }
-    button:hover { background: #005ea6; }
+    body { margin:0; font-family:"Segoe UI",sans-serif; background:#eef2f7; color:#222; }
+    header video { width:100%; height:auto; max-height:400px; object-fit:cover; display:block; }
 
-    .forecast, .alerts, .bulletin {
-      background: #ffffffb0;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 10px 0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
+    main { padding:14px; display:flex; flex-direction:column; gap:20px; max-width:950px; margin:auto; }
 
-    #radar {
-      height: 350px;
-      border-radius: 10px;
-      overflow: hidden;
-    }
+    .section { background:#fff; border-radius:10px; padding:14px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+    h2 { color:#1565c0; font-size:1.1rem; margin-bottom:8px; }
 
-    footer {
-      background: #004b91;
-      color: #fff;
-      text-align: center;
-      padding: 15px;
-      margin-top: 20px;
-      font-size: 0.9rem;
-    }
+    #mapForecast,#mapAlerts { width:100%; height:320px; border-radius:10px; }
+    #radar { width:100%; height:360px; border:0; border-radius:10px; }
 
-    /* ✅ Avatar J.E.A.N */
-    #avatar-jean {
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      width: 80px;
-      height: 80px;
-      cursor: pointer;
-      z-index: 9999;
+    /* Chat flottant */
+    #chatBtn {
+      position:fixed; bottom:18px; right:18px;
+      width:60px; height:60px;
+      background:url('/avatars/jean-default.png') center/cover no-repeat;
+      border-radius:50%; box-shadow:0 0 10px rgba(0,0,0,0.3);
+      cursor:pointer; z-index:1000; animation:pulse 2.5s infinite;
     }
+    @keyframes pulse { 0%{box-shadow:0 0 6px #4fc3f7;} 50%{box-shadow:0 0 14px #4fc3f7;} 100%{box-shadow:0 0 6px #4fc3f7;} }
+    #chatBox {
+      position:fixed; bottom:90px; right:18px;
+      width:300px; height:360px; display:none; flex-direction:column;
+      background:white; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,0.3); z-index:1001;
+    }
+    #chatHeader { background:#1565c0; color:white; padding:8px; border-radius:12px 12px 0 0; font-weight:bold; text-align:center; }
+    #chatMessages { flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; }
+    #chatInput { display:flex; border-top:1px solid #ccc; }
+    #chatInput input { flex:1; border:none; padding:8px; }
+    #chatInput button { background:#1565c0; border:none; color:white; padding:8px 12px; }
 
-    #chat-box {
-      position: fixed;
-      bottom: 170px;
-      right: 20px;
-      width: 300px;
-      height: 380px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
-      display: none;
-      flex-direction: column;
-      z-index: 10000;
-    }
+    footer { text-align:center; font-size:0.85rem; color:#555; padding:20px 10px; background:#f5f5f5; border-top:1px solid #ddd; }
 
-    #chat-header {
-      background: #0078d7;
-      color: white;
-      padding: 8px;
-      border-radius: 12px 12px 0 0;
-      text-align: center;
-      font-weight: bold;
-    }
+    /* Fan Club */
+    #fanClub { display:flex; flex-direction:column; gap:8px; }
+    input[type="email"] { padding:8px; border:1px solid #ccc; border-radius:6px; }
+    button { background:#1565c0; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; cursor:pointer; }
+    button:hover { background:#0d47a1; }
 
-    #chat-messages {
-      flex: 1;
-      padding: 8px;
-      overflow-y: auto;
-      font-size: 0.9rem;
+    .upgrade {
+      position:fixed; bottom:18px; left:18px;
+      background:#ffd600; color:#222;
+      padding:10px 14px; border-radius:10px;
+      font-weight:bold; box-shadow:0 0 10px rgba(0,0,0,0.2);
+      animation:blink 2s infinite;
     }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
 
-    #chat-input {
-      display: flex;
-    }
-
-    #chat-input input {
-      flex: 1;
-      border: none;
-      border-top: 1px solid #ddd;
-      padding: 6px;
-    }
-
-    #chat-input button {
-      background: #0078d7;
-      border: none;
-      color: white;
-      padding: 6px 10px;
-    }
-
-    /* ✅ Bouton Premium flottant */
-    #premium-float {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      background: #ffcc00;
-      color: #002b5c;
-      padding: 10px 15px;
-      border-radius: 50px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      font-weight: bold;
-      cursor: pointer;
-      animation: pulse 1.5s infinite;
-      z-index: 9999;
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(255,204,0,0.7); }
-      70% { box-shadow: 0 0 0 15px rgba(255,204,0,0); }
-      100% { box-shadow: 0 0 0 0 rgba(255,204,0,0); }
-    }
-
-    /* ✅ Fan Club */
-    .fanclub {
-      background: #f8fbff;
-      border-radius: 8px;
-      padding: 12px;
-      margin: 10px 0;
-      text-align: center;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    @media(max-width:700px){
+      #mapForecast,#mapAlerts,#radar{height:260px;}
+      #chatBox{width:90%; right:5%;}
     }
   </style>
 </head>
-
 <body>
   <header>
-    <h1>🌎 TINSFLASH – Prévisions et alertes météo en temps réel</h1>
+    <video autoplay muted loop playsinline>
+      <source src="intro-jean.mp4" type="video/mp4">
+    </video>
   </header>
 
-  <!-- ✅ Vidéo bandeau -->
-  <video autoplay muted loop playsinline>
-    <source src="/videos/intro-jean.mp4" type="video/mp4" />
-  </video>
+  <main>
+    <section class="section">
+      <h2>🌍 Bienvenue sur TINSFLASH</h2>
+      <p>
+        TINSFLASH est un moteur météorologique de nouvelle génération, combinant modèles scientifiques, intelligence artificielle et
+        analyse géographique de haute précision. Nos prévisions sont actualisées en temps réel et optimisées par zone, avec des alertes
+        locales, nationales et mondiales anticipées avant les autres.  
+        <br><br>
+        Notre IA « Jean » t’accompagne au quotidien pour te donner une météo plus intelligente, plus juste et toujours à jour.
+      </p>
+    </section>
 
-  <div class="container">
-    <p>Bienvenue sur <strong>TINSFLASH</strong>, la plateforme météo la plus connectée du monde 🌍<br>
-    Prévisions locales et nationales ultra-précises, alertes automatiques en temps réel, radar haute résolution et intelligence météo J.E.A.N. intégrée.</p>
+    <section class="section">
+      <h2>📍 Localisation</h2>
+      <p>Autorise la géolocalisation ou indique ton adresse pour obtenir tes prévisions locales.</p>
+      <input type="text" id="manualAddress" placeholder="Ex: Paris, France" />
+      <button onclick="detectLocation()">Activer la géolocalisation</button>
+    </section>
 
-    <!-- ✅ Adresse manuelle + géolocalisation -->
-    <h2>📍 Localisation</h2>
-    <input type="text" id="manualAddress" placeholder="Entrez votre ville ou adresse">
-    <button onclick="getForecastManual()">Valider</button>
-    <button onclick="getGeo()">📡 Activer la géolocalisation</button>
+    <section class="section">
+      <h2>🌞 Prévisions du jour & 7 jours</h2>
+      <div id="forecastText">Chargement des prévisions...</div>
+      <div id="mapForecast"></div>
+    </section>
 
-    <!-- ✅ Prévisions -->
-    <div class="forecast">
-      <h2>🌤️ Prévisions locales</h2>
-      <div id="forecast-today">Chargement des prévisions...</div>
-      <div id="forecast-week"></div>
-    </div>
+    <section class="section">
+      <h2>🚨 Alertes locales / mondiales</h2>
+      <div id="mapAlerts"></div>
+      <ul id="alertsList"></ul>
+    </section>
 
-    <!-- ✅ Alertes -->
-    <div class="alerts">
-      <h2>🚨 Alertes météo</h2>
-      <div id="alerts-box">Chargement des alertes...</div>
-    </div>
+    <section class="section">
+      <h2>🛰️ Radar en direct</h2>
+      <iframe id="radar" src="https://embed.windy.com/embed2.html?lat=50&lon=4&detailLat=50&detailLon=4&width=650&height=450&zoom=5&level=surface&overlay=rain&menu=&message=true&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default&radarRange=-1" allowfullscreen></iframe>
+    </section>
 
-    <!-- ✅ Bulletin auto -->
-    <div class="bulletin">
-      <h2>📰 Bulletin automatique</h2>
-      <div id="bulletin-text">Analyse météo en cours...</div>
-    </div>
+    <section class="section">
+      <h2>💌 TINS'Fan Club & avantages</h2>
+      <form id="fanClub">
+        <input type="email" id="email" placeholder="Ton email pour rejoindre le Fan Club" required />
+        <label><input type="checkbox" id="consent" required> J'accepte la politique RGPD (inscription gratuite, infos météo locales)</label>
+        <button type="button" onclick="registerFan()">Je rejoins 🎉</button>
+      </form>
+      <div id="fanMsg"></div>
+    </section>
+  </main>
 
-    <!-- ✅ Fan Club -->
-    <div class="fanclub">
-      <h3>🎁 Tins'Fan Club & Avantages</h3>
-      <p>Inscrivez-vous pour recevoir les alertes exclusives, participer aux concours et débloquer vos 7 jours Premium gratuits !</p>
-      <input type="email" id="fanEmail" placeholder="Votre email">
-      <button onclick="registerFan()">Je m’inscris 🎉</button>
-      <p id="fanResult" style="margin-top:5px;font-size:0.9rem;"></p>
-    </div>
+  <div class="upgrade" onclick="window.location.href='https://buy.stripe.com/cNiaEZgK5bpffuRex3gfu00'">⭐ Passez Premium ou Pro pour + de fonctions exclusives</div>
 
-    <!-- ✅ Radar -->
-    <h2>🌧️ Radar interactif</h2>
-    <div id="radar"></div>
-  </div>
-
-  <!-- ✅ Avatar J.E.A.N -->
-  <div id="avatar-jean" onclick="toggleChat()">
-    <img src="/avatars/jean-default.png" alt="J.E.A.N Avatar" style="width:80px;height:80px;border-radius:50%;">
-  </div>
-
-  <!-- ✅ Chat Cohere -->
-  <div id="chat-box">
-    <div id="chat-header">💬 J.E.A.N (IA météo)</div>
-    <div id="chat-messages"></div>
-    <div id="chat-input">
-      <input type="text" id="chat-input-text" placeholder="Demandez à J.E.A.N...">
-      <button onclick="sendChat()">Envoyer</button>
+  <div id="chatBtn" onclick="toggleChat()" title="Parler à Jean IA"></div>
+  <div id="chatBox">
+    <div id="chatHeader">💬 Jean – Assistant météo IA</div>
+    <div id="chatMessages"></div>
+    <div id="chatInput">
+      <input type="text" id="msgInput" placeholder="Demande à Jean..." />
+      <button onclick="sendMsg()">➤</button>
     </div>
   </div>
 
-  <!-- ✅ Bouton Premium -->
-  <div id="premium-float" onclick="window.open('https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01','_blank')">
-    ⭐ Passez Premium ou Pro pour + de fonctions exclusives !
-  </div>
-
-  <!-- ✅ Footer -->
   <footer>
-    © 2025 TINSFLASH | Contact : <a href="mailto:skysnapia@gmail.com" style="color:white;">skysnapia@gmail.com</a> | WhatsApp : 
-    <a href="https://wa.me/32473264477" style="color:white;">+32 473 26 44 77</a>
+    <p>© 2025 <strong>TINSFLASH</strong> – Tous droits réservés.<br>
+    Pour partenariat, presse ou acquisition de notre moteur météo :  
+    <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> –  
+    WhatsApp : <a href="https://wa.me/32473264477">0032 473 26 44 77</a>
+    </p>
   </footer>
 
   <script>
     // === GEOLOCALISATION ===
-    function getGeo() {
-      if (!navigator.geolocation) {
-        alert("La géolocalisation n’est pas supportée par votre navigateur.");
-        return;
+    async function detectLocation(){
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(pos=>{
+          loadForecast(pos.coords.latitude,pos.coords.longitude);
+        },err=>alert("Erreur géoloc: "+err.message));
+      }else alert("Géolocalisation non supportée");
+    }
+
+    // === CARTES ===
+    const mapF=L.map("mapForecast").setView([20,0],2);
+    const mapA=L.map("mapAlerts").setView([20,0],2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:"© OpenStreetMap"}).addTo(mapF);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:"© OpenStreetMap"}).addTo(mapA);
+
+    async function loadForecast(lat=50,lon=4){
+      document.getElementById("forecastText").innerText="Chargement...";
+      try{
+        const res=await fetch("/api/status");
+        const data=await res.json();
+        document.getElementById("forecastText").innerText="Prévisions générées par notre IA pour ta zone.";
+        data.alerts?.forEach(a=>{
+          if(a.lat&&a.lon)L.circle([a.lat,a.lon],{radius:80000,color:"#2196f3",fillOpacity:0.4})
+            .addTo(mapF).bindPopup(`<b>${a.country||"?"}</b><br>${a.title||"Prévision locale"}`);
+        });
+      }catch(e){
+        document.getElementById("forecastText").innerText="⚠️ Erreur de chargement.";
       }
-      navigator.geolocation.getCurrentPosition(async pos => {
-        const lat = pos.coords.latitude, lon = pos.coords.longitude;
-        document.getElementById("manualAddress").value = `${lat},${lon}`;
-        await getForecast(lat, lon);
-      }, err => alert("Erreur géolocalisation : " + err.message));
     }
+    loadForecast();
 
-    // === PREVISIONS ===
-    async function getForecastManual() {
-      const address = document.getElementById("manualAddress").value;
-      if (!address) return alert("Veuillez entrer une adresse.");
-      getForecast(address);
+    async function loadAlerts(){
+      try{
+        const res=await fetch("/api/alerts");
+        const alerts=await res.json();
+        const ul=document.getElementById("alertsList"); ul.innerHTML="";
+        mapA.eachLayer(l=>l instanceof L.Circle && l.remove());
+        alerts.forEach(a=>{
+          if(a.lat&&a.lon)L.circle([a.lat,a.lon],{radius:120000,color:"red",fillOpacity:0.5})
+            .addTo(mapA).bindPopup(`<b>${a.country}</b><br>${a.title||"Alerte"}`);
+          const li=document.createElement("li"); li.textContent=`${a.country||"?"}: ${a.title||"Alerte météo"}`;
+          ul.appendChild(li);
+        });
+      }catch(e){console.warn("alerts:",e.message);}
     }
+    loadAlerts();
+    setInterval(loadAlerts,90000);
 
-    async function getForecast(query) {
-      document.getElementById("forecast-today").innerText = "Chargement...";
-      const res = await fetch("/api/forecast/Europe");
-      const data = await res.json();
-      document.getElementById("forecast-today").innerText = data.forecast?.today || "Prévisions indisponibles.";
-      document.getElementById("forecast-week").innerText = data.forecast?.week || "";
+    // === CHAT IA ===
+    function toggleChat(){
+      const c=document.getElementById("chatBox");
+      c.style.display=c.style.display==="flex"?"none":"flex";
     }
-
-    // === ALERTES ===
-    async function loadAlerts() {
-      const res = await fetch("/api/alerts");
-      const alerts = await res.json();
-      const box = document.getElementById("alerts-box");
-      if (!alerts.length) return box.innerHTML = "Aucune alerte en cours.";
-      box.innerHTML = alerts.map(a => `<div>⚠️ <b>${a.country}</b> – ${a.message || 'Alerte en cours'}</div>`).join("");
-    }
-
-    // === BULLETIN ===
-    function generateBulletin() {
-      document.getElementById("bulletin-text").innerText =
-        "Le bulletin est généré automatiquement à partir des dernières données météo TINSFLASH...";
-    }
-
-    // === RADAR ===
-    const map = L.map('radar').setView([20, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    // === CHAT J.E.A.N ===
-    function toggleChat() {
-      const box = document.getElementById("chat-box");
-      box.style.display = box.style.display === "flex" ? "none" : "flex";
-    }
-
-    async function sendChat() {
-      const input = document.getElementById("chat-input-text");
-      const msg = input.value.trim();
-      if (!msg) return;
-      const messages = document.getElementById("chat-messages");
-      messages.innerHTML += `<div><b>Moi:</b> ${msg}</div>`;
-      input.value = "";
-
-      const res = await fetch("/api/jean", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg })
-      });
-      const data = await res.json();
-      messages.innerHTML += `<div><b>J.E.A.N:</b> ${data.reply}</div>`;
-      messages.scrollTop = messages.scrollHeight;
+    async function sendMsg(){
+      const input=document.getElementById("msgInput");
+      const text=input.value.trim();
+      if(!text)return;
+      const chat=document.getElementById("chatMessages");
+      chat.innerHTML+=`<div><b>Moi:</b> ${text}</div>`;
+      input.value="";
+      try{
+        const res=await fetch("/api/jean",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text})});
+        const data=await res.json();
+        chat.innerHTML+=`<div><b>Jean:</b> ${data.reply}</div>`;
+        chat.scrollTop=chat.scrollHeight;
+      }catch(e){chat.innerHTML+=`<div>⚠️ ${e.message}</div>`;}
     }
 
     // === FAN CLUB ===
-    async function registerFan() {
-      const email = document.getElementById("fanEmail").value;
-      if (!email) return alert("Veuillez entrer votre email.");
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, fanClub: true, consent: { accepted: true } })
-      });
-      const data = await res.json();
-      document.getElementById("fanResult").innerText = data.message || data.error;
+    async function registerFan(){
+      const email=document.getElementById("email").value.trim();
+      const consent=document.getElementById("consent").checked;
+      if(!email||!consent)return alert("Merci de renseigner ton email et d'accepter le RGPD");
+      const res=await fetch("/api/register-fan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+      const data=await res.json();
+      document.getElementById("fanMsg").innerText=data.success?"Bienvenue 🎉":"Erreur : "+(data.message||data.error);
     }
-
-    // AUTOLOAD
-    loadAlerts();
-    generateBulletin();
   </script>
 </body>
 </html>
