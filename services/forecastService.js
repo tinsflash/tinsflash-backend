@@ -1,86 +1,134 @@
-// services/forecastService.js
+// PATH: services/forecastService.js
 // Bulletin national et local — basé sur SuperForecast et runGlobal
-// ⚡ Centrale nucléaire météo – Vue utilisateur enrichie
+// ⚡ TINSFLASH – Moteur nucléaire météo (bulletins en temps réel)
 
 import { runSuperForecast } from "./superForecast.js";
 import openweather from "./openweather.js";
-import { ALL_ZONES } from "./runGlobal.js"; 
+import wetter3Bridge from "./wetter3Bridge.js"; // 🆕 Intégration Wetter3.de (source GFS interne)
+import { ALL_ZONES } from "./runGlobal.js";
 
-/** Bulletin national (zones couvertes) */
+/**
+ * 🇪🇺 Bulletin national (zones couvertes)
+ */
 async function getNationalForecast(country) {
   try {
     const zones = ALL_ZONES[country];
     if (!zones) {
-      return { 
-        country, 
-        source: "Centrale Nucléaire Météo", 
-        error: "Pays non couvert", 
-        forecasts: {} 
+      return {
+        country,
+        source: "Centrale Nucléaire Météo",
+        error: "Pays non couvert",
+        forecasts: {},
       };
     }
 
-    const results = await Promise.all(zones.map(async (z) => {
-      try {
-        const sf = await runSuperForecast({
-          lat: z.lat,
-          lon: z.lon,
-          country,
-          region: z.region,
-        });
-        return [
-          z.region,
-          {
-            lat: z.lat,
-            lon: z.lon,
-            country,
-            forecast: sf?.forecast || "⚠️ Pas de données",
-            sources: sf?.sources || null,
-            enriched: sf?.enriched || null,
-            source: "Centrale Nucléaire Météo",
-            note: country === "USA"
-              ? "⚡ Fusion multi-modèles + HRRR (USA)"
-              : "⚡ Fusion multi-modèles (GFS/ECMWF/ICON/Meteomatics + Copernicus/NASA + benchmarks)",
-          },
-        ];
-      } catch (e) {
-        return [
-          z.region,
-          {
-            lat: z.lat,
-            lon: z.lon,
-            country,
-            forecast: "❌ Erreur lors du calcul",
-            error: e.message,
-            source: "Centrale Nucléaire Météo",
-          },
-        ];
-      }
-    }));
+    const results = await Promise.all(
+      zones.map(async (z) => {
+        try {
+          // === 1️⃣ Wetter3 interne (renforcement du GFS) ===
+          let wetter3Data = null;
+          try {
+            wetter3Data = await wetter3Bridge.getWetter3GFS(z.lat, z.lon);
+          } catch {
+            wetter3Data = null;
+          }
 
-    return { country, source: "Centrale Nucléaire Météo", forecasts: Object.fromEntries(results) };
+          // === 2️⃣ SuperForecast principal ===
+          const sf = await runSuperForecast({
+            lat: z.lat,
+            lon: z.lon,
+            country,
+            region: z.region,
+          });
+
+          return [
+            z.region,
+            {
+              lat: z.lat,
+              lon: z.lon,
+              country,
+              forecast: sf?.forecast || "⚠️ Pas de données",
+              sources: [
+                "Centrale Nucléaire Météo",
+                wetter3Data ? "Wetter3 GFS" : null,
+                "Fusion IA J.E.A.N",
+              ].filter(Boolean),
+              wetter3: wetter3Data || null,
+              enriched: sf?.enriched || null,
+              source: "Centrale Nucléaire Météo",
+              note:
+                country === "USA"
+                  ? "⚡ Fusion multi-modèles + HRRR (USA)"
+                  : "⚡ Fusion multi-modèles (ECMWF/GFS/ICON/Meteomatics/Copernicus/NASA + Wetter3)",
+            },
+          ];
+        } catch (e) {
+          return [
+            z.region,
+            {
+              lat: z.lat,
+              lon: z.lon,
+              country,
+              forecast: "❌ Erreur lors du calcul",
+              error: e.message,
+              source: "Centrale Nucléaire Météo",
+            },
+          ];
+        }
+      })
+    );
+
+    return {
+      country,
+      source: "Centrale Nucléaire Météo",
+      forecasts: Object.fromEntries(results),
+    };
   } catch (err) {
     console.error("❌ getNationalForecast error:", err.message);
-    return { country, source: "Centrale Nucléaire Météo", error: err.message, forecasts: {} };
+    return {
+      country,
+      source: "Centrale Nucléaire Météo",
+      error: err.message,
+      forecasts: {},
+    };
   }
 }
 
-/** Prévision locale (point unique) */
+/**
+ * 📍 Prévision locale (point unique)
+ */
 async function getLocalForecast(lat, lon, country) {
   try {
     const zones = ALL_ZONES[country];
+
     if (zones) {
+      // Wetter3 local (si dispo)
+      let wetter3Data = null;
+      try {
+        wetter3Data = await wetter3Bridge.getWetter3GFS(lat, lon);
+      } catch {
+        wetter3Data = null;
+      }
+
       const sf = await runSuperForecast({ lat, lon, country });
+
       return {
         lat,
         lon,
         country,
         forecast: sf?.forecast || "⚠️ Pas de données",
-        sources: sf?.sources || null,
+        wetter3: wetter3Data || null,
+        sources: [
+          "Centrale Nucléaire Météo",
+          wetter3Data ? "Wetter3 GFS" : null,
+          "Fusion IA J.E.A.N",
+        ].filter(Boolean),
         enriched: sf?.enriched || null,
         source: "Centrale Nucléaire Météo",
-        note: country === "USA"
-          ? "⚡ Fusion multi-modèles + HRRR (USA)"
-          : "⚡ Fusion multi-modèles (GFS/ECMWF/ICON/Meteomatics + Copernicus/NASA + benchmarks)",
+        note:
+          country === "USA"
+            ? "⚡ Fusion multi-modèles + HRRR (USA)"
+            : "⚡ Fusion multi-modèles (ECMWF/GFS/ICON/Meteomatics/Copernicus/NASA + Wetter3)",
       };
     }
 
@@ -99,9 +147,16 @@ async function getLocalForecast(lat, lon, country) {
     };
   } catch (err) {
     console.error("❌ getLocalForecast error:", err.message);
-    return { lat, lon, country, source: "Centrale Nucléaire Météo", error: err.message, forecasts: {} };
+    return {
+      lat,
+      lon,
+      country,
+      source: "Centrale Nucléaire Météo",
+      error: err.message,
+      forecasts: {},
+    };
   }
 }
 
-// ✅ Export par défaut
+// ✅ Export par défaut (aucune modification des signatures)
 export default { getNationalForecast, getLocalForecast };
