@@ -110,7 +110,7 @@ app.post("/api/jean", async (req, res) => {
   }
 });
 
-// === CHAT MOTEUR (ADMIN CONSOLE) ===
+// === CHAT MOTEUR (ChatGPT-5) ===
 app.post("/api/chat-engine", async (req, res) => {
   try {
     const { message } = req.body;
@@ -121,6 +121,20 @@ app.post("/api/chat-engine", async (req, res) => {
   } catch (e) {
     console.error("⚠️ Chat moteur:", e.message);
     res.status(500).json({ reply: "⚠️ Erreur moteur: " + e.message });
+  }
+});
+
+// === CHAT CONSOLE ADMIN (ChatGPT-3.5) ===
+app.post("/api/chat-admin", async (req, res) => {
+  try {
+    const { message, mode } = req.body;
+    if (!message) return res.status(400).json({ reply: "❌ Message manquant" });
+
+    const reply = await chatService.askAIAdmin(message, mode || "moteur");
+    res.json({ reply });
+  } catch (e) {
+    console.error("⚠️ Chat admin:", e.message);
+    res.status(500).json({ reply: "⚠️ Erreur chat admin: " + e.message });
   }
 });
 
