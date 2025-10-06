@@ -1,8 +1,10 @@
 // PATH: services/superForecast.js
-import { addEngineLog, addEngineError, updateEngineState, saveEngineState } from "./engineState.js";
+// ⚙️ SuperForecast – moteur IA fusion multi-modèles (ECMWF / GFS / ICON / etc.)
+
+import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import forecastService from "./forecastService.js";
 import * as alertsService from "./alertsService.js";
-import aiFusionService from "./aiFusionService.js"; // Fusion IA (GraphCast / Pangu / Gemini / GPT5)
+import aiFusionService from "./aiFusionService.js"; // Fusion IA (GraphCast / Pangu / Gemini / GPT-5)
 import { getGlobalTimestamp } from "./timeUtils.js";
 
 /**
@@ -16,11 +18,17 @@ import { getGlobalTimestamp } from "./timeUtils.js";
 export async function superForecast(zone = "Europe") {
   const cycleId = getGlobalTimestamp();
   await addEngineLog(`🌀 Démarrage SuperForecast pour la zone ${zone} [${cycleId}]`);
-  await updateEngineState("status", "running");
-  await updateEngineState("checkup.engineStatus", "RUNNING");
-  await updateEngineState("currentCycleId", cycleId);
 
-  // Ajout Wetter3 à la liste des modèles actifs
+  // Récupérer l’état actuel du moteur
+  const state = await getEngineState();
+  state.status = "running";
+  state.checkup = state.checkup || {};
+  state.checkup.engineStatus = "RUNNING";
+  state.currentCycleId = cycleId;
+
+  await saveEngineState(state);
+
+  // === Liste des modèles ===
   const models = [
     "ECMWF",
     "GFS",
@@ -29,13 +37,13 @@ export async function superForecast(zone = "Europe") {
     "Copernicus",
     "NASA",
     "OpenWeather",
-    "Wetter3", // <--- Nouveau modèle interne
+    "Wetter3", // nouveau modèle interne
   ];
 
   const modelResults = {};
   const errors = [];
 
-  // === 1️⃣ Chargement des modèles météo ===
+  /* === 1️⃣ Chargement des modèles météo === */
   for (const model of models) {
     try {
       await addEngineLog(`📡 Chargement modèle ${model}...`);
@@ -43,71 +51,61 @@ export async function superForecast(zone = "Europe") {
 
       if (data && Object.keys(data).length > 0) {
         modelResults[model] = data;
-        await updateEngineState(`checkup.models.${model}`, "ok");
+        state.checkup.models = state.checkup.models || {};
+        state.checkup.models[model] = "ok";
         await addEngineLog(`✅ ${model} chargé (${Object.keys(data).length} points).`);
       } else {
-        await updateEngineState(`checkup.models.${model}`, "fail");
+        state.checkup.models[model] = "fail";
         throw new Error(`${model} a renvoyé des données vides.`);
       }
     } catch (err) {
       errors.push(`[${model}] ${err.message}`);
-      await updateEngineState(`checkup.models.${model}`, "fail");
+      state.checkup.models = state.checkup.models || {};
+      state.checkup.models[model] = "fail";
       await addEngineError(`❌ ${model}: ${err.message}`);
     }
   }
 
-  // === 2️⃣ Fusion IA ===
+  /* === 2️⃣ Fusion IA === */
   try {
     await addEngineLog("🧠 Fusion IA des modèles...");
     const fused = await aiFusionService.fuseModels(modelResults, zone);
     if (!fused) throw new Error("Résultat IA vide ou invalide.");
-    await updateEngineState("checkup.steps.fusionIA", "ok");
+    state.checkup.steps = state.checkup.steps || {};
+    state.checkup.steps.fusionIA = "ok";
     await addEngineLog("✅ Fusion IA terminée avec succès.");
   } catch (err) {
-    await updateEngineState("checkup.steps.fusionIA", "fail");
+    state.checkup.steps = state.checkup.steps || {};
+    state.checkup.steps.fusionIA = "fail";
     await addEngineError(`❌ Fusion IA: ${err.message}`);
     errors.push(`[FusionIA] ${err.message}`);
   }
 
-  // === 3️⃣ Génération des alertes ===
+  /* === 3️⃣ Génération des alertes === */
   try {
     await addEngineLog("🚨 Génération des alertes pour zones couvertes...");
     const alerts = await alertsService.generateAlerts(zone, modelResults);
-    await updateEngineState("checkup.steps.alertsCovered", "ok");
+    state.checkup.steps.alertsCovered = "ok";
     await addEngineLog(`✅ ${alerts.length} alertes générées (zones couvertes).`);
 
-    // Génération des alertes continentales
     if (zone === "Europe" || zone === "USA") {
       await addEngineLog("🌍 Génération des alertes continentales...");
       const cont = await alertsService.generateContinentalAlerts(zone);
-      await updateEngineState("checkup.steps.alertsContinental", "ok");
+      state.checkup.steps.alertsContinental = "ok";
       await addEngineLog(`✅ ${cont.length} alertes continentales générées.`);
     }
   } catch (err) {
-    await updateEngineState("checkup.steps.alertsCovered", "fail");
+    state.checkup.steps.alertsCovered = "fail";
     await addEngineError(`❌ Erreur génération alertes: ${err.message}`);
     errors.push(`[Alertes] ${err.message}`);
   }
 
-  // === 4️⃣ Finalisation & sauvegarde ===
-  const state = {
-    status: errors.length > 0 ? "fail" : "ok",
-    lastRun: new Date(),
-    checkup: {
-      engineStatus: errors.length > 0 ? "FAIL" : "OK",
-      zonesCovered: zone === "Europe" ? 30 : 1, // MAJ: >27 pays
-      models: Object.fromEntries(models.map(m => [m, modelResults[m] ? "ok" : "fail"])),
-      steps: {
-        superForecast: "ok",
-        fusionIA: errors.find(e => e.includes("FusionIA")) ? "fail" : "ok",
-        alertsCovered: errors.find(e => e.includes("Alertes")) ? "fail" : "ok",
-        alertsContinental: "ok",
-        deploy: "pending",
-      },
-    },
-    finalReport: { forecasts: modelResults },
-    engineErrors: errors.map(e => ({ message: e, timestamp: new Date() })),
-  };
+  /* === 4️⃣ Finalisation & sauvegarde === */
+  state.status = errors.length > 0 ? "fail" : "ok";
+  state.lastRun = new Date();
+  state.checkup.engineStatus = errors.length > 0 ? "FAIL" : "OK";
+  state.finalReport = { forecasts: modelResults };
+  state.engineErrors = errors.map(e => ({ message: e, timestamp: new Date() }));
 
   await saveEngineState(state);
 
@@ -122,5 +120,4 @@ export async function superForecast(zone = "Europe") {
 
 // ✅ Compatibilité rétro
 export const runSuperForecast = superForecast;
-
 export default { superForecast, runSuperForecast };
