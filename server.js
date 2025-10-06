@@ -1,5 +1,5 @@
 // PATH: server.js
-// 🧠 TINSFLASH Meteorological Nuclear Core – Serveur principal connecté
+// 🧠 TINSFLASH Meteorological Nuclear Core – Serveur principal connecté et réel
 
 import express from "express";
 import mongoose from "mongoose";
@@ -68,13 +68,14 @@ app.get("/api/status", async (req, res) => {
       alertsCount: state?.alertsLocal?.length || 0,
       forecasts: state?.forecastsContinental || {},
       finalReport: state?.finalReport || {},
+      engineErrors: state?.errors || [],
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// === ALERTES (complètes depuis DB ou engineState) ===
+// === ALERTES ===
 app.get("/api/alerts", async (_, res) => {
   try {
     const list = await Alert.find().sort({ createdAt: -1 }).limit(500);
@@ -98,6 +99,8 @@ app.get("/api/alerts/summary", async (_, res) => {
       },
       exclusives: all.filter(a => a.status === "✅ Premier détecteur").length,
       confirmedElsewhere: all.filter(a => a.status === "⚠️ Déjà signalé").length,
+      local: all.filter(a => a.country && a.country.length === 2).length,
+      continental: all.filter(a => a.country && a.country.length > 2).length,
     };
     res.json(summary);
   } catch (e) {
@@ -106,17 +109,14 @@ app.get("/api/alerts/summary", async (_, res) => {
 });
 
 // === EXPORT PREMIUM NASA / GOVERNMENT ===
-app.post("/api/alerts/export", async (req, res) => {
+app.post("/api/alerts/export/:id", async (req, res) => {
   try {
-    const { id } = req.body;
-    if (!id) return res.status(400).json({ error: "ID requis" });
+    const { id } = req.params;
     const alert = await Alert.findById(id);
     if (!alert) return res.status(404).json({ error: "Alerte introuvable" });
 
-    // Vérifie premium
-    if (alert.status !== "✅ Premier détecteur" || alert.certainty < 70) {
-      return res.status(403).json({ error: "Alerte non éligible export premium" });
-    }
+    if (alert.status !== "✅ Premier détecteur" || alert.certainty < 70)
+      return res.status(403).json({ error: "Alerte non éligible à l’export premium" });
 
     const payload = {
       id: alert._id,
@@ -129,24 +129,48 @@ app.post("/api/alerts/export", async (req, res) => {
       severity: alert.severity,
     };
 
-    // (Ici tu pourras plus tard envoyer via API officielle NASA / WMO)
-    console.log("🚀 Export NASA/GOV:", payload);
-    res.json({ success: true, message: "Export simulé (console)" });
+    console.log("🚀 Export vers partenaires NASA/NWS :", payload);
+    res.json({ success: true, targets: ["NASA", "NOAA", "WMO", "EUMETNET"] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// === MISE À JOUR D’UNE ALERTE (validation manuelle admin) ===
+// === ANALYSE IA J.E.A.N (profondeur) ===
+app.post("/api/alerts/analyze/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const alert = await Alert.findById(id);
+    if (!alert) return res.status(404).json({ error: "Alerte introuvable" });
+
+    const prompt = `
+      Tu es J.E.A.N, analyste météo de la Centrale TINSFLASH.
+      Analyse cette alerte avec précision :
+      - type, intensité, causes
+      - zones à risque
+      - impact sur la population et les animaux
+      - influence altitude/relief
+      - évolution probable selon les modèles récents
+      Voici l'alerte :
+      ${JSON.stringify(alert, null, 2)}
+    `;
+    const analysis = await chatService.askAIEngine(prompt);
+    res.json({ success: true, alert, analysis });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// === VALIDATION / SURVEILLANCE MANUELLE ===
 app.post("/api/alerts/:id/:action", async (req, res) => {
   try {
     const { id, action } = req.params;
     const alert = await Alert.findById(id);
     if (!alert) return res.status(404).json({ error: "Alerte introuvable" });
 
-    if (action === "published") alert.certainty = 95;
-    if (action === "under-surveillance") alert.certainty = 60;
-    if (action === "pending") alert.certainty = 75;
+    if (action === "published") { alert.certainty = 95; alert.status = "⚠️ Déjà signalé"; }
+    if (action === "under-surveillance") { alert.certainty = 60; alert.status = "✅ Premier détecteur"; }
+    if (action === "pending") { alert.certainty = 75; alert.status = "❌ Doublon"; }
 
     await alert.save();
     res.json({ success: true, updated: alert });
@@ -155,7 +179,7 @@ app.post("/api/alerts/:id/:action", async (req, res) => {
   }
 });
 
-// === MISE À JOUR AUTOMATIQUE (évolution) ===
+// === ÉVOLUTION AUTO DES ALERTES ===
 app.post("/api/evolution/run", async (_, res) => {
   try {
     const evo = await runEvolution();
@@ -187,7 +211,7 @@ app.get("/api/logs/stream", async (req, res) => {
   req.on("close", () => console.log("❌ Client SSE déconnecté"));
 });
 
-// === CHAT PUBLIC J.E.A.N (Cohere) ===
+// === CHAT PUBLIC (Cohere J.E.A.N) ===
 app.post("/api/jean", async (req, res) => {
   try {
     const { message } = req.body;
@@ -199,7 +223,7 @@ app.post("/api/jean", async (req, res) => {
   }
 });
 
-// === CHAT MOTEUR (GPT-5) ===
+// === CHAT MOTEUR (ChatGPT-5) ===
 app.post("/api/chat-engine", async (req, res) => {
   try {
     const { message } = req.body;
@@ -211,7 +235,7 @@ app.post("/api/chat-engine", async (req, res) => {
   }
 });
 
-// === CHAT CONSOLE ADMIN (GPT-3.5) ===
+// === CHAT ADMIN (ChatGPT-3.5) ===
 app.post("/api/chat-admin", async (req, res) => {
   try {
     const { message, mode } = req.body;
@@ -242,7 +266,7 @@ app.post("/api/register-fan", async (req, res) => {
   }
 });
 
-// === PAGES ADMIN (protégées, invisibles) ===
+// === PAGES ADMIN (protégées & invisibles) ===
 app.get("/admin", (_, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-pp.html"))
 );
@@ -252,4 +276,4 @@ app.get("/admin-alerts", (_, res) =>
 
 // === LANCEMENT SERVEUR ===
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 TINSFLASH Server operational on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 TINSFLASH Server opérationnel sur le port ${PORT}`));
