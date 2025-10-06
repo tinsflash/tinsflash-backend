@@ -1,136 +1,90 @@
-const API_BASE = "/api";
-let userLat = null, userLon = null;
+// index.js
+let coords = null;
 
-async function fetchJSON(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Erreur API");
-  return res.json();
-}
-
-// === Gestion vidéo ===
-const video = document.getElementById("introVideo");
-const soundToggle = document.getElementById("soundToggle");
-soundToggle.onclick = () => {
-  video.muted = !video.muted;
-  soundToggle.textContent = video.muted ? "🔇" : "🔊";
+document.getElementById("soundToggle").onclick = () => {
+  const v = document.getElementById("introJean");
+  v.muted = !v.muted;
 };
 
-// === Géolocalisation ===
-async function useGeoloc() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        userLat = pos.coords.latitude;
-        userLon = pos.coords.longitude;
-        loadAll();
-      },
-      () => alert("Géolocalisation refusée")
-    );
-  } else alert("Géolocalisation non supportée");
-}
-
-async function manualAddress() {
-  const address = document.getElementById("address").value;
-  if (!address) return alert("Entrez une adresse complète");
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
+document.getElementById("btnGeo").onclick = () => {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      document.getElementById("zoneStatus").textContent = `Position détectée: ${coords.lat.toFixed(2)}, ${coords.lon.toFixed(2)}`;
+      loadStatus();
+    },
+    () => alert("Impossible d’obtenir la géolocalisation.")
   );
+};
+
+document.getElementById("manualAddress").addEventListener("change", e => {
+  document.getElementById("zoneStatus").textContent = `Adresse encodée: ${e.target.value}`;
+  loadStatus();
+});
+
+// === Récupération statut moteur ===
+async function loadStatus() {
+  const res = await fetch("/api/status");
   const data = await res.json();
-  if (data.length) {
-    userLat = parseFloat(data[0].lat);
-    userLon = parseFloat(data[0].lon);
-    loadAll();
-  } else alert("Adresse non trouvée");
-}
-
-// === Chargement des prévisions ===
-async function loadForecasts() {
-  try {
-    const res = await fetchJSON(`${API_BASE}/status`);
-    const f = res.forecasts || {};
-    const local = f.local || {}, national = f.national || {};
-
-    document.getElementById("local-today").innerHTML = local.today
-      ? `<b>${local.today.summary}</b><br>${local.today.temp_min}°C / ${local.today.temp_max}°C`
-      : "Prévision locale indisponible";
-
-    document.getElementById("national-today").innerHTML = national.today
-      ? `<b>${national.today.summary}</b><br>${national.today.temp_min}°C / ${national.today.temp_max}°C`
-      : "Prévision nationale indisponible";
-
-    // Avatar dynamique
-    const avatar = document.getElementById("jeanAvatar");
-    let mood = "default";
-    const s = (local.today?.summary || "").toLowerCase();
-    if (s.includes("pluie")) mood = "rain";
-    else if (s.includes("neige")) mood = "snow";
-    else if (s.includes("orage")) mood = "storm";
-    else if (s.includes("soleil")) mood = "sun";
-    avatar.src = `avatars/jean-${mood}.png`;
-
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-// === Alertes ===
-async function loadAlerts() {
-  const res = await fetchJSON(`${API_BASE}/alerts`);
-  const div = document.getElementById("alerts");
-  div.innerHTML = "";
-  if (!res.length) {
-    div.innerHTML = "<p>Aucune alerte active</p>";
-    return;
-  }
-  res.forEach((a) => {
-    const p = document.createElement("p");
-    p.innerHTML = `⚠️ <strong>${a.zone || a.country}</strong> – ${a.title || a.type || "Alerte"} (${a.level || "info"})`;
-    if (a.level === "high") p.className = "blink";
-    div.appendChild(p);
-  });
+  renderCoverage(data.coveredZones);
+  renderAlerts(data.alerts);
+  renderForecast(data.finalReport);
 }
 
 // === Cartes ===
-function initMaps() {
-  const mapForecast = L.map("map-forecast").setView([20, 10], 2);
-  const mapAlerts = L.map("map-alerts").setView([20, 10], 2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
-
-  // Couverture verte / bleue
-  fetchJSON(`${API_BASE}/status`).then((data) => {
-    const covered = data?.checkup?.coveredPoints || [];
-    covered.forEach((p) =>
-      L.circle([p.lat, p.lon], { color: "lime", radius: 80000 }).addTo(mapForecast)
-    );
-  });
-
-  // Alertes mondiales
-  fetchJSON(`${API_BASE}/alerts`).then((alerts) => {
-    alerts.forEach((a) => {
-      if (a.lat && a.lon) {
-        L.circle([a.lat, a.lon], {
-          color: a.level === "high" ? "red" : "orange",
-          radius: 100000,
-        }).addTo(mapAlerts).bindPopup(a.title || "Alerte");
-      }
-    });
+let map1, map2;
+function renderCoverage(points) {
+  if (!map1) {
+    map1 = L.map("mapCoverage").setView([50, 5], 3);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map1);
+  }
+  points.forEach(p => {
+    L.circleMarker([p.lat, p.lon], { color: "lime", radius: 3 }).addTo(map1);
   });
 }
 
-// === Lancer tout ===
-function loadAll() {
-  loadForecasts();
-  loadAlerts();
-  initMaps();
+function renderAlerts(alerts) {
+  if (!map2) {
+    map2 = L.map("mapAlerts").setView([20, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map2);
+  }
+  const c = document.getElementById("alertsList");
+  c.innerHTML = "";
+  alerts.forEach(a => {
+    const div = document.createElement("div");
+    div.textContent = `⚠️ ${a.title || "Alerte"} (${a.level || "N/A"})`;
+    c.appendChild(div);
+  });
 }
 
-// === Chat IA future ===
-function openJeanChat() {
-  alert("👋 Ici J.E.A.N – module IA-AI en développement (Premium à venir)");
+// === Prévisions ===
+function renderForecast(finalReport) {
+  const zone = document.getElementById("forecastData");
+  zone.textContent = "";
+  if (!finalReport) {
+    zone.textContent = "Prévisions en cours de mise à jour.";
+    return;
+  }
+  for (const country in finalReport) {
+    const p = document.createElement("p");
+    p.textContent = `${country}: ${finalReport[country].summary || "Données en cours."}`;
+    zone.appendChild(p);
+  }
 }
 
-// === Auto start ===
-document.addEventListener("DOMContentLoaded", () => {
-  useGeoloc();
-});
+// === Chat Cohere ===
+document.getElementById("sendChat").onclick = async () => {
+  const q = document.getElementById("chatInput").value;
+  if (!q) return;
+  const res = await fetch("/api/cohere", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: q }),
+  });
+  const data = await res.json();
+  document.getElementById("chatInput").value = "";
+  document.getElementById("chatAvatar").src = data.avatar;
+  alert("J.E.A.N: " + data.reply);
+};
+
+window.onload = loadStatus;
