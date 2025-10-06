@@ -37,13 +37,15 @@ async function preRunChecks() {
 
   try {
     const resp = await fetch("https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&hourly=temperature_2m");
-    if (!resp.ok) errors.push({ code: "SRC_DOWN", msg: `Service Open-Meteo non accessible (HTTP ${resp.status})` });
+    if (!resp.ok)
+      errors.push({ code: "SRC_DOWN", msg: `Service Open-Meteo non accessible (HTTP ${resp.status})` });
   } catch {
     errors.push({ code: "SRC_DOWN", msg: "Impossible d’accéder à Open-Meteo" });
   }
 
   if (errors.length) {
-    for (const e of errors) await addEngineError(`PRECHECK ❌ ${e.code}: ${e.msg}`);
+    for (const e of errors)
+      await addEngineError(`PRECHECK ❌ ${e.code}: ${e.msg}`);
     throw new Error(`Pré-check échoué (${errors.length} erreur(s))`);
   }
 
@@ -54,7 +56,8 @@ async function preRunChecks() {
    🚀 RUN GLOBAL
 ------------------------------------------------------------------ */
 export async function runGlobal(zone = "All") {
-  const state = await getEngineState();
+  let state = await getEngineState();
+
   try {
     await addEngineLog(`🧩 Pré-check du moteur (${zone})...`);
     await preRunChecks();
@@ -63,15 +66,15 @@ export async function runGlobal(zone = "All") {
     state.status = "running";
     state.lastRun = new Date();
     state.checkup.engineStatus = "RUNNING";
-    await saveEngineState(state);
+    state = await saveEngineState(state);
 
     /* === PHASE 1 : Prévisions === */
     await addEngineLog("📡 Phase 1 – Prévisions (Europe / USA)");
     const forecasts = {};
     if (zone === "Europe" || zone === "All")
-      forecasts.Europe = await runGlobalEurope().catch((e) => addEngineError("❌ Europe : " + e.message));
+      forecasts.Europe = await runGlobalEurope().catch(e => addEngineError("❌ Europe : " + e.message));
     if (zone === "USA" || zone === "All")
-      forecasts.USA = await runGlobalUSA().catch((e) => addEngineError("❌ USA : " + e.message));
+      forecasts.USA = await runGlobalUSA().catch(e => addEngineError("❌ USA : " + e.message));
 
     /* === PHASE 2 : Continental === */
     if (zone === "All") {
@@ -96,6 +99,7 @@ export async function runGlobal(zone = "All") {
         await generateAlerts(lat, lon, country, z.region ?? z.name ?? "Inconnu", zone);
       }
     }
+
     const alerts = await getActiveAlerts();
     state.alertsLocal = alerts;
     await addEngineLog(`✅ ${alerts.length} alertes locales/nationales générées`);
@@ -127,11 +131,13 @@ export async function runGlobal(zone = "All") {
     /* === PHASE 5 : Fusion mondiale === */
     if (zone === "All") {
       await addEngineLog("🌍 Phase 5 – Fusion mondiale des alertes...");
-      const world = await runWorldAlerts().catch((e) =>
-        addEngineError("⚠️ Fusion mondiale : " + e.message)
-      );
-      state.alertsWorld = world || [];
-      await addEngineLog(`✅ Fusion mondiale terminée (${world?.length || 0})`);
+      try {
+        const world = await runWorldAlerts();
+        state.alertsWorld = world || [];
+        await addEngineLog(`✅ Fusion mondiale terminée (${world?.length || 0})`);
+      } catch (e) {
+        await addEngineError("⚠️ Fusion mondiale : " + e.message);
+      }
     }
 
     /* === PHASE 6 : Fusion IA J.E.A.N === */
@@ -158,6 +164,7 @@ export async function runGlobal(zone = "All") {
         await addEngineError("⚠️ NWS : " + e.message);
       }
     }
+
     if (zone === "Europe" || zone === "All") {
       try {
         const eu = await euroMeteoService.crossCheck(forecasts.Europe, alerts);
@@ -173,8 +180,10 @@ export async function runGlobal(zone = "All") {
     state.checkup.engineStatus = "OK";
     state.lastRun = new Date();
     await saveEngineState(state);
+
     await addEngineLog("✅ RUN GLOBAL terminé");
     return { success: true, alerts };
+
   } catch (e) {
     await addEngineError("❌ RUN GLOBAL échec : " + e.message);
     state.status = "fail";
@@ -189,9 +198,10 @@ export async function runGlobal(zone = "All") {
 export async function retryPhase(phase) {
   const state = await getEngineState();
   await addEngineLog(`🔁 Relance ciblée de la phase ${phase}`);
+
   try {
     switch (phase) {
-      case "IA":
+      case "IA": {
         const aiInput = {
           forecasts: state.forecastsContinental,
           alerts: state.alertsLocal,
@@ -204,17 +214,20 @@ export async function retryPhase(phase) {
         state.finalReport = JSON.parse(aiResponse || "{}");
         await addEngineLog("✅ Relance IA terminée");
         break;
+      }
 
-      case "ALERTES":
+      case "ALERTES": {
         await addEngineLog("🔁 Régénération des alertes locales/nationales...");
         const alerts = await getActiveAlerts();
         state.alertsLocal = alerts;
         await addEngineLog("✅ Alertes rechargées");
         break;
+      }
 
       default:
         throw new Error("Phase non reconnue");
     }
+
     await saveEngineState(state);
     return { success: true };
   } catch (err) {
