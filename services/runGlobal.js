@@ -1,6 +1,6 @@
 // PATH: services/runGlobal.js
 // ⚙️ Moteur orchestral TINSFLASH – Run Global réel et connecté
-// Aucun export modifié — structure identique
+// ✅ Version intégrée avec PHASE 9 : évolution automatique des alertes
 
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
@@ -15,6 +15,7 @@ import { USA_ZONES } from "./runGlobalUSA.js";
 
 import weatherGovService from "./weatherGovService.js"; // 🇺🇸 NWS
 import euroMeteoService from "./euroMeteoService.js";   // 🇪🇺 MeteoAlarm
+import { runEvolution } from "./evolution.js";          // ♻️ Nouveau suivi des alertes
 
 export const ALL_ZONES = { ...EUROPE_ZONES, ...USA_ZONES };
 
@@ -144,12 +145,22 @@ export async function runGlobal(zone = "All") {
       await saveEngineState(state);
     }
 
+    // === PHASE 9 : Évolution automatique des alertes ===
+    await addEngineLog("♻️ PHASE 9 – Évolution automatique des alertes...");
+    try {
+      const evo = await runEvolution();
+      state.checkup.alertEvolution = `OK (+${evo.created?.length || 0} / ${evo.updated?.length || 0} / ${evo.deleted?.length || 0})`;
+      await addEngineLog(`✅ Évolution terminée : ${evo.updated?.length || 0} mises à jour, ${evo.deleted?.length || 0} supprimées`);
+    } catch (err) {
+      await addEngineError("⚠️ Erreur évolution alertes : " + err.message);
+    }
+
     // === Finalisation ===
     state.status = "ok";
     state.checkup.engineStatus = "OK";
     state.lastRun = new Date();
     await saveEngineState(state);
-    await addEngineLog("✅ RUN GLOBAL terminé avec succès");
+    await addEngineLog("✅ RUN GLOBAL terminé avec succès complet");
 
     return {
       forecasts,
