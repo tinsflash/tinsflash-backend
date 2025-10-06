@@ -1,16 +1,17 @@
 // PATH: services/engineState.js
-// 🧠 Gestion centrale de l’état moteur TINSFLASH (status, logs, erreurs, checkup)
+// ⚙️ Suivi et état du moteur TINSFLASH (status, logs, erreurs, zones couvertes)
 
 import mongoose from "mongoose";
+import { enumerateCoveredPoints } from "./zonesCovered.js";
 
-/* -------------------- SCHÉMAS -------------------- */
+// === Schémas Mongo ===
 const ErrorSchema = new mongoose.Schema({
-  message: String,
+  message: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
 
 const LogSchema = new mongoose.Schema({
-  message: String,
+  message: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -18,73 +19,59 @@ const EngineStateSchema = new mongoose.Schema({
   status: { type: String, default: "idle" }, // idle, running, ok, fail
   lastRun: { type: Date, default: null },
   checkup: { type: Object, default: {} },
-  errors: { type: [ErrorSchema], default: [] },
-  logs: { type: [LogSchema], default: [] },
-  currentCycleId: { type: String, default: null },
+  partialReport: { type: Object, default: null },
+  finalReport: { type: Object, default: null },
+  alertsLocal: { type: Array, default: [] },
+  alertsContinental: { type: Array, default: [] },
+  alertsWorld: { type: Array, default: [] },
+  errors: [ErrorSchema],
+  logs: [LogSchema],
 });
 
-const EngineState = mongoose.model("EngineState", EngineStateSchema);
+const EngineState = mongoose.models.EngineState || mongoose.model("EngineState", EngineStateSchema);
 
-/* -------------------- LOGS -------------------- */
-export async function addEngineLog(message) {
-  try {
-    let s = await EngineState.findOne();
-    if (!s) s = new EngineState();
-    s.logs.unshift({ message, timestamp: new Date() });
-    if (s.logs.length > 200) s.logs.pop();
-    await s.save();
-    return { timestamp: Date.now(), message };
-  } catch (err) {
-    console.error("❌ addEngineLog error:", err.message);
-  }
-}
+// === Fonctions principales ===
 
-export async function addEngineError(message) {
-  try {
-    let s = await EngineState.findOne();
-    if (!s) s = new EngineState();
-    s.errors.unshift({ message, timestamp: new Date() });
-    if (s.errors.length > 200) s.errors.pop();
-    await s.save();
-    return { timestamp: Date.now(), message };
-  } catch (err) {
-    console.error("❌ addEngineError error:", err.message);
-  }
-}
-
-/* -------------------- ETAT -------------------- */
 export async function getEngineState() {
-  let s = await EngineState.findOne();
-  if (!s) {
-    s = new EngineState();
-    await s.save();
+  let state = await EngineState.findOne().sort({ _id: -1 });
+  if (!state) {
+    state = new EngineState({ status: "idle" });
+    await state.save();
   }
+
+  // Injection des zones couvertes actuelles
+  const coveredPoints = enumerateCoveredPoints();
+  state.checkup = state.checkup || {};
+  state.checkup.coveredPoints = coveredPoints;
+
+  return state;
+}
+
+export async function saveEngineState(updated) {
+  if (!updated) return null;
+  const s = new EngineState(updated);
+  await s.save();
   return s;
 }
 
-/* -------------------- SAUVEGARDE INTELLIGENTE -------------------- */
-export async function saveEngineState(state) {
-  try {
-    // ✅ Cas 1 : document Mongoose (existant)
-    if (state && typeof state.save === "function") {
-      return await state.save();
-    }
-
-    // ✅ Cas 2 : objet brut → mise à jour ou création
-    const existing = await EngineState.findOne();
-    if (existing) {
-      await EngineState.updateOne({ _id: existing._id }, { $set: state });
-      return await EngineState.findById(existing._id);
-    } else {
-      const s = new EngineState(state);
-      await s.save();
-      return s;
-    }
-  } catch (err) {
-    console.error("❌ saveEngineState error:", err.message);
-    throw err;
-  }
+export async function addEngineLog(message) {
+  const s = await getEngineState();
+  s.logs.push({ message });
+  if (s.logs.length > 500) s.logs.shift(); // limite taille
+  await s.save();
 }
 
-/* -------------------- EXPORT PAR DÉFAUT -------------------- */
-export default EngineState;
+export async function addEngineError(message) {
+  const s = await getEngineState();
+  s.errors.push({ message });
+  if (s.errors.length > 200) s.errors.shift();
+  await s.save();
+}
+
+export async function clearEngineLogs() {
+  const s = await getEngineState();
+  s.logs = [];
+  await s.save();
+}
+
+export default { getEngineState, saveEngineState, addEngineLog, addEngineError, clearEngineLogs };
