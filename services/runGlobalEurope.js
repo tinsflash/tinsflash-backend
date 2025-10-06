@@ -1,14 +1,12 @@
-// services/runGlobalEurope.js
-// ⚡ Centrale nucléaire météo – RUN GLOBAL Europe
-
-import { runSuperForecast } from "./superForecast.js";
-import { generateAlerts } from "./alertsService.js";
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+// PATH: services/runGlobalEurope.js
+// 🌍 Référentiel zones Europe – TINSFLASH
+// Ce fichier ne contient QUE les coordonnées géographiques de référence
+// Il ne génère ni prévision ni alerte : il est lu par zonesCovered.js puis runGlobal.js
 
 // ===========================
 // Zones détaillées par pays
 // ===========================
-const EUROPE_ZONES = {
+export const EUROPE_ZONES = {
   Belgium: [
     { lat: 50.85, lon: 4.35, region: "Brussels-Central" },
     { lat: 51.22, lon: 4.40, region: "North-Sea-Coast" },
@@ -248,119 +246,22 @@ const EUROPE_ZONES = {
   ]
 };
 // ===========================
-// 1️⃣ Prévisions Europe
+// 1️⃣ export zone Europe
 // ===========================
-export async function runEuropeForecasts() {
-  const state = await getEngineState();   // ✅ await ajouté
-  state.checkup = state.checkup || {};   
-  addEngineLog("🌍 Démarrage Prévisions Europe…");
-
-  const byCountry = {};
-  let successCount = 0, totalPoints = 0;
-
+export function getAllEuropeZones() {
+  const all = [];
   for (const [country, zones] of Object.entries(EUROPE_ZONES)) {
-    byCountry[country] = { regions: [] };
     for (const z of zones) {
-      try {
-        const res = await runSuperForecast({
-          lat: z.lat,
-          lon: z.lon,
-          country,
-          region: z.region
-        });
-        byCountry[country].regions.push({ ...z, forecast: res?.forecast });
-        successCount++; totalPoints++;
-        addEngineLog(`✅ Prévisions ${country} — ${z.region}`);
-      } catch (e) {
-        await addEngineError(`❌ Prévisions ${country} — ${z.region}: ${e.message}`);
-        totalPoints++;
-      }
+      all.push({
+        country,
+        region: z.region,
+        lat: z.lat,
+        lon: z.lon,
+        continent: "Europe",
+      });
     }
   }
-
-  state.zonesCoveredEurope = byCountry;
-  state.zonesCoveredSummaryEurope = {
-    countries: Object.keys(byCountry).length,
-    points: totalPoints,
-    success: successCount
-  };
-  state.checkup.localForecastsEurope = successCount > 0 ? "OK" : "FAIL";
-  state.checkup.nationalForecastsEurope = Object.keys(byCountry).length > 0 ? "OK" : "FAIL";
-  await saveEngineState(state);   // ✅ await ajouté
-
-  addEngineLog("✅ Prévisions Europe terminées.");
-  return { summary: state.zonesCoveredSummaryEurope };
+  return all;
 }
 
-// ===========================
-// 2️⃣ Alertes Europe
-// ===========================
-export async function runEuropeAlerts() {
-  const state = await getEngineState();   // ✅ await ajouté
-  state.checkup = state.checkup || {};   
-  addEngineLog("🚨 Démarrage Alertes Europe…");
-
-  if (!state.zonesCoveredEurope) {
-    await addEngineError("❌ Impossible de générer les alertes : pas de prévisions Europe disponibles.");
-    return;
-  }
-
-  const alertsByCountry = {};
-  for (const [country, data] of Object.entries(state.zonesCoveredEurope)) {
-    alertsByCountry[country] = [];
-    for (const regionData of data.regions) {
-      try {
-        const alert = await generateAlerts(
-          regionData.lat,
-          regionData.lon,
-          country,
-          regionData.region,
-          "Europe"
-        );
-        alertsByCountry[country].push({ region: regionData.region, alert });
-        addEngineLog(`🚨 Alerte générée pour ${country} — ${regionData.region}`);
-      } catch (e) {
-        await addEngineError(`❌ Alerte ${country} — ${regionData.region}: ${e.message}`);
-      }
-    }
-  }
-
-  state.alertsEurope = alertsByCountry;
-  state.checkup.alertsEurope = "OK";
-  await saveEngineState(state);   // ✅ await ajouté
-
-  addEngineLog("✅ Alertes Europe terminées.");
-  return alertsByCountry;
-}
-
-// ===========================
-// 3️⃣ Chef d’orchestre : Run Global Europe
-// ===========================
-export async function runGlobalEurope() {
-  const state = await getEngineState();   // ✅ await ajouté
-  state.checkup = state.checkup || {};   
-  try {
-    addEngineLog("🌍 Démarrage RUN GLOBAL EUROPE (prévisions + alertes)…");
-    state.checkup.engineStatusEurope = "PENDING";
-    await saveEngineState(state);   // ✅ await ajouté
-
-    await runEuropeForecasts();
-    await runEuropeAlerts();
-
-    state.checkup.engineStatusEurope = "OK";
-    await saveEngineState(state);   // ✅ await ajouté
-
-    addEngineLog("✅ RUN GLOBAL EUROPE complet terminé avec succès.");
-    return {
-      forecasts: state.zonesCoveredSummaryEurope,
-      alerts: state.alertsEurope ? "OK" : "FAIL"
-    };
-  } catch (err) {
-    await addEngineError("❌ Erreur RUN GLOBAL EUROPE: " + err.message);
-    state.checkup.engineStatusEurope = "FAIL";
-    await saveEngineState(state);   // ✅ await ajouté
-    throw err;
-  }
-}
-
-export { EUROPE_ZONES };
+export default { EUROPE_ZONES, getAllEuropeZones };
