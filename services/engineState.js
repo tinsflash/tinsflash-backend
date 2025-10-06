@@ -1,8 +1,7 @@
 // PATH: services/engineState.js
-// 🔩 Gestion de l’état du moteur et des logs – version complète & connectée SSE + Render
+// 🧠 Suivi d'état du moteur TINSFLASH (vérifié – stable Render)
 
 import mongoose from "mongoose";
-import { broadcastLog } from "./adminLogs.js"; // ⬅️ liaison SSE
 
 const ErrorSchema = new mongoose.Schema({
   message: { type: String, required: true },
@@ -21,62 +20,60 @@ const EngineStateSchema = new mongoose.Schema({
   errors: { type: [ErrorSchema], default: [] },
   logs: { type: [LogSchema], default: [] },
   currentCycleId: { type: String, default: null },
-  alertsLocal: { type: Array, default: [] },
   forecastsContinental: { type: Object, default: {} },
+  alertsLocal: { type: Array, default: [] },
+  alertsWorld: { type: Array, default: [] },
   finalReport: { type: Object, default: {} },
 });
 
-// ✅ Préserve la cohérence de l’état
+// ✅ Maintenir cohérence minimale
 EngineStateSchema.pre("save", function (next) {
   if (!this.checkup) this.checkup = {};
   if (!this.checkup.engineStatus) this.checkup.engineStatus = "IDLE";
   next();
 });
 
+// ✅ Méthodes internes
+EngineStateSchema.methods.addLog = function (msg) {
+  this.logs.unshift({ message: msg, timestamp: new Date() });
+  if (this.logs.length > 500) this.logs.pop(); // on garde 500 max
+};
+
+EngineStateSchema.methods.addError = function (msg) {
+  this.errors.unshift({ message: msg, timestamp: new Date() });
+  if (this.errors.length > 500) this.errors.pop();
+};
+
+// === Modèle principal ===
 const EngineState = mongoose.model("EngineState", EngineStateSchema);
 
-// === Enregistrement des logs + sortie console + diffusion SSE ===
+// === Fonctions utilitaires exportées ===
+
+/** 🔵 Ajouter un log moteur */
 export async function addEngineLog(message) {
-  try {
-    let state = await EngineState.findOne();
-    if (!state) state = new EngineState();
+  let state = await EngineState.findOne();
+  if (!state) state = new EngineState();
 
-    state.logs.unshift({ message, timestamp: new Date() });
-    if (state.logs.length > 200) state.logs.pop();
-    await state.save();
+  state.addLog(message);
+  await state.save();
 
-    // Affiche dans Render
-    console.log("🛰️ LOG:", message);
-
-    // Diffuse SSE
-    if (typeof broadcastLog === "function") broadcastLog({ message, timestamp: new Date() });
-
-    return { ts: Date.now(), type: "INFO", message };
-  } catch (err) {
-    console.error("⚠️ Erreur addEngineLog:", err.message);
-  }
+  console.log("🛰️ LOG:", message);
+  return { ts: Date.now(), type: "INFO", message };
 }
 
+/** 🔴 Ajouter une erreur moteur */
 export async function addEngineError(message) {
-  try {
-    let state = await EngineState.findOne();
-    if (!state) state = new EngineState();
+  let state = await EngineState.findOne();
+  if (!state) state = new EngineState();
 
-    state.errors.unshift({ message, timestamp: new Date() });
-    if (state.errors.length > 200) state.errors.pop();
-    await state.save();
+  state.addError(message);
+  await state.save();
 
-    console.error("❌ ERREUR:", message);
-
-    if (typeof broadcastLog === "function")
-      broadcastLog({ message: "❌ " + message, timestamp: new Date() });
-
-    return { ts: Date.now(), type: "ERROR", message };
-  } catch (err) {
-    console.error("⚠️ Erreur addEngineError:", err.message);
-  }
+  console.error("⚠️ ERREUR:", message);
+  return { ts: Date.now(), type: "ERROR", message };
 }
 
+/** 📖 Récupérer l'état du moteur */
 export async function getEngineState() {
   let state = await EngineState.findOne();
   if (!state) {
@@ -86,8 +83,27 @@ export async function getEngineState() {
   return state;
 }
 
+/** 💾 Sauvegarder l'état du moteur */
 export async function saveEngineState(state) {
   return state.save();
+}
+
+/** 🧩 Mettre à jour une clé spécifique (utilisé par superForecast) */
+export async function updateEngineState(keyPath, value) {
+  let state = await EngineState.findOne();
+  if (!state) state = new EngineState();
+
+  const keys = keyPath.split(".");
+  let obj = state;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    if (!obj[k]) obj[k] = {};
+    obj = obj[k];
+  }
+  obj[keys[keys.length - 1]] = value;
+
+  await state.save();
+  return true;
 }
 
 export default EngineState;
