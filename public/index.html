@@ -7,7 +7,7 @@
   <title>TINSFLASH • Prévisions & Alertes en temps réel</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="index.css" />
+  <script src="index.js" defer></script>
   <style>
     body {
       margin: 0;
@@ -49,9 +49,9 @@
       margin-bottom: 25px;
     }
     .intro img.jean-avatar {
-      width: 150px;
+      width: 140px;
       height: auto;
-      border-radius: 12px;
+      border-radius: 10px;
       box-shadow: 0 0 20px rgba(0,200,255,0.4);
       flex-shrink: 0;
     }
@@ -82,7 +82,9 @@
       padding: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
-    .forecast-box h3 { color: #4fc3f7; }
+    .forecast-box h3 {
+      color: #4fc3f7;
+    }
     .blinking-box {
       animation: blink 1s infinite;
       background: rgba(0,255,255,0.1);
@@ -91,8 +93,8 @@
       border-radius: 8px;
     }
     @keyframes blink {
-      0%,100%{opacity:1;}
-      50%{opacity:0.6;}
+      0%,100% {opacity: 1;}
+      50% {opacity: 0.6;}
     }
     #map-forecast, #map-alerts {
       height: 380px;
@@ -108,17 +110,41 @@
       margin-top: 30px;
       font-size: 0.9em;
     }
-    footer a { color: #4fc3f7; text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+    footer a {color: #4fc3f7; text-decoration: none;}
+    footer a:hover {text-decoration: underline;}
+    #addressForm {
+      margin-top: 10px;
+      text-align: center;
+    }
+    #manualAddress {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      width: 240px;
+      background: #111;
+      color: #eee;
+    }
+    #btnLocate {
+      padding: 6px 12px;
+      background: #4fc3f7;
+      border: none;
+      color: #000;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
+
 <body>
   <header>🌍 TINSFLASH • Prévisions & Alertes en temps réel</header>
   <video autoplay muted loop playsinline>
     <source src="background-sunrise.mp4" type="video/mp4" />
   </video>
 
-  <div class="info-line">🛰 Données satellites • Modèles IA multi-sources • Spécificités locales (relief, altitude, océans)</div>
+  <div class="info-line">
+    🛰 Données satellites • Tous modèles météorologiques + modèles IA • Spécificités locales (relief, altitude, océans)
+  </div>
 
   <main>
     <section class="intro">
@@ -126,12 +152,11 @@
       <div class="intro-text">
         <h2>Présentation du moteur IA <b>J.E.A.N</b></h2>
         <p>
-          Le <b>moteur TINSFLASH</b> combine <b>l’ensemble des modèles météorologiques existants</b>
-          <i>plus les modèles d’intelligence artificielle de dernière génération</i>.  
-          Il croise ces données avec les images satellites, le relief, l’altitude,
-          l’humidité du sol et les microclimats pour fournir des
-          <b>prévisions locales, nationales et mondiales d’une précision inégalée</b>,
-          tout en anticipant <b>les alertes avant tout le monde</b>, où que vous soyez.
+          Le moteur <b>TINSFLASH</b> combine <b>l’ensemble des modèles météorologiques existants</b>
+          <i>et les modèles d’intelligence artificielle de dernière génération</i>.
+          Il croise les données satellites, le relief, l’altitude, les microclimats et la température du sol
+          pour fournir des <b>prévisions locales, nationales et mondiales d’une précision inégalée</b>,
+          tout en anticipant <b>les alertes avant tout le monde</b>.
         </p>
       </div>
     </section>
@@ -139,13 +164,23 @@
     <section>
       <h2>📍 Votre position</h2>
       <p id="user-location">Analyse de votre zone en cours...</p>
+      <div id="addressForm">
+        <input type="text" id="manualAddress" placeholder="Ex. Rue de Namur, Belgique" />
+        <button id="btnLocate">Valider l’adresse</button>
+      </div>
     </section>
 
     <section>
       <h2>📊 Prévisions du jour</h2>
       <div class="forecast-section">
-        <div class="forecast-box"><h3>🌆 Locales</h3><div id="local-forecast">Chargement...</div></div>
-        <div class="forecast-box"><h3>🏙 Nationales</h3><div id="national-forecast">Chargement...</div></div>
+        <div class="forecast-box">
+          <h3>🌆 Locales</h3>
+          <div id="local-forecast">Chargement...</div>
+        </div>
+        <div class="forecast-box">
+          <h3>🏙 Nationales</h3>
+          <div id="national-forecast">Chargement...</div>
+        </div>
       </div>
     </section>
 
@@ -176,85 +211,5 @@
     📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
     💬 WhatsApp : <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a>
   </footer>
-
-  <script src="index.js"></script>
-
-  <script>
-    // === Géolocalisation et interface dynamique ===
-    async function initPosition() {
-      const locEl = document.getElementById("user-location");
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const { latitude, longitude } = pos.coords;
-            locEl.innerHTML = `Latitude : ${latitude.toFixed(2)}, Longitude : ${longitude.toFixed(2)}`;
-            await loadForecastAndAvatar(latitude, longitude);
-          },
-          () => {
-            locEl.innerHTML = "📍 Géolocalisation refusée. Veuillez entrer une adresse manuellement.";
-          }
-        );
-      } else {
-        locEl.innerHTML = "❌ Géolocalisation non supportée.";
-      }
-    }
-
-    // === Lien entre avatar et météo ===
-    async function loadForecastAndAvatar(lat, lon) {
-      const avatar = document.getElementById("jeanAvatar");
-      try {
-        const res = await fetch(`/api/status`);
-        const data = await res.json();
-
-        // Vérifie si zone couverte
-        const covered = data?.checkup?.coveredPoints?.some(p =>
-          Math.abs(p.lat - lat) < 0.5 && Math.abs(p.lon - lon) < 0.5
-        );
-
-        // Détermine avatar selon météo
-        let condition = "default";
-        const f = data.forecasts?.local || data.forecasts?.national;
-        if (f?.today?.rain > 0) condition = "rain";
-        if (data.alertsLocal?.length > 0) condition = "alert";
-        if (f?.today?.sun) condition = "sun";
-
-        avatar.src = `avatars/jean-${condition}.png`;
-
-        // Marque la carte des zones couvertes
-        const mapF = L.map("map-forecast").setView([20, 10], 2);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-        (data.checkup?.coveredPoints || []).forEach(pt => {
-          L.circle([pt.lat, pt.lon], {
-            color: "green",
-            fillColor: "green",
-            fillOpacity: 0.4,
-            radius: 80000
-          }).addTo(mapF);
-        });
-
-        // Carte alertes
-        const mapA = L.map("map-alerts").setView([20, 10], 2);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-        (data.alertsWorld || []).forEach(a => {
-          L.circle([a.lat, a.lon], {
-            color: "red",
-            fillColor: "red",
-            fillOpacity: 0.6,
-            radius: 100000
-          }).addTo(mapA).bindPopup(a.title || "Alerte");
-        });
-
-        // Warning continent
-        if (!covered) {
-          document.getElementById("continent-warning").textContent =
-            "⚠️ Alertes sur votre continent — consultez la carte pour le détail.";
-        }
-      } catch (e) {
-        console.error("Erreur avatar/forecast:", e);
-      }
-    }
-
-    initPosition();
-  </script>
 </body>
 </html>
