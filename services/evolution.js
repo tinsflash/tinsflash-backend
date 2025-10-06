@@ -1,24 +1,21 @@
 // PATH: services/evolution.js
-// ♻️ Suivi automatique des alertes sur plusieurs runs
-// Compare les alertes actuelles avec celles précédentes et ajuste leur statut
+// ♻️ Suivi automatique des alertes TINSFLASH
+// Analyse les alertes de plusieurs runs, ajuste les niveaux de fiabilité et nettoie les anciennes
 
 import Alert from "../models/Alert.js";
 import { addEngineLog, addEngineError } from "./engineState.js";
 
 /**
- * Compare et met à jour les alertes selon les nouveaux runs.
- * - Si une alerte réapparaît → on augmente sa fiabilité
- * - Si elle disparaît → on incrémente disappearedRunsCount
- * - Si disappearedRunsCount >= 3 → suppression
- * - Si confiance >= 90 → publiée
- * - Si 70–89 → à valider
- * - Si 50–69 → sous surveillance
- * @param {Array} newAlerts alertes du run actuel
+ * ⚙️ Évolution automatique des alertes selon les nouveaux runs
+ * - Si une alerte réapparaît → fiabilité ↑
+ * - Si elle disparaît → compteur disparition ↑
+ * - Si 3 disparitions consécutives → suppression
+ * - Classement automatique selon la fiabilité
+ * - Historisation de chaque évolution
  */
 export async function evolveAlerts(newAlerts = []) {
   try {
     const prevAlerts = await Alert.find();
-
     const updated = [];
     const created = [];
     const deleted = [];
@@ -28,30 +25,31 @@ export async function evolveAlerts(newAlerts = []) {
         (old) =>
           old.title === newA.title &&
           old.country === newA.country &&
-          Math.abs(
-            new Date(old.issuedAt).getTime() - new Date(newA.createdAt).getTime()
-          ) < 1000 * 60 * 60 * 24 // même jour ±1
+          Math.abs(new Date(old.issuedAt) - new Date(newA.createdAt)) <
+            1000 * 60 * 60 * 24 // ± 24h
       );
 
       if (match) {
-        // === Réapparition : on actualise
+        // === Réapparition d'une alerte existante ===
         match.certainty = Math.min(100, (match.certainty + newA.confidence) / 2);
         match.disappearedRunsCount = 0;
 
         if (match.certainty >= 90) match.workflow = "published";
         else if (match.certainty >= 70) match.workflow = "toValidate";
         else if (match.certainty >= 50) match.workflow = "under-surveillance";
+        else match.workflow = "archived";
 
+        match.history = match.history || [];
         match.history.push({
           run: Date.now(),
           confidence: newA.confidence,
-          status: match.workflow,
+          workflow: match.workflow,
         });
 
         await match.save();
         updated.push(match);
       } else {
-        // === Nouvelle alerte
+        // === Nouvelle alerte ===
         const fresh = new Alert({
           title: newA.type,
           description: newA.message,
@@ -61,7 +59,9 @@ export async function evolveAlerts(newAlerts = []) {
               ? "extreme"
               : newA.confidence >= 70
               ? "high"
-              : "medium",
+              : newA.confidence >= 50
+              ? "medium"
+              : "low",
           certainty: newA.confidence,
           status: "✅ Premier détecteur",
           workflow:
@@ -69,19 +69,35 @@ export async function evolveAlerts(newAlerts = []) {
               ? "published"
               : newA.confidence >= 70
               ? "toValidate"
-              : "under-surveillance",
+              : newA.confidence >= 50
+              ? "under-surveillance"
+              : "archived",
+          disappearedRunsCount: 0,
+          history: [
+            {
+              run: Date.now(),
+              confidence: newA.confidence,
+              workflow:
+                newA.confidence >= 90
+                  ? "published"
+                  : newA.confidence >= 70
+                  ? "toValidate"
+                  : "under-surveillance",
+            },
+          ],
         });
+
         await fresh.save();
         created.push(fresh);
       }
     }
 
-    // === Alertes disparues
+    // === Traitement des alertes disparues ===
     for (const old of prevAlerts) {
-      const stillThere = newAlerts.some(
+      const stillActive = newAlerts.some(
         (n) => n.title === old.title && n.country === old.country
       );
-      if (!stillThere) {
+      if (!stillActive) {
         old.disappearedRunsCount = (old.disappearedRunsCount || 0) + 1;
         if (old.disappearedRunsCount >= 3) {
           await old.deleteOne();
@@ -95,22 +111,24 @@ export async function evolveAlerts(newAlerts = []) {
     }
 
     await addEngineLog(
-      `♻️ Évolution alertes: +${created.length} créées, ${updated.length} maj, ${deleted.length} supprimées`
+      `♻️ Évolution des alertes : ${created.length} créées, ${updated.length} mises à jour, ${deleted.length} supprimées`
     );
 
     return { created, updated, deleted };
   } catch (err) {
-    await addEngineError("Erreur évolution alertes: " + err.message);
+    await addEngineError("❌ Erreur évolution alertes : " + err.message);
     console.error("❌ Evolution alerts:", err);
     return { error: err.message };
   }
 }
 
 /**
- * Lancement manuel de la routine (utilisée par le moteur principal ou la console admin)
+ * 🚀 Lancement manuel ou via le moteur central
+ * - Met à jour toutes les alertes existantes
+ * - Applique les règles de suppression et de classification
  */
 export async function runEvolution() {
-  await addEngineLog("🚀 Lancement évolution automatique des alertes...");
+  await addEngineLog("🚀 Lancement de la routine d’évolution automatique des alertes...");
   const alerts = await Alert.find();
   const res = await evolveAlerts(alerts);
   await addEngineLog(
