@@ -2,145 +2,202 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TINSFLASH • Prévisions & Alertes en temps réel</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="index.js" defer></script>
+  <link rel="icon" href="favicon.ico" />
   <style>
     body {
+      font-family: "Segoe UI", Roboto, sans-serif;
       margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #0b0f19;
-      color: #eee;
+      background: #0b0f1a;
+      color: #e3f2fd;
+      overflow-x: hidden;
     }
+
     header {
+      background: #061324;
       text-align: center;
-      background: #081224;
-      padding: 15px;
+      padding: 10px 0;
       color: #4fc3f7;
       font-weight: bold;
-      font-size: 1.5em;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      font-size: 1.3em;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
     }
-    video {
+
+    /* === VIDEO INTRO === */
+    .video-container {
+      position: relative;
       width: 100%;
-      max-height: 260px;
+      height: 260px;
+      overflow: hidden;
+    }
+
+    .video-container video {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
+      filter: brightness(0.9);
     }
-    .info-line {
-      background: #0c1a2e;
+
+    .video-container .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.25);
       color: #4fc3f7;
-      text-align: center;
-      padding: 8px;
-      font-size: 1em;
+      text-shadow: 0 0 10px #000;
+      pointer-events: none;
     }
+
+    .video-container h1 {
+      font-size: 2em;
+      margin: 0;
+    }
+
+    .video-container p {
+      margin: 5px 0 0;
+      font-size: 1em;
+      color: #aeefff;
+    }
+
+    #soundToggle {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid #4fc3f7;
+      border-radius: 50%;
+      color: #4fc3f7;
+      font-size: 1.2em;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+      z-index: 5;
+    }
+
+    #soundToggle:hover {
+      background: rgba(79, 195, 247, 0.2);
+      transform: scale(1.1);
+    }
+
+    /* === INFO LINE === */
+    .info-line {
+      text-align: center;
+      background: #07192b;
+      color: #81d4fa;
+      padding: 6px;
+      font-size: 0.9em;
+      border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+    }
+
+    /* === INTRO SECTION === */
     main {
       padding: 20px;
-      max-width: 1200px;
-      margin: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
+
     .intro {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
+      gap: 15px;
+      max-width: 800px;
       flex-wrap: wrap;
-      gap: 20px;
-      margin-bottom: 25px;
     }
-    .intro img.jean-avatar {
-      width: 140px;
+
+    .jean-avatar {
+      width: 120px;
       height: auto;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,200,255,0.4);
-      flex-shrink: 0;
+      border-radius: 14px;
+      box-shadow: 0 0 15px rgba(0, 200, 255, 0.3);
+      transition: all 0.6s ease;
     }
+
+    .avatar-active {
+      filter: brightness(1.4) drop-shadow(0 0 25px rgba(0, 255, 255, 0.9));
+      transform: scale(1.1) rotate(2deg);
+      animation: pulseIA 0.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseIA {
+      from {
+        filter: brightness(1.2) drop-shadow(0 0 15px rgba(0, 255, 255, 0.4));
+      }
+      to {
+        filter: brightness(1.6) drop-shadow(0 0 35px rgba(0, 255, 255, 0.8));
+      }
+    }
+
     .intro-text {
       flex: 1;
-      text-align: justify;
-      font-size: 1.05em;
-      color: #ccc;
-      line-height: 1.6em;
+      color: #e3f2fd;
     }
-    h2 {
+
+    .intro-text h2 {
       color: #4fc3f7;
-      border-left: 4px solid #4fc3f7;
+      border-left: 3px solid #4fc3f7;
       padding-left: 10px;
-      margin-top: 30px;
     }
-    .forecast-section {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 20px;
-    }
-    .forecast-box {
-      background: #121b2c;
-      border-radius: 8px;
-      flex: 1;
-      min-width: 280px;
-      padding: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    .forecast-box h3 {
-      color: #4fc3f7;
-    }
-    .blinking-box {
-      animation: blink 1s infinite;
-      background: rgba(0,255,255,0.1);
-      border: 1px solid cyan;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    @keyframes blink {
-      0%,100% {opacity: 1;}
-      50% {opacity: 0.6;}
-    }
-    #map-forecast, #map-alerts {
-      height: 380px;
-      border-radius: 10px;
-      margin-top: 20px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.4);
-    }
-    footer {
-      text-align: center;
-      background: #081224;
-      color: #aaa;
-      padding: 15px;
-      margin-top: 30px;
-      font-size: 0.9em;
-    }
-    footer a {color: #4fc3f7; text-decoration: none;}
-    footer a:hover {text-decoration: underline;}
-    #addressForm {
-      margin-top: 10px;
-      text-align: center;
-    }
-    #manualAddress {
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid #333;
-      width: 240px;
-      background: #111;
-      color: #eee;
-    }
-    #btnLocate {
-      padding: 6px 12px;
-      background: #4fc3f7;
-      border: none;
-      color: #000;
-      border-radius: 6px;
+
+    /* === BULLE IA-AI === */
+    .ia-bubble {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      background: #03a9f4;
+      color: #fff;
+      border-radius: 30px;
+      padding: 12px 22px;
       font-weight: bold;
+      box-shadow: 0 0 20px rgba(3, 169, 244, 0.6);
       cursor: pointer;
+      transition: 0.3s ease;
+      z-index: 10;
+    }
+
+    .ia-bubble:hover {
+      background: #0288d1;
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(3, 169, 244, 0.8);
+    }
+
+    /* === FORECASTS === */
+    .forecast {
+      margin-top: 25px;
+      background: #081b2d;
+      padding: 15px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      color: #b3e5fc;
+      box-shadow: 0 0 10px rgba(0, 200, 255, 0.1);
     }
   </style>
 </head>
-
 <body>
   <header>🌍 TINSFLASH • Prévisions & Alertes en temps réel</header>
-  <video autoplay muted loop playsinline>
-    <source src="background-sunrise.mp4" type="video/mp4" />
-  </video>
+
+  <div class="video-container">
+    <video id="introVideo" autoplay muted loop playsinline>
+      <source src="intro-jean.mp4" type="video/mp4" />
+    </video>
+    <button id="soundToggle" title="Activer le son 🔊">🔇</button>
+    <div class="overlay">
+      <h1>🌌 TINSFLASH</h1>
+      <p>Prévisions et alertes IA en temps réel • Moteur J.E.A.N</p>
+    </div>
+  </div>
 
   <div class="info-line">
     🛰 Données satellites • Tous modèles météorologiques + modèles IA • Spécificités locales (relief, altitude, océans)
@@ -150,7 +207,7 @@
     <section class="intro">
       <img src="avatars/jean-default.png" alt="J.E.A.N" class="jean-avatar" id="jeanAvatar" />
       <div class="intro-text">
-        <h2>Présentation du moteur IA <b>J.E.A.N</b></h2>
+        <h2>Présentation du moteur IA J.E.A.N</h2>
         <p>
           Le moteur <b>TINSFLASH</b> combine <b>l’ensemble des modèles météorologiques existants</b>
           <i>et les modèles d’intelligence artificielle de dernière génération</i>.
@@ -161,55 +218,18 @@
       </div>
     </section>
 
-    <section>
-      <h2>📍 Votre position</h2>
-      <p id="user-location">Analyse de votre zone en cours...</p>
-      <div id="addressForm">
-        <input type="text" id="manualAddress" placeholder="Ex. Rue de Namur, Belgique" />
-        <button id="btnLocate">Valider l’adresse</button>
-      </div>
-    </section>
-
-    <section>
-      <h2>📊 Prévisions du jour</h2>
-      <div class="forecast-section">
-        <div class="forecast-box">
-          <h3>🌆 Locales</h3>
-          <div id="local-forecast">Chargement...</div>
-        </div>
-        <div class="forecast-box">
-          <h3>🏙 Nationales</h3>
-          <div id="national-forecast">Chargement...</div>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2>📅 Prévisions sur 7 jours</h2>
-      <div id="forecast-7days" class="forecast-section"></div>
-    </section>
-
-    <section>
-      <h2>⚠️ Alertes en temps réel</h2>
-      <div id="alerts" class="blinking-box">Chargement des alertes...</div>
-    </section>
-
-    <section>
-      <h2>🗺️ Carte mondiale des prévisions</h2>
-      <div id="map-forecast"></div>
-    </section>
-
-    <section>
-      <h2>🌎 Carte mondiale des alertes</h2>
-      <p id="continent-warning" style="text-align:center;color:#4fc3f7;"></p>
-      <div id="map-alerts"></div>
-    </section>
+    <div class="forecast">
+      <h3>Prévisions locales</h3>
+      <div id="local-forecast">Chargement...</div>
+      <h3>Prévisions nationales</h3>
+      <div id="national-forecast">Chargement...</div>
+      <h3>Prévisions sur 7 jours</h3>
+      <div id="forecast-7days">Chargement...</div>
+    </div>
   </main>
 
-  <footer>
-    © 2025 TINSFLASH – Tous droits réservés<br />
-    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
-    💬 WhatsApp : <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a>
-  </footer>
+  <div class="ia-bubble" id="iaBubble">IA-AI</div>
+
+  <script src="index.js"></script>
 </body>
 </html>
