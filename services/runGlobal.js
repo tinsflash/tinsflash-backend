@@ -6,7 +6,7 @@ import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
 import { runContinental } from "./runContinental.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
-import { generateAlerts, getActiveAlerts } from "./alertsService.js";
+import { generateAlerts, getActiveAlerts, runGlobalAlerts } from "./alertsService.js";
 import { askOpenAI } from "./openaiService.js";
 import {
   addEngineLog,
@@ -36,23 +36,17 @@ async function preRunChecks() {
       errors.push({ code: "MISSING_ENV", msg: `Variable ${key} manquante` });
 
   try {
-    const resp = await fetch(
-      "https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&hourly=temperature_2m"
-    );
-    if (!resp.ok)
-      errors.push({
-        code: "SRC_DOWN",
-        msg: `Service Open-Meteo non accessible (HTTP ${resp.status})`,
-      });
-  } catch (e) {
+    const resp = await fetch("https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&hourly=temperature_2m");
+    if (!resp.ok) errors.push({ code: "SRC_DOWN", msg: `Service Open-Meteo non accessible (HTTP ${resp.status})` });
+  } catch {
     errors.push({ code: "SRC_DOWN", msg: "Impossible d’accéder à Open-Meteo" });
   }
 
-  if (errors.length > 0) {
-    for (const e of errors)
-      await addEngineError(`PRECHECK ❌ ${e.code}: ${e.msg}`);
+  if (errors.length) {
+    for (const e of errors) await addEngineError(`PRECHECK ❌ ${e.code}: ${e.msg}`);
     throw new Error(`Pré-check échoué (${errors.length} erreur(s))`);
   }
+
   await addEngineLog("✅ Pré-checks terminés avec succès");
 }
 
@@ -71,23 +65,17 @@ export async function runGlobal(zone = "All") {
     state.checkup.engineStatus = "RUNNING";
     await saveEngineState(state);
 
-    // === PHASE 1 : Prévisions ===
+    /* === PHASE 1 : Prévisions === */
     await addEngineLog("📡 Phase 1 – Prévisions (Europe / USA)");
     const forecasts = {};
-    if (zone === "Europe" || zone === "All") {
-      forecasts.Europe = await runGlobalEurope().catch((e) =>
-        addEngineError("❌ Europe : " + e.message)
-      );
-    }
-    if (zone === "USA" || zone === "All") {
-      forecasts.USA = await runGlobalUSA().catch((e) =>
-        addEngineError("❌ USA : " + e.message)
-      );
-    }
+    if (zone === "Europe" || zone === "All")
+      forecasts.Europe = await runGlobalEurope().catch((e) => addEngineError("❌ Europe : " + e.message));
+    if (zone === "USA" || zone === "All")
+      forecasts.USA = await runGlobalUSA().catch((e) => addEngineError("❌ USA : " + e.message));
 
-    // === PHASE 2 : Continental ===
+    /* === PHASE 2 : Continental === */
     if (zone === "All") {
-      await addEngineLog("🌐 Phase 2 – Continental (fallback)");
+      await addEngineLog("🌐 Phase 2 – Prévisions continentales (fallback)");
       try {
         const cont = await runContinental();
         forecasts.Continental = cont?.forecasts || {};
@@ -98,7 +86,7 @@ export async function runGlobal(zone = "All") {
       }
     }
 
-    // === PHASE 3 : Alertes locales/nationales ===
+    /* === PHASE 3 : Alertes locales/nationales === */
     await addEngineLog("🚨 Phase 3 – Génération alertes locales/nationales...");
     for (const [country, zones] of Object.entries(ALL_ZONES)) {
       for (const z of zones) {
@@ -112,21 +100,31 @@ export async function runGlobal(zone = "All") {
     state.alertsLocal = alerts;
     await addEngineLog(`✅ ${alerts.length} alertes locales/nationales générées`);
 
-    // === PHASE 4 : Alertes continentales ===
+    /* === 🧠 PHASE 3B : RUN GLOBAL ALERTS COMPLET === */
+    if (zone === "All") {
+      await addEngineLog("🌎 Phase 3B – Lancement moteur global des alertes (fusion zones + continental)...");
+      try {
+        const globalResults = await runGlobalAlerts();
+        state.alertsGlobal = globalResults;
+        await addEngineLog(`✅ ${globalResults.length} alertes globales consolidées`);
+      } catch (e) {
+        await addEngineError("⚠️ Erreur runGlobalAlerts : " + e.message);
+      }
+    }
+
+    /* === PHASE 4 : Alertes continentales === */
     if (zone === "All") {
       await addEngineLog("🌎 Phase 4 – Alertes continentales...");
       try {
         const cont = await runContinental();
         state.alertsContinental = cont?.alerts || [];
-        await addEngineLog(
-          `✅ ${state.alertsContinental.length} alertes continentales`
-        );
+        await addEngineLog(`✅ ${state.alertsContinental.length} alertes continentales`);
       } catch (e) {
         await addEngineError("⚠️ Continental alertes : " + e.message);
       }
     }
 
-    // === PHASE 5 : Fusion mondiale ===
+    /* === PHASE 5 : Fusion mondiale === */
     if (zone === "All") {
       await addEngineLog("🌍 Phase 5 – Fusion mondiale des alertes...");
       const world = await runWorldAlerts().catch((e) =>
@@ -136,16 +134,12 @@ export async function runGlobal(zone = "All") {
       await addEngineLog(`✅ Fusion mondiale terminée (${world?.length || 0})`);
     }
 
-    // === PHASE 6 : Fusion IA J.E.A.N ===
+    /* === PHASE 6 : Fusion IA J.E.A.N === */
     await addEngineLog("🤖 Phase 6 – Fusion IA J.E.A.N...");
     try {
-      const aiInput = {
-        forecasts,
-        alerts: state.alertsLocal,
-        world: state.alertsWorld,
-      };
+      const aiInput = { forecasts, alerts: state.alertsLocal, world: state.alertsWorld };
       const aiResponse = await askOpenAI(
-        "Tu es J.E.A.N., système d’analyse météo. Fournis une synthèse lisible et fiable.",
+        "Tu es J.E.A.N., système d’analyse météo nucléaire. Fournis une synthèse lisible, concise et fiable.",
         JSON.stringify(aiInput)
       );
       state.finalReport = JSON.parse(aiResponse || "{}");
@@ -154,7 +148,7 @@ export async function runGlobal(zone = "All") {
       await addEngineError("⚠️ IA indisponible : " + e.message);
     }
 
-    // === PHASE 7 : Cross-check ===
+    /* === PHASE 7 : Cross-check (NWS / MeteoAlarm) === */
     if (zone === "USA" || zone === "All") {
       try {
         const nws = await weatherGovService.crossCheck(forecasts.USA, alerts);
@@ -174,7 +168,7 @@ export async function runGlobal(zone = "All") {
       }
     }
 
-    // === FINALISATION ===
+    /* === FINALISATION === */
     state.status = "ok";
     state.checkup.engineStatus = "OK";
     state.lastRun = new Date();
