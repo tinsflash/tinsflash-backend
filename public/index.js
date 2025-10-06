@@ -1,93 +1,136 @@
 const API_BASE = "/api";
+let userLat = null, userLon = null;
 
-// === BOUTON SON ===
-document.addEventListener("DOMContentLoaded", () => {
-  const video = document.getElementById("introVideo");
-  const btn = document.getElementById("soundToggle");
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Erreur API");
+  return res.json();
+}
 
-  if (btn && video) {
-    btn.addEventListener("click", () => {
-      if (video.muted) {
-        video.muted = false;
-        btn.textContent = "🔊";
-      } else {
-        video.muted = true;
-        btn.textContent = "🔇";
+// === Gestion vidéo ===
+const video = document.getElementById("introVideo");
+const soundToggle = document.getElementById("soundToggle");
+soundToggle.onclick = () => {
+  video.muted = !video.muted;
+  soundToggle.textContent = video.muted ? "🔇" : "🔊";
+};
+
+// === Géolocalisation ===
+async function useGeoloc() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userLat = pos.coords.latitude;
+        userLon = pos.coords.longitude;
+        loadAll();
+      },
+      () => alert("Géolocalisation refusée")
+    );
+  } else alert("Géolocalisation non supportée");
+}
+
+async function manualAddress() {
+  const address = document.getElementById("address").value;
+  if (!address) return alert("Entrez une adresse complète");
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
+  );
+  const data = await res.json();
+  if (data.length) {
+    userLat = parseFloat(data[0].lat);
+    userLon = parseFloat(data[0].lon);
+    loadAll();
+  } else alert("Adresse non trouvée");
+}
+
+// === Chargement des prévisions ===
+async function loadForecasts() {
+  try {
+    const res = await fetchJSON(`${API_BASE}/status`);
+    const f = res.forecasts || {};
+    const local = f.local || {}, national = f.national || {};
+
+    document.getElementById("local-today").innerHTML = local.today
+      ? `<b>${local.today.summary}</b><br>${local.today.temp_min}°C / ${local.today.temp_max}°C`
+      : "Prévision locale indisponible";
+
+    document.getElementById("national-today").innerHTML = national.today
+      ? `<b>${national.today.summary}</b><br>${national.today.temp_min}°C / ${national.today.temp_max}°C`
+      : "Prévision nationale indisponible";
+
+    // Avatar dynamique
+    const avatar = document.getElementById("jeanAvatar");
+    let mood = "default";
+    const s = (local.today?.summary || "").toLowerCase();
+    if (s.includes("pluie")) mood = "rain";
+    else if (s.includes("neige")) mood = "snow";
+    else if (s.includes("orage")) mood = "storm";
+    else if (s.includes("soleil")) mood = "sun";
+    avatar.src = `avatars/jean-${mood}.png`;
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// === Alertes ===
+async function loadAlerts() {
+  const res = await fetchJSON(`${API_BASE}/alerts`);
+  const div = document.getElementById("alerts");
+  div.innerHTML = "";
+  if (!res.length) {
+    div.innerHTML = "<p>Aucune alerte active</p>";
+    return;
+  }
+  res.forEach((a) => {
+    const p = document.createElement("p");
+    p.innerHTML = `⚠️ <strong>${a.zone || a.country}</strong> – ${a.title || a.type || "Alerte"} (${a.level || "info"})`;
+    if (a.level === "high") p.className = "blink";
+    div.appendChild(p);
+  });
+}
+
+// === Cartes ===
+function initMaps() {
+  const mapForecast = L.map("map-forecast").setView([20, 10], 2);
+  const mapAlerts = L.map("map-alerts").setView([20, 10], 2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
+
+  // Couverture verte / bleue
+  fetchJSON(`${API_BASE}/status`).then((data) => {
+    const covered = data?.checkup?.coveredPoints || [];
+    covered.forEach((p) =>
+      L.circle([p.lat, p.lon], { color: "lime", radius: 80000 }).addTo(mapForecast)
+    );
+  });
+
+  // Alertes mondiales
+  fetchJSON(`${API_BASE}/alerts`).then((alerts) => {
+    alerts.forEach((a) => {
+      if (a.lat && a.lon) {
+        L.circle([a.lat, a.lon], {
+          color: a.level === "high" ? "red" : "orange",
+          radius: 100000,
+        }).addTo(mapAlerts).bindPopup(a.title || "Alerte");
       }
     });
-  }
-});
-
-// === FETCH JSON ===
-async function fetchJSON(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Erreur HTTP " + res.status);
-    return await res.json();
-  } catch (e) {
-    console.error("❌ Erreur fetch :", e.message);
-    return null;
-  }
+  });
 }
 
-// === AVATAR DYNAMIQUE J.E.A.N ===
-async function updateJeanAvatar(summary = "") {
-  const avatar = document.getElementById("jeanAvatar");
-  if (!avatar) return;
-
-  summary = summary.toLowerCase();
-  let avatarSrc = "avatars/jean-default.png";
-
-  if (summary.includes("pluie") || summary.includes("rain")) avatarSrc = "avatars/jean-rain.png";
-  else if (summary.includes("neige") || summary.includes("snow")) avatarSrc = "avatars/jean-snow.png";
-  else if (summary.includes("orage") || summary.includes("storm") || summary.includes("tempête")) avatarSrc = "avatars/jean-storm.png";
-  else if (summary.includes("soleil") || summary.includes("sun") || summary.includes("clair")) avatarSrc = "avatars/jean-sun.png";
-  else if (summary.includes("alerte") || summary.includes("warning")) avatarSrc = "avatars/jean-alert.png";
-  else if (summary.includes("ia") || summary.includes("analyse")) avatarSrc = "avatars/jean-ai.png";
-  else if (summary.includes("tablette") || summary.includes("data")) avatarSrc = "avatars/jean-tablet.png";
-
-  avatar.classList.add("avatar-active");
-  setTimeout(() => {
-    avatar.src = avatarSrc;
-    avatar.classList.remove("avatar-active");
-  }, 600);
+// === Lancer tout ===
+function loadAll() {
+  loadForecasts();
+  loadAlerts();
+  initMaps();
 }
 
-// === PREVISIONS LOCALES ===
-async function loadForecast(lat = 50.5, lon = 4.7) {
-  const local = document.getElementById("local-forecast");
-  const national = document.getElementById("national-forecast");
-  const week = document.getElementById("forecast-7days");
-
-  local.innerHTML = national.innerHTML = week.innerHTML = "Chargement...";
-
-  const localData = await fetchJSON(`${API_BASE}/forecast/local?lat=${lat}&lon=${lon}`);
-  const nationalData = await fetchJSON(`${API_BASE}/forecast/national?lat=${lat}&lon=${lon}`);
-  const weekData = await fetchJSON(`${API_BASE}/forecast/7days?lat=${lat}&lon=${lon}`);
-
-  if (localData) {
-    local.innerHTML = `<b>${localData.summary}</b><br>🌡 ${localData.temperature_min}°C / ${localData.temperature_max}°C<br>💨 ${localData.wind} km/h`;
-    updateJeanAvatar(localData.summary || "");
-  } else local.innerHTML = "❌ Erreur chargement prévisions locales";
-
-  if (nationalData)
-    national.innerHTML = `<b>${nationalData.country}</b><br>🌡 ${nationalData.temperature_min}°C / ${nationalData.temperature_max}°C<br>🌧 ${nationalData.precipitation} mm`;
-  else national.innerHTML = "❌ Erreur prévisions nationales";
-
-  if (weekData && Array.isArray(weekData))
-    week.innerHTML = weekData
-      .map((d) => `<div>📅 ${d.date} – ${d.summary} – ${d.temperature_min}°C / ${d.temperature_max}°C</div>`)
-      .join("");
-  else week.innerHTML = "❌ Erreur prévisions 7 jours";
+// === Chat IA future ===
+function openJeanChat() {
+  alert("👋 Ici J.E.A.N – module IA-AI en développement (Premium à venir)");
 }
 
-// === GEOLOCALISATION ===
-navigator.geolocation.getCurrentPosition(
-  (pos) => loadForecast(pos.coords.latitude, pos.coords.longitude),
-  () => loadForecast(50.5, 4.7)
-);
-
-// === Bulle IA-AI ===
-document.getElementById("iaBubble").addEventListener("click", () => {
-  alert("👋 Ici J.E.A.N – Mode conversation IA bientôt actif !");
+// === Auto start ===
+document.addEventListener("DOMContentLoaded", () => {
+  useGeoloc();
 });
