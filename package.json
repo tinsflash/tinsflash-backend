@@ -4,8 +4,8 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node --max-old-space-size=2048 server.js",
+    "dev": "nodemon --max-old-space-size=2048 server.js"
   },
   "engines": {
     "node": "22.x"
