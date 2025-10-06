@@ -1,5 +1,5 @@
 // ==========================================================
-// 🧠 TINSFLASH Meteorological Nuclear Core
+// 🧠 TINSFLASH Meteorological Core
 // 🚀 Serveur principal connecté – 100 % réel, zéro démo
 // ==========================================================
 import express from "express";
@@ -25,7 +25,18 @@ const __dirname  = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// ==========================================================
+// 🌍 Dossiers statiques – tout ce qui est public et visible Render
+// ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
+
+// ✅ Force les ressources statiques principales (Render bug fix)
+app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
+app.use("/videos", express.static(path.join(__dirname, "public/videos")));
+app.use("/media", express.static(path.join(__dirname, "public")));
+app.use("/scripts", express.static(path.join(__dirname, "public")));
+app.use("/assets", express.static(path.join(__dirname, "public")));
 
 // ==========================================================
 // 🔌 Connexion MongoDB (logs, alertes, états moteur)
@@ -98,9 +109,9 @@ app.get("/api/status", async (_, res) => {
       finalReport: state?.finalReport || null,
       engineErrors: state?.errors || [],
 
-      // 💚 Zones réellement couvertes (vert)
+      // 💚 Zones couvertes par le moteur (vert)
       coveredZones: enumerateCoveredPoints(),
-      // 💙 Zones non couvertes (préparées pour Open Data)
+      // 💙 Zones non couvertes (OpenData)
       uncoveredZones: [],
     });
   } catch (e) {
@@ -255,6 +266,6 @@ for (const page of adminPages) {
 // ==========================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`⚡ Centrale TINSFLASH prête sur port ${PORT}`);
+  console.log(`⚡ TINSFLASH prêt sur port ${PORT}`);
   console.log("🌍 Couverture :", enumerateCoveredPoints().length, "points actifs (zones vertes).");
 });
