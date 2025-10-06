@@ -4,204 +4,341 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH • Prévisions & Alertes en temps réel</title>
+  <title>TINSFLASH • Centrale Nucléaire Météo J.E.A.N.</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    body{margin:0;font-family:"Segoe UI",sans-serif;background:#0c1220;color:#eee}
-    header{text-align:center;padding:15px;background:linear-gradient(90deg,#18243b,#101725);color:#4fc3f7;font-size:1.6em;font-weight:bold}
-    video{width:100%;max-height:260px;object-fit:cover;display:block}
-    main{padding:20px;max-width:1200px;margin:auto}
-    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px}
-    p.intro{text-align:justify;color:#ccc;font-size:1.05em;line-height:1.6em;margin-bottom:20px}
-    .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px}
-    footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:.9em}
-    footer a{color:#4fc3f7;text-decoration:none}
-    footer a:hover{text-decoration:underline}
-
-    .jean-section{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
-    .jean-avatar{width:130px;height:130px;border-radius:50%;box-shadow:0 0 25px rgba(79,195,247,.6);animation:floatAvatar 4s ease-in-out infinite}
-    @keyframes floatAvatar{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-    .nasa-line{text-align:center;background:#111a2e;color:#4fc3f7;padding:10px;border-radius:8px;font-size:.95em;margin-top:10px}
-    .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,.4)}
-    iframe{width:100%;height:450px;border:none;margin-top:25px;border-radius:10px}
-
-    /* === Chat === */
-    #chat-trigger{position:fixed;bottom:28px;right:28px;width:22px;height:22px;border-radius:50%;background:#00bfff;box-shadow:0 0 18px 6px rgba(0,191,255,.7);cursor:pointer;z-index:9999;animation:pulse 2s infinite}
-    @keyframes pulse{0%{box-shadow:0 0 0 rgba(0,191,255,.7)}50%{box-shadow:0 0 20px 10px rgba(0,191,255,.4)}100%{box-shadow:0 0 0 rgba(0,191,255,.7)}}
-    .chat-box{position:fixed;bottom:65px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:310px;height:380px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,.5);z-index:9998}
-    .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:5px;font-weight:bold;border-radius:10px 10px 0 0}
-    .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423}
-    .chat-input{display:flex;border-top:1px solid #333}
-    .chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;border-radius:0 0 0 10px}
-    .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;border-radius:0 0 10px 0;cursor:pointer;font-weight:bold}
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #0c1220;
+      color: #eee;
+    }
+    header {
+      text-align: center;
+      padding: 15px;
+      background: linear-gradient(90deg, #18243b, #101725);
+      color: #4fc3f7;
+      font-size: 1.6em;
+      font-weight: bold;
+      text-shadow: 0 0 6px #4fc3f7;
+    }
+    video {
+      width: 100%;
+      max-height: 260px;
+      object-fit: cover;
+      display: block;
+    }
+    .intro-nasa {
+      background: radial-gradient(circle at center, #1b2a4a 0%, #0c1220 100%);
+      text-align: center;
+      padding: 15px 20px;
+      color: #9edcff;
+      font-size: 1.1em;
+      border-bottom: 1px solid #1c273d;
+    }
+    main {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    h2 {
+      color: #4fc3f7;
+      border-left: 4px solid #4fc3f7;
+      padding-left: 10px;
+      margin-top: 30px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    h2 img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #00bfff;
+    }
+    p.intro {
+      text-align: justify;
+      color: #ccc;
+      font-size: 1.05em;
+      line-height: 1.6em;
+      margin-bottom: 30px;
+    }
+    .map-container {
+      height: 360px;
+      margin: 25px 0;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+    }
+    iframe {
+      width: 100%;
+      height: 450px;
+      border: none;
+      margin-top: 25px;
+      border-radius: 10px;
+    }
+    footer {
+      text-align: center;
+      background: #111827;
+      color: #ccc;
+      padding: 15px;
+      font-size: 0.9em;
+    }
+    footer a {
+      color: #4fc3f7;
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+    /* === Chat J.E.A.N. === */
+    .point-chat {
+      position: fixed;
+      bottom: 60px;
+      right: 40px;
+      width: 22px;
+      height: 22px;
+      background: #00bfff;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #00bfff;
+      cursor: pointer;
+      z-index: 999;
+    }
+    .chat-box {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      background: #1b2439;
+      border: 2px solid #4fc3f7;
+      border-radius: 12px;
+      width: 310px;
+      height: 380px;
+      display: none;
+      flex-direction: column;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+    }
+    .chat-header {
+      background: #4fc3f7;
+      color: #000;
+      text-align: center;
+      padding: 5px;
+      font-weight: bold;
+      border-radius: 10px 10px 0 0;
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 8px;
+      overflow-y: auto;
+      font-size: 14px;
+      background: #0e1423;
+    }
+    .chat-input {
+      display: flex;
+      border-top: 1px solid #333;
+    }
+    .chat-input input {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: #1b2339;
+      color: #eee;
+    }
+    .chat-input button {
+      background: #4fc3f7;
+      border: none;
+      color: #000;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .banner {
+      background: #16233a;
+      color: #4fc3f7;
+      padding: 12px;
+      text-align: center;
+      font-weight: bold;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
+    .geo {
+      text-align: center;
+      background: #16233a;
+      padding: 12px;
+      border-radius: 10px;
+      color: #4fc3f7;
+      margin-bottom: 20px;
+    }
+    input#manualAddress {
+      width: 80%;
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: none;
+      background: #0f182e;
+      color: #fff;
+    }
+    button#locateBtn {
+      margin-top: 10px;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 6px;
+      background: #4fc3f7;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
-
 <body>
-<header>TINSFLASH • Prévisions & Alertes en temps réel – Monde</header>
-<video autoplay muted loop playsinline><source src="intro-jean.mp4" type="video/mp4" /></video>
+  <header>TINSFLASH • Centrale Nucléaire Météo J.E.A.N.</header>
+  <video autoplay muted loop playsinline>
+    <source src="intro-jean.mp4" type="video/mp4" />
+  </video>
 
-<main>
-  <h2>Présentation du système J.E.A.N.</h2>
-  <div class="jean-section">
-    <div class="jean-text">
-      <p class="intro">
-        Le <strong>Système J.E.A.N.</strong> croise en temps réel les données satellites,
-        les modèles numériques et les modèles IA multi-sources.  
-        Il intègre le relief, l’humidité, la température du sol et les microclimats
-        pour fournir des prévisions <strong>fiables, locales, nationales et mondiales</strong>,
-        tout en anticipant les anomalies météo susceptibles d’évoluer en alertes — 
-        <strong>avant tous les autres !</strong>
-      </p>
-      <div class="nasa-line">
-        🛰️ Modèles météorologiques IA, images satellites et reliefs intégrés : précision atomique et analyses en temps réel.
-      </div>
+  <div class="intro-nasa">
+    🔬 Données satellites • Modèles IA multi-sources • Spécificités locales (relief, altitude, océans)
+  </div>
+
+  <main>
+    <h2>
+      <img src="avatars/jean-default.png" alt="Avatar J.E.A.N." />
+      Présentation du système J.E.A.N.
+    </h2>
+
+    <p class="intro">
+      Le <strong>Système J.E.A.N.</strong> croise en temps réel les données satellites,
+      modèles numériques et intelligences artificielles multi-sources.
+      Il analyse le relief, l’humidité, la température du sol et les microclimats
+      pour fournir des prévisions <strong>fiables, locales, nationales et mondiales</strong>,
+      tout en anticipant les anomalies météorologiques susceptibles d’évoluer en alertes.
+    </p>
+
+    <div class="geo">
+      <p><strong>📍 Votre position</strong></p>
+      <button id="locateBtn">Activer la géolocalisation</button><br>
+      ou entrez votre adresse :
+      <input type="text" id="manualAddress" placeholder="Rue, ville, pays" />
     </div>
-    <div><img src="avatars/jean-default.png" alt="IA J.E.A.N" class="jean-avatar" /></div>
+
+    <h2>Prévisions locales et nationales</h2>
+    <div id="forecastZone">Chargement...</div>
+
+    <h2>Alertes météo</h2>
+    <div id="alertsZone">Chargement...</div>
+
+    <h2>Carte couverture prévisions</h2>
+    <div id="mapCoverage" class="map-container"></div>
+
+    <h2>Carte mondiale des alertes</h2>
+    <div id="mapAlerts" class="map-container"></div>
+
+    <div class="banner">
+      🔧 Pour vos diagnostics et détections de fuites :
+      <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
+    </div>
+  </main>
+
+  <footer>
+    © 2025 TINSFLASH – Tous droits réservés<br />
+    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
+    💬 WhatsApp :
+    <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a><br />
+    <em>Contactez-nous pour tout partenariat ou achat du moteur J.E.A.N.</em>
+  </footer>
+
+  <!-- CHAT POINT -->
+  <div class="point-chat" id="chatTrigger"></div>
+  <div class="chat-box" id="chatJean">
+    <div class="chat-header">Assistant J.E.A.N.</div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="Écris à J.E.A.N..." />
+      <button onclick="sendChat()">Envoyer</button>
+    </div>
   </div>
 
-  <h2>📍 Votre position</h2>
-  <p id="position-status">Analyse de votre zone en cours...</p>
-  <div id="manual-location" style="display:none;">
-    <input id="addressInput" type="text" placeholder="Rue, localité, pays" style="padding:6px;width:70%;border-radius:6px;border:none;background:#111a2e;color:#eee"/>
-    <button onclick="manualLocate()" style="padding:6px 10px;border:none;border-radius:6px;background:#4fc3f7;color:#000;font-weight:bold;">Valider</button>
-  </div>
+  <script>
+    const API_BASE = "/api";
 
-  <h2>Prévisions du jour</h2>
-  <div id="local-forecast">Chargement...</div>
-  <div id="national-forecast">Chargement...</div>
+    document.getElementById("chatTrigger").addEventListener("click", () => {
+      const chat = document.getElementById("chatJean");
+      chat.style.display = chat.style.display === "flex" ? "none" : "flex";
+    });
 
-  <h2>Prévisions sur 7 jours</h2>
-  <div id="forecast-7days">Chargement...</div>
-
-  <h2>Alertes actives</h2>
-  <div id="alerts">Chargement...</div>
-
-  <h2>Carte des zones couvertes</h2>
-  <div id="map-forecast" class="map-container"></div>
-
-  <h2>Carte mondiale des alertes</h2>
-  <div id="map-alerts" class="map-container"></div>
-
-  <iframe src="https://embed.windy.com/embed2.html?lat=20&lon=10&zoom=2&level=surface&overlay=rain&menu=true&marker=false&calendar=24&pressure=true&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default" loading="lazy"></iframe>
-
-  <div class="banner">
-    🔧 Pour vos diagnostics et détections de fuites :
-    <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
-  </div>
-</main>
-
-<footer>
-  © 2025 TINSFLASH – Tous droits réservés<br>
-  📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
-  💬 <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a><br>
-  <em>Contactez-nous pour tout partenariat ou achat du moteur J.E.A.N.</em>
-</footer>
-
-<!-- Chat -->
-<div id="chat-trigger" title="Parler à J.E.A.N."></div>
-<div class="chat-box" id="chatJean">
-  <div class="chat-header">Assistant J.E.A.N.</div>
-  <div class="chat-messages" id="chatMessages"></div>
-  <div class="chat-input">
-    <input type="text" id="chatInput" placeholder="Écris à J.E.A.N…" />
-    <button onclick="sendChat()">Envoyer</button>
-  </div>
-</div>
-
-<script src="index.js"></script>
-<script>
-const API_BASE="https://tinsflash-backend.onrender.com/api";
-
-/* === Géolocalisation === */
-navigator.geolocation.getCurrentPosition(
-  pos=>{
-    const {latitude,longitude}=pos.coords;
-    document.getElementById("position-status").textContent=`📡 Localisation détectée : ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
-    loadForecast(latitude,longitude);
-  },
-  ()=>{document.getElementById("manual-location").style.display="block";}
-);
-async function manualLocate(){
-  const address=document.getElementById("addressInput").value.trim();
-  if(!address)return;
-  document.getElementById("position-status").textContent=`📍 Adresse : ${address}`;
-  const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`).then(r=>r.json());
-  if(geo.length)loadForecast(geo[0].lat,geo[0].lon);
-}
-
-/* === Prévisions === */
-async function loadForecast(lat,lon){
-  try{
-    const res=await fetch(`${API_BASE}/status`);
-    const data=await res.json();
-    const covered=data?.checkup?.coveredPoints||[];
-    const isCovered=covered.some(z=>Math.abs(z.lat-lat)<1 && Math.abs(z.lon-lon)<1);
-    if(isCovered){
-      const local=await fetch(`${API_BASE}/forecast/local`).then(r=>r.json());
-      const nat=await fetch(`${API_BASE}/forecast/national`).then(r=>r.json());
-      renderForecast(local,nat,true);
-    }else{
-      const ow=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`).then(r=>r.json());
-      renderForecastOpen(ow);
+    async function sendChat() {
+      const input = document.getElementById("chatInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+      const messages = document.getElementById("chatMessages");
+      messages.innerHTML += `<div style="color:#4fc3f7;">Vous: ${msg}</div>`;
+      input.value = "";
+      const res = await fetch("/api/jean", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      messages.innerHTML += `<div>J.E.A.N: ${data.reply}</div>`;
+      messages.scrollTop = messages.scrollHeight;
     }
-  }catch(e){console.error(e);}
-}
-function renderForecast(local,nat){
-  document.getElementById("local-forecast").innerHTML=`🌡 ${local.temperature_min}°C / ${local.temperature_max}°C<br>💨 ${local.wind} km/h<br>🌧 ${local.precipitation} mm<br>🔒 Fiabilité ${local.reliability}%`;
-  document.getElementById("national-forecast").innerHTML=`📍${nat.country}<br>🌡 ${nat.temperature_min}°C / ${nat.temperature_max}°C<br>💨 ${nat.wind} km/h<br>🌧 ${nat.precipitation} mm`;
-}
-function renderForecastOpen(ow){
-  const c=ow.current_weather;
-  document.getElementById("local-forecast").innerHTML=`🔵 Zone open-data :<br>🌡 ${c.temperature}°C<br>💨 ${c.windspeed} km/h`;
-  document.getElementById("national-forecast").innerHTML="—";
-}
 
-/* === Alertes === */
-(async()=>{
-  const alerts=await fetch(`${API_BASE}/alerts`).then(r=>r.json());
-  const div=document.getElementById("alerts");
-  div.innerHTML="";
-  alerts.forEach(a=>{
-    div.innerHTML+=`<p>⚠️ <b>${a.country||a.zone}</b> – ${a.title||a.type||"Alerte"} (${a.level||"info"})</p>`;
-    if(a.lat&&a.lon){
-      L.circleMarker([a.lat,a.lon],{radius:6,color:a.level==="high"?"red":"orange",fillOpacity:.8})
-      .addTo(mapAlerts).bindPopup(`${a.title||"Alerte"}<br>${a.country}`);
+    // === Géolocalisation ===
+    document.getElementById("locateBtn").addEventListener("click", () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => loadForecast(pos.coords.latitude, pos.coords.longitude),
+          () => alert("Géolocalisation refusée, entrez votre adresse.")
+        );
+      }
+    });
+
+    document.getElementById("manualAddress").addEventListener("change", async e => {
+      const addr = e.target.value;
+      if (addr.length < 4) return;
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${addr}`);
+      const data = await res.json();
+      if (data.length) loadForecast(data[0].lat, data[0].lon);
+    });
+
+    // === Prévisions ===
+    async function loadForecast(lat, lon) {
+      const res = await fetch(`${API_BASE}/status`);
+      const data = await res.json();
+      const covered = data.checkup?.coveredPoints?.some(
+        p => Math.abs(p.lat - lat) < 2 && Math.abs(p.lon - lon) < 2
+      );
+      document.getElementById("forecastZone").innerHTML = covered
+        ? "✅ Zone couverte : Prévisions réelles du moteur TINSFLASH"
+        : "🌍 Zone non couverte : Données OpenData météo (Premium → 48h ouverture)";
     }
-  });
-})();
 
-/* === Cartes === */
-const mapForecast=L.map("map-forecast").setView([20,10],2);
-const mapAlerts=L.map("map-alerts").setView([20,10],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
+    // === Alertes ===
+    async function loadAlerts() {
+      const res = await fetch(`${API_BASE}/alerts`);
+      const alerts = await res.json();
+      const div = document.getElementById("alertsZone");
+      div.innerHTML = "";
+      alerts.forEach(a => {
+        const p = document.createElement("p");
+        p.innerHTML = `⚠️ <strong>${a.zone || a.country}</strong> – ${a.title || "Alerte"} (${a.level || "info"})`;
+        div.appendChild(p);
+        if (a.lat && a.lon) {
+          L.circle([a.lat, a.lon], {
+            color: a.level === "high" ? "red" : "orange",
+            radius: 100000
+          }).addTo(mapAlerts).bindPopup(a.title || "Alerte");
+        }
+      });
+    }
 
-(async()=>{
-  const s=await fetch(`${API_BASE}/status`).then(r=>r.json());
-  const covered=s?.checkup?.coveredPoints||[];
-  covered.forEach(p=>{
-    L.circleMarker([p.lat,p.lon],{radius:4,color:"#4caf50",fillOpacity:.9}).addTo(mapForecast)
-    .bindPopup(`✅ Zone couverte : ${p.country}`);
-  });
-})();
+    const mapCoverage = L.map("mapCoverage").setView([20, 10], 2);
+    const mapAlerts = L.map("mapAlerts").setView([20, 10], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapCoverage);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
 
-/* === Chat === */
-document.getElementById("chat-trigger").addEventListener("click",()=>{
-  const c=document.getElementById("chatJean");
-  c.style.display=c.style.display==="flex"?"none":"flex";
-});
-async function sendChat(){
-  const input=document.getElementById("chatInput");
-  const msg=input.value.trim();if(!msg)return;
-  const m=document.getElementById("chatMessages");
-  m.innerHTML+=`<div style="color:#4fc3f7;">Vous : ${msg}</div>`;
-  input.value="";
-  const res=await fetch(`${API_BASE}/jean`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-  const d=await res.json();
-  m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
-}
-</script>
+    loadAlerts();
+  </script>
 </body>
 </html>
