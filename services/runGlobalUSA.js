@@ -1,14 +1,12 @@
-// services/runGlobalUSA.js
-// ⚡ Centrale nucléaire météo – RUN GLOBAL USA
-
-import { runSuperForecast } from "./superForecast.js";
-import { generateAlerts } from "./alertsService.js";
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
+// PATH: services/runGlobalUSA.js
+// 🌎 Référentiel zones USA – TINSFLASH
+// Ce fichier ne contient QUE les coordonnées géographiques de référence
+// Il ne génère ni prévision ni alerte : il est lu par zonesCovered.js puis runGlobal.js
 
 // ===========================
 // Zones détaillées par État
 // ===========================
-const USA_ZONES = {
+export const USA_ZONES = {
   California: [
     { lat: 34.05, lon: -118.24, region: "Los Angeles - South Coast" },
     { lat: 37.77, lon: -122.42, region: "San Francisco - Bay Area" },
@@ -384,118 +382,23 @@ const USA_ZONES = {
   ]
     };
 // ===========================
-// 1️⃣ Prévisions USA
+// Export zone USA
 // ===========================
-export async function runUSAForecasts() {
-  const state = getEngineState();
-  state.checkup = state.checkup || {};   // ✅ Sécurité
-  addEngineLog("🇺🇸 Démarrage Prévisions USA…");
-
-  const byState = {};
-  let successCount = 0, totalPoints = 0;
-
-  for (const [stateName, zones] of Object.entries(USA_ZONES)) {
-    byState[stateName] = { regions: [] };
+export function getAllUSAZones() {
+  const all = [];
+  for (const [state, zones] of Object.entries(USA_ZONES)) {
     for (const z of zones) {
-      try {
-        const res = await runSuperForecast({
-          lat: z.lat,
-          lon: z.lon,
-          country: "USA",
-          region: z.region
-        });
-        byState[stateName].regions.push({ ...z, forecast: res?.forecast });
-        successCount++; totalPoints++;
-        addEngineLog(`✅ Prévisions ${stateName} — ${z.region}`);
-      } catch (e) {
-        addEngineError(`❌ Prévisions ${stateName} — ${z.region}: ${e.message}`);
-        totalPoints++;
-      }
+      all.push({
+        country: "USA",
+        state,
+        region: z.region,
+        lat: z.lat,
+        lon: z.lon,
+        continent: "North America"
+      });
     }
   }
-
-  state.zonesCoveredUSA = byState;
-  state.zonesCoveredSummaryUSA = {
-    states: Object.keys(byState).length,
-    points: totalPoints,
-    success: successCount
-  };
-  state.checkup.localForecastsUSA = successCount > 0 ? "OK" : "FAIL";
-  saveEngineState(state);
-
-  addEngineLog("✅ Prévisions USA terminées.");
-  return { summary: state.zonesCoveredSummaryUSA };
+  return all;
 }
 
-// ===========================
-// 2️⃣ Alertes USA
-// ===========================
-export async function runUSAAlerts() {
-  const state = getEngineState();
-  state.checkup = state.checkup || {};   // ✅ Sécurité
-  addEngineLog("🚨 Démarrage Alertes USA…");
-
-  if (!state.zonesCoveredUSA) {
-    addEngineError("❌ Impossible de générer les alertes : pas de prévisions USA disponibles.");
-    return;
-  }
-
-  const alertsByState = {};
-  for (const [stateName, data] of Object.entries(state.zonesCoveredUSA)) {
-    alertsByState[stateName] = [];
-    for (const regionData of data.regions) {
-      try {
-        const alert = await generateAlerts(
-          regionData.lat,
-          regionData.lon,
-          "USA",
-          regionData.region,
-          "USA"
-        );
-        alertsByState[stateName].push({ region: regionData.region, alert });
-        addEngineLog(`🚨 Alerte générée pour ${stateName} — ${regionData.region}`);
-      } catch (e) {
-        addEngineError(`❌ Alerte ${stateName} — ${regionData.region}: ${e.message}`);
-      }
-    }
-  }
-
-  state.alertsUSA = alertsByState;
-  state.checkup.alertsUSA = "OK";
-  saveEngineState(state);
-
-  addEngineLog("✅ Alertes USA terminées.");
-  return alertsByState;
-}
-
-// ===========================
-// 3️⃣ Chef d’orchestre : Run Global USA
-// ===========================
-export async function runGlobalUSA() {
-  const state = getEngineState();
-  state.checkup = state.checkup || {};   // ✅ Sécurité
-  try {
-    addEngineLog("🇺🇸 Démarrage RUN GLOBAL USA (prévisions + alertes)…");
-    state.checkup.engineStatusUSA = "PENDING";
-    saveEngineState(state);
-
-    await runUSAForecasts();
-    await runUSAAlerts();
-
-    state.checkup.engineStatusUSA = "OK";
-    saveEngineState(state);
-
-    addEngineLog("✅ RUN GLOBAL USA complet terminé avec succès.");
-    return {
-      forecasts: state.zonesCoveredSummaryUSA,
-      alerts: state.alertsUSA ? "OK" : "FAIL"
-    };
-  } catch (err) {
-    addEngineError("❌ Erreur RUN GLOBAL USA: " + err.message);
-    state.checkup.engineStatusUSA = "FAIL";
-    saveEngineState(state);
-    throw err;
-  }
-}
-
-export { USA_ZONES };
+export default { USA_ZONES, getAllUSAZones };
