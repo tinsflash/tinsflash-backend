@@ -8,175 +8,33 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #0c1220;
-      color: #eee;
-    }
-    header {
-      text-align: center;
-      padding: 15px;
-      background: linear-gradient(90deg, #18243b, #101725);
-      color: #4fc3f7;
-      font-size: 1.6em;
-      font-weight: bold;
-    }
-    video {
-      width: 100%;
-      max-height: 260px;
-      object-fit: cover;
-      display: block;
-    }
-    main {
-      padding: 20px;
-      max-width: 1200px;
-      margin: auto;
-    }
-    h2 {
-      color: #4fc3f7;
-      border-left: 4px solid #4fc3f7;
-      padding-left: 10px;
-      margin-top: 30px;
-    }
-    p.intro {
-      text-align: justify;
-      color: #ccc;
-      font-size: 1.05em;
-      line-height: 1.6em;
-      margin-bottom: 30px;
-    }
-    .forecast-section {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: space-between;
-    }
-    .forecast-box {
-      background: #131a2b;
-      border-radius: 10px;
-      padding: 15px;
-      flex: 1;
-      min-width: 300px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    }
-    .forecast-day {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #222;
-      padding: 6px 0;
-    }
-    .forecast-day:last-child {
-      border-bottom: none;
-    }
-    .map-container {
-      height: 360px;
-      margin: 25px 0;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
-    }
-    iframe {
-      width: 100%;
-      height: 450px;
-      border: none;
-      margin-top: 25px;
-      border-radius: 10px;
-    }
-    footer {
-      text-align: center;
-      background: #111827;
-      color: #ccc;
-      padding: 15px;
-      font-size: 0.9em;
-    }
-    footer a {
-      color: #4fc3f7;
-      text-decoration: none;
-    }
-    footer a:hover {
-      text-decoration: underline;
-    }
-    /* === Avatar & Chat J.E.A.N. === */
-    .avatar-jean {
-      position: fixed;
-      bottom: 95px;
-      right: 18px;
-      width: 85px;
-      height: 85px;
-      cursor: pointer;
-      z-index: 999;
-      border-radius: 50%;
-      transition: transform 0.3s ease;
-      box-shadow: 0 0 25px rgba(79, 195, 247, 0.4);
-    }
-    .avatar-jean:hover {
-      transform: scale(1.1);
-    }
-    .chat-box {
-      position: fixed;
-      bottom: 190px;
-      right: 20px;
-      background: #1b2439;
-      border: 2px solid #4fc3f7;
-      border-radius: 12px;
-      width: 310px;
-      height: 380px;
-      display: none;
-      flex-direction: column;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    }
-    .chat-header {
-      background: #4fc3f7;
-      color: #000;
-      text-align: center;
-      padding: 5px;
-      font-weight: bold;
-      border-radius: 10px 10px 0 0;
-    }
-    .chat-messages {
-      flex: 1;
-      padding: 8px;
-      overflow-y: auto;
-      font-size: 14px;
-      background: #0e1423;
-    }
-    .chat-input {
-      display: flex;
-      border-top: 1px solid #333;
-    }
-    .chat-input input {
-      flex: 1;
-      padding: 8px;
-      border: none;
-      background: #1b2339;
-      color: #eee;
-      border-radius: 0 0 0 10px;
-    }
-    .chat-input button {
-      background: #4fc3f7;
-      border: none;
-      color: #000;
-      padding: 8px 12px;
-      border-radius: 0 0 10px 0;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .banner {
-      background: #16233a;
-      color: #4fc3f7;
-      padding: 12px;
-      text-align: center;
-      font-weight: bold;
-      margin-top: 20px;
-      border-radius: 8px;
-    }
+    body{margin:0;font-family:"Segoe UI",sans-serif;background:#0c1220;color:#eee;}
+    header{text-align:center;padding:15px;background:linear-gradient(90deg,#18243b,#101725);color:#4fc3f7;font-size:1.6em;font-weight:bold;}
+    video{width:100%;max-height:260px;object-fit:cover;display:block;}
+    main{padding:20px;max-width:1200px;margin:auto;}
+    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;}
+    p.intro{text-align:justify;color:#ccc;font-size:1.05em;line-height:1.6em;margin-bottom:30px;}
+    .forecast-section{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;}
+    .forecast-box{background:#131a2b;border-radius:10px;padding:15px;flex:1;min-width:300px;box-shadow:0 0 10px rgba(0,0,0,0.3);}
+    .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
+    iframe{width:100%;height:450px;border:none;margin-top:25px;border-radius:10px;}
+    footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;}
+    footer a{color:#4fc3f7;text-decoration:none;}footer a:hover{text-decoration:underline;}
+    /* Avatar et chat */
+    .avatar-jean{position:fixed;bottom:95px;right:18px;width:85px;height:85px;cursor:pointer;z-index:999;border-radius:50%;transition:transform .3s ease;box-shadow:0 0 25px rgba(79,195,247,.4);}
+    .avatar-jean:hover{transform:scale(1.1);}
+    .chat-box{position:fixed;bottom:190px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:310px;height:380px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,.5);}
+    .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:5px;font-weight:bold;border-radius:10px 10px 0 0;}
+    .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
+    .chat-input{display:flex;border-top:1px solid #333;}
+    .chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;border-radius:0 0 0 10px;}
+    .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;border-radius:0 0 10px 0;cursor:pointer;font-weight:bold;}
+    .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
+    #coverage-status{background:#111831;color:#eee;border-radius:10px;padding:15px;margin:20px 0;text-align:center;font-size:1.05em;box-shadow:0 0 10px rgba(0,0,0,0.4);}
   </style>
 </head>
 <body>
   <header>TINSFLASH • Prévisions & Alertes en temps réel – Monde</header>
-
   <video autoplay muted loop playsinline>
     <source src="intro-jean.mp4" type="video/mp4" />
   </video>
@@ -191,6 +49,11 @@
       tout en anticipant les anomalies météorologiques susceptibles d’évoluer en alertes.
     </p>
 
+    <div id="coverage-status">
+      <span id="coverageIcon">⏳</span>
+      <span id="coverageText">Analyse de votre zone en cours...</span>
+    </div>
+
     <h2>Prévisions du jour</h2>
     <div class="forecast-section">
       <div class="forecast-box">
@@ -200,18 +63,6 @@
       <div class="forecast-box">
         <h3>📡 Nationales</h3>
         <div id="national-today">Chargement...</div>
-      </div>
-    </div>
-
-    <h2>Prévisions sur 7 jours</h2>
-    <div class="forecast-section">
-      <div class="forecast-box">
-        <h3>Locales</h3>
-        <div id="local-week">Chargement...</div>
-      </div>
-      <div class="forecast-box">
-        <h3>Nationales</h3>
-        <div id="national-week">Chargement...</div>
       </div>
     </div>
 
@@ -238,8 +89,7 @@
   <footer>
     © 2025 TINSFLASH – Tous droits réservés<br />
     📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
-    💬 WhatsApp :
-    <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a><br />
+    💬 WhatsApp : <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a><br />
     <em>Contactez-nous pour tout partenariat ou achat du moteur J.E.A.N.</em>
   </footer>
 
@@ -254,83 +104,116 @@
   </div>
 
   <script>
-    const avatar = document.getElementById("avatarJean");
-    const chat = document.getElementById("chatJean");
-    avatar.addEventListener("click", () => {
-      chat.style.display = chat.style.display === "flex" ? "none" : "flex";
-    });
+    const avatar=document.getElementById("avatarJean");
+    const chat=document.getElementById("chatJean");
+    avatar.addEventListener("click",()=>{chat.style.display=chat.style.display==="flex"?"none":"flex";});
 
-    async function sendChat() {
-      const input = document.getElementById("chatInput");
-      const msg = input.value.trim();
-      if (!msg) return;
-      const messages = document.getElementById("chatMessages");
-      const userMsg = document.createElement("div");
-      userMsg.style.color = "#4fc3f7";
-      userMsg.textContent = "Vous: " + msg;
+    async function sendChat(){
+      const input=document.getElementById("chatInput");
+      const msg=input.value.trim();
+      if(!msg)return;
+      const messages=document.getElementById("chatMessages");
+      const userMsg=document.createElement("div");
+      userMsg.style.color="#4fc3f7";
+      userMsg.textContent="Vous: "+msg;
       messages.appendChild(userMsg);
-      input.value = "";
-      try {
-        const res = await fetch("/api/jean", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: msg }),
-        });
-        const data = await res.json();
-        const botMsg = document.createElement("div");
-        botMsg.textContent = "J.E.A.N: " + data.reply;
+      input.value="";
+      try{
+        const res=await fetch("/api/jean",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+        const data=await res.json();
+        const botMsg=document.createElement("div");
+        botMsg.textContent="J.E.A.N: "+data.reply;
         messages.appendChild(botMsg);
-        messages.scrollTop = messages.scrollHeight;
-      } catch (err) {
-        const errMsg = document.createElement("div");
-        errMsg.textContent = "Erreur: " + err.message;
+        messages.scrollTop=messages.scrollHeight;
+      }catch(err){
+        const errMsg=document.createElement("div");
+        errMsg.textContent="Erreur: "+err.message;
         messages.appendChild(errMsg);
       }
     }
 
-    async function loadForecast() {
-      try {
-        const res = await fetch("/api/status");
-        const data = await res.json();
-        document.getElementById("local-today").innerHTML =
+    async function loadForecast(){
+      try{
+        const res=await fetch("/api/status");
+        const data=await res.json();
+        document.getElementById("local-today").innerHTML=
           data.forecasts?.local?.today
             ? `<b>${data.forecasts.local.today.summary}</b><br>${data.forecasts.local.today.temp_min}°C / ${data.forecasts.local.today.temp_max}°C`
             : "Prévision locale indisponible";
-        document.getElementById("national-today").innerHTML =
+        document.getElementById("national-today").innerHTML=
           data.forecasts?.national?.today
             ? `<b>${data.forecasts.national.today.summary}</b><br>${data.forecasts.national.today.temp_min}°C / ${data.forecasts.national.today.temp_max}°C`
             : "Prévision nationale indisponible";
-      } catch (err) {
-        document.getElementById("local-today").innerText = "Erreur chargement.";
-        document.getElementById("national-today").innerText = "Erreur chargement.";
+      }catch(err){
+        document.getElementById("local-today").innerText="Erreur chargement.";
+        document.getElementById("national-today").innerText="Erreur chargement.";
       }
     }
 
-    async function loadAlerts() {
-      const res = await fetch("/api/alerts");
-      const alerts = await res.json();
-      const div = document.getElementById("alerts");
-      div.innerHTML = "";
-      alerts.forEach((a) => {
-        const p = document.createElement("p");
-        p.innerHTML = `⚠️ <strong>${a.zone || a.country}</strong> – ${a.title || a.type || "Alerte"} (${a.level || "info"})`;
+    async function loadAlerts(){
+      const res=await fetch("/api/alerts");
+      const alerts=await res.json();
+      const div=document.getElementById("alerts");
+      div.innerHTML="";
+      alerts.forEach(a=>{
+        const p=document.createElement("p");
+        p.innerHTML=`⚠️ <strong>${a.zone||a.country}</strong> – ${a.title||a.type||"Alerte"} (${a.level||"info"})`;
         div.appendChild(p);
-        if (a.lat && a.lon) {
-          L.circle([a.lat, a.lon], {
-            color: a.level === "high" ? "red" : "orange",
-            radius: 100000,
-          }).addTo(mapAlerts).bindPopup(a.title || "Alerte");
+        if(a.lat&&a.lon){
+          L.circle([a.lat,a.lon],{color:a.level==="high"?"red":"orange",radius:100000}).addTo(mapAlerts).bindPopup(a.title||"Alerte");
         }
       });
     }
 
-    const mapForecast = L.map("map-forecast").setView([20, 10], 2);
-    const mapAlerts = L.map("map-alerts").setView([20, 10], 2);
+    const mapForecast=L.map("map-forecast").setView([20,10],2);
+    const mapAlerts=L.map("map-alerts").setView([20,10],2);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
 
+    // === Couverture J.E.A.N. ===
+    async function checkCoverage(){
+      try{
+        if(!navigator.geolocation){setCoverage("unknown");return;}
+        navigator.geolocation.getCurrentPosition(async(pos)=>{
+          const {latitude,longitude}=pos.coords;
+          const res=await fetch("/api/status");
+          const data=await res.json();
+          const covered=(data?.steps?.coveredPoints||[]).map(p=>({lat:parseFloat(p.lat),lon:parseFloat(p.lon)}));
+          const userInZone=covered.some(p=>{
+            const dlat=Math.abs(p.lat-latitude);
+            const dlon=Math.abs(p.lon-longitude);
+            return dlat<1&&dlon<1;
+          });
+          if(userInZone)setCoverage("covered");else setCoverage("not-covered");
+        });
+      }catch(err){console.error("Erreur checkCoverage:",err);setCoverage("unknown");}
+    }
+
+    function setCoverage(status){
+      const icon=document.getElementById("coverageIcon");
+      const text=document.getElementById("coverageText");
+      const box=document.getElementById("coverage-status");
+      if(status==="covered"){
+        icon.textContent="🟢";
+        text.innerHTML="<b>Zone couverte J.E.A.N.</b> — prévisions locales & alertes IA actives.";
+        box.style.border="2px solid #4caf50";
+        box.style.background="#112417";
+      }else if(status==="not-covered"){
+        icon.textContent="🔵";
+        text.innerHTML="<b>Zone en attente d’activation Premium/Pro</b> — prévisions Open-Data temporaires.<br><br><a href='/premium' style='color:#4fc3f7;text-decoration:underline;'>📈 Passer Premium et activer votre zone sous 48h</a>";
+        box.style.border="2px solid #2196f3";
+        box.style.background="#0c1a2a";
+      }else{
+        icon.textContent="⚪";
+        text.innerHTML="Impossible de déterminer votre zone.";
+        box.style.border="2px solid #777";
+        box.style.background="#222";
+      }
+    }
+
     loadForecast();
     loadAlerts();
+    checkCoverage();
   </script>
 </body>
 </html>
