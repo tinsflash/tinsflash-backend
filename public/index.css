@@ -1,141 +1,122 @@
-// public/js/index.js
+const API_BASE = "https://tinsflash-backend.onrender.com/api";
 
-async function getUserPosition() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject("La géolocalisation n'est pas supportée.");
-    } else {
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-        err => reject("Impossible d'obtenir la géolocalisation: " + err.message)
-      );
-    }
-  });
-}
-
-// Prévisions locales
-async function loadLocalForecast(lat, lon) {
-  const res = await fetch(`/api/localforecast/${lat}/${lon}`);
-  const data = await res.json();
-  const div = document.getElementById("local-content");
-
-  if (data.error) {
-    div.innerHTML = "❌ Erreur prévisions locales";
-    return;
-  }
-
-  div.innerHTML = `
-    <h3>${data.zone || "Votre position"}</h3>
-    <i class="wi wi-day-sunny animated"></i>
-    <p>${data.temp_min}°C – ${data.temp_max}°C</p>
-    <p>🌧️ Pluie: ${data.rain_prob || 0}%</p>
-    <p>💨 Vent: ${data.wind || 0} km/h</p>
-    <p>🔒 Fiabilité: ${data.confidence || 70}%</p>
-  `;
-}
-
-// Prévisions nationales
-async function loadNationalForecast(zone = "Belgium") {
-  const res = await fetch(`/api/forecast/${zone}`);
-  const data = await res.json();
-  const div = document.getElementById("national-content");
-
-  if (data.error) {
-    div.innerHTML = "❌ Erreur prévisions nationales";
-    return;
-  }
-
-  div.innerHTML = `
-    <h3>${zone}</h3>
-    <i class="wi wi-cloudy animated"></i>
-    <p>${data.temp_min}°C – ${data.temp_max}°C</p>
-    <p>${data.summary || "Prévisions nationales en cours..."}</p>
-  `;
-}
-
-// Prévisions 7 jours
-async function loadForecastDays(zone = "Belgium") {
-  const res = await fetch(`/api/forecast/${zone}`);
-  const data = await res.json();
-  const container = document.getElementById("days-container");
-
-  if (!data || !data.days) {
-    container.innerHTML = "❌ Erreur 7 jours";
-    return;
-  }
-
-  container.innerHTML = data.days
-    .map(day => `
-      <div class="forecast-item">
-        <h4>${day.date || "?"}</h4>
-        <i class="wi wi-day-cloudy animated"></i>
-        <p>${day.temp_min}°C – ${day.temp_max}°C</p>
-      </div>
-    `)
-    .join("");
-}
-
-// Bulletin météo (auto, pas IA)
-async function loadBulletin(zone = "Belgium") {
-  const res = await fetch(`/api/bulletin/${zone}`);
-  const data = await res.json();
-  document.getElementById("forecast-text").innerText =
-    data.text || "❌ Erreur génération bulletin";
-}
-
-// Radar
-async function loadRadar(zone = "Belgium") {
-  const res = await fetch(`/api/radar/${zone}`);
-  const data = await res.json();
-  const div = document.getElementById("radar-map");
-
-  if (data.error) {
-    div.innerHTML = "❌ Erreur radar";
-    return;
-  }
-
-  const map = L.map("radar-map").setView([50.5, 4.7], 6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "Radar data",
-  }).addTo(map);
-}
-
-// Alertes
-async function loadAlerts(zone = "Belgium") {
-  const res = await fetch(`/api/alerts/${zone}`);
-  const data = await res.json();
-  const div = document.getElementById("alerts-content");
-
-  if (!data.alerts || data.alerts.length === 0) {
-    div.innerHTML = "✅ Aucune alerte";
-    return;
-  }
-
-  div.innerHTML = data.alerts
-    .map(a => `
-      <div class="alert">
-        <strong>${a.type}</strong> (${a.prob || 0}%)<br>
-        ${a.message}
-      </div>
-    `)
-    .join("");
-}
-
-// ==============================
-// 🚀 Initialisation
-// ==============================
-(async function init() {
+// === UTILITAIRE FETCH JSON ===
+async function fetchJSON(url) {
   try {
-    const pos = await getUserPosition();
-    await loadLocalForecast(pos.lat, pos.lon);
-    await loadNationalForecast("Belgium");
-    await loadForecastDays("Belgium");
-    await loadBulletin("Belgium");
-    await loadRadar("Belgium");
-    await loadAlerts("Belgium");
-  } catch (err) {
-    console.error("Erreur init:", err);
-    document.getElementById("local-content").innerText =
-      "❌ Impossible de récupérer votre position";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Erreur API ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.error("❌ Erreur API:", e);
+    return null;
   }
-})();
+}
+
+// === CHARGEMENT GÉNÉRAL ===
+document.addEventListener("DOMContentLoaded", () => {
+  initPosition();
+  document.getElementById("btnLocate").addEventListener("click", async () => {
+    const addr = document.getElementById("manualAddress").value.trim();
+    if (addr) await geocodeAddress(addr);
+  });
+});
+
+async function initPosition() {
+  const locEl = document.getElementById("user-location");
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        locEl.innerHTML = `📍 Latitude : ${latitude.toFixed(2)}, Longitude : ${longitude.toFixed(2)}`;
+        await loadAll(latitude, longitude);
+      },
+      () => {
+        locEl.innerHTML = "⚠️ Géolocalisation refusée, utilisez le champ ci-dessous.";
+      }
+    );
+  } else {
+    locEl.innerHTML = "❌ Géolocalisation non supportée.";
+  }
+}
+
+async function geocodeAddress(address) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+    const data = await res.json();
+    if (!data.length) throw new Error("Adresse non trouvée");
+    const { lat, lon, display_name } = data[0];
+    document.getElementById("user-location").innerHTML = `📍 ${display_name}`;
+    await loadAll(parseFloat(lat), parseFloat(lon));
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function loadAll(lat, lon) {
+  loadForecast(lat, lon);
+  loadAlerts(lat, lon);
+  initMaps(lat, lon);
+}
+
+// === PRÉVISIONS ===
+async function loadForecast(lat, lon) {
+  const local = document.getElementById("local-forecast");
+  const national = document.getElementById("national-forecast");
+  const week = document.getElementById("forecast-7days");
+
+  local.innerHTML = national.innerHTML = week.innerHTML = "Chargement...";
+
+  const localData = await fetchJSON(`${API_BASE}/forecast/local?lat=${lat}&lon=${lon}`);
+  const nationalData = await fetchJSON(`${API_BASE}/forecast/national?lat=${lat}&lon=${lon}`);
+  const weekData = await fetchJSON(`${API_BASE}/forecast/7days?lat=${lat}&lon=${lon}`);
+
+  if (localData)
+    local.innerHTML = `<b>${localData.summary}</b><br>🌡 ${localData.temperature_min}°C / ${localData.temperature_max}°C<br>💨 ${localData.wind} km/h`;
+  else local.innerHTML = "❌ Erreur chargement prévisions locales";
+
+  if (nationalData)
+    national.innerHTML = `<b>${nationalData.country}</b><br>🌡 ${nationalData.temperature_min}°C / ${nationalData.temperature_max}°C<br>🌧 ${nationalData.precipitation} mm`;
+  else national.innerHTML = "❌ Erreur prévisions nationales";
+
+  if (weekData && Array.isArray(weekData))
+    week.innerHTML = weekData
+      .map((d) => `<div>📅 ${d.date} – ${d.summary} – ${d.temperature_min}°C / ${d.temperature_max}°C</div>`)
+      .join("");
+  else week.innerHTML = "❌ Erreur prévisions 7 jours";
+}
+
+// === ALERTES ===
+async function loadAlerts(lat, lon) {
+  const alertsEl = document.getElementById("alerts");
+  const data = await fetchJSON(`${API_BASE}/alerts`);
+  if (!data) {
+    alertsEl.innerHTML = "❌ Erreur chargement alertes";
+    return;
+  }
+
+  const localAlerts = data.filter((a) => a.lat && Math.abs(a.lat - lat) < 5 && Math.abs(a.lon - lon) < 5);
+  if (localAlerts.length > 0) {
+    alertsEl.innerHTML = localAlerts
+      .map((a) => `⚠️ <b>${a.zone || a.country}</b> – ${a.title || a.type || "Alerte"} (${a.level || "info"})`)
+      .join("<br>");
+  } else {
+    alertsEl.innerHTML = "✅ Aucune alerte locale active";
+    document.getElementById("continent-warning").innerText = "🌍 Alertes sur votre continent disponibles sur la carte ci-dessous.";
+  }
+}
+
+// === CARTES ===
+let mapForecast, mapAlerts;
+function initMaps(lat, lon) {
+  if (!mapForecast) {
+    mapForecast = L.map("map-forecast").setView([lat, lon], 3);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
+  } else mapForecast.setView([lat, lon], 3);
+
+  if (!mapAlerts) {
+    mapAlerts = L.map("map-alerts").setView([lat, lon], 3);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
+  } else mapAlerts.setView([lat, lon], 3);
+
+  L.circle([lat, lon], { color: "cyan", radius: 100000 }).addTo(mapForecast).bindPopup("Votre position");
+}
