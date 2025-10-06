@@ -131,11 +131,11 @@ async function loadSummary(){
     const res=await fetch("/api/alerts/summary");
     const s=await res.json();
     document.getElementById("summaryBody").innerHTML=`
-      <tr><td>Locales/Nationales</td><td>${s.local||0}</td></tr>
-      <tr><td>Continentales</td><td>${s.continental||0}</td></tr>
-      <tr><td>Mondiales</td><td>${s.world||0}</td></tr>
-      <tr><td>Premières (Premium)</td><td>${s.first||0}</td></tr>
-      <tr><td>Fiabilité ≥90%</td><td>${s.high||0}</td></tr>`;
+      <tr><td>Locales/Nationales</td><td>${s.byStatus?.toValidate+s.byStatus?.published+s.byStatus?.["under-surveillance"]||0}</td></tr>
+      <tr><td>Publiées (≥90%)</td><td>${s.byStatus?.published||0}</td></tr>
+      <tr><td>À valider (70–89%)</td><td>${s.byStatus?.toValidate||0}</td></tr>
+      <tr><td>Sous surveillance</td><td>${s.byStatus?.["under-surveillance"]||0}</td></tr>
+      <tr><td>Archivées</td><td>${s.byStatus?.archived||0}</td></tr>`;
   }catch(e){console.error(e);}
 }
 
@@ -178,7 +178,18 @@ async function runGlobal(){
   loadStatus();updateMapAlerts();updateMapForecast();loadSummary();
 }
 
-/* === Chat IA (GPT-3.5) === */
+/* === Relance ciblée IA / Alertes === */
+async function retryPhase(phase){
+  const btn=document.getElementById(`retry${phase}`);
+  btn.disabled=true;btn.innerText="⏳...";
+  const res=await fetch(`/api/retryPhase/${phase}`,{method:"POST"});
+  const data=await res.json();
+  alert(data.success?`✅ Phase ${phase} relancée`:`❌ ${data.error||"Erreur relance"}`);
+  btn.disabled=false;btn.innerText=`🔁 Relancer ${phase}`;
+  loadStatus();updateMapAlerts();updateMapForecast();
+}
+
+/* === Chat IA (GPT-5) === */
 function addMsg(txt,who="bot"){
   const box=document.querySelector(".chat-messages");
   const div=document.createElement("div");
@@ -219,6 +230,9 @@ window.onload=()=>{initMaps();loadStatus();loadErrors();loadSummary();updateMapA
     <button onclick="refreshSection('status')">🔄</button>
   </h2>
   <button id="runBtn" onclick="runGlobal()">⚡ Lancer Run Global</button>
+  <button id="retryIA" onclick="retryPhase('IA')">🔁 Relancer IA</button>
+  <button id="retryALERTES" onclick="retryPhase('ALERTES')">🔁 Relancer Alertes</button>
+
   <div class="status-grid">
     <div class="status-box"><b>Statut moteur</b><span id="engineStatus">–</span></div>
     <div class="status-box"><b>Dernier run</b><span id="lastRun">1970</span></div>
@@ -251,7 +265,7 @@ window.onload=()=>{initMaps();loadStatus();loadErrors();loadSummary();updateMapA
   <div id="errors"></div>
 </main>
 
-<!-- === Chat IA (GPT-3.5) === -->
+<!-- === Chat IA === -->
 <div class="chat-float">
   <div class="chat-header" onclick="toggleChat()">💬 Chat IA moteur</div>
   <div class="chat-body">
