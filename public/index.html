@@ -4,35 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH • Prévisions & Alertes en temps réel – Monde</title>
+  <title>TINSFLASH • Prévisions & Alertes en temps réel</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="index.css" />
   <style>
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
-      background: #0b101d;
+      background: #0b0f19;
       color: #eee;
     }
     header {
       text-align: center;
+      background: #081224;
       padding: 15px;
-      background: linear-gradient(90deg, #18243b, #101725);
       color: #4fc3f7;
-      font-size: 1.6em;
       font-weight: bold;
-      letter-spacing: 1px;
+      font-size: 1.5em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
     video {
       width: 100%;
-      max-height: 240px;
+      max-height: 260px;
       object-fit: cover;
-      display: block;
+    }
+    .info-line {
+      background: #0c1a2e;
+      color: #4fc3f7;
+      text-align: center;
+      padding: 8px;
+      font-size: 1em;
     }
     main {
       padding: 20px;
       max-width: 1200px;
       margin: auto;
+    }
+    .intro {
+      display: flex;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    .intro img.jean-avatar {
+      width: 150px;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,200,255,0.4);
+      flex-shrink: 0;
+    }
+    .intro-text {
+      flex: 1;
+      text-align: justify;
+      font-size: 1.05em;
+      color: #ccc;
+      line-height: 1.6em;
     }
     h2 {
       color: #4fc3f7;
@@ -40,218 +68,193 @@
       padding-left: 10px;
       margin-top: 30px;
     }
-    p.intro {
-      text-align: justify;
-      color: #ccc;
-      font-size: 1.05em;
-      line-height: 1.6em;
-    }
-    .intro-block {
-      display: flex;
-      align-items: flex-start;
-      gap: 18px;
-      flex-wrap: wrap;
-    }
-    .intro-block img {
-      width: 80px; /* 🔹 Taille fixe élégante */
-      height: auto;
-      margin-top: 5px;
-    }
     .forecast-section {
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
       justify-content: space-between;
+      gap: 20px;
     }
     .forecast-box {
-      background: #131a2b;
-      border-radius: 10px;
-      padding: 15px;
+      background: #121b2c;
+      border-radius: 8px;
       flex: 1;
-      min-width: 300px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      min-width: 280px;
+      padding: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
-    .alert-banner {
-      background: #ffcc00;
-      color: #000;
+    .forecast-box h3 { color: #4fc3f7; }
+    .blinking-box {
+      animation: blink 1s infinite;
+      background: rgba(0,255,255,0.1);
+      border: 1px solid cyan;
       padding: 10px;
-      text-align: center;
-      font-weight: bold;
-      border-radius: 6px;
-      animation: blink 1.5s infinite;
+      border-radius: 8px;
     }
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+      0%,100%{opacity:1;}
+      50%{opacity:0.6;}
     }
-    .map-container {
+    #map-forecast, #map-alerts {
       height: 380px;
-      margin: 25px 0;
       border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
-    }
-    iframe {
-      width: 100%;
-      height: 450px;
-      border: none;
-      margin-top: 25px;
-      border-radius: 10px;
+      margin-top: 20px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.4);
     }
     footer {
       text-align: center;
-      background: #111827;
-      color: #ccc;
+      background: #081224;
+      color: #aaa;
       padding: 15px;
+      margin-top: 30px;
       font-size: 0.9em;
     }
-    footer a {
-      color: #4fc3f7;
-      text-decoration: none;
-    }
+    footer a { color: #4fc3f7; text-decoration: none; }
     footer a:hover { text-decoration: underline; }
-    #geoPrompt {
-      background: #16233a;
-      color: #4fc3f7;
-      padding: 10px;
-      text-align: center;
-      border-radius: 8px;
-      margin: 15px 0;
-    }
   </style>
 </head>
 <body>
   <header>🌍 TINSFLASH • Prévisions & Alertes en temps réel</header>
-
   <video autoplay muted loop playsinline>
-    <source src="intro-jean.mp4" type="video/mp4" />
+    <source src="background-sunrise.mp4" type="video/mp4" />
   </video>
 
+  <div class="info-line">🛰 Données satellites • Modèles IA multi-sources • Spécificités locales (relief, altitude, océans)</div>
+
   <main>
-    <div class="intro-block">
-      <img src="avatars/jean-default.png" alt="J.E.A.N" />
-      <div>
-        <h2>Présentation du moteur IA J.E.A.N</h2>
-        <p class="intro">
-          Le <strong>moteur TINSFLASH</strong> combine <strong>l’ensemble des modèles météorologiques existants</strong>
-          <em>plus les modèles d’intelligence artificielle de dernière génération</em>.
+    <section class="intro">
+      <img src="avatars/jean-default.png" alt="J.E.A.N" class="jean-avatar" id="jeanAvatar" />
+      <div class="intro-text">
+        <h2>Présentation du moteur IA <b>J.E.A.N</b></h2>
+        <p>
+          Le <b>moteur TINSFLASH</b> combine <b>l’ensemble des modèles météorologiques existants</b>
+          <i>plus les modèles d’intelligence artificielle de dernière génération</i>.  
           Il croise ces données avec les images satellites, le relief, l’altitude,
           l’humidité du sol et les microclimats pour fournir des
-          <strong>prévisions locales, nationales et mondiales d’une précision inégalée</strong>,
-          tout en <strong>détectant et diffusant les alertes avant tout le monde</strong>, 
-          où que vous soyez sur la planète.
+          <b>prévisions locales, nationales et mondiales d’une précision inégalée</b>,
+          tout en anticipant <b>les alertes avant tout le monde</b>, où que vous soyez.
         </p>
       </div>
-    </div>
+    </section>
 
-    <div id="geoPrompt">
-      📍 Activez votre géolocalisation pour des prévisions locales précises<br>
-      ou entrez votre adresse :
-      <input id="manualAddress" type="text" placeholder="Rue, localité, pays" style="width:260px;padding:4px;border-radius:5px;border:none;">
-      <button onclick="manualLocate()">OK</button>
-    </div>
+    <section>
+      <h2>📍 Votre position</h2>
+      <p id="user-location">Analyse de votre zone en cours...</p>
+    </section>
 
-    <h2>Prévisions du jour</h2>
-    <div class="forecast-section">
-      <div class="forecast-box"><h3>🌍 Locales</h3><div id="local-forecast">Chargement...</div></div>
-      <div class="forecast-box"><h3>📡 Nationales</h3><div id="national-forecast">Chargement...</div></div>
-    </div>
+    <section>
+      <h2>📊 Prévisions du jour</h2>
+      <div class="forecast-section">
+        <div class="forecast-box"><h3>🌆 Locales</h3><div id="local-forecast">Chargement...</div></div>
+        <div class="forecast-box"><h3>🏙 Nationales</h3><div id="national-forecast">Chargement...</div></div>
+      </div>
+    </section>
 
-    <h2>Prévisions sur 7 jours</h2>
-    <div class="forecast-section">
-      <div class="forecast-box"><h3>Locales</h3><div id="forecast-7days">Chargement...</div></div>
-      <div class="forecast-box"><h3>Nationales</h3><div id="forecast-7days-national">Chargement...</div></div>
-    </div>
+    <section>
+      <h2>📅 Prévisions sur 7 jours</h2>
+      <div id="forecast-7days" class="forecast-section"></div>
+    </section>
 
-    <div id="alerts"></div>
+    <section>
+      <h2>⚠️ Alertes en temps réel</h2>
+      <div id="alerts" class="blinking-box">Chargement des alertes...</div>
+    </section>
 
-    <h2>Carte des zones de prévisions couvertes</h2>
-    <div id="map-forecast" class="map-container"></div>
+    <section>
+      <h2>🗺️ Carte mondiale des prévisions</h2>
+      <div id="map-forecast"></div>
+    </section>
 
-    <h2>Carte mondiale des alertes</h2>
-    <div id="map-alerts" class="map-container"></div>
-
-    <iframe
-      src="https://embed.windy.com/embed2.html?lat=20&lon=10&zoom=2&level=surface&overlay=rain&menu=true&marker=false&calendar=24&pressure=true&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default"
-      loading="lazy"></iframe>
-
-    <div style="margin-top:20px;text-align:center;">
-      <a href="https://www.uman-detect.com" target="_blank" style="color:#4fc3f7;font-weight:bold;">
-        🔧 Diagnostics et détection de fuites : visitez Uman-Detect.com
-      </a>
-    </div>
+    <section>
+      <h2>🌎 Carte mondiale des alertes</h2>
+      <p id="continent-warning" style="text-align:center;color:#4fc3f7;"></p>
+      <div id="map-alerts"></div>
+    </section>
   </main>
 
   <footer>
-    © 2025 TINSFLASH – Tous droits réservés<br>
+    © 2025 TINSFLASH – Tous droits réservés<br />
     📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
     💬 WhatsApp : <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a>
   </footer>
 
   <script src="index.js"></script>
+
   <script>
-    const mapForecast = L.map("map-forecast").setView([20, 10], 2);
-    const mapAlerts = L.map("map-alerts").setView([20, 10], 2);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
-
-    async function loadCoverage() {
-      const res = await fetch("/api/status");
-      const data = await res.json();
-      const pts = data?.steps?.coveredPoints || [];
-      pts.forEach(p => {
-        const c = p.continent === "Europe" || p.continent === "North America" ? "#00ff66" : "#0099ff";
-        L.circle([p.lat, p.lon], { radius: 80000, color: c, fillOpacity: 0.4 }).addTo(mapForecast);
-      });
-    }
-
-    async function showAlertsBanner() {
-      const res = await fetch("/api/alerts");
-      const data = await res.json();
-      const div = document.getElementById("alerts");
-      div.innerHTML = "";
-
-      const localAlerts = data.filter(a => a.data?.type === "local");
-      const continentalAlerts = data.filter(a => a.data?.type === "continental");
-
-      if (localAlerts.length > 0) {
-        div.innerHTML = `<div class='alert-banner'>🚨 ${localAlerts.length} alerte(s) active(s) dans votre pays</div>`;
-      } else if (continentalAlerts.length > 0) {
-        div.innerHTML = `<div class='alert-banner'>⚠️ Alertes sur votre continent – consultez la carte pour le détail</div>`;
+    // === Géolocalisation et interface dynamique ===
+    async function initPosition() {
+      const locEl = document.getElementById("user-location");
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            locEl.innerHTML = `Latitude : ${latitude.toFixed(2)}, Longitude : ${longitude.toFixed(2)}`;
+            await loadForecastAndAvatar(latitude, longitude);
+          },
+          () => {
+            locEl.innerHTML = "📍 Géolocalisation refusée. Veuillez entrer une adresse manuellement.";
+          }
+        );
       } else {
-        div.innerHTML = "<div class='alert-banner' style='background:#2a2;color:#fff;'>✅ Aucune alerte active</div>";
+        locEl.innerHTML = "❌ Géolocalisation non supportée.";
       }
+    }
 
-      data.forEach(a => {
-        if (a.lat && a.lon) {
-          const color = a.level === "high" ? "red" : "orange";
-          L.circle([a.lat, a.lon], { radius: 120000, color }).addTo(mapAlerts)
-            .bindPopup(a.title || "Alerte");
+    // === Lien entre avatar et météo ===
+    async function loadForecastAndAvatar(lat, lon) {
+      const avatar = document.getElementById("jeanAvatar");
+      try {
+        const res = await fetch(`/api/status`);
+        const data = await res.json();
+
+        // Vérifie si zone couverte
+        const covered = data?.checkup?.coveredPoints?.some(p =>
+          Math.abs(p.lat - lat) < 0.5 && Math.abs(p.lon - lon) < 0.5
+        );
+
+        // Détermine avatar selon météo
+        let condition = "default";
+        const f = data.forecasts?.local || data.forecasts?.national;
+        if (f?.today?.rain > 0) condition = "rain";
+        if (data.alertsLocal?.length > 0) condition = "alert";
+        if (f?.today?.sun) condition = "sun";
+
+        avatar.src = `avatars/jean-${condition}.png`;
+
+        // Marque la carte des zones couvertes
+        const mapF = L.map("map-forecast").setView([20, 10], 2);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+        (data.checkup?.coveredPoints || []).forEach(pt => {
+          L.circle([pt.lat, pt.lon], {
+            color: "green",
+            fillColor: "green",
+            fillOpacity: 0.4,
+            radius: 80000
+          }).addTo(mapF);
+        });
+
+        // Carte alertes
+        const mapA = L.map("map-alerts").setView([20, 10], 2);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+        (data.alertsWorld || []).forEach(a => {
+          L.circle([a.lat, a.lon], {
+            color: "red",
+            fillColor: "red",
+            fillOpacity: 0.6,
+            radius: 100000
+          }).addTo(mapA).bindPopup(a.title || "Alerte");
+        });
+
+        // Warning continent
+        if (!covered) {
+          document.getElementById("continent-warning").textContent =
+            "⚠️ Alertes sur votre continent — consultez la carte pour le détail.";
         }
-      });
+      } catch (e) {
+        console.error("Erreur avatar/forecast:", e);
+      }
     }
 
-    function manualLocate() {
-      const addr = document.getElementById("manualAddress").value;
-      if (!addr) return alert("Entrez une adresse complète");
-      alert("📍 Localisation définie sur " + addr + " — chargement des données…");
-      loadCoverage();
-      showAlertsBanner();
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(() => {
-        loadCoverage();
-        showAlertsBanner();
-      }, () => {
-        document.getElementById("geoPrompt").style.display = "block";
-      });
-    } else {
-      document.getElementById("geoPrompt").style.display = "block";
-    }
-
-    loadCoverage();
-    showAlertsBanner();
+    initPosition();
   </script>
 </body>
 </html>
