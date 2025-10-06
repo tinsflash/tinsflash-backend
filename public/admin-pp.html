@@ -1,3 +1,4 @@
+<!-- PATH: public/admin-pp.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -7,40 +8,50 @@
   <title>🛰️ Console IA J.E.A.N – TINSFLASH</title>
   <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
   <style>
-    body { font-family:"Inter",sans-serif;background:#0b0f19;color:#eaeaea;margin:0; }
-    header { background:#111831;padding:15px;text-align:center;color:#4fc3f7;font-size:22px;font-weight:bold; }
-    nav { background:#1a2238;padding:10px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap; }
-    nav a { color:#ccc;text-decoration:none;font-weight:600; }
-    nav a:hover { color:#4fc3f7; }
-    main { padding:15px; }
-    h2 { color:#4fc3f7;border-bottom:1px solid #333;padding-bottom:6px;margin-top:25px;display:flex;align-items:center;justify-content:space-between; }
-    button { background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:8px 15px;cursor:pointer;font-weight:bold; }
-    button:hover { background:#0288d1; }
-    .status-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px; }
-    .status-box { background:#1a2238;padding:10px;border-radius:8px;text-align:center; }
-    .status-box span { display:block;margin-top:4px;font-size:13px;color:#aaa; }
-    #logs { background:#111;border-radius:8px;padding:10px;height:250px;overflow-y:auto;font-size:13px;margin-top:10px; }
-    #errors { background:#260000;border-radius:8px;padding:10px;margin-top:10px;color:#ffbaba;font-size:13px;display:none; }
-    #mapForecast,#mapAlerts { height:380px;margin-top:10px;border-radius:8px; }
-    .chat-float { position:fixed;bottom:15px;right:15px;width:300px;background:#111831;border-radius:10px;box-shadow:0 0 12px #000;overflow:hidden; }
-    .chat-header { background:#4fc3f7;color:#000;font-weight:bold;padding:8px;text-align:center;cursor:pointer; }
-    .chat-body { display:none;flex-direction:column;height:260px; }
-    .chat-messages { flex:1;overflow-y:auto;padding:8px;font-size:13px; }
-    .chat-input { display:flex;gap:5px;padding:8px;background:#0b0f19; }
-    .chat-input input { flex:1;padding:6px;border-radius:6px;border:1px solid #555;background:#111;color:#eee; }
-    .chat-input button { padding:6px 10px;background:#4fc3f7;border:none;border-radius:6px;cursor:pointer; }
-    .msg { margin:4px 0;padding:6px 10px;border-radius:6px;max-width:75%; }
-    .bot { background:#333;color:#fff;text-align:left; }
-    .user { background:#4fc3f7;color:#000;margin-left:auto;text-align:right; }
+    body{font-family:Inter,system-ui,Arial;background:#0b0f19;color:#eaeaea;margin:0}
+    header{background:#111831;padding:15px;text-align:center;color:#4fc3f7;font-size:22px;font-weight:bold}
+    nav{background:#1a2238;padding:10px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap}
+    nav a{color:#ccc;text-decoration:none;font-weight:600}nav a:hover{color:#4fc3f7}
+    main{padding:15px}h2{color:#4fc3f7;border-bottom:1px solid #333;padding-bottom:6px;margin-top:25px}
+    .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}
+    .status-box{background:#1a2238;padding:10px;border-radius:8px;text-align:center}
+    .status-box span{display:block;margin-top:4px;font-size:13px;color:#aaa}
+    button{background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:8px 15px;cursor:pointer;font-weight:bold}
+    button:hover{background:#0288d1}
+    .btn-secondary{background:#8bc34a;color:#000} .btn-danger{background:#ef5350;color:#fff}
+    #summaryTable{width:100%;margin-top:10px;border-collapse:collapse;font-size:14px}
+    #summaryTable th,#summaryTable td{border:1px solid #333;padding:6px;text-align:center}
+    #summaryTable th{background:#1a2238;color:#4fc3f7}
+    #logs{background:#111;border-radius:8px;padding:10px;height:220px;overflow-y:auto;font-size:13px;margin-top:10px}
+    #errors{background:#260000;border-radius:8px;padding:10px;margin-top:10px;color:#ffbaba;font-size:13px;display:none}
+    #mapForecast,#mapAlerts{height:380px;margin-top:10px;border-radius:8px}
+    .chat-float{position:fixed;bottom:15px;right:15px;width:280px;background:#111831;border-radius:10px;box-shadow:0 0 12px #000;overflow:hidden}
+    .chat-header{background:#4fc3f7;color:#000;font-weight:bold;padding:8px;text-align:center;cursor:pointer}
+    .chat-body{display:none;flex-direction:column;height:260px}
+    .chat-messages{flex:1;overflow-y:auto;padding:8px;font-size:13px}
+    .chat-input{display:flex;gap:5px;padding:8px;background:#0b0f19}
+    .chat-input input{flex:1;padding:6px;border-radius:6px;border:1px solid #555;background:#111;color:#eee}
+    .chat-input button{padding:6px 10px;background:#4fc3f7;border:none;border-radius:6px;cursor:pointer}
+    .msg{margin:4px 0;padding:6px 10px;border-radius:6px;max-width:75%}.bot{background:#333;color:#fff}.user{background:#4fc3f7;color:#000;margin-left:auto}
+    .bad{color:#ef5350}.ok{color:#66bb6a}.warn{color:#ffca28}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+    @media(max-width:768px){.chat-float{width:90%;right:5%;bottom:10px}#mapForecast,#mapAlerts{height:280px}}
   </style>
 </head>
 <body>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const pin=sessionStorage.getItem("tinsflashPIN");
-if(!pin){const p=prompt("Code d’accès admin ?");if(p!=="202679"){alert("⛔ Accès refusé");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
+// === Sécurité simple ===
+const storedPin = sessionStorage.getItem("tinsflashPIN");
+if(!storedPin){
+  const pin = prompt("Code d’accès admin ?");
+  if(pin!=="202679"){ alert("⛔ Accès refusé"); location.href="/"; }
+  else { sessionStorage.setItem("tinsflashPIN","ok"); }
+}
 
-let mapForecast,mapAlerts;
+let mapForecast, mapAlerts;
+
+// === Cartes ===
 function initMaps(){
   mapForecast=L.map("mapForecast").setView([20,0],2);
   mapAlerts=L.map("mapAlerts").setView([20,0],2);
@@ -48,153 +59,202 @@ function initMaps(){
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(mapAlerts);
 }
 
+// === Status moteur ===
 async function loadStatus(){
-  const res=await fetch("/api/status");
-  const d=await res.json();
-  document.getElementById("engineStatus").innerText=d.status||"–";
-  document.getElementById("lastRun").innerText=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
-  document.getElementById("engineStatus").style.color=d.status==="ok"?"#4caf50":d.status==="fail"?"#ff5252":"#ff9800";
+  try{
+    const res = await fetch("/api/status");
+    const data = await res.json();
+    document.getElementById("engineStatus").innerText = data.status || "–";
+    document.getElementById("lastRun").innerText = data.lastRun?new Date(data.lastRun).toLocaleString():"Jamais";
+    const cls = data.status?.includes("OK")||data.status==="ok"||data.status==="OK-EXTRACTED" ? "ok" : (data.status==="fail"||data.status==="FAIL"?"bad":"warn");
+    document.getElementById("engineStatus").className = cls;
+
+    // Partiel: synthèse extraction
+    const pr = data.partialReport || {};
+    const models = pr.models || {};
+    const rows = [];
+    for(const [m,st] of Object.entries(models)){
+      rows.push(`<tr><td>${m}</td><td>${st.ok}</td><td>${st.fail}</td></tr>`);
+    }
+    document.getElementById("modelsBody").innerHTML = rows.join("") || "<tr><td colspan='3'>Aucun modèle extrait</td></tr>";
+
+    // recap alertes
+    const s = {
+      local: data?.alerts?.length || 0,
+      continental: (data?.alertsContinental||[]).length || 0,
+      world: (data?.alertsWorld||[]).length || 0
+    };
+    document.getElementById("summaryBody").innerHTML = `
+      <tr><td>Locales/Nationales</td><td>${s.local}</td></tr>
+      <tr><td>Continentales</td><td>${s.continental}</td></tr>
+      <tr><td>Mondiales (fusion)</td><td>${s.world}</td></tr>
+    `;
+  }catch(e){ console.error(e); }
 }
 
-const evtSource=new EventSource("/api/logs/stream");
-evtSource.onmessage=e=>{
-  const log=JSON.parse(e.data);
-  const div=document.getElementById("logs");
-  const line=document.createElement("div");
-  line.textContent=`[${new Date(log.timestamp).toLocaleTimeString()}] ${log.message}`;
-  div.appendChild(line);div.scrollTop=div.scrollHeight;
+// === Logs SSE ===
+const evtSource = new EventSource("/api/logs/stream");
+evtSource.onmessage = e => {
+  const log = JSON.parse(e.data);
+  const div = document.getElementById("logs");
+  const line = document.createElement("div");
+  line.textContent = `[${new Date(log.timestamp||log.ts).toLocaleTimeString()}] ${log.message}`;
+  div.appendChild(line);
+  div.scrollTop = div.scrollHeight;
 };
 
+// === Erreurs ===
+async function loadErrors(){
+  try{
+    const res = await fetch("/api/status");
+    const data = await res.json();
+    if(data.engineErrors?.length){
+      const box = document.getElementById("errors");
+      box.innerHTML = "<b>Erreurs récentes :</b><br>"+data.engineErrors.map(e=>`• ${e.message}`).join("<br>");
+      box.style.display="block";
+    }
+  }catch(e){ console.error(e); }
+}
+
+// === Carte prévisions (voyants pays) ===
+async function updateMapForecast(){
+  mapForecast.eachLayer(l=>{ if(l instanceof L.CircleMarker) mapForecast.removeLayer(l); });
+  try{
+    const res = await fetch("/api/status");
+    const data = await res.json();
+    const pr = data.partialReport || {};
+    const countriesOK = new Set(pr.extraction?.countriesOK||[]);
+    const countriesFail = new Set(pr.extraction?.countriesFail||[]);
+    // On projette un point par pays (simplifié: lat/lon médian si dispo côté back plus tard)
+    const all = [...countriesOK].map(c=>({c,ok:true})).concat([...countriesFail].map(c=>({c,ok:false})));
+    all.forEach(e=>{
+      // couleurs voyant
+      const col = e.ok ? "#4caf50" : "#ef5350";
+      // Fallback lat/lon approximatifs par centre monde si pas dispo — la popup suffit
+      L.circleMarker([0,0],{radius:6,color:col,fillOpacity:0.8})
+        .addTo(mapForecast)
+        .bindPopup(`<b>${e.c}</b><br>${e.ok?"Prévisions OK":"Erreur d'extraction"}`);
+    });
+  }catch(e){ console.error(e); }
+}
+
+// === Carte alertes monde ===
+async function updateMapAlerts(){
+  mapAlerts.eachLayer(l=>{ if(l instanceof L.CircleMarker) mapAlerts.removeLayer(l); });
+  try{
+    const res = await fetch("/api/alerts");
+    const alerts = await res.json();
+    alerts.forEach(a=>{
+      const col = a.severity==="extreme"?"#ff0000":a.severity==="high"?"#ff9800":"#4caf50";
+      const lat = a.lat || a.latitude || 0, lon = a.lon || a.longitude || 0;
+      L.circleMarker([lat,lon],{radius:7,color:col,fillOpacity:0.8})
+        .addTo(mapAlerts)
+        .bindPopup(`<b>${a.region||a.country}</b><br>${a.title}<br>Fiabilité: ${a.certainty??"?"}%`);
+    });
+  }catch(e){ console.error(e); }
+}
+
+// === Boutons ===
+async function runExtraction(){
+  const btn=document.getElementById("runBtn");
+  btn.disabled=true; btn.innerText="⏳ Extraction...";
+  const r = await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})});
+  const d = await r.json();
+  alert(d.success?"✅ Extraction terminée":"❌ Échec extraction");
+  btn.disabled=false; btn.innerText="⚡ Lancer Extraction (sans IA)";
+  refreshAll();
+}
+
+async function runAI(){
+  const btn=document.getElementById("aiBtn");
+  btn.disabled=true; btn.innerText="⏳ IA J.E.A.N...";
+  const r = await fetch("/api/ai-analyse",{method:"POST"});
+  const d = await r.json();
+  alert(d.success?"✅ IA J.E.A.N terminée":"❌ Erreur IA: "+(d.error||""));
+  btn.disabled=false; btn.innerText="🧠 Lancer Analyse IA J.E.A.N.";
+  refreshAll();
+}
+
+// === Rafraîchissements manuels par section ===
 async function refreshSection(section){
   if(section==="status") loadStatus();
   if(section==="forecast") updateMapForecast();
   if(section==="alerts") updateMapAlerts();
-  if(section==="summary") loadSummary();
-  if(section==="logs") refreshLogs();
+  if(section==="summary") loadStatus();
+  if(section==="logs") {/* SSE en continu, rien à faire */}
   if(section==="errors") loadErrors();
 }
 
-async function refreshLogs(){
-  const res=await fetch("/api/status");
-  const d=await res.json();
-  const div=document.getElementById("logs");
-  const logs=d.checkup?.logs||[];
-  div.innerHTML=logs.slice(-50).map(l=>`<div>[${new Date(l.timestamp).toLocaleTimeString()}] ${l.message}</div>`).join("");
-  div.scrollTop=div.scrollHeight;
+function refreshAll(){
+  loadStatus(); updateMapForecast(); updateMapAlerts(); loadErrors();
 }
 
-async function loadErrors(){
-  const res=await fetch("/api/status");
-  const d=await res.json();
-  const box=document.getElementById("errors");
-  if(d.engineErrors?.length){
-    box.innerHTML="<b>Erreurs récentes :</b><br>"+d.engineErrors.map(e=>`• ${e.message}`).join("<br>");
-    box.style.display="block";
-  }
-}
+setInterval(refreshAll, 10000);
 
-async function loadSummary(){
-  const res=await fetch("/api/alerts/summary");
-  const s=await res.json();
-  document.getElementById("summaryBody").innerHTML=`
-    <tr><td>Locales/Nationales</td><td>${s.byStatus?.toValidate+s.byStatus?.published+s.byStatus?.["under-surveillance"]||0}</td></tr>
-    <tr><td>Publiées (≥90%)</td><td>${s.byStatus?.published||0}</td></tr>
-    <tr><td>À valider (70–89%)</td><td>${s.byStatus?.toValidate||0}</td></tr>
-    <tr><td>Sous surveillance</td><td>${s.byStatus?.["under-surveillance"]||0}</td></tr>
-    <tr><td>Archivées</td><td>${s.byStatus?.archived||0}</td></tr>`;
-}
-
-async function updateMapForecast(){
-  mapForecast.eachLayer(l=>{if(l instanceof L.CircleMarker)mapForecast.removeLayer(l);});
-  const res=await fetch("/api/status");
-  const d=await res.json();
-  const forecasts=d.forecasts||{};
-  for(const [country,info] of Object.entries(forecasts)){
-    const color=info.status==="ok"?"#4caf50":info.status==="fail"?"#ff5252":"#ff9800";
-    L.circleMarker([info.lat||0,info.lon||0],{radius:6,color,fillOpacity:0.8})
-      .addTo(mapForecast).bindPopup(`<b>${country}</b><br>${info.summary||"Prévision en cours"}`);
-  }
-}
-
-async function updateMapAlerts(){
-  mapAlerts.eachLayer(l=>{if(l instanceof L.CircleMarker)mapAlerts.removeLayer(l);});
-  const res=await fetch("/api/alerts");
-  const alerts=await res.json();
-  alerts.forEach(a=>{
-    const col=a.severity==="red"?"#ff0000":a.severity==="orange"?"#ff9800":"#4caf50";
-    L.circleMarker([a.lat,a.lon],{radius:7,color:col,fillOpacity:0.8})
-      .addTo(mapAlerts)
-      .bindPopup(`<b>${a.region||a.country}</b><br>${a.title}<br>Fiabilité: ${a.confidence||"?"}%`);
-  });
-}
-
-async function runGlobal(){
-  const btn=document.getElementById("runBtn");
-  btn.disabled=true;btn.innerText="⏳ Lancement...";
-  const res=await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"}});
-  const data=await res.json();
-  alert(data.success?"✅ RUN GLOBAL lancé avec succès":"❌ Erreur run");
-  btn.disabled=false;btn.innerText="⚡ Lancer Run Global";
-  refreshSection("logs");
-  refreshSection("status");
-}
-
-function addMsg(txt,who="bot"){
-  const box=document.querySelector(".chat-messages");
-  const div=document.createElement("div");
-  div.className=`msg ${who}`;div.innerText=txt;
-  box.appendChild(div);box.scrollTop=box.scrollHeight;
-}
-async function sendMsg(){
-  const input=document.getElementById("chatInput");
-  const text=input.value.trim();if(!text)return;
-  addMsg(text,"user");input.value="";
-  const res=await fetch("/api/chat-engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text})});
-  const data=await res.json();
-  addMsg(data.reply||"⚠️ Pas de réponse","bot");
-}
-function toggleChat(){
-  const body=document.querySelector(".chat-body");
-  body.style.display=body.style.display==="flex"?"none":"flex";
-}
-window.onload=()=>{initMaps();loadStatus();loadErrors();loadSummary();updateMapAlerts();updateMapForecast();};
+window.onload = ()=>{
+  initMaps();
+  refreshAll();
+};
 </script>
 
 <header>🛰️ Console IA J.E.A.N – TINSFLASH</header>
 <nav>
   <a href="/admin-pp.html">Console</a>
   <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-index.html">Vue Index</a>
+  <a href="/admin-radar.html">Radar & News</a>
+  <a href="/admin-users.html">Utilisateurs</a>
 </nav>
 
 <main>
-  <h2>⚙️ État du moteur <button onclick="refreshSection('status')">🔄</button></h2>
-  <button id="runBtn" onclick="runGlobal()">⚡ Lancer Run Global</button>
-  <div class="status-grid">
-    <div class="status-box"><b>Statut moteur</b><span id="engineStatus">–</span></div>
-    <div class="status-box"><b>Dernier run</b><span id="lastRun">–</span></div>
-    <div class="status-box"><b>Modèles actifs</b><span>IA + GFS + ECMWF + ICON</span></div>
+  <div class="actions">
+    <button id="runBtn" onclick="runExtraction()">⚡ Lancer Extraction (sans IA)</button>
+    <button id="aiBtn" class="btn-secondary" onclick="runAI()">🧠 Lancer Analyse IA J.E.A.N.</button>
+    <button onclick="refreshAll()">🔄 Tout rafraîchir</button>
   </div>
 
-  <h2>📊 Synthèse alertes <button onclick="refreshSection('summary')">🔄</button></h2>
-  <table id="summaryTable"><thead><tr><th>Type</th><th>Nombre</th></tr></thead><tbody id="summaryBody"><tr><td colspan="2">Chargement...</td></tr></tbody></table>
+  <h2>⚙️ État du moteur 
+    <button onclick="refreshSection('status')">🔄</button>
+  </h2>
+  <div class="status-grid">
+    <div class="status-box"><b>Statut</b><span id="engineStatus" class="warn">–</span></div>
+    <div class="status-box"><b>Dernier run</b><span id="lastRun">Jamais</span></div>
+    <div class="status-box"><b>Modèles actifs</b><span>GFS, ECMWF, ICON, HRRR, UKMO, DWD, NASA POWER, OpenWeather</span></div>
+    <div class="status-box"><b>Pipeline</b><span>Extraction ➜ IA (sur ordre)</span></div>
+  </div>
 
-  <h2>🌍 Carte prévisions <button onclick="refreshSection('forecast')">🔄</button></h2>
+  <h2>📊 Modèles – Résumé extraction 
+    <button onclick="refreshSection('summary')">🔄</button>
+  </h2>
+  <table id="summaryTable">
+    <thead><tr><th>Type</th><th>Nombre</th></tr></thead>
+    <tbody id="summaryBody"><tr><td colspan="2">–</td></tr></tbody>
+  </table>
+
+  <h2>📚 Détail par modèle (OK/Fail)
+    <button onclick="refreshSection('summary')">🔄</button>
+  </h2>
+  <table id="modelsTable">
+    <thead><tr><th>Modèle</th><th>OK</th><th>Fail</th></tr></thead>
+    <tbody id="modelsBody"><tr><td colspan="3">Chargement…</td></tr></tbody>
+  </table>
+
+  <h2>🌍 Carte prévisions (voyants pays)
+    <button onclick="refreshSection('forecast')">🔄</button>
+  </h2>
   <div id="mapForecast"></div>
 
-  <h2>🚨 Carte alertes (monde) <button onclick="refreshSection('alerts')">🔄</button></h2>
+  <h2>🚨 Carte alertes (monde)
+    <button onclick="refreshSection('alerts')">🔄</button>
+  </h2>
   <div id="mapAlerts"></div>
 
-  <h2>📜 Logs moteur <button onclick="refreshSection('logs')">🔄</button></h2>
+  <h2>📜 Logs moteur (temps réel)
+    <button onclick="refreshSection('logs')">🔄</button>
+  </h2>
   <div id="logs"></div>
   <div id="errors"></div>
 </main>
-
-<div class="chat-float">
-  <div class="chat-header" onclick="toggleChat()">💬 Chat IA moteur</div>
-  <div class="chat-body">
-    <div class="chat-messages"></div>
-    <div class="chat-input"><input id="chatInput" placeholder="Demande à l’IA..." /><button onclick="sendMsg()">▶</button></div>
-  </div>
-</div>
 </body>
 </html>
