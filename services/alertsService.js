@@ -1,5 +1,5 @@
 // PATH: services/alertsService.js
-// 🚨 Service central de gestion des alertes TINSFLASH (réel et connecté)
+// 🚨 Service central de gestion des alertes TINSFLASH – version extraction sans IA (100 % réel)
 
 import {
   addEngineLog,
@@ -7,7 +7,6 @@ import {
   saveEngineState,
   getEngineState,
 } from "./engineState.js";
-import { askOpenAI } from "./openaiService.js";
 import { analyzeSnow } from "./snowService.js";
 import { analyzeRain } from "./rainService.js";
 import { analyzeWind } from "./windService.js";
@@ -29,12 +28,12 @@ import { runContinental } from "./runContinental.js";
 let activeAlerts = [];
 
 /* ===========================================================
-   🔎 GÉNÉRATION D’UNE ALERTE (POINT UNIQUE)
+   🔎 GÉNÉRATION D’UNE ALERTE (PHASE 1 – Extraction sans IA)
    =========================================================== */
 export async function generateAlerts(lat, lon, country, region, continent = "Europe") {
   const state = await getEngineState();
   try {
-    await addEngineLog(`🚨 Analyse alertes pour ${country}${region ? " - " + region : ""}`);
+    await addEngineLog(`🚨 Extraction brute pour ${country}${region ? " - " + region : ""}`);
 
     // 1️⃣ Détection brute multi-modèles
     const detectorResults = await detectAlerts({ lat, lon, country }, { scope: continent, country });
@@ -63,33 +62,18 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
     const anomaly = forecastVision.detectSeasonalAnomaly(base);
     if (anomaly) base.anomaly = anomaly;
 
-    // 5️⃣ IA d’analyse globale
-    const prompt = `
-Analyse des risques météo pour ${country}${region ? " - " + region : ""}, continent=${continent}.
-Sources enrichies :
-- Neige: ${JSON.stringify(snow)}
-- Pluie: ${JSON.stringify(rain)}
-- Vent: ${JSON.stringify(wind)}
-- Détecteur brut: ${JSON.stringify(detectorResults)}
-- Stations: ${JSON.stringify(stations?.summary || {})}
-- Haute résolution: ${JSON.stringify(hiRes || {})}
-- Anomalies: ${JSON.stringify(anomaly || {})}
+    // ⚠️ 5️⃣ Pas d’IA ici — données prêtes pour analyse IA ultérieure
+    const parsed = {
+      type: "pending-analysis",
+      confidence: 0,
+      status: "to-analyze",
+      note: "Analyse IA non encore effectuée (Phase 2 requise)",
+      dataSources: {
+        snow, rain, wind, stations, hiRes, detectorResults, anomaly,
+      },
+    };
 
-Consignes :
-Croise toutes les données. Ajuste selon relief, climat, saison et latitude.
-Réponds STRICTEMENT en JSON avec :
-{ type, zone, confidence(0–100), intensité, conséquences, recommandations, durée }.
-`;
-    const aiResult = await askOpenAI("Tu es un moteur d’alerte météo nucléaire", prompt);
-
-    let parsed;
-    try {
-      parsed = JSON.parse(aiResult);
-    } catch {
-      parsed = { type: "unknown", confidence: 0, note: "JSON invalide", raw: aiResult };
-    }
-
-    // 6️⃣ Classification
+    // 6️⃣ Classification simple
     let classified = classifyAlerts(parsed);
 
     // 7️⃣ Vérification externe (MeteoAlarm, NWS, etc.)
@@ -129,9 +113,6 @@ Réponds STRICTEMENT en JSON avec :
     if (prev) {
       prev.data = {
         ...newAlert.data,
-        history: Array.isArray(prev.data.history)
-          ? [...prev.data.history, ...newAlert.data.history]
-          : newAlert.data.history,
         disappearedRunsCount: 0,
         firstExclusivity:
           prev.data.firstExclusivity ||
@@ -152,93 +133,19 @@ Réponds STRICTEMENT en JSON avec :
     state.lastAlertsGenerated = new Date().toISOString();
     await saveEngineState(state);
 
-    await addEngineLog(`✅ Alerte générée (${exclusivity}) pour ${country}${region ? " – " + region : ""}`);
+    await addEngineLog(`✅ Extraction terminée pour ${country}${region ? " – " + region : ""}`);
     return prev || newAlert;
   } catch (err) {
-    await addEngineError(`Erreur génération alertes: ${err.message}`);
+    await addEngineError(`Erreur extraction alertes: ${err.message}`);
     return { error: err.message };
   }
 }
 
 /* ===========================================================
-   📦 GETTERS / UPDATERS
-   =========================================================== */
-export async function getActiveAlerts() {
-  return [...activeAlerts];
-}
-
-export async function updateAlertStatus(id, action) {
-  const alert = activeAlerts.find((a) => a.id === id);
-  if (!alert) return { error: "Alerte introuvable" };
-  alert.data = { ...alert.data, status: action };
-  await addEngineLog(`⚡ Alerte ${id} → ${action}`);
-  return alert;
-}
-
-/* ===========================================================
-   🧮 SYNTHÈSE SURVEILLANCE
-   =========================================================== */
-export async function getSurveillanceSummary() {
-  const summary = {
-    total: activeAlerts.length,
-    byStatus: {
-      published: 0,
-      toValidate: 0,
-      "under-surveillance": 0,
-      "low-confidence": 0,
-      archived: 0,
-    },
-    byConfidence: { "0-49": 0, "50-69": 0, "70-89": 0, "90-100": 0 },
-    exclusives: 0,
-    confirmedElsewhere: 0,
-  };
-
-  for (const a of activeAlerts) {
-    const s = a.data?.status || "under-surveillance";
-    if (summary.byStatus[s] != null) summary.byStatus[s]++;
-    const c = a.data?.confidence ?? 0;
-    if (c < 50) summary.byConfidence["0-49"]++;
-    else if (c < 70) summary.byConfidence["50-69"]++;
-    else if (c < 90) summary.byConfidence["70-89"]++;
-    else summary.byConfidence["90-100"]++;
-    const ex = a.data?.external?.exclusivity;
-    if (ex === "exclusive") summary.exclusives++;
-    if (ex === "confirmed-elsewhere") summary.confirmedElsewhere++;
-  }
-
-  return summary;
-}
-
-/* ===========================================================
-   💤 MARQUAGE DES ALERTES DISPARUES
-   =========================================================== */
-export async function markDisappearedSince(lastRunSeenIds = []) {
-  const seen = new Set(lastRunSeenIds);
-  let changed = false;
-  for (const a of activeAlerts) {
-    if (a.data?.status === "archived") continue;
-    if (!seen.has(a.id)) {
-      const d = (a.data?.disappearedRunsCount ?? 0) + 1;
-      a.data.disappearedRunsCount = d;
-      if (d >= 6) a.data.status = "archived";
-      changed = true;
-    } else {
-      if (a.data?.disappearedRunsCount) a.data.disappearedRunsCount = 0;
-    }
-  }
-  if (changed) {
-    const state = await getEngineState();
-    state.alerts = activeAlerts;
-    await saveEngineState(state);
-  }
-  return { changed };
-}
-
-/* ===========================================================
-   🌍 AUTO-RUN ALERTES GLOBALES
+   🌍 RUN GLOBAL ALERTS (Extraction mondiale sans IA)
    =========================================================== */
 export async function runGlobalAlerts() {
-  await addEngineLog("🚨 Lancement global des alertes sur toutes les zones couvertes...");
+  await addEngineLog("🚨 Extraction globale des alertes sans IA...");
   const state = await getEngineState();
 
   const allZones = [
@@ -275,8 +182,23 @@ export async function runGlobalAlerts() {
     }
   }
 
-  await addEngineLog(`✅ Génération globale terminée (${results.length} alertes actives)`);
+  await addEngineLog(`✅ Extraction globale terminée (${results.length} zones)`);
   state.alerts = await getActiveAlerts();
   await saveEngineState(state);
   return results;
+}
+
+/* ===========================================================
+   📦 GETTERS / UPDATERS
+   =========================================================== */
+export async function getActiveAlerts() {
+  return [...activeAlerts];
+}
+
+export async function updateAlertStatus(id, action) {
+  const alert = activeAlerts.find((a) => a.id === id);
+  if (!alert) return { error: "Alerte introuvable" };
+  alert.data = { ...alert.data, status: action };
+  await addEngineLog(`⚡ Alerte ${id} → ${action}`);
+  return alert;
 }
