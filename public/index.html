@@ -1,70 +1,150 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH • Prévisions & Alertes</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>TINSFLASH • Prévisions & Alertes en temps réel</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="icon" href="favicon.ico" />
+  <style>
+    body {
+      font-family: "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      background: #0b0f1a;
+      color: #e3f2fd;
+      overflow-x: hidden;
+    }
+    header {
+      background: #061324;
+      text-align: center;
+      padding: 10px 0;
+      color: #4fc3f7;
+      font-weight: bold;
+      font-size: 1.3em;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    }
+    .video-container { position: relative; width: 100%; height: 260px; overflow: hidden; }
+    .video-container video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.9); }
+    .video-container .overlay {
+      position:absolute;top:0;left:0;width:100%;height:100%;
+      display:flex;flex-direction:column;justify-content:center;align-items:center;
+      background:rgba(0,0,0,0.25);color:#4fc3f7;text-shadow:0 0 10px #000;pointer-events:none;
+    }
+    #soundToggle {
+      position:absolute;bottom:10px;right:15px;
+      background:rgba(0,0,0,0.6);border:1px solid #4fc3f7;border-radius:50%;
+      color:#4fc3f7;font-size:1.2em;cursor:pointer;width:40px;height:40px;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 10px rgba(0,255,255,0.3);z-index:5;
+    }
+    main { padding:20px;max-width:1200px;margin:auto; }
+    h2 {
+      color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;
+    }
+    p.intro {
+      display:flex;align-items:center;gap:20px;text-align:justify;color:#ccc;font-size:1.05em;line-height:1.6em;
+    }
+    p.intro img {
+      width:120px;height:auto;border-radius:12px;box-shadow:0 0 25px rgba(79,195,247,0.4);
+    }
+    .input-loc {display:flex;gap:8px;margin:15px 0;}
+    .input-loc input {
+      flex:1;padding:8px;border:none;border-radius:6px;background:#15233b;color:#e3f2fd;
+    }
+    .input-loc button {
+      background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:8px 12px;font-weight:bold;cursor:pointer;
+    }
+    .forecast-section {display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;}
+    .forecast-box {
+      background:#131a2b;border-radius:10px;padding:15px;flex:1;min-width:300px;
+      box-shadow:0 0 10px rgba(0,0,0,0.3);
+    }
+    #alerts p.blink {
+      background:#d32f2f;padding:8px;border-radius:6px;animation:blink 1s infinite;color:#fff;
+    }
+    @keyframes blink {50%{opacity:0.5;}}
+    .map-container {height:360px;margin:25px 0;border-radius:10px;overflow:hidden;
+      box-shadow:0 0 12px rgba(0,0,0,0.4);}
+    iframe {width:100%;height:450px;border:none;border-radius:10px;}
+    footer {
+      text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;
+    }
+    footer a {color:#4fc3f7;text-decoration:none;} footer a:hover{text-decoration:underline;}
+    .ia-bubble {
+      position:fixed;bottom:20px;right:20px;background:#4fc3f7;color:#000;
+      border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center;
+      font-weight:bold;cursor:pointer;box-shadow:0 0 20px rgba(79,195,247,0.6);z-index:999;
+    }
+  </style>
 </head>
-<body class="bg-black text-white font-sans">
 
-<header class="text-center py-4 bg-slate-900">
-  <h1 class="text-2xl font-bold text-cyan-400">🌍 TINSFLASH • Prévisions & Alertes en temps réel</h1>
-  <p class="text-sm text-cyan-300">🛰️ Données satellites • Modèles IA multi-sources • Relief, altitude, océans</p>
-</header>
+<body>
+  <header>TINSFLASH • Prévisions & Alertes en temps réel</header>
 
-<section id="intro-video">
-  <video id="introJean" autoplay loop muted playsinline>
-    <source src="/videos/intro-jean.mp4" type="video/mp4">
-  </video>
-  <button id="soundToggle">🔊 Son</button>
-</section>
-
-<section id="presentation" class="flex flex-wrap items-center justify-center gap-4 p-4">
-  <img id="jeanAvatar" src="/avatars/jean-default.png" alt="J.E.A.N." class="w-32 rounded-xl shadow-lg">
-  <div class="max-w-md">
-    <h2 class="text-cyan-400 text-xl font-bold mb-2">Présentation du moteur IA J.E.A.N</h2>
-    <p>
-      Le moteur <strong>TINSFLASH</strong> combine l’ensemble des modèles météorologiques existants
-      <em>plus les modèles d’intelligence artificielle de dernière génération</em>.  
-      Il croise images satellites, relief, altitude, humidité du sol et microclimats
-      pour fournir des <strong>prévisions locales, nationales et mondiales</strong> d’une précision inégalée,
-      tout en anticipant les <strong>alertes météorologiques avant tout le monde</strong>.
-    </p>
+  <div class="video-container">
+    <video id="introVideo" autoplay muted loop playsinline>
+      <source src="intro-jean.mp4" type="video/mp4" />
+    </video>
+    <div class="overlay">🌌 Moteur Météo IA – Système J.E.A.N</div>
+    <div id="soundToggle">🔊</div>
   </div>
-</section>
 
-<section id="geo" class="p-4 text-center">
-  <h3 class="text-cyan-400 mb-2">Votre position</h3>
-  <button id="btnGeo" class="bg-cyan-600 px-3 py-1 rounded">📍 Activer ma géolocalisation</button>
-  <input id="manualAddress" placeholder="Ou entrez votre adresse, localité, pays…" class="mt-2 px-2 py-1 text-black rounded w-64">
-  <p id="zoneStatus" class="text-cyan-300 mt-2"></p>
-</section>
+  <main>
+    <h2>Présentation du système J.E.A.N</h2>
+    <p class="intro">
+      <img src="avatars/jean-default.png" id="jeanAvatar" alt="J.E.A.N" />
+      Le <strong>Système J.E.A.N</strong> combine l’ensemble des modèles météorologiques existants,
+      les modèles IA dernière génération et les données satellites.
+      Il analyse le relief, l’humidité, la température du sol et les microclimats
+      pour fournir des prévisions <strong>fiables, locales, nationales et mondiales</strong>,
+      ainsi que des <strong>alertes précises, avant tout le monde</strong>.
+    </p>
 
-<section id="maps" class="p-4">
-  <h3 class="text-cyan-400 text-center">Cartes interactives</h3>
-  <div id="mapCoverage" style="height:300px;margin:10px 0;"></div>
-  <div id="mapAlerts" style="height:300px;margin:10px 0;"></div>
-  <iframe id="radar" src="https://embed.windy.com/embed2.html" width="100%" height="400" frameborder="0"></iframe>
-</section>
+    <h2>Votre position</h2>
+    <div class="input-loc">
+      <input id="address" placeholder="Rue, Localité, Pays..." />
+      <button onclick="useGeoloc()">📍 Géolocaliser</button>
+      <button onclick="manualAddress()">Valider</button>
+    </div>
 
-<section id="alerts" class="p-4">
-  <h3 class="text-cyan-400">Alertes locales</h3>
-  <div id="alertsList" class="space-y-2"></div>
-</section>
+    <h2>Prévisions du jour</h2>
+    <div class="forecast-section">
+      <div class="forecast-box"><h3>🌍 Locales</h3><div id="local-today">Chargement...</div></div>
+      <div class="forecast-box"><h3>📡 Nationales</h3><div id="national-today">Chargement...</div></div>
+    </div>
 
-<section id="forecast" class="p-4">
-  <h3 class="text-cyan-400">Prévisions</h3>
-  <div id="forecastData" class="text-sm text-gray-200"></div>
-</section>
+    <h2>Prévisions sur 7 jours</h2>
+    <div class="forecast-section">
+      <div class="forecast-box"><h3>Locales</h3><div id="local-week">Chargement...</div></div>
+      <div class="forecast-box"><h3>Nationales</h3><div id="national-week">Chargement...</div></div>
+    </div>
 
-<!-- 💬 Bulle IA Cohere -->
-<div id="chatJean" class="fixed bottom-4 right-4 bg-cyan-700 rounded-xl shadow-lg p-2 flex items-center gap-2">
-  <img src="/avatars/jean-default.png" id="chatAvatar" class="w-10 h-10 rounded-full border-2 border-cyan-300">
-  <input id="chatInput" placeholder="Parler à J.E.A.N…" class="text-black rounded px-2 py-1 w-48">
-  <button id="sendChat" class="bg-cyan-400 text-black px-2 py-1 rounded">IA-AI</button>
-</div>
+    <h2>Alertes actives</h2>
+    <div id="alerts">Chargement...</div>
 
-<script src="index.js"></script>
+    <h2>Carte de couverture (prévisions)</h2>
+    <div id="map-forecast" class="map-container"></div>
+
+    <h2>Carte mondiale des alertes</h2>
+    <div id="map-alerts" class="map-container"></div>
+
+    <iframe src="https://embed.windy.com/embed2.html?lat=20&lon=10&zoom=2&level=surface&overlay=rain&menu=true&marker=false"
+      loading="lazy"></iframe>
+
+    <p style="text-align:center;color:#81d4fa;margin-top:25px;">
+      🔍 Sources : GFS, ECMWF, ICON, Copernicus, NOAA, NASA, OpenWeather – ajustées par IA et relief.
+    </p>
+  </main>
+
+  <footer>
+    © 2025 TINSFLASH – Tous droits réservés<br />
+    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
+    💬 <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a>
+  </footer>
+
+  <div class="ia-bubble" onclick="openJeanChat()">IA-AI</div>
+  <script src="index.js"></script>
 </body>
 </html>
