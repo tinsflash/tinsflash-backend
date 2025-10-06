@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
   <title>TINSFLASH • Prévisions & Alertes en temps réel</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <link rel="icon" href="favicon.ico" />
   <style>
     body {
@@ -13,7 +16,6 @@
       color: #e3f2fd;
       overflow-x: hidden;
     }
-
     header {
       background: #061324;
       text-align: center;
@@ -21,215 +23,128 @@
       color: #4fc3f7;
       font-weight: bold;
       font-size: 1.3em;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.6);
     }
-
-    /* === VIDEO INTRO === */
-    .video-container {
-      position: relative;
-      width: 100%;
-      height: 260px;
-      overflow: hidden;
-    }
-
-    .video-container video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: brightness(0.9);
-    }
-
+    .video-container { position: relative; width: 100%; height: 260px; overflow: hidden; }
+    .video-container video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.9); }
     .video-container .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: rgba(0, 0, 0, 0.25);
-      color: #4fc3f7;
-      text-shadow: 0 0 10px #000;
-      pointer-events: none;
+      position:absolute;top:0;left:0;width:100%;height:100%;
+      display:flex;flex-direction:column;justify-content:center;align-items:center;
+      background:rgba(0,0,0,0.25);color:#4fc3f7;text-shadow:0 0 10px #000;pointer-events:none;
     }
-
-    .video-container h1 {
-      font-size: 2em;
-      margin: 0;
-    }
-
-    .video-container p {
-      margin: 5px 0 0;
-      font-size: 1em;
-      color: #aeefff;
-    }
-
     #soundToggle {
-      position: absolute;
-      bottom: 10px;
-      right: 15px;
-      background: rgba(0, 0, 0, 0.6);
-      border: 1px solid #4fc3f7;
-      border-radius: 50%;
-      color: #4fc3f7;
-      font-size: 1.2em;
-      cursor: pointer;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-      z-index: 5;
+      position:absolute;bottom:10px;right:15px;
+      background:rgba(0,0,0,0.6);border:1px solid #4fc3f7;border-radius:50%;
+      color:#4fc3f7;font-size:1.2em;cursor:pointer;width:40px;height:40px;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 10px rgba(0,255,255,0.3);z-index:5;
     }
-
-    #soundToggle:hover {
-      background: rgba(79, 195, 247, 0.2);
-      transform: scale(1.1);
+    main { padding:20px;max-width:1200px;margin:auto; }
+    h2 {
+      color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;
     }
-
-    /* === INFO LINE === */
-    .info-line {
-      text-align: center;
-      background: #07192b;
-      color: #81d4fa;
-      padding: 6px;
-      font-size: 0.9em;
-      border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+    p.intro {
+      display:flex;align-items:center;gap:20px;text-align:justify;color:#ccc;font-size:1.05em;line-height:1.6em;
     }
-
-    /* === INTRO SECTION === */
-    main {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    p.intro img {
+      width:120px;height:auto;border-radius:12px;box-shadow:0 0 25px rgba(79,195,247,0.4);
     }
-
-    .intro {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      max-width: 800px;
-      flex-wrap: wrap;
+    .input-loc {display:flex;gap:8px;margin:15px 0;}
+    .input-loc input {
+      flex:1;padding:8px;border:none;border-radius:6px;background:#15233b;color:#e3f2fd;
     }
-
-    .jean-avatar {
-      width: 120px;
-      height: auto;
-      border-radius: 14px;
-      box-shadow: 0 0 15px rgba(0, 200, 255, 0.3);
-      transition: all 0.6s ease;
+    .input-loc button {
+      background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:8px 12px;font-weight:bold;cursor:pointer;
     }
-
-    .avatar-active {
-      filter: brightness(1.4) drop-shadow(0 0 25px rgba(0, 255, 255, 0.9));
-      transform: scale(1.1) rotate(2deg);
-      animation: pulseIA 0.8s ease-in-out infinite alternate;
+    .forecast-section {display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;}
+    .forecast-box {
+      background:#131a2b;border-radius:10px;padding:15px;flex:1;min-width:300px;
+      box-shadow:0 0 10px rgba(0,0,0,0.3);
     }
-
-    @keyframes pulseIA {
-      from {
-        filter: brightness(1.2) drop-shadow(0 0 15px rgba(0, 255, 255, 0.4));
-      }
-      to {
-        filter: brightness(1.6) drop-shadow(0 0 35px rgba(0, 255, 255, 0.8));
-      }
+    #alerts p.blink {
+      background:#d32f2f;padding:8px;border-radius:6px;animation:blink 1s infinite;color:#fff;
     }
-
-    .intro-text {
-      flex: 1;
-      color: #e3f2fd;
+    @keyframes blink {50%{opacity:0.5;}}
+    .map-container {height:360px;margin:25px 0;border-radius:10px;overflow:hidden;
+      box-shadow:0 0 12px rgba(0,0,0,0.4);}
+    iframe {width:100%;height:450px;border:none;border-radius:10px;}
+    footer {
+      text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;
     }
-
-    .intro-text h2 {
-      color: #4fc3f7;
-      border-left: 3px solid #4fc3f7;
-      padding-left: 10px;
-    }
-
-    /* === BULLE IA-AI === */
+    footer a {color:#4fc3f7;text-decoration:none;} footer a:hover{text-decoration:underline;}
     .ia-bubble {
-      position: fixed;
-      bottom: 25px;
-      right: 25px;
-      background: #03a9f4;
-      color: #fff;
-      border-radius: 30px;
-      padding: 12px 22px;
-      font-weight: bold;
-      box-shadow: 0 0 20px rgba(3, 169, 244, 0.6);
-      cursor: pointer;
-      transition: 0.3s ease;
-      z-index: 10;
-    }
-
-    .ia-bubble:hover {
-      background: #0288d1;
-      transform: scale(1.05);
-      box-shadow: 0 0 25px rgba(3, 169, 244, 0.8);
-    }
-
-    /* === FORECASTS === */
-    .forecast {
-      margin-top: 25px;
-      background: #081b2d;
-      padding: 15px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 800px;
-      color: #b3e5fc;
-      box-shadow: 0 0 10px rgba(0, 200, 255, 0.1);
+      position:fixed;bottom:20px;right:20px;background:#4fc3f7;color:#000;
+      border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center;
+      font-weight:bold;cursor:pointer;box-shadow:0 0 20px rgba(79,195,247,0.6);z-index:999;
     }
   </style>
 </head>
+
 <body>
-  <header>🌍 TINSFLASH • Prévisions & Alertes en temps réel</header>
+  <header>TINSFLASH • Prévisions & Alertes en temps réel</header>
 
   <div class="video-container">
     <video id="introVideo" autoplay muted loop playsinline>
       <source src="intro-jean.mp4" type="video/mp4" />
     </video>
-    <button id="soundToggle" title="Activer le son 🔊">🔇</button>
-    <div class="overlay">
-      <h1>🌌 TINSFLASH</h1>
-      <p>Prévisions et alertes IA en temps réel • Moteur J.E.A.N</p>
-    </div>
-  </div>
-
-  <div class="info-line">
-    🛰 Données satellites • Tous modèles météorologiques + modèles IA • Spécificités locales (relief, altitude, océans)
+    <div class="overlay">🌌 Moteur Météo IA – Système J.E.A.N</div>
+    <div id="soundToggle">🔊</div>
   </div>
 
   <main>
-    <section class="intro">
-      <img src="avatars/jean-default.png" alt="J.E.A.N" class="jean-avatar" id="jeanAvatar" />
-      <div class="intro-text">
-        <h2>Présentation du moteur IA J.E.A.N</h2>
-        <p>
-          Le moteur <b>TINSFLASH</b> combine <b>l’ensemble des modèles météorologiques existants</b>
-          <i>et les modèles d’intelligence artificielle de dernière génération</i>.
-          Il croise les données satellites, le relief, l’altitude, les microclimats et la température du sol
-          pour fournir des <b>prévisions locales, nationales et mondiales d’une précision inégalée</b>,
-          tout en anticipant <b>les alertes avant tout le monde</b>.
-        </p>
-      </div>
-    </section>
+    <h2>Présentation du système J.E.A.N</h2>
+    <p class="intro">
+      <img src="avatars/jean-default.png" id="jeanAvatar" alt="J.E.A.N" />
+      Le <strong>Système J.E.A.N</strong> combine l’ensemble des modèles météorologiques existants,
+      les modèles IA dernière génération et les données satellites.
+      Il analyse le relief, l’humidité, la température du sol et les microclimats
+      pour fournir des prévisions <strong>fiables, locales, nationales et mondiales</strong>,
+      ainsi que des <strong>alertes précises, avant tout le monde</strong>.
+    </p>
 
-    <div class="forecast">
-      <h3>Prévisions locales</h3>
-      <div id="local-forecast">Chargement...</div>
-      <h3>Prévisions nationales</h3>
-      <div id="national-forecast">Chargement...</div>
-      <h3>Prévisions sur 7 jours</h3>
-      <div id="forecast-7days">Chargement...</div>
+    <h2>Votre position</h2>
+    <div class="input-loc">
+      <input id="address" placeholder="Rue, Localité, Pays..." />
+      <button onclick="useGeoloc()">📍 Géolocaliser</button>
+      <button onclick="manualAddress()">Valider</button>
     </div>
+
+    <h2>Prévisions du jour</h2>
+    <div class="forecast-section">
+      <div class="forecast-box"><h3>🌍 Locales</h3><div id="local-today">Chargement...</div></div>
+      <div class="forecast-box"><h3>📡 Nationales</h3><div id="national-today">Chargement...</div></div>
+    </div>
+
+    <h2>Prévisions sur 7 jours</h2>
+    <div class="forecast-section">
+      <div class="forecast-box"><h3>Locales</h3><div id="local-week">Chargement...</div></div>
+      <div class="forecast-box"><h3>Nationales</h3><div id="national-week">Chargement...</div></div>
+    </div>
+
+    <h2>Alertes actives</h2>
+    <div id="alerts">Chargement...</div>
+
+    <h2>Carte de couverture (prévisions)</h2>
+    <div id="map-forecast" class="map-container"></div>
+
+    <h2>Carte mondiale des alertes</h2>
+    <div id="map-alerts" class="map-container"></div>
+
+    <iframe src="https://embed.windy.com/embed2.html?lat=20&lon=10&zoom=2&level=surface&overlay=rain&menu=true&marker=false"
+      loading="lazy"></iframe>
+
+    <p style="text-align:center;color:#81d4fa;margin-top:25px;">
+      🔍 Sources : GFS, ECMWF, ICON, Copernicus, NOAA, NASA, OpenWeather – ajustées par IA et relief.
+    </p>
   </main>
 
-  <div class="ia-bubble" id="iaBubble">IA-AI</div>
+  <footer>
+    © 2025 TINSFLASH – Tous droits réservés<br />
+    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
+    💬 <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a>
+  </footer>
 
+  <div class="ia-bubble" onclick="openJeanChat()">IA-AI</div>
   <script src="index.js"></script>
 </body>
 </html>
