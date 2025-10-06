@@ -48,15 +48,14 @@
     }
     .intro-block {
       display: flex;
-      align-items: center;
-      gap: 20px;
+      align-items: flex-start;
+      gap: 18px;
       flex-wrap: wrap;
     }
     .intro-block img {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      box-shadow: 0 0 20px rgba(79, 195, 247, 0.4);
+      width: 80px; /* 🔹 Taille fixe élégante */
+      height: auto;
+      margin-top: 5px;
     }
     .forecast-section {
       display: flex;
@@ -132,22 +131,22 @@
     <div class="intro-block">
       <img src="avatars/jean-default.png" alt="J.E.A.N" />
       <div>
-        <h2>Présentation du moteur TINSFLASH IA J.E.A.N</h2>
+        <h2>Présentation du moteur IA J.E.A.N</h2>
         <p class="intro">
           Le <strong>moteur TINSFLASH</strong> combine <strong>l’ensemble des modèles météorologiques existants</strong>
           <em>plus les modèles d’intelligence artificielle de dernière génération</em>.
           Il croise ces données avec les images satellites, le relief, l’altitude,
-          l’humidité du sol et les microclimats pour délivrer des
+          l’humidité du sol et les microclimats pour fournir des
           <strong>prévisions locales, nationales et mondiales d’une précision inégalée</strong>,
-          et surtout <strong>détecter et diffuser des alertes avant tout le monde, partout sur la planète</strong>.
-          <br><em>⚡ Une technologie météorologique unique, connectée en temps réel.</em>
+          tout en <strong>détectant et diffusant les alertes avant tout le monde</strong>, 
+          où que vous soyez sur la planète.
         </p>
       </div>
     </div>
 
     <div id="geoPrompt">
       📍 Activez votre géolocalisation pour des prévisions locales précises<br>
-      ou entrez votre adresse : 
+      ou entrez votre adresse :
       <input id="manualAddress" type="text" placeholder="Rue, localité, pays" style="width:260px;padding:4px;border-radius:5px;border:none;">
       <button onclick="manualLocate()">OK</button>
     </div>
@@ -196,7 +195,6 @@
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
 
-    // 🟢/🔵 Couverture dynamique réelle
     async function loadCoverage() {
       const res = await fetch("/api/status");
       const data = await res.json();
@@ -207,7 +205,6 @@
       });
     }
 
-    // ⚠️ Alertes locales & continentales
     async function showAlertsBanner() {
       const res = await fetch("/api/alerts");
       const data = await res.json();
@@ -234,7 +231,6 @@
       });
     }
 
-    // 📍 Géolocalisation
     function manualLocate() {
       const addr = document.getElementById("manualAddress").value;
       if (!addr) return alert("Entrez une adresse complète");
