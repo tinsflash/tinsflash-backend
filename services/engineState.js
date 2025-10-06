@@ -1,5 +1,8 @@
 // PATH: services/engineState.js
+// 🔩 Gestion de l’état du moteur et des logs – version complète & connectée SSE + Render
+
 import mongoose from "mongoose";
+import { broadcastLog } from "./adminLogs.js"; // ⬅️ liaison SSE
 
 const ErrorSchema = new mongoose.Schema({
   message: { type: String, required: true },
@@ -14,92 +17,66 @@ const LogSchema = new mongoose.Schema({
 const EngineStateSchema = new mongoose.Schema({
   status: { type: String, default: "idle" }, // idle, running, ok, fail
   lastRun: { type: Date, default: null },
-
-  checkup: {
-    type: Object,
-    default: {
-      models: {
-        ECMWF: "pending",
-        GFS: "pending",
-        ICON: "pending",
-        Meteomatics: "pending",
-        Copernicus: "pending",
-        NASA: "pending",
-        OpenWeather: "pending",
-      },
-      steps: {
-        superForecast: "pending",
-        alertsCovered: "pending",
-        alertsContinental: "pending",
-        fusionIA: "pending",
-        deploy: "pending",
-      },
-      zonesCovered: 0,
-      engineStatus: "IDLE",
-    },
-  },
-
-  engineErrors: { type: [ErrorSchema], default: [] },
+  checkup: { type: Object, default: {} },
+  errors: { type: [ErrorSchema], default: [] },
   logs: { type: [LogSchema], default: [] },
   currentCycleId: { type: String, default: null },
+  alertsLocal: { type: Array, default: [] },
+  forecastsContinental: { type: Object, default: {} },
+  finalReport: { type: Object, default: {} },
 });
 
-// ✅ Middleware cohérence
+// ✅ Préserve la cohérence de l’état
 EngineStateSchema.pre("save", function (next) {
   if (!this.checkup) this.checkup = {};
   if (!this.checkup.engineStatus) this.checkup.engineStatus = "IDLE";
-  if (!this.checkup.models) {
-    this.checkup.models = {
-      ECMWF: "pending",
-      GFS: "pending",
-      ICON: "pending",
-      Meteomatics: "pending",
-      Copernicus: "pending",
-      NASA: "pending",
-      OpenWeather: "pending",
-    };
-  }
-  if (!this.checkup.steps) {
-    this.checkup.steps = {
-      superForecast: "pending",
-      alertsCovered: "pending",
-      alertsContinental: "pending",
-      fusionIA: "pending",
-      deploy: "pending",
-    };
-  }
-  if (!this.checkup.zonesCovered) this.checkup.zonesCovered = 0;
   next();
 });
 
-// === Modèle
 const EngineState = mongoose.model("EngineState", EngineStateSchema);
 
-// === Fonctions utilitaires ===
-
-// Ajoute un log (atomique, max 200)
+// === Enregistrement des logs + sortie console + diffusion SSE ===
 export async function addEngineLog(message) {
-  const entry = { message, timestamp: new Date() };
-  await EngineState.findOneAndUpdate(
-    {},
-    { $push: { logs: { $each: [entry], $position: 0 } }, $slice: { logs: 200 } },
-    { new: true, upsert: true }
-  );
-  return { ts: Date.now(), type: "INFO", message };
+  try {
+    let state = await EngineState.findOne();
+    if (!state) state = new EngineState();
+
+    state.logs.unshift({ message, timestamp: new Date() });
+    if (state.logs.length > 200) state.logs.pop();
+    await state.save();
+
+    // Affiche dans Render
+    console.log("🛰️ LOG:", message);
+
+    // Diffuse SSE
+    if (typeof broadcastLog === "function") broadcastLog({ message, timestamp: new Date() });
+
+    return { ts: Date.now(), type: "INFO", message };
+  } catch (err) {
+    console.error("⚠️ Erreur addEngineLog:", err.message);
+  }
 }
 
-// Ajoute une erreur (atomique, max 200)
 export async function addEngineError(message) {
-  const entry = { message, timestamp: new Date() };
-  await EngineState.findOneAndUpdate(
-    {},
-    { $push: { engineErrors: { $each: [entry], $position: 0 } }, $slice: { engineErrors: 200 } },
-    { new: true, upsert: true }
-  );
-  return { ts: Date.now(), type: "ERROR", message };
+  try {
+    let state = await EngineState.findOne();
+    if (!state) state = new EngineState();
+
+    state.errors.unshift({ message, timestamp: new Date() });
+    if (state.errors.length > 200) state.errors.pop();
+    await state.save();
+
+    console.error("❌ ERREUR:", message);
+
+    if (typeof broadcastLog === "function")
+      broadcastLog({ message: "❌ " + message, timestamp: new Date() });
+
+    return { ts: Date.now(), type: "ERROR", message };
+  } catch (err) {
+    console.error("⚠️ Erreur addEngineError:", err.message);
+  }
 }
 
-// Récupère l’état moteur
 export async function getEngineState() {
   let state = await EngineState.findOne();
   if (!state) {
@@ -109,21 +86,8 @@ export async function getEngineState() {
   return state;
 }
 
-// Sauvegarde atomique (merge, safe même si state est un objet brut)
 export async function saveEngineState(state) {
-  const obj = state?.toObject ? state.toObject() : state;
-  return await EngineState.findOneAndUpdate(
-    {},
-    obj,
-    { new: true, upsert: true }
-  );
-}
-
-// Met à jour un champ précis
-export async function updateEngineState(path, value) {
-  const update = {};
-  update[path] = value;
-  return await EngineState.findOneAndUpdate({}, { $set: update }, { new: true, upsert: true });
+  return state.save();
 }
 
 export default EngineState;
