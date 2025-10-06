@@ -4,38 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH • Centrale Nucléaire Météo J.E.A.N.</title>
+  <title>TINSFLASH • Prévisions & Alertes en temps réel – Monde</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
-      background: #0b0f19;
+      background: #0b101d;
       color: #eee;
     }
     header {
       text-align: center;
-      padding: 18px;
-      background: linear-gradient(90deg, #172b4d, #0c1425);
+      padding: 15px;
+      background: linear-gradient(90deg, #18243b, #101725);
       color: #4fc3f7;
-      font-size: 1.5em;
+      font-size: 1.6em;
       font-weight: bold;
-      text-shadow: 0 0 10px #4fc3f7;
+      letter-spacing: 1px;
     }
     video {
       width: 100%;
-      max-height: 260px;
+      max-height: 240px;
       object-fit: cover;
       display: block;
-    }
-    .intro-nasa {
-      text-align: center;
-      padding: 12px;
-      background: radial-gradient(circle at center, #13253b 0%, #0b0f19 100%);
-      color: #9edcff;
-      font-size: 1.1em;
-      border-bottom: 1px solid #1c273d;
     }
     main {
       padding: 20px;
@@ -47,55 +39,54 @@
       border-left: 4px solid #4fc3f7;
       padding-left: 10px;
       margin-top: 30px;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-    h2 img {
-      width: 75px;
-      height: 75px;
-      border-radius: 50%;
-      box-shadow: 0 0 20px #00bfff;
-      border: 2px solid #00bfff;
-      object-fit: cover;
-      background: #000;
     }
     p.intro {
       text-align: justify;
       color: #ccc;
       font-size: 1.05em;
       line-height: 1.6em;
-      margin-bottom: 30px;
     }
-    .geo {
-      text-align: center;
-      background: #16233a;
-      padding: 14px;
+    .intro-block {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .intro-block img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(79, 195, 247, 0.4);
+    }
+    .forecast-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-between;
+    }
+    .forecast-box {
+      background: #131a2b;
       border-radius: 10px;
-      color: #4fc3f7;
-      margin-bottom: 25px;
+      padding: 15px;
+      flex: 1;
+      min-width: 300px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     }
-    input#manualAddress {
-      width: 80%;
-      padding: 8px;
-      margin-top: 10px;
-      border-radius: 6px;
-      border: none;
-      background: #0f182e;
-      color: #fff;
-    }
-    button#locateBtn {
-      margin-top: 10px;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 6px;
-      background: #4fc3f7;
+    .alert-banner {
+      background: #ffcc00;
       color: #000;
+      padding: 10px;
+      text-align: center;
       font-weight: bold;
-      cursor: pointer;
+      border-radius: 6px;
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
     .map-container {
-      height: 360px;
+      height: 380px;
       margin: 25px 0;
       border-radius: 10px;
       overflow: hidden;
@@ -119,229 +110,152 @@
       color: #4fc3f7;
       text-decoration: none;
     }
-    footer a:hover {
-      text-decoration: underline;
-    }
-    /* === Bouton IA-AI === */
-    .btn-ai {
-      position: fixed;
-      bottom: 45px;
-      right: 30px;
-      background: #00bfff;
-      color: #000;
-      border: none;
-      font-weight: bold;
-      font-size: 15px;
-      border-radius: 50px;
-      padding: 10px 18px;
-      box-shadow: 0 0 20px #00bfff;
-      cursor: pointer;
-      z-index: 1000;
-    }
-    .chat-box {
-      position: fixed;
-      bottom: 95px;
-      right: 20px;
-      background: #1b2439;
-      border: 2px solid #4fc3f7;
-      border-radius: 12px;
-      width: 310px;
-      height: 380px;
-      display: none;
-      flex-direction: column;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-      z-index: 999;
-    }
-    .chat-header {
-      background: #4fc3f7;
-      color: #000;
-      text-align: center;
-      padding: 5px;
-      font-weight: bold;
-      border-radius: 10px 10px 0 0;
-    }
-    .chat-messages {
-      flex: 1;
-      padding: 8px;
-      overflow-y: auto;
-      font-size: 14px;
-      background: #0e1423;
-    }
-    .chat-input {
-      display: flex;
-      border-top: 1px solid #333;
-    }
-    .chat-input input {
-      flex: 1;
-      padding: 8px;
-      border: none;
-      background: #1b2339;
-      color: #eee;
-    }
-    .chat-input button {
-      background: #4fc3f7;
-      border: none;
-      color: #000;
-      padding: 8px 12px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .banner {
+    footer a:hover { text-decoration: underline; }
+    #geoPrompt {
       background: #16233a;
       color: #4fc3f7;
-      padding: 12px;
+      padding: 10px;
       text-align: center;
-      font-weight: bold;
-      margin-top: 20px;
       border-radius: 8px;
+      margin: 15px 0;
     }
   </style>
 </head>
 <body>
-  <header>TINSFLASH • Centrale Nucléaire Météo J.E.A.N.</header>
+  <header>🌍 TINSFLASH • Prévisions & Alertes en temps réel</header>
+
   <video autoplay muted loop playsinline>
     <source src="intro-jean.mp4" type="video/mp4" />
   </video>
 
-  <div class="intro-nasa">
-    🔬 Données satellites • Modèles IA multi-sources • Spécificités locales (relief, altitude, océans)
-  </div>
-
   <main>
-    <h2>
-      <img src="avatars/jean-default.png" alt="Avatar J.E.A.N" />
-      Présentation du système J.E.A.N.
-    </h2>
-
-    <p class="intro">
-      Le <strong>Système J.E.A.N.</strong> croise en temps réel les données satellites,
-      modèles numériques et intelligences artificielles multi-sources.
-      Il analyse le relief, l’humidité, la température du sol et les microclimats
-      pour fournir des prévisions <strong>fiables, locales, nationales et mondiales</strong>,
-      tout en anticipant les anomalies météorologiques susceptibles d’évoluer en alertes.
-    </p>
-
-    <div class="geo">
-      <p><strong>📍 Votre position</strong></p>
-      <button id="locateBtn">Activer la géolocalisation</button><br>
-      ou entrez votre adresse :
-      <input type="text" id="manualAddress" placeholder="Rue, ville, pays" />
+    <div class="intro-block">
+      <img src="avatars/jean-default.png" alt="J.E.A.N" />
+      <div>
+        <h2>Présentation du moteur TINSFLASH IA J.E.A.N</h2>
+        <p class="intro">
+          Le <strong>moteur TINSFLASH</strong> combine <strong>l’ensemble des modèles météorologiques existants</strong>
+          <em>plus les modèles d’intelligence artificielle de dernière génération</em>.
+          Il croise ces données avec les images satellites, le relief, l’altitude,
+          l’humidité du sol et les microclimats pour délivrer des
+          <strong>prévisions locales, nationales et mondiales d’une précision inégalée</strong>,
+          et surtout <strong>détecter et diffuser des alertes avant tout le monde, partout sur la planète</strong>.
+          <br><em>⚡ Une technologie météorologique unique, connectée en temps réel.</em>
+        </p>
+      </div>
     </div>
 
-    <h2>Prévisions locales et nationales</h2>
-    <div id="forecastZone">Chargement...</div>
+    <div id="geoPrompt">
+      📍 Activez votre géolocalisation pour des prévisions locales précises<br>
+      ou entrez votre adresse : 
+      <input id="manualAddress" type="text" placeholder="Rue, localité, pays" style="width:260px;padding:4px;border-radius:5px;border:none;">
+      <button onclick="manualLocate()">OK</button>
+    </div>
 
-    <h2>Alertes météo</h2>
-    <div id="alertsZone">Chargement...</div>
+    <h2>Prévisions du jour</h2>
+    <div class="forecast-section">
+      <div class="forecast-box"><h3>🌍 Locales</h3><div id="local-forecast">Chargement...</div></div>
+      <div class="forecast-box"><h3>📡 Nationales</h3><div id="national-forecast">Chargement...</div></div>
+    </div>
 
-    <h2>Carte couverture prévisions</h2>
-    <div id="mapCoverage" class="map-container"></div>
+    <h2>Prévisions sur 7 jours</h2>
+    <div class="forecast-section">
+      <div class="forecast-box"><h3>Locales</h3><div id="forecast-7days">Chargement...</div></div>
+      <div class="forecast-box"><h3>Nationales</h3><div id="forecast-7days-national">Chargement...</div></div>
+    </div>
+
+    <div id="alerts"></div>
+
+    <h2>Carte des zones de prévisions couvertes</h2>
+    <div id="map-forecast" class="map-container"></div>
 
     <h2>Carte mondiale des alertes</h2>
-    <div id="mapAlerts" class="map-container"></div>
+    <div id="map-alerts" class="map-container"></div>
 
-    <div class="banner">
-      🔧 Pour vos diagnostics et détections de fuites :
-      <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
+    <iframe
+      src="https://embed.windy.com/embed2.html?lat=20&lon=10&zoom=2&level=surface&overlay=rain&menu=true&marker=false&calendar=24&pressure=true&type=map&location=coordinates&detail=true&metricWind=default&metricTemp=default"
+      loading="lazy"></iframe>
+
+    <div style="margin-top:20px;text-align:center;">
+      <a href="https://www.uman-detect.com" target="_blank" style="color:#4fc3f7;font-weight:bold;">
+        🔧 Diagnostics et détection de fuites : visitez Uman-Detect.com
+      </a>
     </div>
   </main>
 
   <footer>
-    © 2025 TINSFLASH – Tous droits réservés<br />
+    © 2025 TINSFLASH – Tous droits réservés<br>
     📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
-    💬 WhatsApp :
-    <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a><br />
-    <em>Contactez-nous pour tout partenariat ou achat du moteur J.E.A.N.</em>
+    💬 WhatsApp : <a href="https://wa.me/32473264477" target="_blank">+32 473 26 44 77</a>
   </footer>
 
-  <!-- Bouton IA-AI -->
-  <button class="btn-ai" id="chatTrigger">IA-AI</button>
-
-  <div class="chat-box" id="chatJean">
-    <div class="chat-header">Assistant J.E.A.N.</div>
-    <div class="chat-messages" id="chatMessages"></div>
-    <div class="chat-input">
-      <input type="text" id="chatInput" placeholder="Écris à J.E.A.N..." />
-      <button onclick="sendChat()">Envoyer</button>
-    </div>
-  </div>
-
+  <script src="index.js"></script>
   <script>
-    const API_BASE = "/api";
-    const chat = document.getElementById("chatJean");
-    document.getElementById("chatTrigger").addEventListener("click", () => {
-      chat.style.display = chat.style.display === "flex" ? "none" : "flex";
-    });
+    const mapForecast = L.map("map-forecast").setView([20, 10], 2);
+    const mapAlerts = L.map("map-alerts").setView([20, 10], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapForecast);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
 
-    async function sendChat() {
-      const input = document.getElementById("chatInput");
-      const msg = input.value.trim();
-      if (!msg) return;
-      const messages = document.getElementById("chatMessages");
-      messages.innerHTML += `<div style="color:#4fc3f7;">Vous: ${msg}</div>`;
-      input.value = "";
-      const res = await fetch("/api/jean", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg })
+    // 🟢/🔵 Couverture dynamique réelle
+    async function loadCoverage() {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      const pts = data?.steps?.coveredPoints || [];
+      pts.forEach(p => {
+        const c = p.continent === "Europe" || p.continent === "North America" ? "#00ff66" : "#0099ff";
+        L.circle([p.lat, p.lon], { radius: 80000, color: c, fillOpacity: 0.4 }).addTo(mapForecast);
       });
-      const data = await res.json();
-      messages.innerHTML += `<div>J.E.A.N: ${data.reply}</div>`;
-      messages.scrollTop = messages.scrollHeight;
     }
 
-    document.getElementById("locateBtn").addEventListener("click", () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          pos => loadForecast(pos.coords.latitude, pos.coords.longitude),
-          () => alert("Géolocalisation refusée.")
-        );
-      }
-    });
-
-    document.getElementById("manualAddress").addEventListener("change", async e => {
-      const addr = e.target.value;
-      if (addr.length < 4) return;
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${addr}`);
+    // ⚠️ Alertes locales & continentales
+    async function showAlertsBanner() {
+      const res = await fetch("/api/alerts");
       const data = await res.json();
-      if (data.length) loadForecast(data[0].lat, data[0].lon);
-    });
-
-    async function loadForecast(lat, lon) {
-      const res = await fetch(`${API_BASE}/status`);
-      const data = await res.json();
-      const covered = data.checkup?.coveredPoints?.some(
-        p => Math.abs(p.lat - lat) < 2 && Math.abs(p.lon - lon) < 2
-      );
-      document.getElementById("forecastZone").innerHTML = covered
-        ? "✅ Zone couverte : Prévisions réelles du moteur TINSFLASH"
-        : "🌍 Zone non couverte : Données OpenData météo (Premium → 48h ouverture)";
-    }
-
-    async function loadAlerts() {
-      const res = await fetch(`${API_BASE}/alerts`);
-      const alerts = await res.json();
-      const div = document.getElementById("alertsZone");
+      const div = document.getElementById("alerts");
       div.innerHTML = "";
-      alerts.forEach(a => {
-        const p = document.createElement("p");
-        p.innerHTML = `⚠️ <strong>${a.zone || a.country}</strong> – ${a.title || "Alerte"} (${a.level || "info"})`;
-        div.appendChild(p);
+
+      const localAlerts = data.filter(a => a.data?.type === "local");
+      const continentalAlerts = data.filter(a => a.data?.type === "continental");
+
+      if (localAlerts.length > 0) {
+        div.innerHTML = `<div class='alert-banner'>🚨 ${localAlerts.length} alerte(s) active(s) dans votre pays</div>`;
+      } else if (continentalAlerts.length > 0) {
+        div.innerHTML = `<div class='alert-banner'>⚠️ Alertes sur votre continent – consultez la carte pour le détail</div>`;
+      } else {
+        div.innerHTML = "<div class='alert-banner' style='background:#2a2;color:#fff;'>✅ Aucune alerte active</div>";
+      }
+
+      data.forEach(a => {
         if (a.lat && a.lon) {
-          L.circle([a.lat, a.lon], {
-            color: a.level === "high" ? "red" : "orange",
-            radius: 100000
-          }).addTo(mapAlerts).bindPopup(a.title || "Alerte");
+          const color = a.level === "high" ? "red" : "orange";
+          L.circle([a.lat, a.lon], { radius: 120000, color }).addTo(mapAlerts)
+            .bindPopup(a.title || "Alerte");
         }
       });
     }
 
-    const mapCoverage = L.map("mapCoverage").setView([20, 10], 2);
-    const mapAlerts = L.map("mapAlerts").setView([20, 10], 2);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapCoverage);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapAlerts);
+    // 📍 Géolocalisation
+    function manualLocate() {
+      const addr = document.getElementById("manualAddress").value;
+      if (!addr) return alert("Entrez une adresse complète");
+      alert("📍 Localisation définie sur " + addr + " — chargement des données…");
+      loadCoverage();
+      showAlertsBanner();
+    }
 
-    loadAlerts();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(() => {
+        loadCoverage();
+        showAlertsBanner();
+      }, () => {
+        document.getElementById("geoPrompt").style.display = "block";
+      });
+    } else {
+      document.getElementById("geoPrompt").style.display = "block";
+    }
+
+    loadCoverage();
+    showAlertsBanner();
   </script>
 </body>
 </html>
