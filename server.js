@@ -1,5 +1,5 @@
 // PATH: server.js
-// 🧠 TINSFLASH Meteorological Nuclear Core – Serveur principal 100% réel & stable Render
+// 🧠 TINSFLASH Meteorological Nuclear Core – Serveur principal connecté & visible Render
 
 import express from "express";
 import mongoose from "mongoose";
@@ -9,7 +9,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // === Services ===
-import { runGlobal } from "./services/runGlobal.js";
+import { runGlobal } from "./services/runGlobal.js";             // Extraction sans IA
+import { runAIAnalysis } from "./services/aiAnalysis.js";        // Étape 2 IA J.E.A.N
 import * as engineStateService from "./services/engineState.js";
 import * as adminLogs from "./services/adminLogs.js";
 import * as chatService from "./services/chatService.js";
@@ -25,42 +26,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
-/* ------------------------------------------------------------------
-   🧩 CONNEXION MONGO
------------------------------------------------------------------- */
+// === MongoDB ===
 if (process.env.MONGO_URI) {
   mongoose
     .connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 15000,
     })
     .then(() => console.log("✅ MongoDB connecté"))
-    .catch((err) => console.error("❌ Erreur MongoDB:", err.message));
+    .catch((err) => console.error("❌ Erreur MongoDB:", err));
 } else {
-  console.error("⚠️ Variable MONGO_URI manquante !");
+  console.error("⚠️ MONGO_URI manquant dans .env");
 }
 
-/* ------------------------------------------------------------------
-   🌐 ROUTES DE BASE
------------------------------------------------------------------- */
+// === PAGE ACCUEIL ===
 app.get("/", (_, res) =>
   res.sendFile(path.join(__dirname, "public", "index.html"))
 );
 
-/* ------------------------------------------------------------------
-   ⚙️ LANCEMENT RUN GLOBAL
------------------------------------------------------------------- */
+// ==========================================================
+// 🚀  ETAPE 1 : EXTRACTION SANS IA (RUN GLOBAL)
+// ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
-    console.log("🚀 Lancement RUN GLOBAL via API (Render visible)");
+    console.log("🚀 Lancement RUN GLOBAL (EXTRACTION) via API");
     await checkSourcesFreshness();
     const { zone } = req.body;
-    const result = await runGlobal(zone || "All");
+    const result = await runGlobal(zone || "All"); // Extraction complète sans IA
     res.json({ success: true, result });
   } catch (e) {
     console.error("❌ Erreur run-global:", e);
@@ -68,113 +64,103 @@ app.post("/api/run-global", async (req, res) => {
   }
 });
 
-/* ------------------------------------------------------------------
-   📊 STATUS MOTEUR
------------------------------------------------------------------- */
+// ==========================================================
+// 🧠  ETAPE 2 : ANALYSE IA J.E.A.N (GPT-5, relief/altitude)
+// ==========================================================
+app.post("/api/ai-analyse", async (_, res) => {
+  try {
+    console.log("🧠 Lancement Analyse IA J.E.A.N via API");
+    const r = await runAIAnalysis();
+    res.json(r);
+  } catch (e) {
+    console.error("❌ Erreur analyse IA:", e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 📡 STATUS MOTEUR
+// ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
     const state = await engineStateService.getEngineState();
     res.json({
-      status: state?.checkup?.engineStatus || state?.status || "IDLE",
+      status:
+        state?.checkup?.engineStatus || state?.status || "IDLE",
       lastRun: state?.lastRun,
-      models: state?.checkup?.models || {},
+      models: state?.checkup?.models || "unknown",
       steps: state?.checkup || {},
       alerts: state?.alertsLocal || [],
       alertsCount: state?.alertsLocal?.length || 0,
+      alertsContinental: state?.alertsContinental || [],
+      alertsWorld: state?.alertsWorld || [],
       forecasts: state?.forecastsContinental || {},
-      finalReport: state?.finalReport || {},
+      partialReport: state?.partialReport || null,
+      finalReport: state?.finalReport || null,
       engineErrors: state?.errors || [],
     });
   } catch (e) {
-    console.error("⚠️ Erreur récupération status:", e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-/* ------------------------------------------------------------------
-   🛰️ LOGS SSE EN DIRECT
------------------------------------------------------------------- */
+// ==========================================================
+// 🔁 LOGS SSE – Console Admin en direct
+// ==========================================================
 app.get("/api/logs/stream", async (req, res) => {
-  try {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
 
-    adminLogs.registerClient(res);
-    console.log("🛰️ Client SSE connecté");
+  adminLogs.registerClient(res);
+  console.log("🛰️ Client SSE connecté");
 
-    const logs = await adminLogs.getLogs("current");
-    if (logs?.length)
-      logs.forEach((l) =>
-        res.write(`data: ${JSON.stringify(l)}\n\n`)
-      );
+  const logs = await adminLogs.getLogs("current");
+  if (logs?.length)
+    logs.forEach((l) => res.write(`data: ${JSON.stringify(l)}\n\n`));
 
-    req.on("close", () => console.log("❌ Client SSE déconnecté"));
-  } catch (err) {
-    console.error("⚠️ Erreur SSE logs:", err.message);
-    res.status(500).end();
-  }
+  req.on("close", () => console.log("❌ Client SSE déconnecté"));
 });
 
-/* ------------------------------------------------------------------
-   🧠 EVOLUTION AUTO DES ALERTES
------------------------------------------------------------------- */
-app.post("/api/evolution/run", async (_, res) => {
+// ==========================================================
+// 🔎 ALERTES – Lecture complète (pour cartes & résumés)
+// ==========================================================
+app.get("/api/alerts", async (_, res) => {
   try {
-    const evo = await runEvolution();
-    res.json({ success: true, evolution: evo });
+    const alerts = await Alert.find();
+    res.json(alerts);
   } catch (e) {
-    console.error("❌ Erreur évolution:", e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-/* ------------------------------------------------------------------
-   ⚡ CHAT MOTEUR (GPT-3.5)
------------------------------------------------------------------- */
-app.post("/api/chat-engine", async (req, res) => {
-  try {
-    const { message } = req.body;
-    if (!message) return res.status(400).json({ reply: "❌ Message vide" });
-    const reply = await chatService.askAIEngine(message);
-    res.json({ reply });
-  } catch (e) {
-    console.error("⚠️ Chat moteur:", e.message);
-    res.status(500).json({ reply: "Erreur moteur: " + e.message });
-  }
-});
-
-/* ------------------------------------------------------------------
-   🪐 CHAT PUBLIC (Cohere J.E.A.N)
------------------------------------------------------------------- */
-app.post("/api/jean", async (req, res) => {
-  try {
-    const { message } = req.body;
-    if (!message)
-      return res.status(400).json({ reply: "❌ Message manquant" });
-    const { reply, avatar } = await askCohere(message);
-    res.json({ reply, avatar });
-  } catch (e) {
-    console.error("⚠️ Chat public J.E.A.N:", e.message);
-    res.status(500).json({ reply: "Erreur interne", avatar: "default" });
-  }
-});
-
-/* ------------------------------------------------------------------
-   📋 PAGES ADMIN (invisibles moteurs recherche)
------------------------------------------------------------------- */
+// ==========================================================
+// 🧭 PAGES ADMIN (protégées, non indexées)
+// ==========================================================
 app.get("/admin", (_, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-pp.html"))
 );
 app.get("/admin-alerts", (_, res) =>
   res.sendFile(path.join(__dirname, "public", "admin-alerts.html"))
 );
+app.get("/admin-chat", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-chat.html"))
+);
+app.get("/admin-index", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-index.html"))
+);
+app.get("/admin-radar", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-radar.html"))
+);
+app.get("/admin-users", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "admin-users.html"))
+);
 
-/* ------------------------------------------------------------------
-   🚀 LANCEMENT SERVEUR
------------------------------------------------------------------- */
+// ==========================================================
+// 🚀 LANCEMENT SERVEUR
+// ==========================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
-  console.log(`🚀 TINSFLASH Server opérationnel sur le port ${PORT}`)
+  console.log(`🚀 TINSFLASH Server en ligne sur port ${PORT}`)
 );
