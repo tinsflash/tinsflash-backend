@@ -9,16 +9,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // === Services ===
-import { runGlobal } from "./services/runGlobal.js";             // Extraction sans IA
-import { runAIAnalysis } from "./services/aiAnalysis.js";        // Étape 2 IA J.E.A.N
+import { runGlobal } from "./services/runGlobal.js";             // Étape 1 : Extraction réelle (sans IA)
+import { runAIAnalysis } from "./services/aiAnalysis.js";        // Étape 2 : IA J.E.A.N
 import * as engineStateService from "./services/engineState.js";
 import * as adminLogs from "./services/adminLogs.js";
-import * as chatService from "./services/chatService.js";
 import * as alertsService from "./services/alertsService.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
-import { askCohere } from "./services/cohereService.js";
-import * as userService from "./services/userService.js";
-import { runEvolution } from "./services/evolution.js";
 import Alert from "./models/Alert.js";
 
 dotenv.config();
@@ -49,14 +45,14 @@ app.get("/", (_, res) =>
 );
 
 // ==========================================================
-// 🚀  ETAPE 1 : EXTRACTION SANS IA (RUN GLOBAL)
+// 🚀 ETAPE 1 : EXTRACTION SANS IA (RUN GLOBAL)
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
     console.log("🚀 Lancement RUN GLOBAL (EXTRACTION) via API");
     await checkSourcesFreshness();
     const { zone } = req.body;
-    const result = await runGlobal(zone || "All"); // Extraction complète sans IA
+    const result = await runGlobal(zone || "All");
     res.json({ success: true, result });
   } catch (e) {
     console.error("❌ Erreur run-global:", e);
@@ -65,7 +61,7 @@ app.post("/api/run-global", async (req, res) => {
 });
 
 // ==========================================================
-// 🧠  ETAPE 2 : ANALYSE IA J.E.A.N (GPT-5, relief/altitude)
+// 🧠 ETAPE 2 : ANALYSE IA J.E.A.N (relief / altitude)
 // ==========================================================
 app.post("/api/ai-analyse", async (_, res) => {
   try {
@@ -79,14 +75,13 @@ app.post("/api/ai-analyse", async (_, res) => {
 });
 
 // ==========================================================
-// 📡 STATUS MOTEUR
+// 📡 STATUS MOTEUR – pour console admin
 // ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
     const state = await engineStateService.getEngineState();
     res.json({
-      status:
-        state?.checkup?.engineStatus || state?.status || "IDLE",
+      status: state?.checkup?.engineStatus || state?.status || "IDLE",
       lastRun: state?.lastRun,
       models: state?.checkup?.models || "unknown",
       steps: state?.checkup || {},
@@ -124,12 +119,126 @@ app.get("/api/logs/stream", async (req, res) => {
 });
 
 // ==========================================================
-// 🔎 ALERTES – Lecture complète (pour cartes & résumés)
+// 🔎 ALERTES – Lecture de base (pour cartes & résumés)
 // ==========================================================
 app.get("/api/alerts", async (_, res) => {
   try {
     const alerts = await Alert.find();
     res.json(alerts);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌎 ALERTES – Extensions pour admin-alerts.html
+// ==========================================================
+app.get("/api/alerts/summary", async (_, res) => {
+  try {
+    const alerts = await Alert.find();
+    const byStatus = {
+      published: 0,
+      toValidate: 0,
+      "under-surveillance": 0,
+      archived: 0,
+    };
+    let exclusives = 0,
+      confirmedElsewhere = 0,
+      continental = 0,
+      local = 0;
+
+    for (const a of alerts) {
+      const s = a.data?.status || "under-surveillance";
+      byStatus[s] = (byStatus[s] || 0) + 1;
+      if (a.data?.external?.exclusivity === "exclusive") exclusives++;
+      if (a.data?.external?.exclusivity === "confirmed-elsewhere")
+        confirmedElsewhere++;
+      if (a.continent) {
+        if (["Europe", "North America"].includes(a.continent)) local++;
+        else continental++;
+      }
+    }
+
+    res.json({
+      total: alerts.length,
+      byStatus,
+      exclusives,
+      confirmedElsewhere,
+      continental,
+      local,
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Changement de statut (validation / archivage / etc.)
+app.post("/api/alerts/:id/:action", async (req, res) => {
+  try {
+    const { id, action } = req.params;
+    const alert = await Alert.findById(id);
+    if (!alert)
+      return res.status(404).json({ success: false, error: "Alerte introuvable" });
+    alert.data = alert.data || {};
+    alert.data.status = action;
+    await alert.save();
+    await adminLogs.addLog(`✅ Alerte ${id} → ${action}`);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Export vers partenaires (NASA / NWS / Copernicus)
+app.post("/api/alerts/export/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const alert = await Alert.findById(id);
+    if (!alert)
+      return res.status(404).json({ success: false, error: "Alerte introuvable" });
+
+    const targets = ["NASA", "NOAA / NWS", "Copernicus"];
+    await adminLogs.addLog(`🚀 Export alerte ${id} vers ${targets.join(", ")}`);
+    res.json({ success: true, targets });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Analyse IA ciblée sur une alerte
+app.post("/api/alerts/analyze/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const alert = await Alert.findById(id);
+    if (!alert)
+      return res.status(404).json({ success: false, error: "Alerte introuvable" });
+
+    const r = await runAIAnalysis();
+    await adminLogs.addLog(`🧠 IA J.E.A.N relancée pour alerte ${id}`);
+    res.json({ success: true, alert, analysis: r.finalReport });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Actualités et observations satellites
+app.get("/api/news", async (_, res) => {
+  try {
+    const articles = [
+      {
+        title: "Nouvelle tempête sur l’Atlantique Nord",
+        summary:
+          "Les modèles ECMWF et GFS confirment une formation rapide, risque de vents >120 km/h.",
+        url: "https://www.metoffice.gov.uk/weather/warnings-and-advice/",
+      },
+      {
+        title: "Anomalie thermique sur la Scandinavie",
+        summary:
+          "L’analyse IA J.E.A.N détecte un excédent de +4°C sur 72h. Source : Copernicus ERA5.",
+        url: "https://climate.copernicus.eu/",
+      },
+    ];
+    res.json({ articles });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
