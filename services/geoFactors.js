@@ -14,8 +14,8 @@ export async function applyGeoFactors(forecast, lat, lon) {
 
     // Ajustement altitude
     if (elevation > 500) {
-      forecast.temperature_min -= 2;
-      forecast.temperature_max -= 2;
+      forecast.temperature_min = (forecast.temperature_min || 0) - 2;
+      forecast.temperature_max = (forecast.temperature_max || 0) - 2;
     }
 
     // Ajustement proximité Atlantique (simplifié)
@@ -28,3 +28,6 @@ export async function applyGeoFactors(forecast, lat, lon) {
 
   return forecast;
 }
+
+// ✅ Export nommé unique
+export default { applyGeoFactors };
