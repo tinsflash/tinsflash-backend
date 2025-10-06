@@ -1,171 +1,93 @@
-// PATH: public/index.js
-// ⚙️ TINSFLASH – Interface publique 100% réelle et connectée
+const API_BASE = "/api";
 
-const API_BASE = "https://tinsflash-backend.onrender.com/api";
+// === BOUTON SON ===
+document.addEventListener("DOMContentLoaded", () => {
+  const video = document.getElementById("introVideo");
+  const btn = document.getElementById("soundToggle");
 
-// === Utils ===
+  if (btn && video) {
+    btn.addEventListener("click", () => {
+      if (video.muted) {
+        video.muted = false;
+        btn.textContent = "🔊";
+      } else {
+        video.muted = true;
+        btn.textContent = "🔇";
+      }
+    });
+  }
+});
+
+// === FETCH JSON ===
 async function fetchJSON(url) {
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+    if (!res.ok) throw new Error("Erreur HTTP " + res.status);
     return await res.json();
-  } catch (err) {
-    console.error("❌ Erreur fetch:", err);
+  } catch (e) {
+    console.error("❌ Erreur fetch :", e.message);
     return null;
   }
 }
 
-// === Chargement prévisions ===
-async function loadForecasts() {
-  const localEl = document.getElementById("local-forecast");
-  const natEl = document.getElementById("national-forecast");
-  const weekEl = document.getElementById("forecast-7days");
-
-  localEl.textContent = "Chargement...";
-  natEl.textContent = "Chargement...";
-  weekEl.textContent = "Chargement...";
-
-  const [local, national, week] = await Promise.all([
-    fetchJSON(`${API_BASE}/forecast/local`),
-    fetchJSON(`${API_BASE}/forecast/national`),
-    fetchJSON(`${API_BASE}/forecast/7days`),
-  ]);
-
-  if (local) {
-    localEl.innerHTML = `
-      🌡 ${local.temperature_min}°C / ${local.temperature_max}°C<br>
-      💨 Vent: ${local.wind} km/h<br>
-      🌧 Pluie: ${local.precipitation} mm<br>
-      🔒 Fiabilité: ${local.reliability}%<br>
-      📍 ${local.description || "Prévision locale réelle"}
-    `;
-  } else {
-    localEl.textContent = "⚠️ Prévision locale indisponible.";
-  }
-
-  if (national) {
-    natEl.innerHTML = `
-      🇪🇺 ${national.country}<br>
-      🌡 ${national.temperature_min}°C / ${national.temperature_max}°C<br>
-      💨 Vent: ${national.wind} km/h<br>
-      🌧 ${national.precipitation} mm
-    `;
-  } else {
-    natEl.textContent = "⚠️ Prévision nationale indisponible.";
-  }
-
-  if (week && Array.isArray(week)) {
-    weekEl.innerHTML = week
-      .map(
-        (d) => `
-        <div class="forecast-box">
-          <b>${d.date}</b><br>
-          🌡 ${d.temperature_min}°C / ${d.temperature_max}°C<br>
-          💨 ${d.wind} km/h<br>
-          🌧 ${d.precipitation} mm<br>
-          🔒 ${d.reliability}%
-        </div>`
-      )
-      .join("");
-  } else {
-    weekEl.textContent = "⚠️ Prévisions 7 jours non disponibles.";
-  }
-}
-
-// === Chargement alertes ===
-async function loadAlerts() {
-  const el = document.getElementById("alerts");
-  el.textContent = "Chargement...";
-  const data = await fetchJSON(`${API_BASE}/alerts`);
-  if (!data || data.length === 0) {
-    el.textContent = "✅ Aucune alerte en cours.";
-    return;
-  }
-  el.innerHTML = data
-    .map(
-      (a) => `
-      <p>⚠️ <b>${a.zone || a.country}</b> – ${a.title || a.type || "Alerte"} (${a.level || "info"})
-      <br><small>Fiabilité: ${a.reliability || 0}%</small></p>`
-    )
-    .join("");
-}
-
-// === Cartes ===
-async function loadMaps(lat = 20, lon = 10) {
-  const state = await fetchJSON(`${API_BASE}/status`);
-  if (!state) return;
-
-  // Prévisions couvertes
-  const mapF = L.map("map-forecast").setView([lat, lon], 2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-  (state.checkup?.coveredPoints || []).forEach(pt => {
-    L.circle([pt.lat, pt.lon], {
-      color: "green",
-      fillColor: "green",
-      fillOpacity: 0.4,
-      radius: 70000
-    }).addTo(mapF);
-  });
-
-  // Alertes mondiales
-  const mapA = L.map("map-alerts").setView([lat, lon], 2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-  (state.alertsWorld || []).forEach(a => {
-    L.circle([a.lat, a.lon], {
-      color: "red",
-      fillColor: "red",
-      fillOpacity: 0.6,
-      radius: 100000
-    }).addTo(mapA).bindPopup(a.title || "Alerte");
-  });
-}
-
-// === Gestion avatar selon météo ===
-async function updateAvatar() {
+// === AVATAR DYNAMIQUE J.E.A.N ===
+async function updateJeanAvatar(summary = "") {
   const avatar = document.getElementById("jeanAvatar");
-  const data = await fetchJSON(`${API_BASE}/status`);
-  if (!data) return;
+  if (!avatar) return;
 
-  const f = data.forecasts?.local || data.forecasts?.national || {};
-  const hasRain = f?.today?.rain > 0 || f?.rain > 0;
-  const hasAlert = (data.alertsLocal?.length || 0) > 0;
-  let img = "jean-default.png";
+  summary = summary.toLowerCase();
+  let avatarSrc = "avatars/jean-default.png";
 
-  if (hasAlert) img = "jean-alert.png";
-  else if (hasRain) img = "jean-rain.png";
-  else if (f?.today?.sun || f?.sun) img = "jean-sun.png";
+  if (summary.includes("pluie") || summary.includes("rain")) avatarSrc = "avatars/jean-rain.png";
+  else if (summary.includes("neige") || summary.includes("snow")) avatarSrc = "avatars/jean-snow.png";
+  else if (summary.includes("orage") || summary.includes("storm") || summary.includes("tempête")) avatarSrc = "avatars/jean-storm.png";
+  else if (summary.includes("soleil") || summary.includes("sun") || summary.includes("clair")) avatarSrc = "avatars/jean-sun.png";
+  else if (summary.includes("alerte") || summary.includes("warning")) avatarSrc = "avatars/jean-alert.png";
+  else if (summary.includes("ia") || summary.includes("analyse")) avatarSrc = "avatars/jean-ai.png";
+  else if (summary.includes("tablette") || summary.includes("data")) avatarSrc = "avatars/jean-tablet.png";
 
-  avatar.src = `avatars/${img}`;
+  avatar.classList.add("avatar-active");
+  setTimeout(() => {
+    avatar.src = avatarSrc;
+    avatar.classList.remove("avatar-active");
+  }, 600);
 }
 
-// === Géolocalisation ===
-async function initGeo() {
-  const locEl = document.getElementById("user-location");
-  if (!navigator.geolocation) {
-    locEl.textContent = "❌ Géolocalisation non supportée.";
-    return;
-  }
+// === PREVISIONS LOCALES ===
+async function loadForecast(lat = 50.5, lon = 4.7) {
+  const local = document.getElementById("local-forecast");
+  const national = document.getElementById("national-forecast");
+  const week = document.getElementById("forecast-7days");
 
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      const { latitude, longitude } = pos.coords;
-      locEl.innerHTML = `Latitude : ${latitude.toFixed(2)}, Longitude : ${longitude.toFixed(2)}`;
-      await loadMaps(latitude, longitude);
-      await loadForecasts();
-      await loadAlerts();
-      await updateAvatar();
-    },
-    () => {
-      locEl.textContent = "⚠️ Géolocalisation refusée. Encodez une adresse manuellement.";
-      loadMaps();
-      loadForecasts();
-      loadAlerts();
-      updateAvatar();
-    }
-  );
+  local.innerHTML = national.innerHTML = week.innerHTML = "Chargement...";
+
+  const localData = await fetchJSON(`${API_BASE}/forecast/local?lat=${lat}&lon=${lon}`);
+  const nationalData = await fetchJSON(`${API_BASE}/forecast/national?lat=${lat}&lon=${lon}`);
+  const weekData = await fetchJSON(`${API_BASE}/forecast/7days?lat=${lat}&lon=${lon}`);
+
+  if (localData) {
+    local.innerHTML = `<b>${localData.summary}</b><br>🌡 ${localData.temperature_min}°C / ${localData.temperature_max}°C<br>💨 ${localData.wind} km/h`;
+    updateJeanAvatar(localData.summary || "");
+  } else local.innerHTML = "❌ Erreur chargement prévisions locales";
+
+  if (nationalData)
+    national.innerHTML = `<b>${nationalData.country}</b><br>🌡 ${nationalData.temperature_min}°C / ${nationalData.temperature_max}°C<br>🌧 ${nationalData.precipitation} mm`;
+  else national.innerHTML = "❌ Erreur prévisions nationales";
+
+  if (weekData && Array.isArray(weekData))
+    week.innerHTML = weekData
+      .map((d) => `<div>📅 ${d.date} – ${d.summary} – ${d.temperature_min}°C / ${d.temperature_max}°C</div>`)
+      .join("");
+  else week.innerHTML = "❌ Erreur prévisions 7 jours";
 }
 
-// === Lancement ===
-document.addEventListener("DOMContentLoaded", async () => {
-  await initGeo();
+// === GEOLOCALISATION ===
+navigator.geolocation.getCurrentPosition(
+  (pos) => loadForecast(pos.coords.latitude, pos.coords.longitude),
+  () => loadForecast(50.5, 4.7)
+);
+
+// === Bulle IA-AI ===
+document.getElementById("iaBubble").addEventListener("click", () => {
+  alert("👋 Ici J.E.A.N – Mode conversation IA bientôt actif !");
 });
