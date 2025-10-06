@@ -5,14 +5,14 @@
 import { runSuperForecast } from "./superForecast.js";
 import openweather from "./openweather.js";
 import wetter3Bridge from "./wetter3Bridge.js"; // 🆕 Intégration Wetter3.de (source GFS interne)
-import { ALL_ZONES } from "./runGlobal.js";
+import { COVERED_ZONES } from "./zonesCovered.js"; // ✅ Nouveau import correct
 
 /**
  * 🇪🇺 Bulletin national (zones couvertes)
  */
 async function getNationalForecast(country) {
   try {
-    const zones = ALL_ZONES[country];
+    const zones = COVERED_ZONES[country];
     if (!zones) {
       return {
         country,
@@ -99,7 +99,7 @@ async function getNationalForecast(country) {
  */
 async function getLocalForecast(lat, lon, country) {
   try {
-    const zones = ALL_ZONES[country];
+    const zones = COVERED_ZONES[country];
 
     if (zones) {
       // Wetter3 local (si dispo)
