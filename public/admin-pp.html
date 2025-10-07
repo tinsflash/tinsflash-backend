@@ -18,7 +18,7 @@
     .status-box span{display:block;margin-top:4px;font-size:13px;color:#aaa}
     button{background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:8px 15px;cursor:pointer;font-weight:bold}
     button:hover{background:#0288d1}
-    .btn-secondary{background:#8bc34a;color:#000} .btn-danger{background:#ef5350;color:#fff}
+    .btn-secondary{background:#8bc34a;color:#000}
     #summaryTable,#modelsTable{width:100%;margin-top:10px;border-collapse:collapse;font-size:14px}
     #summaryTable th,#summaryTable td,#modelsTable th,#modelsTable td{border:1px solid #333;padding:6px;text-align:center}
     #summaryTable th,#modelsTable th{background:#1a2238;color:#4fc3f7}
@@ -94,7 +94,6 @@ evtSource.onmessage = e => {
   const msg = log.message || log.text || "";
   const ts = new Date(log.timestamp||log.ts).toLocaleTimeString();
 
-  // Coloration automatique
   let cls = "log-info";
   if(msg.includes("❌")||msg.includes("Erreur")||msg.includes("FAIL")) cls="log-error";
   else if(msg.includes("🛰️")||msg.includes("🔄")||msg.includes("⚙️")) cls="log-system";
@@ -103,7 +102,6 @@ evtSource.onmessage = e => {
   div.appendChild(line);
   div.scrollTop = div.scrollHeight;
 
-  // Gestion erreurs critiques
   if(log.type==="error" || msg.includes("🔥") || msg.includes("❌")){
     const box=document.getElementById("errors");
     box.style.display="block";
@@ -126,20 +124,33 @@ async function loadErrors(){
   }catch(e){ console.error(e); }
 }
 
-// === Cartes ===
+// === Carte prévisions (points réels) ===
 async function updateMapForecast(){
   mapForecast.eachLayer(l=>{ if(l instanceof L.CircleMarker) mapForecast.removeLayer(l); });
   try{
     const res = await fetch("/api/status");
     const data = await res.json();
     const pr = data.partialReport || {};
-    const ok = new Set(pr.extraction?.countriesOK||[]);
-    const fail = new Set(pr.extraction?.countriesFail||[]);
-    [...ok].forEach(c=>L.circleMarker([0,0],{radius:6,color:"#4caf50"}).addTo(mapForecast).bindPopup(`<b>${c}</b><br>Prévisions OK`)));
-    [...fail].forEach(c=>L.circleMarker([0,0],{radius:6,color:"#ef5350"}).addTo(mapForecast).bindPopup(`<b>${c}</b><br>Erreur d'extraction`)));
-  }catch(e){ console.error(e); }
+    const okPoints = pr.extraction?.pointsOK || [];
+    const failPoints = pr.extraction?.pointsFail || [];
+
+    okPoints.forEach(e=>{
+      L.circleMarker([e.lat, e.lon],{
+        radius:5,color:"#4caf50",fillColor:"#4caf50",fillOpacity:0.9
+      }).addTo(mapForecast)
+      .bindPopup(`<b>${e.country}</b><br>${e.region}<br>Prévisions OK`);
+    });
+
+    failPoints.forEach(e=>{
+      L.circleMarker([e.lat, e.lon],{
+        radius:5,color:"#ef5350",fillColor:"#ef5350",fillOpacity:0.9
+      }).addTo(mapForecast)
+      .bindPopup(`<b>${e.country}</b><br>${e.region}<br>Erreur d'extraction`);
+    });
+  }catch(e){ console.error("Erreur carte prévisions:", e); }
 }
 
+// === Carte alertes mondiale ===
 async function updateMapAlerts(){
   mapAlerts.eachLayer(l=>{ if(l instanceof L.CircleMarker) mapAlerts.removeLayer(l); });
   try{
@@ -147,14 +158,17 @@ async function updateMapAlerts(){
     const alerts = await res.json();
     alerts.forEach(a=>{
       const col = a.severity==="extreme"?"#ff0000":a.severity==="high"?"#ff9800":"#4caf50";
-      L.circleMarker([a.lat||0,a.lon||0],{radius:7,color:col,fillOpacity:0.8})
-        .addTo(mapAlerts)
-        .bindPopup(`<b>${a.region||a.country}</b><br>${a.title}<br>Fiabilité: ${a.certainty??"?"}%`);
+      const lat = a.lat || a.latitude || 0;
+      const lon = a.lon || a.longitude || 0;
+      L.circleMarker([lat,lon],{
+        radius:7,color:col,fillColor:col,fillOpacity:0.85
+      }).addTo(mapAlerts)
+      .bindPopup(`<b>${a.region||a.country||"Zone inconnue"}</b><br>${a.title||"Alerte"}<br>Fiabilité: ${a.certainty??"?"}%`);
     });
-  }catch(e){ console.error(e); }
+  }catch(e){ console.error("Erreur carte alertes:", e); }
 }
 
-// === Boutons ===
+// === Actions ===
 async function runExtraction(){
   const btn=document.getElementById("runBtn");
   btn.disabled=true; btn.innerText="⏳ Extraction...";
