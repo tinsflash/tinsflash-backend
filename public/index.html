@@ -7,74 +7,24 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #0c1220;
-      color: #eee;
-    }
-    header {
-      text-align: center;
-      padding: 15px;
-      background: linear-gradient(90deg,#08101f,#15294d);
-      color: #4fc3f7;
-      font-size: 1.6em;
-      font-weight: bold;
-      text-shadow: 0 0 12px #4fc3f7;
-    }
-    .subheader {
-      text-align: center;
-      background:#0d1528;
-      color:#7dd3fc;
-      padding:6px;
-      font-size:0.9em;
-    }
-    video {
-      width: 100%;
-      max-height: 260px;
-      object-fit: cover;
-      display: block;
-    }
-    main {max-width:1200px;margin:auto;padding:20px;}
-    h2 {
-      color:#4fc3f7;
-      border-left:4px solid #4fc3f7;
-      padding-left:10px;
-      margin-top:35px;
-    }
+    body{margin:0;font-family:"Segoe UI",sans-serif;background:#0c1220;color:#eee;}
+    header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
+    .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:0.9em;}
+    video{width:100%;max-height:260px;object-fit:cover;display:block;}
+    main{max-width:1200px;margin:auto;padding:20px;}
+    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
     p.intro{text-align:justify;color:#ccc;font-size:1.05em;line-height:1.6em;}
-    .jean-block{
-      display:flex;align-items:center;gap:18px;margin-top:20px;
-    }
-    .jean-avatar{
-      width:90px;height:90px;border-radius:50%;box-shadow:0 0 30px rgba(79,195,247,0.6);
-    }
+    .jean-block{display:flex;align-items:center;gap:18px;margin-top:20px;}
     .forecast-section{display:flex;flex-wrap:wrap;gap:20px;}
-    .forecast-box{
-      background:#131a2b;border-radius:10px;padding:15px;flex:1;min-width:300px;
-      box-shadow:0 0 10px rgba(0,0,0,0.3);
-    }
-    .forecast-day{border-bottom:1px solid #222;padding:6px 0;}
-    .forecast-day:last-child{border:none;}
+    .forecast-box{background:#131a2b;border-radius:10px;padding:15px;flex:1;min-width:300px;box-shadow:0 0 10px rgba(0,0,0,0.3);}
     .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
-    .alert-warning{
-      background:#facc15;color:#000;text-align:center;font-weight:bold;padding:10px;
-      border-radius:6px;animation:blink 1.2s infinite alternate;
-    }
+    .alert-warning{background:#facc15;color:#000;text-align:center;font-weight:bold;padding:10px;border-radius:6px;animation:blink 1.2s infinite alternate;}
     @keyframes blink{from{opacity:1;}to{opacity:0.3;}}
     footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;}
     footer a{color:#4fc3f7;text-decoration:none;}
     footer a:hover{text-decoration:underline;}
-    .btn-ai{
-      position:fixed;bottom:20px;right:20px;background:#4fc3f7;color:#000;
-      font-weight:bold;border:none;border-radius:20px;padding:10px 18px;cursor:pointer;
-      box-shadow:0 0 15px rgba(79,195,247,0.6);
-    }
-    .chat-box{
-      position:fixed;bottom:70px;right:20px;background:#1b2439;border:2px solid #4fc3f7;
-      border-radius:12px;width:310px;height:380px;display:none;flex-direction:column;
-      box-shadow:0 0 15px rgba(0,0,0,0.5);
-    }
+    .btn-ai{position:fixed;bottom:20px;right:20px;background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:20px;padding:10px 18px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);}
+    .chat-box{position:fixed;bottom:70px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:310px;height:380px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);}
     .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:5px;font-weight:bold;}
     .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
     .chat-input{display:flex;border-top:1px solid #333;}
@@ -161,32 +111,53 @@
     btnAI.onclick = ()=>{chat.style.display = chat.style.display==="flex"?"none":"flex";};
 
     async function sendChat(){
-      const i=document.getElementById("chatInput");const msg=i.value.trim();
+      const i=document.getElementById("chatInput");
+      const msg=i.value.trim();
       if(!msg)return;
       const m=document.getElementById("chatMessages");
-      m.innerHTML+=`<div style="color:#4fc3f7;">Vous: ${msg}</div>`;
+      m.innerHTML+=`<div style="color:#4fc3f7;">Vous : ${msg}</div>`;
       i.value="";
       try{
-        const r=await fetch(`${API_BASE}/jean`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+        const r=await fetch(`${API_BASE}/cohere`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({question:msg})
+        });
         const d=await r.json();
-        m.innerHTML+=`<div>J.E.A.N: ${d.reply}</div>`;
-        m.scrollTop=m.scrollHeight;
-      }catch(e){m.innerHTML+=`<div>Erreur: ${e.message}</div>`;}
+        if(!d.success)throw new Error(d.error||d.reply);
+        m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
+      }catch(e){
+        m.innerHTML+=`<div>❌ Erreur : ${e.message}</div>`;
+      }
+      m.scrollTop=m.scrollHeight;
     }
 
-    async function fetchJSON(url){try{const r=await fetch(url);if(!r.ok)throw new Error(`API ${r.status}`);return await r.json();}catch(e){console.error(e);return null;}}
+    async function fetchJSON(url){
+      try{
+        const r=await fetch(url);
+        if(!r.ok)throw new Error(`API ${r.status}`);
+        return await r.json();
+      }catch(e){
+        console.error(e);
+        return null;
+      }
+    }
 
     async function loadForecast(){
       const d=await fetchJSON(`${API_BASE}/status`);
       if(!d)return;
       const loc=document.getElementById("local-today");
       const nat=document.getElementById("national-today");
-      if(d.forecasts?.local?.today)loc.innerHTML=`<b>${d.forecasts.local.today.summary}</b><br>${d.forecasts.local.today.temp_min}°C / ${d.forecasts.local.today.temp_max}°C`;
+      if(d.forecasts?.local?.today)
+        loc.innerHTML=`<b>${d.forecasts.local.today.summary}</b><br>${d.forecasts.local.today.temp_min}°C / ${d.forecasts.local.today.temp_max}°C`;
       else loc.innerHTML="⚠️ Données locales indisponibles";
-      if(d.forecasts?.national?.today)nat.innerHTML=`<b>${d.forecasts.national.today.summary}</b><br>${d.forecasts.national.today.temp_min}°C / ${d.forecasts.national.today.temp_max}°C`;
+      if(d.forecasts?.national?.today)
+        nat.innerHTML=`<b>${d.forecasts.national.today.summary}</b><br>${d.forecasts.national.today.temp_min}°C / ${d.forecasts.national.today.temp_max}°C`;
       else nat.innerHTML="⚠️ Données nationales indisponibles";
       if(d.forecasts?.week){
-        document.getElementById("forecast-7days").innerHTML=d.forecasts.week.map(f=>`<div class="forecast-box"><h3>${f.date}</h3><p>${f.summary}</p><p>🌡 ${f.temp_min}°C / ${f.temp_max}°C</p></div>`).join("");
+        document.getElementById("forecast-7days").innerHTML=d.forecasts.week.map(f=>
+          `<div class="forecast-box"><h3>${f.date}</h3><p>${f.summary}</p><p>🌡 ${f.temp_min}°C / ${f.temp_max}°C</p></div>`
+        ).join("");
       }
     }
 
@@ -197,8 +168,10 @@
       if(!a||!a.length){div.innerHTML="✅ Aucune alerte active";return;}
       a.forEach(e=>{
         const p=document.createElement("p");
-        if(e.level==="continental")p.innerHTML=`<div class="alert-warning">⚠️ Alertes sur votre continent – consultez la carte pour le détail.</div>`;
-        else p.innerHTML=`⚠️ <strong>${e.zone||e.country}</strong> – ${e.title||e.type||"Alerte"} (${e.level||"info"})`;
+        if(e.level==="continental")
+          p.innerHTML=`<div class="alert-warning">⚠️ Alertes sur votre continent – consultez la carte pour le détail.</div>`;
+        else
+          p.innerHTML=`⚠️ <strong>${e.zone||e.country}</strong> – ${e.title||e.type||"Alerte"} (${e.level||"info"})`;
         div.appendChild(p);
       });
     }
@@ -223,6 +196,8 @@
       initMaps();
       loadForecast();
       loadAlerts();
+      setInterval(loadForecast,600000); // actualise toutes les 10 min
+      setInterval(loadAlerts,600000);
     });
   </script>
 </body>
