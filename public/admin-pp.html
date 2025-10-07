@@ -8,35 +8,43 @@
   <title>🛰️ Console IA J.E.A.N – TINSFLASH</title>
   <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
   <style>
-    body{font-family:Inter,system-ui,Arial;background:#0b0f19;color:#eaeaea;margin:0}
+    body{font-family:Inter,system-ui,Arial;background:#0b0f19;color:#eaeaea;margin:0;display:flex;flex-direction:column;min-height:100vh}
     header{background:#111831;padding:15px;text-align:center;color:#4fc3f7;font-size:22px;font-weight:bold}
     nav{background:#1a2238;padding:10px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap}
     nav a{color:#ccc;text-decoration:none;font-weight:600}nav a:hover{color:#4fc3f7}
-    main{padding:15px}h2{color:#4fc3f7;border-bottom:1px solid #333;padding-bottom:6px;margin-top:25px}
+    main{flex:1;padding:15px;padding-bottom:260px;box-sizing:border-box}
+    h2{color:#4fc3f7;border-bottom:1px solid #333;padding-bottom:6px;margin-top:25px}
     .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}
     .status-box{background:#1a2238;padding:10px;border-radius:8px;text-align:center}
     .status-box span{display:block;margin-top:4px;font-size:13px;color:#aaa}
     button{background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:8px 15px;cursor:pointer;font-weight:bold}
     button:hover{background:#0288d1}
-    .btn-secondary{background:#8bc34a;color:#000}
+    .btn-secondary{background:#8bc34a;color:#000} .btn-danger{background:#ef5350;color:#fff}
     #summaryTable,#modelsTable{width:100%;margin-top:10px;border-collapse:collapse;font-size:14px}
     #summaryTable th,#summaryTable td,#modelsTable th,#modelsTable td{border:1px solid #333;padding:6px;text-align:center}
     #summaryTable th,#modelsTable th{background:#1a2238;color:#4fc3f7}
     #logs{background:#111;border-radius:8px;padding:10px;height:220px;overflow-y:auto;font-size:13px;margin-top:10px;white-space:pre-line}
     #errors{background:#260000;border-radius:8px;padding:10px;margin-top:10px;color:#ffbaba;font-size:13px;display:none}
     #mapForecast,#mapAlerts{height:380px;margin-top:10px;border-radius:8px}
-    .log-info{color:#66bb6a;}
-    .log-error{color:#ef5350;font-weight:bold;}
-    .log-system{color:#4fc3f7;}
+    .log-info{color:#66bb6a}
+    .log-error{color:#ef5350;font-weight:bold}
+    .log-system{color:#4fc3f7}
     .bad{color:#ef5350}.ok{color:#66bb6a}.warn{color:#ffca28}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
     @media(max-width:768px){#mapForecast,#mapAlerts{height:280px}}
+    /* --- Zone Chat --- */
+    #chatContainer{position:fixed;bottom:0;left:0;width:100%;background:#111831;border-top:2px solid #333;z-index:999;padding:8px 10px;box-sizing:border-box}
+    #chatMessages{max-height:180px;overflow-y:auto;background:#0b0f19;border-radius:6px;padding:8px;font-size:13px;margin-bottom:6px}
+    #chatMessages .user{color:#4fc3f7;font-weight:600}
+    #chatMessages .ai{color:#8bc34a}
+    #chatForm{display:flex;gap:8px}
+    #chatInput{flex:1;padding:6px 8px;border-radius:6px;border:none;background:#1a2238;color:#fff}
   </style>
 </head>
 <body>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// === Sécurité simple ===
+// === Sécurité PIN ===
 const storedPin = sessionStorage.getItem("tinsflashPIN");
 if(!storedPin){
   const pin = prompt("Code d’accès admin ?");
@@ -68,7 +76,7 @@ async function loadStatus(){
     const models = pr.models || {};
     const rows = [];
     for(const [m,st] of Object.entries(models)){
-      rows.push(`<tr><td>${m}</td><td>${st.ok}</td><td>${st.fail}</td></tr>`);
+      rows.push(`<tr><td>${m}</td><td>${st.ok||"-"}</td><td>${st.fail||"-"}</td></tr>`);
     }
     document.getElementById("modelsBody").innerHTML = rows.join("") || "<tr><td colspan='3'>Aucun modèle extrait</td></tr>";
 
@@ -124,33 +132,19 @@ async function loadErrors(){
   }catch(e){ console.error(e); }
 }
 
-// === Carte prévisions (points réels) ===
+// === Cartes ===
 async function updateMapForecast(){
   mapForecast.eachLayer(l=>{ if(l instanceof L.CircleMarker) mapForecast.removeLayer(l); });
   try{
     const res = await fetch("/api/status");
     const data = await res.json();
-    const pr = data.partialReport || {};
-    const okPoints = pr.extraction?.pointsOK || [];
-    const failPoints = pr.extraction?.pointsFail || [];
-
-    okPoints.forEach(e=>{
-      L.circleMarker([e.lat, e.lon],{
-        radius:5,color:"#4caf50",fillColor:"#4caf50",fillOpacity:0.9
-      }).addTo(mapForecast)
-      .bindPopup(`<b>${e.country}</b><br>${e.region}<br>Prévisions OK`);
-    });
-
-    failPoints.forEach(e=>{
-      L.circleMarker([e.lat, e.lon],{
-        radius:5,color:"#ef5350",fillColor:"#ef5350",fillOpacity:0.9
-      }).addTo(mapForecast)
-      .bindPopup(`<b>${e.country}</b><br>${e.region}<br>Erreur d'extraction`);
-    });
-  }catch(e){ console.error("Erreur carte prévisions:", e); }
+    const ok = data?.partialReport?.extraction?.countriesOK || [];
+    const fail = data?.partialReport?.extraction?.countriesFail || [];
+    ok.forEach(c=>L.circleMarker([0,0],{radius:6,color:"#4caf50"}).addTo(mapForecast).bindPopup(`<b>${c}</b><br>Prévisions OK`)));
+    fail.forEach(c=>L.circleMarker([0,0],{radius:6,color:"#ef5350"}).addTo(mapForecast).bindPopup(`<b>${c}</b><br>Erreur extraction`)));
+  }catch(e){ console.error(e); }
 }
 
-// === Carte alertes mondiale ===
 async function updateMapAlerts(){
   mapAlerts.eachLayer(l=>{ if(l instanceof L.CircleMarker) mapAlerts.removeLayer(l); });
   try{
@@ -158,17 +152,14 @@ async function updateMapAlerts(){
     const alerts = await res.json();
     alerts.forEach(a=>{
       const col = a.severity==="extreme"?"#ff0000":a.severity==="high"?"#ff9800":"#4caf50";
-      const lat = a.lat || a.latitude || 0;
-      const lon = a.lon || a.longitude || 0;
-      L.circleMarker([lat,lon],{
-        radius:7,color:col,fillColor:col,fillOpacity:0.85
-      }).addTo(mapAlerts)
-      .bindPopup(`<b>${a.region||a.country||"Zone inconnue"}</b><br>${a.title||"Alerte"}<br>Fiabilité: ${a.certainty??"?"}%`);
+      L.circleMarker([a.lat||0,a.lon||0],{radius:7,color:col,fillOpacity:0.8})
+        .addTo(mapAlerts)
+        .bindPopup(`<b>${a.region||a.country}</b><br>${a.title}<br>Fiabilité: ${a.certainty??"?"}%`);
     });
-  }catch(e){ console.error("Erreur carte alertes:", e); }
+  }catch(e){ console.error(e); }
 }
 
-// === Actions ===
+// === Boutons ===
 async function runExtraction(){
   const btn=document.getElementById("runBtn");
   btn.disabled=true; btn.innerText="⏳ Extraction...";
@@ -195,6 +186,27 @@ function refreshAll(){
 
 setInterval(refreshAll, 10000);
 window.onload = ()=>{initMaps();refreshAll();}
+
+// === CHAT IA intégré (GPT-4o-mini) ===
+async function sendChat(){
+  const input=document.getElementById("chatInput");
+  const msg=input.value.trim();
+  if(!msg)return;
+  appendChat("user",msg);
+  input.value="";
+  const res=await fetch("/api/admin-chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,mode:"moteur"})});
+  const data=await res.json();
+  appendChat("ai",(data.success?data.reply:`Erreur IA: ${data.error||"?"}`)+`\n(model: ${data.model||"?"})`);
+}
+
+function appendChat(type,text){
+  const div=document.createElement("div");
+  div.className=type;
+  div.innerHTML=`<span class="${type}">${type==="user"?"👨‍💻 Toi":"🤖 IA"}</span> : ${text}`;
+  const box=document.getElementById("chatMessages");
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
 </script>
 
 <header>🛰️ Console IA J.E.A.N – TINSFLASH</header>
@@ -218,7 +230,7 @@ window.onload = ()=>{initMaps();refreshAll();}
   <div class="status-grid">
     <div class="status-box"><b>Statut</b><span id="engineStatus" class="warn">–</span></div>
     <div class="status-box"><b>Dernier run</b><span id="lastRun">Jamais</span></div>
-    <div class="status-box"><b>Modèles actifs</b><span>GFS, ECMWF, ICON, HRRR, UKMO, DWD, NASA POWER, OpenWeather</span></div>
+    <div class="status-box"><b>Modèles actifs</b><span>GFS, ECMWF, ICON, HRRR, UKMO, DWD, NASA, OpenWeather</span></div>
   </div>
 
   <h2>📊 Résumés</h2>
@@ -235,5 +247,14 @@ window.onload = ()=>{initMaps();refreshAll();}
   <div id="logs"></div>
   <div id="errors"></div>
 </main>
+
+<!-- === CHAT INTEGRE === -->
+<div id="chatContainer">
+  <div id="chatMessages"></div>
+  <form id="chatForm" onsubmit="event.preventDefault();sendChat();">
+    <input id="chatInput" placeholder="Parle à J.E.A.N (moteur GPT-4o-mini)" autocomplete="off" />
+    <button type="submit">Envoyer</button>
+  </form>
+</div>
 </body>
 </html>
