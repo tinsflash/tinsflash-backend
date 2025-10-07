@@ -36,7 +36,7 @@ app.use(cors({
 }));
 
 // ==========================================================
-// 🌍 Fichiers publics
+// 🌍 Fichiers publics (Render + GitHub /avatars /videos)
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
@@ -234,7 +234,7 @@ async function emitAdminLog(message) {
 }
 
 // ==========================================================
-// 🧭 Pages Admin
+// 🧭 Pages Admin (invisibles moteurs)
 // ==========================================================
 const adminPages = [
   "admin-pp.html",
