@@ -1,16 +1,52 @@
-/* ===========================================================
-   💬 Chat console admin – IA économique (GPT-4o-mini)
-   =========================================================== */
+// PATH: services/chatService.js
+import { askOpenAI } from "./openaiService.js";
+import { askCohere } from "./cohereService.js";
+import { getEngineState } from "./engineState.js";
+import { getLogs } from "./adminLogs.js";
+
+// =====================================================
+// 💬 Chat moteur (GPT-5)
+// =====================================================
+export async function askAIEngine(message = "") {
+  try {
+    const state = await getEngineState();
+    const logs = await getLogs();
+    const context = {
+      checkup: state?.checkup || {},
+      lastRun: state?.lastRun,
+      alerts: state?.alertsLocal || [],
+      logs: logs?.slice(-200) || [],
+    };
+
+    const SYSTEM = `
+Tu es ChatGPT-5, cerveau du moteur TINSFLASH.
+Analyse uniquement les données réelles.
+Réponds en français, de manière concise et technique.
+`;
+
+    const prompt = `
+[QUESTION]
+${message}
+
+[CONTEXTE]
+${JSON.stringify(context, null, 2)}
+`;
+    return await askOpenAI(SYSTEM, prompt, { model: "gpt-5" });
+  } catch (err) {
+    console.error("❌ askAIEngine error:", err.message);
+    return "Erreur IA moteur (GPT-5).";
+  }
+}
+
+// =====================================================
+// 💬 Chat console admin (GPT-4o-mini)
+// =====================================================
 export async function askAIAdmin(message = "", mode = "moteur") {
   try {
-    const SYSTEM_ADMIN = `
-Tu es "J.E.A.N. Console", propulsé par GPT-4o-mini.
-Ton rôle : aider Patrick et Michael à interpréter les prévisions,
-les runs du moteur et les alertes météo TINSFLASH.
-Parle en français, ton professionnel mais humain.
-Donne des explications simples, fiables et opérationnelles.
-Affiche toujours le modèle utilisé au début de ta réponse :
-(par ex. "🧠 Modèle : GPT-4o-mini").
+    const SYSTEM = `
+Tu es un assistant technique TINSFLASH basé sur GPT-4o-mini.
+Aide Patrick à interpréter les prévisions, les alertes et l’état du moteur.
+Réponds en français, clair, professionnel et opérationnel.
 `;
 
     const prefix =
@@ -19,20 +55,24 @@ Affiche toujours le modèle utilisé au début de ta réponse :
         : "Demande liée au moteur ou à la console :";
 
     const prompt = `${prefix}\n${message}`;
-    const reply = await askOpenAI(SYSTEM_ADMIN, prompt, {
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      max_tokens: 400,
-    });
-
-    // 🔁 injection du tag modèle si l'IA l'oublie
-    const taggedReply = reply.startsWith("🧠")
-      ? reply
-      : `🧠 Modèle : GPT-4o-mini\n\n${reply}`;
-
-    return taggedReply;
+    return await askOpenAI(SYSTEM, prompt, { model: "gpt-4o-mini" });
   } catch (err) {
     console.error("❌ askAIAdmin error:", err.message);
     return "Erreur IA admin (GPT-4o-mini).";
   }
 }
+
+// =====================================================
+// 💬 Chat public (Cohere)
+// =====================================================
+export async function askAIGeneral(message = "") {
+  try {
+    const { reply } = await askCohere(message);
+    return reply || "Réponse IA indisponible (Cohere).";
+  } catch (err) {
+    console.error("❌ askAIGeneral error:", err.message);
+    return "Erreur IA publique (Cohere).";
+  }
+}
+
+export default { askAIEngine, askAIAdmin, askAIGeneral };
