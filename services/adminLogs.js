@@ -1,75 +1,65 @@
-// services/adminLogs.js
-import { addEngineLog as dbAddLog, addEngineError as dbAddErr, getEngineState, saveEngineState } from "./engineState.js";
+// PATH: services/adminLogs.js
+// 🛰️ Gestion centralisée des logs d’administration (temps réel)
+import fs from "fs";
+import path from "path";
 
-let clients = [];
+const LOG_FILE = path.join(process.cwd(), "logs", "admin.log");
 let currentCycleId = null;
+let listeners = [];
 
-/** 🔑 Générer un cycleId */
-function generateCycleId() {
-  const now = new Date();
-  return (
-    now.getFullYear().toString() +
-    String(now.getMonth() + 1).padStart(2, "0") +
-    String(now.getDate()).padStart(2, "0") +
-    "-" +
-    String(now.getHours()).padStart(2, "0") +
-    String(now.getMinutes()).padStart(2, "0") +
-    String(now.getSeconds()).padStart(2, "0")
-  );
+function broadcastLog(entry) {
+  for (const cb of listeners) cb(entry);
 }
 
-/** 🚀 Démarrer un nouveau cycle */
+export function onLog(cb) {
+  listeners.push(cb);
+  return () => (listeners = listeners.filter((f) => f !== cb));
+}
+
+// Simulation stockage local minimal (optionnel Mongo)
+async function dbAddLog(message) {
+  const line = `[${new Date().toISOString()}] ${message}\n`;
+  fs.appendFileSync(LOG_FILE, line);
+}
+
+async function dbAddErr(message) {
+  const line = `[${new Date().toISOString()}] [ERROR] ${message}\n`;
+  fs.appendFileSync(LOG_FILE, line);
+}
+
 export async function startNewCycle() {
-  currentCycleId = generateCycleId();
-  const state = await getEngineState();
-  state.currentCycleId = currentCycleId;
-  state.logs = state.logs || [];
-  state.logs.push({ ts: Date.now(), type: "INFO", cycleId: currentCycleId, message: `🔄 Nouveau cycle démarré : ${currentCycleId}` });
-  await saveEngineState(state);
-  broadcastLog({ ts: Date.now(), type: "INFO", cycleId: currentCycleId, message: `🔄 Nouveau cycle démarré : ${currentCycleId}` });
-  return currentCycleId;
+  currentCycleId = Date.now().toString(36).toUpperCase();
+  await dbAddLog(`🔄 Nouveau cycle de logs démarré [${currentCycleId}]`);
 }
 
-/** 🔌 Ajout d’un client SSE */
-export function registerClient(res) {
-  clients.push(res);
-  res.on("close", () => {
-    clients = clients.filter(c => c !== res);
-  });
-}
-
-/** 📡 Diffuser un log en direct */
-function broadcastLog(log) {
-  clients.forEach(c => c.write(`data: ${JSON.stringify(log)}\n\n`));
-}
-
-/** ✅ Ajout log INFO */
 export async function addLog(message) {
   if (!currentCycleId) await startNewCycle();
-  const log = await dbAddLog(`[${currentCycleId}] ${message}`);
-  log.cycleId = currentCycleId;
-  broadcastLog(log);
-  return log;
+  await dbAddLog(`[${currentCycleId}] ${message}`);
+  const entry = {
+    ts: Date.now(),
+    type: "INFO",
+    message: `[${currentCycleId}] ${message}`,
+    cycleId: currentCycleId,
+  };
+  broadcastLog(entry);
+  return entry;
 }
 
-/** ❌ Ajout log ERROR */
 export async function addError(message) {
   if (!currentCycleId) await startNewCycle();
-  const log = await dbAddErr(`[${currentCycleId}] ${message}`);
-  log.cycleId = currentCycleId;
-  broadcastLog(log);
-  return log;
+  await dbAddErr(`[${currentCycleId}] ${message}`);
+  const entry = {
+    ts: Date.now(),
+    type: "ERROR",
+    message: `[${currentCycleId}] ${message}`,
+    cycleId: currentCycleId,
+  };
+  broadcastLog(entry);
+  return entry;
 }
 
-/** 🔎 Lire tous les logs */
-export async function getLogs(cycleId = null) {
-  const state = await getEngineState();
-  const allLogs = state.logs || [];
-  if (cycleId === "current" && state.currentCycleId) {
-    return allLogs.filter(l => l.cycleId === state.currentCycleId);
-  }
-  if (cycleId && cycleId !== "all") {
-    return allLogs.filter(l => l.cycleId === cycleId);
-  }
-  return allLogs; // par défaut tout
+export async function getLogs(limit = 500) {
+  if (!fs.existsSync(LOG_FILE)) return [];
+  const lines = fs.readFileSync(LOG_FILE, "utf-8").trim().split("\n");
+  return lines.slice(-limit).map((l) => ({ message: l, ts: Date.now() }));
 }
