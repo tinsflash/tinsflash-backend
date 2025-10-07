@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import EventEmitter from "events";
 
 import { runGlobal } from "./services/runGlobal.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
@@ -29,7 +30,7 @@ app.use(express.json());
 // 🌍 CORS renforcé pour compatibilité Render / GitHub / Local
 // ==========================================================
 app.use(cors({
-  origin: "*", // ou préciser ton domaine front ex: ["https://tinsflash.onrender.com"]
+  origin: "*",
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
@@ -73,9 +74,10 @@ app.post("/api/run-global", async (req, res) => {
     await checkSourcesFreshness();
     const { zone } = req.body;
     const result = await runGlobal(zone || "All");
+    await adminLogs.addLog(`⚙️ Extraction complète effectuée pour ${zone || "All"}`);
     res.json({ success: true, result });
   } catch (e) {
-    console.error("❌ Erreur extraction (POST /api/run-global) :", e.message);
+    await adminLogs.addLog(`❌ Erreur extraction: ${e.message}`);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -87,9 +89,10 @@ app.get("/api/extract", async (_, res) => {
   try {
     await checkSourcesFreshness();
     const result = await runGlobal("All");
+    await adminLogs.addLog("⚙️ Extraction complète (route legacy)");
     res.json({ success: true, result });
   } catch (e) {
-    console.error("❌ Échec extraction (GET /api/extract) :", e.message);
+    await adminLogs.addLog(`❌ Échec extraction (legacy): ${e.message}`);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -100,8 +103,10 @@ app.get("/api/extract", async (_, res) => {
 app.post("/api/ai-analyse", async (_, res) => {
   try {
     const r = await runAIAnalysis();
+    await adminLogs.addLog("🧠 Analyse IA J.E.A.N terminée avec succès");
     res.json(r);
   } catch (e) {
+    await adminLogs.addLog(`❌ Erreur IA J.E.A.N: ${e.message}`);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -143,6 +148,7 @@ app.post("/api/cohere", async (req, res) => {
       return res.status(400).json({ error: "Question invalide" });
 
     const { reply, avatar } = await askCohere(question);
+    await adminLogs.addLog(`💬 Question IA J.E.A.N reçue: "${question}"`);
     res.json({
       success: true,
       reply,
@@ -181,6 +187,60 @@ app.post("/api/alerts/export/:id", async (req, res) => {
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
+});
+
+// ==========================================================
+// 📡 Flux de logs & erreurs temps réel (SSE)
+// ==========================================================
+const logEmitter = new EventEmitter();
+const errorEmitter = new EventEmitter();
+
+// --- Flux logs ---
+app.get("/api/logs/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const sendLog = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
+  logEmitter.on("newLog", sendLog);
+
+  const sendErr = (err) =>
+    res.write(`data: ${JSON.stringify({ type: "error", ...err })}\n\n`);
+  errorEmitter.on("newError", sendErr);
+
+  const ping = setInterval(() => res.write(`: ping\n\n`), 25000);
+
+  req.on("close", () => {
+    clearInterval(ping);
+    logEmitter.removeListener("newLog", sendLog);
+    errorEmitter.removeListener("newError", sendErr);
+  });
+});
+
+// --- Extension adminLogs pour émettre vers la console ---
+const originalAddLog = adminLogs.addLog;
+adminLogs.addLog = async function (message) {
+  const payload = { timestamp: new Date(), message };
+  logEmitter.emit("newLog", payload);
+  try {
+    await originalAddLog(message);
+  } catch (e) {
+    errorEmitter.emit("newError", {
+      timestamp: new Date(),
+      message: `⚠️ Erreur enregistrement log: ${e.message}`,
+    });
+  }
+};
+
+// --- Middleware global capture erreurs non gérées ---
+app.use((err, req, res, next) => {
+  console.error("🔥 Erreur non gérée:", err);
+  errorEmitter.emit("newError", {
+    timestamp: new Date(),
+    message: `🔥 Exception serveur: ${err.message}`,
+  });
+  res.status(500).json({ success: false, error: "Erreur interne serveur" });
 });
 
 // ==========================================================
