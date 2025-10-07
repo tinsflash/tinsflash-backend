@@ -1,42 +1,36 @@
-// PATH: services/superForecast.js
-// ⚛️ Fusion IA J.E.A.N – multi-sources haute fiabilité
-
-import axios from "axios";
-import { applyGeoFactors } from "./geoFactors.js";
-import * as engineState from "./engineState.js";
+// services/superForecast.js
+import fetch from "node-fetch";
+import { fetchStationData } from "./stationsService.js";
+import { applyLocalFactors } from "./localFactors.js";
+import { applyClimateFactors } from "./climateFactors.js";
+import { addEngineLog, addEngineError } from "./engineState.js";
 
 export async function runSuperForecast({ lat, lon, country, region }) {
-  const start = Date.now();
-  await engineState.addEngineLog(`🚀 SuperForecast lancé pour ${country} / ${region || "n/a"}`);
-
   try {
-    const timeout = { timeout: 7000 };
-    const [gfs, ecmwf, icon] = await Promise.all([
-      axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m`, timeout).then(r=>r.data).catch(()=>null),
-      axios.get(`https://api.ecmwf.int/v1/data`, timeout).then(r=>r.data).catch(()=>null),
-      axios.get(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, timeout).then(r=>r.data).catch(()=>null),
-    ]);
+    await addEngineLog(`🧠 SuperForecast pour ${country} ${region || ""}`);
+    const stations = await fetchStationData(lat, lon, country, region);
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m&forecast_days=3`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Erreur HTTP " + res.status);
+    const data = await res.json();
 
-    const forecast = {
-      temperature_min: gfs?.hourly?.temperature_2m?.[0] ?? 0,
-      temperature_max: gfs?.hourly?.temperature_2m?.[6] ?? 0,
-      reliability: 60,
+    let forecast = {
+      lat, lon, country, region,
+      timestamp: new Date().toISOString(),
+      temperature: data.hourly.temperature_2m?.[0] ?? null,
+      humidity: data.hourly.relative_humidity_2m?.[0] ?? null,
+      precipitation: data.hourly.precipitation?.[0] ?? null,
+      wind: data.hourly.wind_speed_10m?.[0] ?? null,
+      pressure: data.hourly.pressure_msl?.[0] ?? null,
+      stations,
     };
 
-    // Ajustements géographiques
-    const adjusted = await applyGeoFactors(forecast, lat, lon);
-
-    const enriched = {
-      gfs: !!gfs, ecmwf: !!ecmwf, icon: !!icon,
-      delay_ms: Date.now() - start,
-      reliability: adjusted.reliability ?? 60,
-    };
-
-    await engineState.addEngineLog(`✅ SuperForecast ${country}/${region} OK (${enriched.delay_ms}ms)`);
-
-    return { forecast: adjusted, enriched };
+    forecast = await applyLocalFactors(forecast, lat, lon, country);
+    forecast = await applyClimateFactors(forecast, lat, lon, country);
+    await addEngineLog("✅ SuperForecast terminé.");
+    return { forecast };
   } catch (err) {
-    await engineState.addEngineError(`❌ SuperForecast ${country}/${region}: ${err.message}`);
-    return { forecast: { error: err.message }, enriched: { fail: true } };
+    await addEngineError("Erreur SuperForecast: " + err.message);
+    return { error: err.message };
   }
 }

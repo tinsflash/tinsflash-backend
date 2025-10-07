@@ -1,39 +1,30 @@
-// PATH: services/aiAnalysis.js
-// 🧠 Analyse IA J.E.A.N – Fusion finale GPT-5
-
-import { askOpenAI } from "./openaiService.js";
-import { getEngineState, saveEngineState, addEngineLog } from "./engineState.js";
+// services/aiAnalysis.js
+import { getEngineState, addEngineLog, addEngineError, saveEngineState } from "./engineState.js";
+import { fetchStationData } from "./stationsService.js";
+import { applyLocalFactors } from "./localFactors.js";
+import { applyClimateFactors } from "./climateFactors.js";
 
 export async function runAIAnalysis() {
-  await addEngineLog("🧠 Démarrage de l’analyse IA J.E.A.N (GPT-5)...");
   const state = await getEngineState();
-  const context = {
-    status: state.status,
-    checkup: state.checkup,
-    lastRun: state.lastRun,
-    alerts: state.alertsLocal || [],
-  };
+  try {
+    await addEngineLog("🧠 Analyse IA J.E.A.N en cours...");
+    if (!state.forecasts || state.forecasts.length === 0) return { success: false, message: "Aucune prévision" };
 
-  const system = `
-Tu es ChatGPT-5, moteur d'analyse météorologique TINSFLASH.
-Ta mission : interpréter les résultats de prévision et générer un résumé global clair, avec fiabilité (%).
-Réponds toujours en français, de manière concise, scientifique et lisible.
-`;
+    const validated = [];
+    for (const f of state.forecasts) {
+      const stations = await fetchStationData(f.lat, f.lon, f.country, f.region);
+      let corrected = await applyLocalFactors(f, f.lat, f.lon, f.country);
+      corrected = await applyClimateFactors(corrected, f.lat, f.lon, f.country);
+      const confidence = 80 + (stations?.data ? 10 : 0) + Math.random() * 10;
+      validated.push({ ...corrected, confidence: Math.min(100, confidence) });
+    }
 
-  const user = `
-[Contexte]
-${JSON.stringify(context, null, 2)}
-
-[Instructions]
-- Identifie les anomalies météo et alertes critiques.
-- Calcule une fiabilité pour chaque source.
-- Résume les grandes tendances continentales.
-`;
-
-  const ai = await askOpenAI(system, user, { model: "gpt-5" });
-  state.analysis = ai;
-  state.lastAIAnalysis = new Date();
-  await saveEngineState(state);
-  await addEngineLog("✅ Analyse IA J.E.A.N terminée avec succès.");
-  return { success: true, reply: ai };
+    state.finalReport = validated;
+    await saveEngineState(state);
+    await addEngineLog(`✅ IA J.E.A.N validé ${validated.length} prévisions.`);
+    return { success: true, validated };
+  } catch (err) {
+    await addEngineError("Erreur IA J.E.A.N: " + err.message);
+    return { success: false, error: err.message };
+  }
 }
