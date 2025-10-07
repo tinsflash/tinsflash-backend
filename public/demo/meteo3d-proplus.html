@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>TINSFLASH PRO+ – Terre 3D IA</title>
+
+<style>
+html,body{
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  font-family:sans-serif;
+  background:radial-gradient(#003366,#000010);
+  color:#fff;
+}
+#hud{
+  position:fixed;
+  bottom:10px;
+  left:10px;
+  background:#00000080;
+  padding:10px 15px;
+  border-radius:10px;
+  font-size:13px;
+  box-shadow:0 0 8px #00bfff;
+}
+#btnLocate{
+  position:fixed;
+  top:10px;
+  left:10px;
+  background:#0077ff;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  padding:10px 15px;
+  font-weight:600;
+  box-shadow:0 0 8px #00aaff;
+}
+canvas{touch-action:none;}
+</style>
+
+<script type="module">
+import * as THREE from "/three.module.js";
+import { OrbitControls } from "/OrbitControls.js";
+
+let scene,camera,renderer,controls,earth,clouds,stars,light,lat,lon,hud;
+let isNight=false;
+
+init();
+animate();
+
+function init(){
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(devicePixelRatio);
+  document.body.appendChild(renderer.domElement);
+
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,100);
+  camera.position.set(0,0,3);
+
+  controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;
+  controls.minDistance=1.2;
+  controls.maxDistance=6;
+
+  // ☀️ Lumière réaliste
+  light=new THREE.DirectionalLight(0xffffff,1.2);
+  light.position.set(5,3,5);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x404040));
+
+  // 🌍 Texture Terre + relief + lumière jour/nuit
+  const texLoader=new THREE.TextureLoader();
+  const texEarth=texLoader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthmap4k.jpg");
+  const texBump=texLoader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthbump4k.jpg");
+  const texSpec=texLoader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthspec4k.jpg");
+  const texNight=texLoader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthlights4k.jpg");
+
+  const matEarth=new THREE.MeshPhongMaterial({
+    map: texEarth,
+    bumpMap: texBump,
+    bumpScale: 0.05,
+    specularMap: texSpec,
+    specular: new THREE.Color("#444"),
+    shininess: 8,
+    emissiveMap: texNight,
+    emissive: new THREE.Color("#000"),
+    emissiveIntensity: 1.0
+  });
+
+  earth=new THREE.Mesh(new THREE.SphereGeometry(1,64,64),matEarth);
+  scene.add(earth);
+
+  // ☁️ Nuages semi-transparents
+  const texClouds=texLoader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthcloudmap.jpg");
+  const matClouds=new THREE.MeshLambertMaterial({map:texClouds,transparent:true,opacity:0.4});
+  clouds=new THREE.Mesh(new THREE.SphereGeometry(1.01,64,64),matClouds);
+  scene.add(clouds);
+
+  // ✨ Étoiles
+  const starGeo=new THREE.BufferGeometry();
+  const starCount=1200;
+  const starPos=[];
+  for(let i=0;i<starCount;i++){
+    const r=5+Math.random()*20;
+    const theta=Math.random()*Math.PI*2;
+    const phi=Math.acos(2*Math.random()-1);
+    starPos.push(
+      r*Math.sin(phi)*Math.cos(theta),
+      r*Math.sin(phi)*Math.sin(theta),
+      r*Math.cos(phi)
+    );
+  }
+  starGeo.setAttribute("position",new THREE.Float32BufferAttribute(starPos,3));
+  const starMat=new THREE.PointsMaterial({color:0xffffff,size:0.02});
+  stars=new THREE.Points(starGeo,starMat);
+  scene.add(stars);
+
+  // 🛰️ HUD + bouton
+  hud=document.createElement("div");
+  hud.id="hud";
+  hud.textContent="📍 Appuie sur Localiser pour météo réelle";
+  document.body.appendChild(hud);
+
+  const btn=document.createElement("button");
+  btn.id="btnLocate";
+  btn.textContent="Localiser";
+  btn.onclick=askLocation;
+  document.body.appendChild(btn);
+
+  window.addEventListener("resize",()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  });
+
+  // 🌗 Détermine auto jour/nuit
+  checkTimeMode();
+  setInterval(checkTimeMode,60000);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  earth.rotation.y+=0.0008;
+  clouds.rotation.y+=0.0012;
+  renderer.render(scene,camera);
+}
+
+function checkTimeMode(){
+  const hr=new Date().getHours();
+  const newIsNight=hr<6||hr>18;
+  if(newIsNight!==isNight){
+    isNight=newIsNight;
+    if(isNight){
+      document.body.style.background="radial-gradient(#000010,#000)";
+      stars.visible=true;
+      light.intensity=0.3;
+      earth.material.emissiveIntensity=1.0;
+    }else{
+      document.body.style.background="linear-gradient(#87ceeb,#e0f7ff)";
+      stars.visible=false;
+      light.intensity=1.2;
+      earth.material.emissiveIntensity=0.2;
+    }
+  }
+}
+
+async function askLocation(){
+  hud.textContent="📡 Recherche position…";
+  if(!navigator.geolocation){hud.textContent="⚠️ Géolocalisation non supportée";return;}
+  navigator.geolocation.getCurrentPosition(async(pos)=>{
+    lat=pos.coords.latitude;
+    lon=pos.coords.longitude;
+    hud.textContent=`Position: ${lat.toFixed(2)}, ${lon.toFixed(2)} – météo en cours…`;
+    await loadData();
+  },err=>{
+    hud.textContent="⚠️ Localisation refusée";
+  });
+}
+
+async function loadData(){
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,precipitation`;
+    const r=await fetch(url);
+    const d=await r.json();
+    const t=d.current.temperature_2m;
+    const w=d.current.wind_speed_10m;
+    const p=d.current.precipitation;
+    hud.textContent=`🌡️ ${t}°C  💨 ${w} km/h  🌧️ ${p} mm/h`;
+  }catch(e){
+    hud.textContent="⚠️ Erreur données météo";
+  }
+}
+</script>
+</head>
+<body></body>
+</html>
