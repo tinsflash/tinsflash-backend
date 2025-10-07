@@ -1,19 +1,39 @@
-// services/climateFactors.js
-import fetch from "node-fetch";
-import { addEngineLog } from "./engineState.js";
+// services/localFactors.js
+// 🌍 Ajustement des prévisions selon les facteurs locaux (relief, mer, climat urbain, etc.)
 
-export async function applyClimateFactors(forecast, lat, lon, country) {
+import { addEngineLog, addEngineError } from "./engineState.js";
+
+export function adjustWithLocalFactors(forecast, region = "GENERIC") {
   try {
-    const nasa = await fetch(`https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M_ANOMALY&latitude=${lat}&longitude=${lon}&format=JSON`);
-    const nasaData = await nasa.json();
-    const anomaly = nasaData?.properties?.parameter?.T2M_ANOMALY
-      ? Object.values(nasaData.properties.parameter.T2M_ANOMALY)[0] : 0;
-    forecast.temperature += anomaly;
-    forecast.climateAdjust = { anomaly };
-    await addEngineLog("🌍 ClimateFactors appliqués");
+    if (!forecast) return forecast;
+
+    // 🔹 Ajustement relief
+    if (forecast.elevation && forecast.elevation > 500) {
+      forecast.temperature_min -= 1.5;
+      forecast.temperature_max -= 1.5;
+      addEngineLog(`🏔️ Ajustement relief appliqué (${forecast.elevation} m)`);
+    }
+
+    // 🔹 Ajustement proximité mer
+    if (forecast.lon > -10 && forecast.lon < 15) {
+      forecast.humidity += 5;
+      forecast.reliability += 2;
+      addEngineLog("🌊 Influence océanique légère appliquée");
+    }
+
+    // 🔹 Ajustement climat urbain
+    if (region.includes("City") || region.includes("Capital")) {
+      forecast.temperature_max += 0.5;
+      forecast.reliability += 1;
+      addEngineLog("🏙️ Ajustement climat urbain appliqué");
+    }
+
     return forecast;
   } catch (err) {
-    await addEngineLog("Erreur ClimateFactors: " + err.message);
+    addEngineError(`Erreur localFactors: ${err.message}`);
     return forecast;
   }
 }
+
+// ✅ Export explicite compatible Node.js et ESModule
+export default { adjustWithLocalFactors };
