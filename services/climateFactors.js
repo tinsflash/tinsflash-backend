@@ -63,5 +63,7 @@ export function adjustWithLocalFactors(forecast, region = "GENERIC") {
     return forecast;
   }
 }
-// ✅ Export explicite compatible ESM (Render, Node v22+)
+// ✅ Double export pour compatibilité totale
+export { applyClimateFactors };
 export default { applyClimateFactors };
+  
