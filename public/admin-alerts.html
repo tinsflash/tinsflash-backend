@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>🌋 Alertes Mondiales – TINSFLASH Everest v1.1</title>
+  <title>🌋 Alertes Mondiales – TINSFLASH Everest v1.2</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -18,8 +18,10 @@
     .filters{display:flex;justify-content:space-around;padding:10px;background:#091626;margin-left:200px;transition:margin-left .3s}
     .collapsed .filters{margin-left:0}
     button{background:#132334;color:white;border:1px solid #6bf3ff;padding:6px 12px;border-radius:6px;cursor:pointer}
-    #map{height:420px;margin:10px 10px 20px 210px;border-radius:10px;overflow:hidden;transition:margin-left .3s}
+    #map{height:420px;margin:10px 10px 10px 210px;border-radius:10px;overflow:hidden;transition:margin-left .3s}
     .collapsed #map{margin-left:10px}
+    #summary{background:#0d1827;color:#9ad6ff;margin:0 10px 15px 210px;padding:10px 15px;border-radius:8px;font-size:14px;line-height:1.5;transition:margin-left .3s}
+    .collapsed #summary{margin-left:10px}
     table{width:96%;margin:20px auto 80px;border-collapse:collapse;background:#101a25;color:#cce6ff;font-size:14px}
     th,td{border-bottom:1px solid #223;padding:6px 8px;text-align:left}
     th{background:#152236;color:#6bf3ff;font-weight:600}
@@ -29,7 +31,7 @@
     footer{position:fixed;bottom:0;left:0;right:0;background:#08121d;text-align:center;padding:6px;font-size:12px;color:#6bf3ff}
     @media(max-width:768px){
       .sidebar{width:0;padding-top:0}
-      #map,.log-box{margin-left:10px}
+      #map,.log-box,#summary{margin-left:10px}
       .filters{flex-direction:column;gap:5px;margin-left:0}
     }
   </style>
@@ -47,7 +49,7 @@
   </div>
 
   <header>
-    🌋 Console des Alertes Mondiales – Everest v1.1
+    🌋 Console des Alertes Mondiales – Everest v1.2
     <button onclick="loadAlerts()">🔄 Rafraîchir</button>
   </header>
 
@@ -59,6 +61,11 @@
   </div>
 
   <div id="map"></div>
+
+  <div id="summary">
+    <b>Résumé mondial :</b>
+    <div id="summaryContent">Chargement...</div>
+  </div>
 
   <h3 style="padding-left:20px;color:#6bf3ff;">📡 Derniers logs d’alertes (temps réel)</h3>
   <div id="logBox" class="log-box"></div>
@@ -79,15 +86,41 @@
     <tbody></tbody>
   </table>
 
-  <footer>© TINSFLASH – Everest Protocol v1.1 | Toutes données réelles</footer>
+  <footer>© TINSFLASH – Everest Protocol v1.2 | Données 100 % réelles et IA J.E.A.N.</footer>
 
   <script>
+    // === Protection code PIN ===
+    const PIN_CODE = "202679";
+    const entered = sessionStorage.getItem("tinsflash_pin");
+    if (entered !== PIN_CODE) {
+      const code = prompt("🔐 Entrez le code d’accès administrateur :");
+      if (code !== PIN_CODE) {
+        alert("⛔ Accès refusé.");
+        location.href = "/";
+      } else {
+        sessionStorage.setItem("tinsflash_pin", code);
+      }
+    }
+
     const body=document.body;
     function toggleSidebar(){body.classList.toggle("collapsed");}
 
     let map=L.map("map").setView([20,0],2);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
     let markers=[];
+
+    async function loadSummary(){
+      try{
+        const res=await fetch("/api/alerts/worldsummary");
+        const sum=await res.json();
+        if(!sum?.totalAlerts){document.getElementById("summaryContent").textContent="Aucune donnée";return;}
+        document.getElementById("summaryContent").innerHTML=`
+          🌍 Total : <b>${sum.totalAlerts}</b> alertes<br>
+          🇪🇺 Europe : ${sum.europeAlerts} | 🇺🇸 USA : ${sum.usaAlerts} | 🌐 Continental : ${sum.continentalAlerts}<br>
+          🕓 Généré le : ${new Date(sum.generatedAt).toLocaleString()}<br>
+          🧭 ${sum.sourceNote||""}`;
+      }catch(err){console.error("Erreur résumé :",err);}
+    }
 
     async function loadAlerts(filter="all"){
       try{
@@ -126,6 +159,7 @@
             </td>`;
           tbody.appendChild(tr);
         }
+        loadSummary();
       }catch(err){console.error("Erreur chargement alertes :",err);}
     }
 
@@ -162,7 +196,7 @@
     };
 
     loadAlerts();
-    setInterval(()=>loadAlerts(),120000); // auto refresh 2 min
+    setInterval(()=>loadAlerts(),120000);
   </script>
 </body>
 </html>
