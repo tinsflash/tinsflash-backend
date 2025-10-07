@@ -4,20 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚡ Console Moteur – TINSFLASH Centrale</title>
+  <title>⚡ Console moteur – TINSFLASH Centrale</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body{font-family:"Segoe UI",sans-serif;background:#0b111a;color:#d3e8ff;margin:0;}
-    header{background:#08131f;color:#4fc3f7;text-align:center;padding:10px 0;font-weight:bold;font-size:22px;}
-    nav{background:#101a2a;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;padding:10px;}
+    body{font-family:"Segoe UI",sans-serif;background:#0c111a;color:#cde4ff;margin:0;}
+    header{background:#08131f;color:#4fc3f7;text-align:center;padding:10px;font-weight:bold;font-size:22px;}
+    nav{background:#101a2a;display:flex;justify-content:center;flex-wrap:wrap;gap:12px;padding:10px;}
     nav a{color:#b9d8ff;text-decoration:none;padding:6px 10px;border-radius:6px;}
     nav a:hover{background:#1b2940;color:#fff;}
     h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin:20px;}
     table{width:92%;margin:10px auto;border-collapse:collapse;background:#131a24;}
-    th,td{padding:6px 8px;border-bottom:1px solid #223;}
+    th,td{padding:8px;border-bottom:1px solid #223;text-align:center;}
     th{color:#6bf3ff;}
-    #map{height:350px;width:94%;margin:10px auto;border-radius:10px;box-shadow:0 0 10px #000;}
+    .status-indicator{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:6px;}
+    #map,#mapAlerts{height:340px;width:94%;margin:10px auto;border-radius:10px;box-shadow:0 0 10px #000;}
     #logBox{background:#000;color:#0f0;font-family:monospace;width:92%;margin:10px auto;padding:10px;height:200px;overflow-y:auto;border-radius:6px;}
     #chatInput{width:75%;padding:8px;border:none;border-radius:6px;background:#1a253a;color:#fff;}
     #sendChat{padding:9px 16px;background:#4fc3f7;color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
@@ -26,8 +27,19 @@
     footer{text-align:center;font-size:12px;color:#6bf3ff;padding:10px;background:#08131f;margin-top:20px;}
   </style>
 </head>
+
 <body>
-  <header>🛰️ Console IA J.E.A.N – TINSFLASH Centrale Météo</header>
+<script>
+// === Sécurité admin ===
+const storedPin=sessionStorage.getItem("tinsflashPIN");
+if(!storedPin){
+  const pin=prompt("Code d’accès admin ?");
+  if(pin!=="202679"){alert("⛔ Accès refusé");location.href="/";}
+  else{sessionStorage.setItem("tinsflashPIN","ok");}
+}
+</script>
+
+  <header>🛰️ Console IA J.E.A.N – TINSFLASH Centrale</header>
 
   <nav>
     <a href="/admin-pp.html">⚡ Moteur</a>
@@ -35,44 +47,58 @@
     <a href="/admin-chat.html">💬 Chat IA</a>
     <a href="/admin-radar.html">🌦️ Radar</a>
     <a href="/admin-users.html">👥 Utilisateurs</a>
+    <a href="/admin-index.html">🏠 Index Preview</a>
   </nav>
 
   <div style="text-align:center;">
-    <button id="runBtn">⚙️ Lancer Extraction (sans IA)</button>
-    <button id="aiBtn">🧠 Analyse IA J.E.A.N</button>
+    <button id="runBtn">⚙️ Lancer Extraction</button>
+    <button id="aiBtn">🧠 Lancer IA J.E.A.N</button>
     <button id="refreshBtn">🔄 Rafraîchir</button>
   </div>
 
   <h2>📊 État du moteur</h2>
-  <p style="text-align:center;">Statut : <span id="status">—</span> | Dernier run : <span id="lastRun">Jamais</span></p>
+  <p style="text-align:center;">
+    Statut :
+    <span id="statusIcon" class="status-indicator" style="background:gray;"></span>
+    <span id="status">—</span> |
+    Dernier run : <span id="lastRun">Jamais</span>
+  </p>
 
   <table>
     <thead><tr><th>Modèle</th><th>OK</th><th>Fail</th></tr></thead>
     <tbody id="modelTable"><tr><td colspan="3">Chargement…</td></tr></tbody>
   </table>
 
-  <h2>🌍 Carte des zones couvertes et prévisions</h2>
+  <h2>🌍 Carte des zones couvertes (prévisions)</h2>
   <div id="map"></div>
+
+  <h2>🌎 Carte mondiale des alertes</h2>
+  <div id="mapAlerts"></div>
+
+  <h2>📈 Statistiques alertes</h2>
+  <table>
+    <thead><tr><th>Total</th><th>Premium</th><th>Taux Premium (%)</th></tr></thead>
+    <tbody id="alertStats"><tr><td>—</td><td>—</td><td>—</td></tr></tbody>
+  </table>
 
   <h2>📜 Logs moteur (temps réel)</h2>
   <div id="logBox">Connexion aux logs…</div>
 
-  <h2>💬 Dialogue IA J.E.A.N</h2>
-  <div style="width:92%;margin:auto;text-align:left;background:#0f172a;padding:10px;border-radius:8px;">
-    <div id="chatBox"></div>
-    <input id="chatInput" placeholder="Parle à J.E.A.N (GPT-4o-mini)" />
-    <button id="sendChat">Envoyer</button>
-  </div>
-
-  <footer>© 2025 TINSFLASH – Interface interne (non indexée) | Moteur IA réel connecté</footer>
+  <footer>© 2025 TINSFLASH – Interface interne sécurisée (non indexée)</footer>
 
   <script>
     const API="https://tinsflash-backend.onrender.com";
     const logBox=document.getElementById("logBox");
     const modelTable=document.getElementById("modelTable");
-    let map=L.map('map').setView([25,0],2);
+    const alertStats=document.getElementById("alertStats");
+    const statusIcon=document.getElementById("statusIcon");
+
+    // === Cartes ===
+    const map=L.map('map').setView([25,0],2);
+    const mapAlerts=L.map('mapAlerts').setView([25,0],2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    let zoneMarkers=[];
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapAlerts);
+    let zoneMarkers=[],alertMarkers=[];
 
     async function updateStatus(){
       try{
@@ -81,28 +107,65 @@
         document.getElementById("status").innerText=d.status;
         document.getElementById("lastRun").innerText=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
 
+        statusIcon.style.background=(d.status==="ok")?"#00ff88":(d.status==="running")?"orange":"#ff3333";
+
         // modèles
         modelTable.innerHTML="";
         for(const [k,v] of Object.entries(d.models||{})){
           modelTable.innerHTML+=`<tr><td>${k}</td><td>${v.ok||"—"}</td><td>${v.fail||"—"}</td></tr>`;
         }
 
-        // Zones vertes si couvertes, rouges sinon
-        zoneMarkers.forEach(m=>map.removeLayer(m)); zoneMarkers=[];
-        const covered=d.coveredZones||[];
-        covered.forEach(z=>{
+        // zones
+        zoneMarkers.forEach(m=>map.removeLayer(m));zoneMarkers=[];
+        (d.coveredZones||[]).forEach(z=>{
           const col=z.covered?"#00ff88":"#ff4444";
-          const c=L.circleMarker([z.lat,z.lon],{
-            radius:5,color:col,fillOpacity:.8
-          }).addTo(map).bindPopup(`${z.country} – ${z.region}`);
+          const c=L.circleMarker([z.lat,z.lon],{radius:5,color:col,fillOpacity:.8})
+            .addTo(map).bindPopup(`${z.country} – ${z.region}`);
           zoneMarkers.push(c);
+        });
+
+        updateAlerts();
+      }catch(e){console.error(e);}
+    }
+
+    async function updateAlerts(){
+      try{
+        const r=await fetch(`${API}/api/alerts`);
+        const d=await r.json();
+        alertMarkers.forEach(m=>mapAlerts.removeLayer(m));alertMarkers=[];
+
+        if(!Array.isArray(d)||!d.length){alertStats.innerHTML="<tr><td>0</td><td>0</td><td>0%</td></tr>";return;}
+
+        const total=d.length;
+        const premium=d.filter(a=>a.level==="premium"||a.certainty>80).length;
+        const taux=((premium/total)*100).toFixed(1);
+        alertStats.innerHTML=`<tr><td>${total}</td><td>${premium}</td><td>${taux}</td></tr>`;
+
+        d.forEach(a=>{
+          const color=(a.certainty>85)?"#ff3333":(a.certainty>60)?"#ffa500":"#00b7ff";
+          const marker=L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{
+            radius:6,color,fillOpacity:.8
+          }).addTo(mapAlerts)
+            .bindPopup(`<b>${a.title}</b><br>${a.zone||""}<br>Fiabilité : ${a.certainty}%`);
+          alertMarkers.push(marker);
         });
       }catch(e){console.error(e);}
     }
 
-    // === Actions ===
+    // === Logs temps réel ===
+    const evtSrc=new EventSource(`${API}/api/logs/stream`);
+    evtSrc.onmessage=(e)=>{
+      try{
+        const data=JSON.parse(e.data);
+        if(!data.message)return;
+        logBox.innerHTML+=`[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}<br>`;
+        logBox.scrollTop=logBox.scrollHeight;
+      }catch{}
+    };
+
+    // === Boutons ===
     document.getElementById("runBtn").onclick=async()=>{
-      const res=await fetch(`${API}/api/run-global`,{method:"POST",headers:{"Content-Type":"application/json"}});
+      const res=await fetch(`${API}/api/run-global`,{method:"POST"});
       const data=await res.json();
       alert(data.success?"✅ Extraction complète !":"❌ Échec extraction");
       updateStatus();
@@ -115,36 +178,6 @@
     };
     document.getElementById("refreshBtn").onclick=updateStatus;
 
-    // === Logs temps réel SSE ===
-    const evtSrc=new EventSource(`${API}/api/logs/stream`);
-    evtSrc.onmessage=(e)=>{
-      try{
-        const data=JSON.parse(e.data);
-        if(!data.message)return;
-        logBox.innerHTML+=`[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}<br>`;
-        logBox.scrollTop=logBox.scrollHeight;
-      }catch{}
-    };
-
-    // === Chat IA connecté Cohere ===
-    const chatBox=document.getElementById("chatBox");
-    document.getElementById("sendChat").onclick=async()=>{
-      const q=document.getElementById("chatInput").value.trim();
-      if(!q)return;
-      chatBox.innerHTML+=`<div class='user'>🧑‍💻 ${q}</div>`;
-      document.getElementById("chatInput").value="";
-      try{
-        const r=await fetch(`${API}/api/cohere`,{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({question:q})
-        });
-        const d=await r.json();
-        chatBox.innerHTML+=`<div class='ai'>🤖 ${d.reply}</div>`;
-      }catch(err){chatBox.innerHTML+=`<div class='ai'>⚠️ ${err.message}</div>`;}
-      chatBox.scrollTop=chatBox.scrollHeight;
-    };
-
-    // Rafraîchissement auto
     setInterval(updateStatus,10000);
     updateStatus();
   </script>
