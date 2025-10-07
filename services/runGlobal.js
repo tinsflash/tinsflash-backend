@@ -1,7 +1,6 @@
 // PATH: services/runGlobal.js
 // ⚙️ TINSFLASH – RUN GLOBAL (PHASE 1 : EXTRACTION RÉELLE SANS IA)
-// Objectif : pomper toutes les sources réelles, générer alertes physiques, alerte continentale et mondiale,
-// produire un RAPPORT INTERMÉDIAIRE (partialReport) prêt pour la phase IA J.E.A.N.
+// Version Everest Protocol v1.1 – 100 % réel, connecté Mongo, alertes sauvegardées
 
 import mongoose from "mongoose";
 import fetch from "node-fetch";
@@ -15,7 +14,7 @@ import weatherGovService from "./weatherGovService.js";
 import euroMeteoService from "./euroMeteoService.js";
 
 /* ======================================================
-   🔍 1️⃣ Pré-check de connectivité (AUCUNE IA)
+   🔍 1️⃣ Pré-check de connectivité
 ====================================================== */
 async function preRunChecks() {
   const errors = [];
@@ -53,7 +52,7 @@ async function preRunChecks() {
 }
 
 /* ======================================================
-   🔬 2️⃣ Fonctions d’extraction réelles
+   🔬 2️⃣ Fonctions d’extraction réelles (sources physiques)
 ====================================================== */
 async function pullOpenMeteo(modelId, lat, lon) {
   const map = {
@@ -70,7 +69,7 @@ async function pullOpenMeteo(modelId, lat, lon) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_gusts_10m,snowfall&models=${model}&forecast_days=3`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Open-Meteo ${modelId} HTTP ${r.status}`);
-  await new Promise((rslv) => setTimeout(rslv, 120)); // Anti-saturation
+  await new Promise((rslv) => setTimeout(rslv, 120));
   return { ok: true, model: modelId };
 }
 
@@ -91,14 +90,14 @@ async function pullOpenWeather(lat, lon) {
 }
 
 /* ======================================================
-   🚀 3️⃣ Lancement complet : RUN GLOBAL (Extraction)
+   🚀 3️⃣ RUN GLOBAL (Extraction réelle + Alertes Mongo)
 ====================================================== */
 export async function runGlobal(zone = "All") {
   const state = await getEngineState();
 
   try {
-    await adminLogs.startNewCycle();
-    await adminLogs.addLog(`🌍 RUN GLOBAL – Phase 1 (EXTRACTION SANS IA) – zone=${zone}`);
+    await adminLogs.startNewCycle?.();
+    await adminLogs.addLog(`🌍 RUN GLOBAL – Phase 1 (EXTRACTION RÉELLE) – zone=${zone}`);
     await preRunChecks();
 
     const modelsRequested = [
@@ -120,9 +119,6 @@ export async function runGlobal(zone = "All") {
     const countriesOK = new Set();
     const countriesFail = new Set();
 
-    /* -----------------------------
-       🛰️  Extraction multi-modèles
-    ------------------------------*/
     for (const p of points) {
       let pointOK = true;
       for (const model of modelsRequested) {
@@ -151,19 +147,15 @@ export async function runGlobal(zone = "All") {
 
     await adminLogs.addLog(`📊 Extraction terminée – ${totalPoints} points, ${modelsRequested.length} modèles.`);
 
-    /* -----------------------------
-       ⚠️  Alertes physiques locales
-    ------------------------------*/
-    await adminLogs.addLog("🚨 Génération alertes locales/nationales (physiques uniquement)...");
+    // 🔥 Génération alertes locales + sauvegarde Mongo
+    await adminLogs.addLog("🚨 Génération alertes locales/nationales...");
     for (const p of points) {
       await generateAlerts(p.lat, p.lon, p.country, p.region, p.continent);
     }
     const alertsLocal = await getActiveAlerts();
-    await adminLogs.addLog(`✅ ${alertsLocal.length} alertes locales actives.`);
+    await adminLogs.addLog(`✅ ${alertsLocal.length} alertes locales enregistrées.`);
 
-    /* -----------------------------
-       🌐  Alertes continentales
-    ------------------------------*/
+    // 🌐 Alertes continentales
     let continentalAlerts = [];
     try {
       const cont = await runContinental();
@@ -173,9 +165,7 @@ export async function runGlobal(zone = "All") {
       await adminLogs.addError("⚠️ runContinental: " + e.message);
     }
 
-    /* -----------------------------
-       🌎  Fusion mondiale brute
-    ------------------------------*/
+    // 🌎 Fusion mondiale
     let worldFusion = [];
     try {
       worldFusion = (await runWorldAlerts()) || [];
@@ -184,9 +174,7 @@ export async function runGlobal(zone = "All") {
       await adminLogs.addError("⚠️ runWorldAlerts: " + e.message);
     }
 
-    /* -----------------------------
-       🔍  Vérifications officielles
-    ------------------------------*/
+    // ✅ Vérifications officielles
     try {
       if (zone === "USA" || zone === "All") {
         const nws = await weatherGovService.crossCheck({}, alertsLocal);
@@ -204,9 +192,7 @@ export async function runGlobal(zone = "All") {
       await adminLogs.addError("⚠️ Cross-check: " + e.message);
     }
 
-    /* -----------------------------
-       🧾  Rapport intermédiaire
-    ------------------------------*/
+    // 🧾 Rapport intermédiaire
     const partialReport = {
       generatedAt: new Date().toISOString(),
       zoneRequested: zone,
@@ -230,9 +216,7 @@ export async function runGlobal(zone = "All") {
       note: "Rapport intermédiaire sans IA – prêt pour phase IA J.E.A.N.",
     };
 
-    /* -----------------------------
-       💾  Sauvegarde moteur
-    ------------------------------*/
+    // 💾 Sauvegarde moteur
     state.status = "extracted";
     state.lastRun = new Date();
     state.checkup = state.checkup || {};
