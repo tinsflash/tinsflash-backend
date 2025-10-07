@@ -1,79 +1,39 @@
 // PATH: services/aiAnalysis.js
-// 🤖 Étape 2 – IA J.E.A.N : lit partialReport + geo/local factors et produit finalReport
+// 🧠 Analyse IA J.E.A.N – Fusion finale GPT-5
 
-import { getEngineState, saveEngineState } from "./engineState.js";
-import * as adminLogs from "./adminLogs.js";
 import { askOpenAI } from "./openaiService.js";
-import { applyGeoFactors } from "./geoFactors.js";          // ✅ Import nommé
-import { adjustWithLocalFactors } from "./localFactors.js"; // ✅ Import nommé
+import { getEngineState, saveEngineState, addEngineLog } from "./engineState.js";
 
 export async function runAIAnalysis() {
+  await addEngineLog("🧠 Démarrage de l’analyse IA J.E.A.N (GPT-5)...");
   const state = await getEngineState();
-  if (!state?.partialReport) {
-    await adminLogs.addError("❌ IA: partialReport introuvable. Lance d'abord l’extraction.");
-    return { success: false, error: "partialReport introuvable" };
-  }
-
-  await adminLogs.addLog("🧠 Lancement Analyse IA J.E.A.N (relief/altitude intégrés)...");
-
-  // 🌍 Intégration terrain avant analyse IA
-  if (state.alertsLocal && state.alertsLocal.length > 0) {
-    for (const a of state.alertsLocal) {
-      if (a.lat && a.lon) {
-        try {
-          // ✅ Ajustement topographique et microclimatique
-          a.forecast = await applyGeoFactors(a.forecast || {}, a.lat, a.lon);
-          a.forecast = adjustWithLocalFactors(a.forecast, a.region || "GENERIC");
-        } catch (err) {
-          await adminLogs.addError(`⚠️ Facteurs terrain échoués sur ${a.region || "inconnu"}: ${err.message}`);
-        }
-      }
-    }
-  }
-
-  // 🧩 Construction du prompt IA
-  const input = {
-    partialReport: state.partialReport,
-    alertsLocalSample: (state.alertsLocal || []).slice(0, 200),
-    alertsContinentalSample: (state.alertsContinental || []).slice(0, 200),
-    worldSample: (state.alertsWorld || []).slice(0, 200),
-    meta: { note: "Utiliser relief, altitude, exposition, océans, continent, anomalies saisonnières." }
+  const context = {
+    status: state.status,
+    checkup: state.checkup,
+    lastRun: state.lastRun,
+    alerts: state.alertsLocal || [],
   };
 
   const system = `
-Tu es J.E.A.N., météorologue IA de TINSFLASH.
-RÈGLES :
-- Analyse exclusivement les EXTRACTIONS RÉELLES (aucune invention).
-- Intègre impérativement : relief, altitude, exposition, océans, continentalité, anomalies saisonnières.
-- Fournis par PAYS COUVERT : synthèse, risques majeurs, intensité, confiance (0–100), recommandations pratiques.
-- Déduis et structure aussi les alertes continentales correspondantes.
-- Réponds UNIQUEMENT en JSON VALIDE.
+Tu es ChatGPT-5, moteur d'analyse météorologique TINSFLASH.
+Ta mission : interpréter les résultats de prévision et générer un résumé global clair, avec fiabilité (%).
+Réponds toujours en français, de manière concise, scientifique et lisible.
 `;
 
-  const user = JSON.stringify(input);
+  const user = `
+[Contexte]
+${JSON.stringify(context, null, 2)}
 
-  try {
-    const ai = await askOpenAI(system, user); // GPT-5 J.E.A.N.
-    let finalReport;
-    try {
-      finalReport = JSON.parse(ai);
-    } catch {
-      finalReport = { raw: ai, note: "⚠️ JSON non parsé (fourni brut par le modèle)" };
-    }
+[Instructions]
+- Identifie les anomalies météo et alertes critiques.
+- Calcule une fiabilité pour chaque source.
+- Résume les grandes tendances continentales.
+`;
 
-    // ✅ Sauvegarde moteur
-    state.finalReport = finalReport;
-    state.status = "ok";
-    state.checkup = state.checkup || {};
-    state.checkup.engineStatus = "OK-ANALYZED";
-    await saveEngineState(state);
-
-    await adminLogs.addLog("✅ IA J.E.A.N terminée. Rapport final disponible.");
-    return { success: true, finalReport };
-  } catch (e) {
-    await adminLogs.addError("⚠️ IA J.E.A.N erreur: " + e.message);
-    return { success: false, error: e.message };
-  }
+  const ai = await askOpenAI(system, user, { model: "gpt-5" });
+  state.analysis = ai;
+  state.lastAIAnalysis = new Date();
+  await saveEngineState(state);
+  await addEngineLog("✅ Analyse IA J.E.A.N terminée avec succès.");
+  return { success: true, reply: ai };
 }
-
-export default { runAIAnalysis };
