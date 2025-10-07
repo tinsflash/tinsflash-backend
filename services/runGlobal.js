@@ -1,11 +1,8 @@
 // PATH: services/runGlobal.js
-// 🌍 TINSFLASH – RUN GLOBAL (Phase 1 : Extraction réelle optimisée)
-// Objectif : pomper toutes les sources météo, générer alertes physiques,
-// fusionner continentales et mondiales, préparer rapport intermédiaire IA J.E.A.N.
+// 🌍 TINSFLASH – RUN GLOBAL (Phase 1 : Extraction réelle optimisée, sans dépendance externe)
 
 import mongoose from "mongoose";
 import fetch from "node-fetch";
-import pLimit from "p-limit";
 import { enumerateCoveredPoints } from "./zonesCovered.js";
 import { runContinental } from "./runContinental.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
@@ -15,9 +12,38 @@ import * as adminLogs from "./adminLogs.js";
 import weatherGovService from "./weatherGovService.js";
 import euroMeteoService from "./euroMeteoService.js";
 
-const TIMEOUT = 7000; // 7 s max / API
-const limit = pLimit(5); // 5 requêtes simultanées max
+// === Mini limitateur maison (équivalent à p-limit 5 simultanées)
+function createLimit(max) {
+  const queue = [];
+  let active = 0;
+  const next = () => {
+    if (queue.length === 0 || active >= max) return;
+    active++;
+    const fn = queue.shift();
+    fn().finally(() => {
+      active--;
+      next();
+    });
+  };
+  return (fn) =>
+    new Promise((resolve, reject) => {
+      queue.push(async () => {
+        try {
+          const result = await fn();
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      });
+      next();
+    });
+}
+const limit = createLimit(5);
 
+// === Timeout API
+const TIMEOUT = 7000;
+
+// === Helper Fetch
 async function safeFetch(url, label) {
   try {
     const ctrl = new AbortController();
@@ -40,11 +66,9 @@ export async function runGlobal(zone = "All") {
   await adminLogs.addLog(`🌍 RUN GLOBAL – Phase 1 (Extraction réelle) zone=${zone}`);
 
   try {
-    // 🔎 Pré-check Mongo / accès
     if (mongoose.connection.readyState !== 1)
       throw new Error("MongoDB non connecté");
 
-    // 🌐 Définition modèles
     const MODELS = [
       { id: "GFS", model: "gfs_seamless" },
       { id: "ECMWF", model: "ecmwf_ifs04" },
@@ -62,7 +86,7 @@ export async function runGlobal(zone = "All") {
     const total = points.length;
     let done = 0;
 
-    // 🌍 Extraction réelle parallèle (limitée)
+    // 🌍 Extraction réelle parallèle (limitée à 5)
     await Promise.all(points.map(p =>
       limit(async () => {
         try {
@@ -89,9 +113,10 @@ export async function runGlobal(zone = "All") {
 
     await adminLogs.addLog("✅ Extraction brute terminée");
 
-    // ⚠️ Alertes locales
+    // ⚠️ Génération alertes
     await adminLogs.addLog("🚨 Génération alertes locales/nationales…");
-    for (const p of points) await generateAlerts(p.lat, p.lon, p.country, p.region, p.continent);
+    for (const p of points)
+      await generateAlerts(p.lat, p.lon, p.country, p.region, p.continent);
     const alertsLocal = await getActiveAlerts();
     await adminLogs.addLog(`✅ ${alertsLocal.length} alertes locales actives`);
 
@@ -101,13 +126,13 @@ export async function runGlobal(zone = "All") {
       return { alerts: [] };
     });
 
-    // 🌎 Fusion mondiale brute
+    // 🌎 Alertes mondiales
     const world = await runWorldAlerts().catch(e => {
       adminLogs.addError("runWorldAlerts : " + e.message);
       return [];
     });
 
-    // 🔍 Vérifications officielles
+    // 🔍 Vérifications externes
     try {
       if (zone === "USA" || zone === "All")
         state.checkup.nwsComparison = await weatherGovService.crossCheck({}, alertsLocal);
@@ -132,7 +157,7 @@ export async function runGlobal(zone = "All") {
       },
     };
 
-    // 💾 Sauvegarde moteur
+    // 💾 Sauvegarde état moteur
     state.status = "extracted";
     state.lastRun = new Date();
     state.checkup.engineStatus = "OK-EXTRACTED";
