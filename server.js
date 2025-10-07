@@ -18,7 +18,6 @@ import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import Alert from "./models/Alert.js";
 import { askCohere } from "./services/cohereService.js";
-import { askAIAdmin } from "./services/chatService.js";
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -37,7 +36,7 @@ app.use(cors({
 }));
 
 // ==========================================================
-// 🌍 Fichiers publics (Render + GitHub /avatars /videos)
+// 🌍 Fichiers publics
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
@@ -75,10 +74,10 @@ app.post("/api/run-global", async (req, res) => {
     await checkSourcesFreshness();
     const { zone } = req.body;
     const result = await runGlobal(zone || "All");
-    await adminLogs.addLog(`⚙️ Extraction complète effectuée pour ${zone || "All"}`);
+    await emitAdminLog(`⚙️ Extraction complète effectuée pour ${zone || "All"}`);
     res.json({ success: true, result });
   } catch (e) {
-    await adminLogs.addLog(`❌ Erreur extraction: ${e.message}`);
+    await emitAdminLog(`❌ Erreur extraction: ${e.message}`);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -90,40 +89,24 @@ app.get("/api/extract", async (_, res) => {
   try {
     await checkSourcesFreshness();
     const result = await runGlobal("All");
-    await adminLogs.addLog("⚙️ Extraction complète (route legacy)");
+    await emitAdminLog("⚙️ Extraction complète (route legacy)");
     res.json({ success: true, result });
   } catch (e) {
-    await adminLogs.addLog(`❌ Échec extraction (legacy): ${e.message}`);
+    await emitAdminLog(`❌ Échec extraction (legacy): ${e.message}`);
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // ==========================================================
-// 🧠 Étape 2 : Analyse IA J.E.A.N (GPT-5)
+// 🧠 Étape 2 : Analyse IA J.E.A.N
 // ==========================================================
 app.post("/api/ai-analyse", async (_, res) => {
   try {
     const r = await runAIAnalysis();
-    await adminLogs.addLog("🧠 Analyse IA J.E.A.N terminée avec succès");
+    await emitAdminLog("🧠 Analyse IA J.E.A.N terminée avec succès");
     res.json(r);
   } catch (e) {
-    await adminLogs.addLog(`❌ Erreur IA J.E.A.N: ${e.message}`);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 💬 Chat console admin (GPT-4o-mini)
-// ==========================================================
-app.post("/api/admin-chat", async (req, res) => {
-  try {
-    const { message, mode } = req.body || {};
-    if (!message || !message.trim())
-      return res.status(400).json({ success: false, error: "message requis" });
-    const reply = await askAIAdmin(message.trim(), mode || "moteur");
-    res.json({ success: true, reply, model: "gpt-4o-mini" });
-  } catch (e) {
-    console.error("❌ /api/admin-chat:", e.message);
+    await emitAdminLog(`❌ Erreur IA J.E.A.N: ${e.message}`);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -156,7 +139,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 IA publique Cohere (J.E.A.N sur index)
+// 💬 IA Cohere publique
 // ==========================================================
 app.post("/api/cohere", async (req, res) => {
   try {
@@ -165,7 +148,7 @@ app.post("/api/cohere", async (req, res) => {
       return res.status(400).json({ error: "Question invalide" });
 
     const { reply, avatar } = await askCohere(question);
-    await adminLogs.addLog(`💬 Question IA J.E.A.N reçue: "${question}"`);
+    await emitAdminLog(`💬 Question IA J.E.A.N reçue: "${question}"`);
     res.json({
       success: true,
       reply,
@@ -199,7 +182,7 @@ app.post("/api/alerts/export/:id", async (req, res) => {
     const alert = await Alert.findById(id);
     if (!alert) return res.status(404).json({ success: false });
     const targets = ["NASA", "NOAA / NWS", "Copernicus"];
-    await adminLogs.addLog(`🚀 Export alerte ${id} vers ${targets.join(", ")}`);
+    await emitAdminLog(`🚀 Export alerte ${id} vers ${targets.join(", ")}`);
     res.json({ success: true, targets });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -234,33 +217,24 @@ app.get("/api/logs/stream", (req, res) => {
   });
 });
 
-// --- Extension adminLogs pour émettre vers la console ---
-const originalAddLog = adminLogs.addLog;
-adminLogs.addLog = async function (message) {
+// ==========================================================
+// 🔧 Wrapper Log SSE (corrige erreur ESM read-only)
+// ==========================================================
+async function emitAdminLog(message) {
   const payload = { timestamp: new Date(), message };
   logEmitter.emit("newLog", payload);
   try {
-    await originalAddLog(message);
+    if (adminLogs?.addLog) await adminLogs.addLog(message);
   } catch (e) {
     errorEmitter.emit("newError", {
       timestamp: new Date(),
       message: `⚠️ Erreur enregistrement log: ${e.message}`,
     });
   }
-};
-
-// --- Middleware global capture erreurs non gérées ---
-app.use((err, req, res, next) => {
-  console.error("🔥 Erreur non gérée:", err);
-  errorEmitter.emit("newError", {
-    timestamp: new Date(),
-    message: `🔥 Exception serveur: ${err.message}`,
-  });
-  res.status(500).json({ success: false, error: "Erreur interne serveur" });
-});
+}
 
 // ==========================================================
-// 🧭 Pages Admin (invisibles moteurs)
+// 🧭 Pages Admin
 // ==========================================================
 const adminPages = [
   "admin-pp.html",
