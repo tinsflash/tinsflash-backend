@@ -39,12 +39,13 @@ app.use(
 );
 
 // ==========================================================
-// 📁 Fichiers statiques
+// 📁 Fichiers statiques (public + sous-dossiers)
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
 app.use("/videos", express.static(path.join(__dirname, "public/videos")));
 app.use("/assets", express.static(path.join(__dirname, "public/assets")));
+app.use("/demo", express.static(path.join(__dirname, "public/demo"))); // ✅ nouvelle ligne
 
 // ==========================================================
 // 🔌 MongoDB
@@ -64,6 +65,14 @@ if (process.env.MONGO_URI) {
 // ==========================================================
 app.get("/", (_, res) =>
   res.sendFile(path.join(__dirname, "public", "index.html"))
+);
+
+// ==========================================================
+// 🌤️ Démo publique météo 3D (Open-Meteo + GPS)
+// ==========================================================
+// URL directe : https://tinsflash-backend.onrender.com/demo/meteo3d-gps-jour.html
+app.get("/demo/meteo3d-gps-jour.html", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "demo", "meteo3d-gps-jour.html"))
 );
 
 // ==========================================================
@@ -129,7 +138,7 @@ app.post("/api/cohere", async (req, res) => {
       return res.status(400).json({ error: "Question invalide" });
 
     const { reply, avatar } = await askCohere(question);
-    await addLog(`💬 Question publique J.E.A.N: "${question}"`);
+    await addLog(`💬 Question publique J.E.A.N: \"${question}\"`);
     res.json({ success: true, reply, avatar: `/avatars/jean-${avatar}.png` });
   } catch (err) {
     console.error("❌ Erreur Cohere :", err.message);
@@ -154,7 +163,7 @@ app.post("/api/ai-admin", async (req, res) => {
     if (mode === "meteo") reply = await chatService.askAIAdmin(message, "meteo");
     else reply = await chatService.askAIAdmin(message, "moteur");
 
-    await addLog(`💬 Question console (${mode}) : "${message}"`);
+    await addLog(`💬 Question console (${mode}) : \"${message}\"`);
     res.json({ success: true, reply });
   } catch (e) {
     console.error("❌ Erreur /api/ai-admin :", e.message);
@@ -212,9 +221,7 @@ app.put("/api/alerts/status/:id", async (req, res) => {
       "archived",
     ];
     if (!validStatuses.includes(action))
-      return res
-        .status(400)
-        .json({ success: false, error: "Statut non reconnu" });
+      return res.status(400).json({ success: false, error: "Statut non reconnu" });
 
     alert.status = action;
     alert.lastCheck = new Date();
@@ -252,14 +259,14 @@ app.get("/api/logs/stream", (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const sendLog = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
+  const sendLog = (log) => res.write(`data: ${JSON.stringify(log)}\\n\\n`);
   const sendErr = (err) =>
-    res.write(`data: ${JSON.stringify({ type: "error", ...err })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: "error", ...err })}\\n\\n`);
 
   logEmitter.on("newLog", sendLog);
   errorEmitter.on("newError", sendErr);
 
-  const ping = setInterval(() => res.write(`: ping\n\n`), 25000);
+  const ping = setInterval(() => res.write(`: ping\\n\\n`), 25000);
   req.on("close", () => {
     clearInterval(ping);
     logEmitter.removeListener("newLog", sendLog);
