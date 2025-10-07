@@ -27,7 +27,7 @@ const app = express();
 app.use(express.json());
 
 // ==========================================================
-// 🌍 CORS renforcé pour compatibilité Render / GitHub / Local
+// 🌍 CORS renforcé
 // ==========================================================
 app.use(cors({
   origin: "*",
@@ -36,235 +36,184 @@ app.use(cors({
 }));
 
 // ==========================================================
-// 🌍 Fichiers publics (Render + GitHub /avatars /videos)
+// 🌍 Fichiers publics
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
-app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
-app.use("/videos", express.static(path.join(__dirname, "public/videos")));
-app.use("/media", express.static(path.join(__dirname, "public")));
-app.use("/scripts", express.static(path.join(__dirname, "public")));
-app.use("/assets", express.static(path.join(__dirname, "public")));
+["/avatars","/videos","/media","/scripts","/assets"].forEach(dir=>{
+  app.use(dir, express.static(path.join(__dirname, "public")));
+});
 
 // ==========================================================
 // 🔌 Connexion MongoDB
 // ==========================================================
 if (process.env.MONGO_URI) {
-  mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ MongoDB connecté"))
-  .catch(err => console.error("❌ Erreur MongoDB :", err));
-} else {
-  console.error("⚠️ MONGO_URI manquant dans .env");
-}
+  mongoose.connect(process.env.MONGO_URI,{useNewUrlParser:true,useUnifiedTopology:true})
+  .then(()=>console.log("✅ MongoDB connecté"))
+  .catch(err=>console.error("❌ Erreur MongoDB :",err));
+} else console.error("⚠️ MONGO_URI manquant dans .env");
 
 // ==========================================================
 // 🌐 Page publique
 // ==========================================================
-app.get("/", (_, res) =>
-  res.sendFile(path.join(__dirname, "public", "index.html"))
-);
+app.get("/",(_,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
 
 // ==========================================================
-// 🚀 Étape 1 : Extraction réelle (route principale)
+// 🚀 Extraction réelle
 // ==========================================================
-app.post("/api/run-global", async (req, res) => {
-  try {
+app.post("/api/run-global",async(req,res)=>{
+  try{
     await checkSourcesFreshness();
-    const { zone } = req.body;
-    const result = await runGlobal(zone || "All");
-    await adminLogs.addLog(`⚙️ Extraction complète effectuée pour ${zone || "All"}`);
-    res.json({ success: true, result });
-  } catch (e) {
-    await adminLogs.addLog(`❌ Erreur extraction: ${e.message}`);
-    res.status(500).json({ success: false, error: e.message });
+    const {zone}=req.body;
+    const result=await runGlobal(zone||"All");
+    await logToAdmin(`⚙️ Extraction complète effectuée pour ${zone||"All"}`);
+    res.json({success:true,result});
+  }catch(e){
+    await logToAdmin(`❌ Erreur extraction: ${e.message}`);
+    res.status(500).json({success:false,error:e.message});
   }
 });
 
 // ==========================================================
-// 🧩 Compatibilité ancienne route /api/extract (GET)
+// 🧩 Compatibilité ancienne route /api/extract
 // ==========================================================
-app.get("/api/extract", async (_, res) => {
-  try {
+app.get("/api/extract",async(_,res)=>{
+  try{
     await checkSourcesFreshness();
-    const result = await runGlobal("All");
-    await adminLogs.addLog("⚙️ Extraction complète (route legacy)");
-    res.json({ success: true, result });
-  } catch (e) {
-    await adminLogs.addLog(`❌ Échec extraction (legacy): ${e.message}`);
-    res.status(500).json({ success: false, error: e.message });
+    const result=await runGlobal("All");
+    await logToAdmin("⚙️ Extraction complète (route legacy)");
+    res.json({success:true,result});
+  }catch(e){
+    await logToAdmin(`❌ Échec extraction (legacy): ${e.message}`);
+    res.status(500).json({success:false,error:e.message});
   }
 });
 
 // ==========================================================
-// 🧠 Étape 2 : Analyse IA J.E.A.N
+// 🧠 Analyse IA J.E.A.N
 // ==========================================================
-app.post("/api/ai-analyse", async (_, res) => {
-  try {
-    const r = await runAIAnalysis();
-    await adminLogs.addLog("🧠 Analyse IA J.E.A.N terminée avec succès");
+app.post("/api/ai-analyse",async(_,res)=>{
+  try{
+    const r=await runAIAnalysis();
+    await logToAdmin("🧠 Analyse IA J.E.A.N terminée avec succès");
     res.json(r);
-  } catch (e) {
-    await adminLogs.addLog(`❌ Erreur IA J.E.A.N: ${e.message}`);
-    res.status(500).json({ success: false, error: e.message });
+  }catch(e){
+    await logToAdmin(`❌ Erreur IA J.E.A.N: ${e.message}`);
+    res.status(500).json({success:false,error:e.message});
   }
 });
 
 // ==========================================================
 // 📡 Status moteur
 // ==========================================================
-app.get("/api/status", async (_, res) => {
-  try {
-    const state = await engineStateService.getEngineState();
+app.get("/api/status",async(_,res)=>{
+  try{
+    const state=await engineStateService.getEngineState();
     res.json({
-      status: state?.checkup?.engineStatus || state?.status || "IDLE",
-      lastRun: state?.lastRun,
-      models: state?.checkup?.models || "unknown",
-      steps: state?.checkup || {},
-      alerts: state?.alertsLocal || [],
-      alertsCount: state?.alertsLocal?.length || 0,
-      alertsContinental: state?.alertsContinental || [],
-      alertsWorld: state?.alertsWorld || [],
-      forecasts: state?.forecastsContinental || {},
-      partialReport: state?.partialReport || null,
-      finalReport: state?.finalReport || null,
-      engineErrors: state?.errors || [],
-      coveredZones: enumerateCoveredPoints(),
-      uncoveredZones: [],
+      status:state?.checkup?.engineStatus||state?.status||"IDLE",
+      lastRun:state?.lastRun,
+      models:state?.checkup?.models||"unknown",
+      steps:state?.checkup||{},
+      alerts:state?.alertsLocal||[],
+      alertsCount:state?.alertsLocal?.length||0,
+      alertsContinental:state?.alertsContinental||[],
+      alertsWorld:state?.alertsWorld||[],
+      forecasts:state?.forecastsContinental||{},
+      partialReport:state?.partialReport||null,
+      finalReport:state?.finalReport||null,
+      engineErrors:state?.errors||[],
+      coveredZones:enumerateCoveredPoints(),
+      uncoveredZones:[]
     });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+});
+
+// ==========================================================
+// 💬 IA Cohere publique
+// ==========================================================
+app.post("/api/cohere",async(req,res)=>{
+  try{
+    const {question}=req.body;
+    if(!question||question.trim().length<2)
+      return res.status(400).json({error:"Question invalide"});
+    const {reply,avatar}=await askCohere(question);
+    await logToAdmin(`💬 Question IA J.E.A.N reçue: "${question}"`);
+    res.json({success:true,reply,avatar:`/avatars/jean-${avatar}.png`});
+  }catch(err){
+    console.error("❌ Erreur Cohere :",err.message);
+    res.status(500).json({success:false,reply:"Erreur interne J.E.A.N.",avatar:"/avatars/jean-default.png"});
   }
 });
 
 // ==========================================================
-// 💬 IA Cohere publique (chat utilisateur)
+// 🌍 Alertes & exports
 // ==========================================================
-app.post("/api/cohere", async (req, res) => {
-  try {
-    const { question } = req.body;
-    if (!question || question.trim().length < 2)
-      return res.status(400).json({ error: "Question invalide" });
-
-    const { reply, avatar } = await askCohere(question);
-    await adminLogs.addLog(`💬 Question IA J.E.A.N reçue: "${question}"`);
-    res.json({
-      success: true,
-      reply,
-      avatar: `/avatars/jean-${avatar}.png`,
-    });
-  } catch (err) {
-    console.error("❌ Erreur Cohere :", err.message);
-    res.status(500).json({
-      success: false,
-      reply: "Erreur interne J.E.A.N.",
-      avatar: "/avatars/jean-default.png",
-    });
-  }
+app.get("/api/alerts",async(_,res)=>{
+  try{res.json(await Alert.find());}
+  catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
-// ==========================================================
-// 🌍 Alertes & exports NASA/NOAA/Copernicus
-// ==========================================================
-app.get("/api/alerts", async (_, res) => {
-  try {
-    const alerts = await Alert.find();
-    res.json(alerts);
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.post("/api/alerts/export/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const alert = await Alert.findById(id);
-    if (!alert) return res.status(404).json({ success: false });
-    const targets = ["NASA", "NOAA / NWS", "Copernicus"];
-    await adminLogs.addLog(`🚀 Export alerte ${id} vers ${targets.join(", ")}`);
-    res.json({ success: true, targets });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+app.post("/api/alerts/export/:id",async(req,res)=>{
+  try{
+    const alert=await Alert.findById(req.params.id);
+    if(!alert)return res.status(404).json({success:false});
+    const targets=["NASA","NOAA / NWS","Copernicus"];
+    await logToAdmin(`🚀 Export alerte ${req.params.id} vers ${targets.join(", ")}`);
+    res.json({success:true,targets});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
 // ==========================================================
 // 📡 Flux de logs & erreurs temps réel (SSE)
 // ==========================================================
-const logEmitter = new EventEmitter();
-const errorEmitter = new EventEmitter();
+const logEmitter=new EventEmitter();
+const errorEmitter=new EventEmitter();
 
-// --- Flux logs ---
-app.get("/api/logs/stream", (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
+app.get("/api/logs/stream",(req,res)=>{
+  res.setHeader("Content-Type","text/event-stream");
+  res.setHeader("Cache-Control","no-cache");
+  res.setHeader("Connection","keep-alive");
   res.flushHeaders();
 
-  const sendLog = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
-  logEmitter.on("newLog", sendLog);
+  const sendLog=log=>res.write(`data: ${JSON.stringify(log)}\n\n`);
+  const sendErr=err=>res.write(`data: ${JSON.stringify({type:"error",...err})}\n\n`);
+  logEmitter.on("newLog",sendLog);
+  errorEmitter.on("newError",sendErr);
 
-  const sendErr = (err) =>
-    res.write(`data: ${JSON.stringify({ type: "error", ...err })}\n\n`);
-  errorEmitter.on("newError", sendErr);
-
-  const ping = setInterval(() => res.write(`: ping\n\n`), 25000);
-
-  req.on("close", () => {
-    clearInterval(ping);
-    logEmitter.removeListener("newLog", sendLog);
-    errorEmitter.removeListener("newError", sendErr);
-  });
+  const ping=setInterval(()=>res.write(`: ping\n\n`),25000);
+  req.on("close",()=>{clearInterval(ping);logEmitter.removeListener("newLog",sendLog);errorEmitter.removeListener("newError",sendErr);});
 });
 
-// --- Extension adminLogs pour émettre vers la console ---
-const originalAddLog = adminLogs.addLog;
-adminLogs.addLog = async function (message) {
-  const payload = { timestamp: new Date(), message };
-  logEmitter.emit("newLog", payload);
-  try {
-    await originalAddLog(message);
-  } catch (e) {
-    errorEmitter.emit("newError", {
-      timestamp: new Date(),
-      message: `⚠️ Erreur enregistrement log: ${e.message}`,
-    });
+// --- Logger intermédiaire sûr ---
+async function logToAdmin(message){
+  const payload={timestamp:new Date(),message};
+  logEmitter.emit("newLog",payload);
+  try{await adminLogs.addLog(message);}
+  catch(e){
+    errorEmitter.emit("newError",{timestamp:new Date(),message:`⚠️ Erreur enregistrement log: ${e.message}`});
   }
-};
+}
 
-// --- Middleware global capture erreurs non gérées ---
-app.use((err, req, res, next) => {
-  console.error("🔥 Erreur non gérée:", err);
-  errorEmitter.emit("newError", {
-    timestamp: new Date(),
-    message: `🔥 Exception serveur: ${err.message}`,
-  });
-  res.status(500).json({ success: false, error: "Erreur interne serveur" });
+// --- Middleware erreurs global ---
+app.use((err,req,res,next)=>{
+  console.error("🔥 Erreur non gérée:",err);
+  errorEmitter.emit("newError",{timestamp:new Date(),message:`🔥 Exception serveur: ${err.message}`});
+  res.status(500).json({success:false,error:"Erreur interne serveur"});
 });
 
 // ==========================================================
-// 🧭 Pages Admin (invisibles moteurs)
+// 🧭 Pages Admin
 // ==========================================================
-const adminPages = [
-  "admin-pp.html",
-  "admin-alerts.html",
-  "admin-chat.html",
-  "admin-index.html",
-  "admin-radar.html",
-  "admin-users.html",
-];
-for (const page of adminPages) {
-  app.get(`/admin${page.includes("admin-") ? "-" + page.split("-")[1].split(".")[0] : ""}`, (_, res) =>
-    res.sendFile(path.join(__dirname, "public", page))
-  );
-}
+["admin-pp.html","admin-alerts.html","admin-chat.html","admin-index.html","admin-radar.html","admin-users.html"]
+.forEach(page=>{
+  const route=`/admin${page.includes("admin-")?"-"+page.split("-")[1].split(".")[0]:""}`;
+  app.get(route,(_,res)=>res.sendFile(path.join(__dirname,"public",page)));
+});
 
 // ==========================================================
 // 🚀 Lancement Serveur
 // ==========================================================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const PORT=process.env.PORT||5000;
+app.listen(PORT,()=>{
   console.log(`⚡ TINSFLASH prêt sur port ${PORT}`);
-  console.log("🌍 Couverture :", enumerateCoveredPoints().length, "points actifs (zones vertes).");
+  console.log("🌍 Couverture :",enumerateCoveredPoints().length,"points actifs (zones vertes).");
 });
