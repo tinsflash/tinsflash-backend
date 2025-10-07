@@ -1,215 +1,147 @@
+<!-- PATH: public/admin-alerts.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="robots" content="noindex,nofollow">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🚨 Console Admin – Alertes (TINSFLASH)</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚨 TINSFLASH – Global Alerts Console</title>
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
   <style>
-    body { font-family: Inter, sans-serif; background:#0b0f19; color:#eee; margin:0; }
-    header { background:#111831; color:#4fc3f7; text-align:center; padding:15px; font-size:22px; font-weight:bold; }
-    nav { background:#1a2238; padding:10px; display:flex; justify-content:center; gap:15px; flex-wrap:wrap; }
-    nav a { color:#ccc; text-decoration:none; font-weight:600; }
-    nav a:hover { color:#4fc3f7; }
-    h2 { color:#4fc3f7; border-bottom:1px solid #333; padding-bottom:6px; margin-top:25px; }
-    button { border:none; border-radius:6px; padding:6px 10px; cursor:pointer; font-weight:bold; }
-    .validate{background:#2a2;color:#fff;} .reject{background:#a22;color:#fff;}
-    .pending{background:#cc0;color:#000;} .export{background:#2196f3;color:#fff;}
-    #summary{background:#1f2937;padding:12px;margin:12px;border-radius:8px;}
-    #map{height:400px;width:95%;margin:15px auto;border-radius:8px;}
-    .alert-block{background:#161b22;padding:10px;margin:10px;border-radius:8px;}
-    .badge{padding:2px 6px;border-radius:4px;font-size:0.8em;margin-left:6px;}
-    .exclusive{background:#a22;color:#fff;} .confirmed{background:#2a2;color:#fff;}
-    .satellite{background:#1976d2;color:#fff;} .trend-up{color:#4caf50;} .trend-down{color:#f44336;}
-    .section-btns{margin:5px 0;}
-    .section-btns button{margin-right:8px;}
-    .analysis{background:#000;padding:8px;border-radius:6px;margin-top:6px;font-size:13px;color:#ccc;}
-    @media(max-width:768px){#map{height:300px;} body{font-size:15px;}}
+    body{font-family:Inter,system-ui,Arial;background:#0b0f19;color:#eee;margin:0}
+    header{background:#111831;padding:15px;text-align:center;color:#4fc3f7;font-size:22px;font-weight:bold}
+    nav{background:#1a2238;padding:10px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap}
+    nav a{color:#ccc;text-decoration:none;font-weight:600}nav a:hover{color:#4fc3f7}
+    main{padding:15px}
+    h2{color:#4fc3f7;border-bottom:1px solid #333;padding-bottom:6px;margin-top:25px}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+    th,td{border:1px solid #333;padding:6px;text-align:center}
+    th{background:#1a2238;color:#4fc3f7}
+    .ok{color:#66bb6a}.warn{color:#ffca28}.bad{color:#ef5350}
+    button{background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:bold}
+    button:hover{background:#0288d1}
+    .btn-danger{background:#ef5350;color:#fff}
+    #map{height:480px;border-radius:8px;margin:20px 0}
+    .premium{background:#112;padding:10px;border-radius:8px;margin-bottom:10px}
+    .premium h3{margin-top:0;color:#ffd54f}
+    @media(max-width:768px){#map{height:320px}}
   </style>
 </head>
 <body>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  const pwd = prompt("Code d’accès admin ?");
-  if (pwd !== "202679") { document.write("⛔ Accès refusé"); throw new Error("Accès refusé"); }
+// === Sécurité admin ===
+const storedPin = sessionStorage.getItem("tinsflashPIN");
+if(!storedPin){
+  const pin = prompt("Code d’accès admin ?");
+  if(pin!=="202679"){ alert("⛔ Accès refusé"); location.href="/"; }
+  else { sessionStorage.setItem("tinsflashPIN","ok"); }
+}
+
+let map;
+
+// === Initialisation carte ===
+function initMap(){
+  map=L.map("map").setView([20,0],2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+}
+
+// === Chargement alertes ===
+async function loadAlerts(){
+  const res = await fetch("/api/alerts");
+  const alerts = await res.json();
+
+  // Tri par certitude décroissante
+  alerts.sort((a,b)=>b.certainty - a.certainty);
+
+  const tableBody=document.getElementById("alertsBody");
+  tableBody.innerHTML="";
+  const premiumDiv=document.getElementById("premiumZone");
+  premiumDiv.innerHTML="";
+
+  // nettoyage carte
+  map.eachLayer(l=>{if(l instanceof L.CircleMarker) map.removeLayer(l);});
+
+  const now=new Date();
+  const topPremium=alerts.filter(a=>a.certainty>=90);
+
+  // Section Premium
+  if(topPremium.length>0){
+    let html="<h3>🌍 Premium World Alerts</h3>";
+    for(const a of topPremium.slice(0,10)){
+      html+=`<div>⚡ <b>${a.title}</b> (${a.region}) – ${a.certainty}% – ${a.severity.toUpperCase()}</div>`;
+    }
+    premiumDiv.innerHTML=html;
+  }
+
+  for(const a of alerts){
+    const col=a.severity==="extreme"?"#ff0000":a.severity==="high"?"#ff9800":a.severity==="medium"?"#ffca28":"#4caf50";
+    const m=L.circleMarker([a.lat,a.lon],{radius:7,color:col,fillOpacity:0.8})
+      .addTo(map)
+      .bindPopup(`<b>${a.title}</b><br>${a.region}<br>${a.certainty}% – ${a.severity}`);
+
+    const det=new Date(a.detectionAt).toLocaleString();
+    const last=new Date(a.lastCheckedAt).toLocaleString();
+    const row=document.createElement("tr");
+    const cls=a.certainty>=90?"ok":a.certainty>=70?"warn":"bad";
+
+    row.innerHTML=`
+      <td>${a.title}</td>
+      <td>${a.region}</td>
+      <td class="${cls}">${a.certainty}%</td>
+      <td>${a.severity}</td>
+      <td>${det}</td>
+      <td>${last}</td>
+      <td>${a.status}</td>
+      <td>
+        <button onclick="exportAlert('${a._id}')">🚀 Publier</button>
+        <button class="btn-danger" onclick="removeAlert('${a._id}')">🗑️ Supprimer</button>
+      </td>
+    `;
+    tableBody.appendChild(row);
+  }
+}
+
+// === Actions ===
+async function exportAlert(id){
+  const res=await fetch(`/api/alerts/export/${id}`,{method:"POST"});
+  const data=await res.json();
+  if(data.success) alert(`✅ Exportée vers ${data.targets.join(", ")}`);
+  else alert("❌ Échec export");
+  loadAlerts();
+}
+
+async function removeAlert(id){
+  if(!confirm("Supprimer cette alerte ?"))return;
+  await fetch(`/api/alerts/${id}`,{method:"DELETE"});
+  loadAlerts();
+}
+
+// === Auto-refresh ===
+setInterval(loadAlerts,15000);
+window.onload=()=>{initMap();loadAlerts();}
 </script>
 
-<header>🚨 Console Admin – Alertes Météorologiques TINSFLASH</header>
+<header>🚨 TINSFLASH – Global Alerts Console</header>
 <nav>
-  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-pp.html">Console moteur</a>
   <a href="/admin-alerts.html">Alertes</a>
   <a href="/admin-chat.html">Chat</a>
-  <a href="/admin-index.html">Vue Index</a>
+  <a href="/admin-index.html">Index</a>
   <a href="/admin-radar.html">Radar & News</a>
   <a href="/admin-users.html">Utilisateurs</a>
 </nav>
 
-<!-- Résumé global -->
-<div id="summary"></div>
+<main>
+  <div class="premium" id="premiumZone"></div>
+  <h2>🌍 Carte mondiale des alertes</h2>
+  <div id="map"></div>
 
-<!-- Boutons de contrôle -->
-<div class="section-btns" style="text-align:center;">
-  <button onclick="fetchAlerts()">🔄 Rafraîchir alertes</button>
-  <button onclick="loadNews()">📰 Rafraîchir news</button>
-  <button onclick="loadWorld()">🌍 Rafraîchir carte</button>
-</div>
-
-<!-- Carte mondiale -->
-<h2>🗺️ Carte des alertes mondiales</h2>
-<div id="map"></div>
-
-<h2>🟢 Publiées (≥90%)</h2><div id="published"></div>
-<h2>🟡 À valider (70–89%)</h2><div id="tovalidate"></div>
-<h2>🔵 Sous surveillance (&lt;70%)</h2><div id="surveillance"></div>
-<h2>⚫ Archivées</h2><div id="archived"></div>
-
-<h2>🧠 Analyse IA J.E.A.N</h2><div id="analysisZone"></div>
-
-<h2>🛰️ News et Observations Satellitaires</h2><div id="news">Chargement...</div>
-
-<script>
-  let geoLayer, alertsData = [];
-
-  // === Init Carte ===
-  const map = L.map("map").setView([20,0], 2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
-
-  async function loadWorld(){
-    if(geoLayer) map.removeLayer(geoLayer);
-    const res = await fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson");
-    const world = await res.json();
-    geoLayer = L.geoJSON(world, {
-      style: { color:"#222", weight:1, fillColor:"#333", fillOpacity:0.6 },
-      onEachFeature: (f,l)=>{ l.bindTooltip(f.properties.ADMIN);
-        l.on("click",()=>showCountryAlerts(f.properties.ISO_A2)); }
-    }).addTo(map);
-  }
-  loadWorld();
-
-  function colorCountry(layer, iso){
-    let color="#333";
-    const a = alertsData.find(x => (x.countryCode||x.country)===iso);
-    if(!a) return;
-    const s=a.data.status;
-    if(s==="published") color="#2a2";
-    else if(s==="toValidate") color="#cc0";
-    else if(s==="under-surveillance") color="#339";
-    else if(s==="archived") color="#555";
-    layer.setStyle({fillColor:color});
-  }
-
-  // === Chargement résumé + alertes ===
-  async function fetchAlerts(){
-    try{
-      const [alertsRes,summaryRes]=await Promise.all([
-        fetch("/api/alerts").then(r=>r.json()),
-        fetch("/api/alerts/summary").then(r=>r.json())
-      ]);
-      alertsData=alertsRes||[];
-      updateSummary(summaryRes);
-      renderAlerts();
-      if(geoLayer){ geoLayer.eachLayer(l=>colorCountry(l,l.feature.properties.ISO_A2)); }
-    }catch(e){console.error(e);}
-  }
-
-  function updateSummary(s){
-    if(!s) return;
-    document.getElementById("summary").innerHTML=`
-      <b>Total alertes :</b> ${s.total}<br>
-      🟢 Publiées : ${s.byStatus.published} |
-      🟡 À valider : ${s.byStatus.toValidate} |
-      🔵 Surveillance : ${s.byStatus["under-surveillance"]} |
-      ⚫ Archivées : ${s.byStatus.archived}<br>
-      🔴 Exclusives : ${s.exclusives} | 🧭 Confirmées ailleurs : ${s.confirmedElsewhere}<br>
-      🌐 Continental : ${s.continental} | 🇪🇺 Local/National : ${s.local}
-    `;
-  }
-
-  function renderAlerts(){
-    const blocks={
-      published:document.getElementById("published"),
-      toValidate:document.getElementById("tovalidate"),
-      surveillance:document.getElementById("surveillance"),
-      archived:document.getElementById("archived")
-    };
-    Object.values(blocks).forEach(b=>b.innerHTML="");
-
-    alertsData.sort((a,b)=>(b.data.confidence||0)-(a.data.confidence||0));
-    alertsData.forEach(a=>{
-      const s=a.data.status,fiab=a.data.confidence||0;
-      const block=blocks[s]||blocks.surveillance;
-      const trend=a.data.trend==="up"?"<span class='trend-up'>▲</span>":"<span class='trend-down'>▼</span>";
-      const sat=a.data.satelliteConfirmed?"<span class='badge satellite'>🛰️ Confirmée satellite</span>":"";
-      const excl=a.data.external?.exclusivity==="exclusive"?"<span class='badge exclusive'>TINSFLASH Exclusif</span>":"";
-      const conf=a.data.external?.exclusivity==="confirmed-elsewhere"?"<span class='badge confirmed'>Confirmée ailleurs</span>":"";
-
-      const div=document.createElement("div");
-      div.className="alert-block";
-      div.innerHTML=`
-        <b>${a.country} ${a.region||""}</b> – ${a.continent||"?"} ${trend} ${sat} ${excl} ${conf}<br>
-        <em>Fiabilité : ${fiab}%</em> | Dernier run : ${a.data.lastRun||"?"}<br>
-        <pre>${JSON.stringify(a.data.summary||a.data,null,2)}</pre>
-        ${s==="toValidate"?`
-          <button class='validate' onclick="updateStatus('${a.id}','published')">Valider</button>
-          <button class='reject' onclick="updateStatus('${a.id}','under-surveillance')">Surveillance</button>
-          <button class='pending' onclick="updateStatus('${a.id}','pending')">En attente</button>
-          <button class='export' onclick="exportAlert('${a.id}')">Exporter (NASA/NWS)</button>
-        `:""}
-        ${s==="under-surveillance"?`
-          <button class='export' onclick="deepAnalyze('${a.id}')">Analyse IA J.E.A.N</button>
-        `:""}
-      `;
-      block.appendChild(div);
-    });
-  }
-
-  async function updateStatus(id,action){
-    await fetch(`/api/alerts/${id}/${action}`,{method:"POST"});
-    fetchAlerts();
-  }
-
-  async function exportAlert(id){
-    try{
-      const res=await fetch(`/api/alerts/export/${id}`,{method:"POST"});
-      const d=await res.json();
-      alert("✅ Exportée vers partenaires : "+(d.targets||[]).join(", "));
-    }catch(e){alert("❌ "+e.message);}
-  }
-
-  async function deepAnalyze(id){
-    const res=await fetch(`/api/alerts/analyze/${id}`,{method:"POST"});
-    const d=await res.json();
-    const box=document.getElementById("analysisZone");
-    const div=document.createElement("div");
-    div.className="analysis";
-    div.innerHTML=`<b>${d.alert?.country||"?"}</b> → ${d.analysis||"Pas d’analyse"}`;
-    box.prepend(div);
-  }
-
-  async function loadNews(){
-    const res=await fetch("/api/news");
-    if(!res.ok)return;
-    const d=await res.json();
-    const box=document.getElementById("news");
-    box.innerHTML="";
-    (d.articles||[]).forEach(n=>{
-      box.innerHTML+=`<div class='alert-block'><h3>${n.title}</h3><p>${n.summary}</p><a href='${n.url}' target='_blank'>🌍 Lire</a></div>`;
-    });
-  }
-
-  function showCountryAlerts(iso){
-    const list=alertsData.filter(a=>(a.countryCode||a.country)===iso);
-    if(!list.length)return alert("Aucune alerte pour "+iso);
-    let txt=`${list.length} alerte(s) pour ${iso}\n\n`;
-    list.forEach(a=>{txt+=`- ${a.region||""} (${a.data.confidence||0}%)\n`;});
-    alert(txt);
-  }
-
-  // Rafraîchissement auto
-  setInterval(fetchAlerts,10000);
-  setInterval(loadNews,120000);
-  window.onload=()=>{fetchAlerts();loadNews();};
-</script>
+  <h2>📋 Liste complète des alertes</h2>
+  <table>
+    <thead><tr><th>Titre</th><th>Région</th><th>Certitude</th><th>Gravité</th><th>Détection</th><th>Dernière vérif</th><th>Statut</th><th>Actions</th></tr></thead>
+    <tbody id="alertsBody"><tr><td colspan="8">Chargement…</td></tr></tbody>
+  </table>
+</main>
 </body>
 </html>
