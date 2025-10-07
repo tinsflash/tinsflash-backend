@@ -1,54 +1,60 @@
-// PATH: services/cohereService.js
-// 🎯 IA Cohere dédiée à J.E.A.N. (Index public uniquement)
+// ==========================================================
+// 💬 TINSFLASH – IA J.E.A.N. Chat Service
+// 🔄 Remplace Cohere par OpenAI GPT-4o-mini (console & utilisateurs)
+// ==========================================================
 
-import fetch from "node-fetch";
+import OpenAI from "openai";
+import dotenv from "dotenv";
+dotenv.config();
 
-const COHERE_API_KEY = process.env.COHERE_API_KEY;
-const COHERE_URL = "https://api.cohere.ai/v1/chat";
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // ⚠️ à placer dans ton .env
+});
 
+// ==========================================================
+// 🚀 Fonction principale
+// ==========================================================
 export async function askCohere(question, category = "grand public") {
   try {
-    if (!COHERE_API_KEY) {
-      throw new Error("❌ COHERE_API_KEY manquant dans .env");
-    }
+    if (!process.env.OPENAI_API_KEY)
+      throw new Error("❌ OPENAI_API_KEY manquant dans .env");
 
-    const response = await fetch(COHERE_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${COHERE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "command-r-plus", // ⚡ modèle Cohere dernière génération
-        messages: [
-          { role: "system", content: "Tu es J.E.A.N., conseiller météo grand public, précis et clair." },
-          { role: "user", content: `Catégorie: ${category}\nQuestion: ${question}` }
-        ],
-      }),
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini", // ⚡ modèle ultra-rapide, économique et intelligent
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es J.E.A.N., assistant météorologique TINSFLASH. Réponds avec précision, clarté et un ton humain.",
+        },
+        {
+          role: "user",
+          content: `Catégorie: ${category}\nQuestion: ${question}`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
     });
 
-    const data = await response.json();
+    const reply =
+      response.choices?.[0]?.message?.content ||
+      "❌ Aucune réponse disponible pour le moment.";
 
-    if (!response.ok) {
-      throw new Error(`Cohere API error: ${response.status} ${data.message || response.statusText}`);
-    }
-
-    // ✅ Nouveau format Cohere
-    const reply = data?.message?.content?.[0]?.text || "❌ Pas de réponse de J.E.A.N.";
-
-    // 🔎 Détection avatar météo
+    // 🔎 Détection d'avatar selon le ton de la réponse
     let avatar = "default";
     const lower = reply.toLowerCase();
-    if (/soleil|sun|clair/.test(lower)) avatar = "sun";
+    if (/soleil|sun|clair|beau/.test(lower)) avatar = "sun";
     else if (/pluie|rain/.test(lower)) avatar = "rain";
     else if (/neige|snow/.test(lower)) avatar = "snow";
     else if (/orage|storm|tonnerre/.test(lower)) avatar = "storm";
     else if (/alerte|danger|warning/.test(lower)) avatar = "alert";
 
     return { reply, avatar };
-
   } catch (err) {
-    console.error("⚠️ Cohere error:", err.message);
-    return { reply: `Erreur J.E.A.N.: ${err.message}`, avatar: "default" };
+    console.error("⚠️ Erreur GPT-4o-mini:", err.message);
+    return {
+      reply: `Erreur J.E.A.N.: ${err.message}`,
+      avatar: "default",
+    };
   }
 }
