@@ -12,15 +12,17 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    body{margin:0;font-family:"Segoe UI",sans-serif;background:#0c1220;color:#eee;}
-    header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
+    body{margin:0;font-family:"Segoe UI",sans-serif;background:#0f172a;color:#f5faff;}
+    header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);
+      color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
     .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:0.9em;}
     video{width:100%;max-height:180px;object-fit:cover;display:block;}
     main{max-width:1200px;margin:auto;padding:20px;}
     h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
-    p.intro{text-align:justify;color:#ccc;font-size:1.05em;line-height:1.6em;}
-    .intro-block{display:flex;align-items:flex-start;gap:18px;margin-top:20px;}
-    .intro-block img{border-radius:10px;width:140px;height:auto;}
+    p.intro{color:#e0e8f9;line-height:1.7;font-size:1.08em;text-align:justify;}
+    .intro-block{display:flex;align-items:flex-start;gap:18px;margin-top:20px;flex-wrap:wrap;opacity:0;transform:translateY(25px);transition:opacity 0.8s ease,transform 0.8s ease;}
+    .intro-block.visible{opacity:1;transform:translateY(0);}
+    .intro-block img{border-radius:12px;width:150px;height:auto;box-shadow:0 0 18px rgba(0,0,0,0.4);}
     .forecast-section{display:flex;flex-wrap:wrap;gap:20px;}
     .forecast-box{background:#131a2b;border-radius:10px;padding:15px;flex:1;min-width:300px;box-shadow:0 0 10px rgba(0,0,0,0.3);}
     .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
@@ -30,16 +32,22 @@
     footer a{color:#4fc3f7;text-decoration:none;}
     footer a:hover{text-decoration:underline;}
     .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
+
     /* Chat IA */
-    .btn-ai{position:fixed;bottom:20px;left:20px;background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:50%;width:60px;height:60px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:20px;}
-    .chat-box{position:fixed;bottom:90px;left:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);}
+    .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
+      border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);
+      font-size:18px;transition:transform .3s ease;z-index:999;}
+    .btn-ai:hover{transform:scale(1.1);}
+    .chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;
+      width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
     .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
     .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
     .chat-input{display:flex;border-top:1px solid #333;}
     .chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
     .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
     .notif-btn{background:#4fc3f7;color:#000;padding:6px 10px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:8px;}
-    .premium-box{position:fixed;bottom:30px;right:20px;background:#15294d;color:#fff;border:2px solid #4fc3f7;border-radius:12px;padding:12px 16px;font-size:14px;box-shadow:0 0 15px rgba(0,0,0,0.5);display:none;z-index:999;}
+    .premium-box{position:fixed;bottom:30px;right:20px;background:#15294d;color:#fff;border:2px solid #4fc3f7;
+      border-radius:12px;padding:12px 16px;font-size:14px;box-shadow:0 0 15px rgba(0,0,0,0.5);display:none;z-index:998;}
     .premium-box a{color:#4fc3f7;text-decoration:none;font-weight:bold;}
   </style>
 </head>
@@ -54,7 +62,7 @@
   <button id="soundBtn" style="position:absolute;top:15px;right:15px;z-index:99;background:#4fc3f7;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;">🔊</button>
 
   <main>
-    <div class="intro-block">
+    <div class="intro-block" id="introBlock">
       <img src="avatars/jean-default.png" alt="avatar">
       <div>
         <h2>Présentation du système J.E.A.N.</h2>
@@ -119,7 +127,8 @@
   </div>
 
   <div class="premium-box" id="premiumBox">
-    🚀 Passez à <a href="https://tinsflash.com/premium" target="_blank">Premium</a> ou <a href="https://tinsflash.com/pro" target="_blank">Pro</a> pour débloquer toutes les alertes et prévisions détaillées !
+    🚀 Passez à <a href="https://tinsflash.com/premium" target="_blank">Premium</a> ou
+    <a href="https://tinsflash.com/pro" target="_blank">Pro</a> pour débloquer toutes les alertes et prévisions détaillées !
   </div>
 
   <script>
@@ -128,7 +137,7 @@
     const btnAI=document.getElementById("btnAI");
     const premiumBox=document.getElementById("premiumBox");
 
-    // 🔁 Premium box cycle
+    // 🔁 Rectangle premium cyclique
     function togglePremiumBox(){
       premiumBox.style.display="block";
       setTimeout(()=>premiumBox.style.display="none",5000);
@@ -137,12 +146,19 @@
     setTimeout(togglePremiumBox,3000);
 
     btnAI.onclick=()=>chat.style.display=chat.style.display==="flex"?"none":"flex";
-    document.getElementById("soundBtn").onclick=()=>{
-      const v=document.getElementById("introVideo");v.muted=!v.muted;
+
+    // 🔊 Gestion du son vidéo
+    const soundBtn=document.getElementById("soundBtn");
+    soundBtn.onclick=()=>{
+      const v=document.getElementById("introVideo");
+      v.muted=!v.muted;
+      soundBtn.textContent=v.muted?"🔇":"🔊";
     };
 
+    // 💬 IA Cohere connectée
     async function sendChat(){
-      const i=document.getElementById("chatInput");const msg=i.value.trim();if(!msg)return;
+      const i=document.getElementById("chatInput");
+      const msg=i.value.trim();if(!msg)return;
       const m=document.getElementById("chatMessages");
       m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;i.value="";
       try{
@@ -157,6 +173,7 @@
       m.scrollTop=m.scrollHeight;
     }
 
+    // 🌦 Chargement des prévisions et alertes
     async function fetchJSON(url){try{const r=await fetch(url);if(!r.ok)throw new Error("HTTP "+r.status);return await r.json();}catch(e){console.error(e);return null;}}
 
     async function loadForecast(){
@@ -190,6 +207,7 @@
       });
     }
 
+    // 🗺️ Cartes connectées
     function initMaps(){
       const mF=L.map("map-forecast").setView([20,10],2);
       const mA=L.map("map-alerts").setView([20,10],2);
@@ -197,6 +215,7 @@
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mA);
     }
 
+    // 📍 Position utilisateur
     function detectPosition(){
       const ps=document.getElementById("position-status");
       if(!navigator.geolocation){ps.textContent="❌ Géolocalisation non supportée";return;}
@@ -205,6 +224,7 @@
       },()=>{ps.textContent="⚠️ Position non détectée, entrez votre adresse manuellement."});
     }
 
+    // 🔔 Notifications
     function askNotifications(){
       if(Notification.permission==="granted"){alert("Notifications déjà activées.");return;}
       Notification.requestPermission().then(p=>{
@@ -212,6 +232,23 @@
       });
     }
 
+    // 🎞️ Effet d’apparition fade-in
+    window.addEventListener("scroll",()=>{
+      const el=document.getElementById("introBlock");
+      const rect=el.getBoundingClientRect();
+      if(rect.top<window.innerHeight-100)el.classList.add("visible");
+    });
+
+    // 🔽 Cache la bulle IA près du footer
+    window.addEventListener("scroll",()=>{
+      const btn=document.getElementById("btnAI");
+      const footer=document.querySelector("footer");
+      const footerTop=footer.getBoundingClientRect().top;
+      const vh=window.innerHeight;
+      btn.style.opacity=(footerTop<vh-60)?"0":"1";
+    });
+
+    // 🚀 Init
     document.addEventListener("DOMContentLoaded",()=>{
       detectPosition();initMaps();loadForecast();loadAlerts();
       setInterval(loadForecast,600000);setInterval(loadAlerts,600000);
