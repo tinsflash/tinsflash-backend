@@ -1,116 +1,116 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>TINSFLASH PRO++ – Terre IA Réaliste</title>
-
-<style>
-html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;}
-#hud{position:fixed;bottom:10px;left:10px;background:#0008;padding:8px 12px;border-radius:10px;font-size:13px;box-shadow:0 0 8px #0ff;}
-#btnLocate{position:fixed;top:10px;left:10px;background:#00aaff;color:#fff;border:none;padding:10px 14px;border-radius:8px;font-weight:600;box-shadow:0 0 8px #09f;}
-</style>
-
-<script type="module">
-import * as THREE from "/three.module.js";
-import { OrbitControls } from "/OrbitControls.js";
-
-let scene,camera,renderer,controls,earth,clouds,stars,light,hud,lat,lon;
-
-init();
-animate();
-
-function init(){
-  renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(innerWidth,innerHeight);
-  renderer.setPixelRatio(devicePixelRatio);
-  document.body.appendChild(renderer.domElement);
-
-  scene=new THREE.Scene();
-  camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,100);
-  camera.position.set(0,0,3);
-
-  controls=new OrbitControls(camera,renderer.domElement);
-  controls.enableDamping=true;
-
-  light=new THREE.DirectionalLight(0xffffff,1.2);
-  light.position.set(5,3,5);
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0x404040));
-
-  const loader=new THREE.TextureLoader();
-  const texEarth=loader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthmap4k.jpg");
-  const texBump=loader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthbump4k.jpg");
-  const texClouds=loader.load("https://raw.githubusercontent.com/roblabs/threejs-earth/master/images/earthcloudmap.jpg");
-
-  const matEarth=new THREE.MeshPhongMaterial({
-    map:texEarth,bumpMap:texBump,bumpScale:0.05,specular:new THREE.Color("#333"),shininess:8
-  });
-  earth=new THREE.Mesh(new THREE.SphereGeometry(1,128,128),matEarth);
-  scene.add(earth);
-
-  clouds=new THREE.Mesh(new THREE.SphereGeometry(1.01,64,64),
-    new THREE.MeshLambertMaterial({map:texClouds,transparent:true,opacity:0.4}));
-  scene.add(clouds);
-
-  const starGeo=new THREE.BufferGeometry();
-  const p=[];for(let i=0;i<1500;i++){const r=5+Math.random()*15,t=Math.random()*6.28,p2=Math.acos(2*Math.random()-1);
-    p.push(r*Math.sin(p2)*Math.cos(t),r*Math.sin(p2)*Math.sin(t),r*Math.cos(p2));}
-  starGeo.setAttribute("position",new THREE.Float32BufferAttribute(p,3));
-  stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:0.02}));
-  scene.add(stars);
-
-  hud=document.createElement("div");hud.id="hud";hud.textContent="📡 Appuie sur Localiser";document.body.appendChild(hud);
-  const btn=document.createElement("button");btn.id="btnLocate";btn.textContent="Localiser";btn.onclick=askLocation;document.body.appendChild(btn);
-
-  window.addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
-}
-
-async function askLocation(){
-  hud.textContent="Recherche position…";
-  if(!navigator.geolocation){hud.textContent="⚠️ Pas de GPS";return;}
-  navigator.geolocation.getCurrentPosition(async(pos)=>{
-    lat=pos.coords.latitude;lon=pos.coords.longitude;
-    hud.textContent=`Position ${lat.toFixed(2)},${lon.toFixed(2)} – chargement relief & météo`;
-    await applyRelief();
-    await updateWeather();
-  },()=>hud.textContent="⚠️ GPS refusé");
-}
-
-async function applyRelief(){
-  try{
-    const r=await fetch(`/api/altitude?lat=${lat}&lon=${lon}`);
-    const d=await r.json();
-    const alt=d.altitude||0;
-    const pos=earth.geometry.attributes.position;
-    for(let i=0;i<pos.count;i++){
-      const v=new THREE.Vector3().fromBufferAttribute(pos,i);
-      v.multiplyScalar(1+alt/40000); // léger gonflement
-      pos.setXYZ(i,v.x,v.y,v.z);
-    }
-    pos.needsUpdate=true;
-  }catch(e){console.warn("relief:",e);}
-}
-
-async function updateWeather(){
-  try{
-    const r=await fetch(`/api/weather-map?lat=${lat}&lon=${lon}`);
-    const d=await r.json();
-    const cloud=d.cloud||0;const rain=d.rain||0;
-    clouds.material.opacity=0.2+cloud/100;
-    clouds.material.color.setHSL(0.6,0.2,1-rain/50);
-    hud.textContent=`☁️ ${cloud}% nuages | 🌧️ ${rain} mm/h`;
-  }catch(e){hud.textContent="⚠️ Erreur météo";}
-}
-
-function animate(){
-  requestAnimationFrame(animate);
-  earth.rotation.y+=0.0008;
-  clouds.rotation.y+=0.001;
-  controls.update();
-  renderer.render(scene,camera);
-}
-</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TINSFLASH PRO++ 3D</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #003366; color: white; font-family: Arial; }
+    #debug { position: absolute; top: 10px; left: 10px; font-size: 14px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px; }
+    #switch { position: absolute; bottom: 10px; right: 10px; background: rgba(255,255,255,0.8); color:#000; border:none; border-radius:8px; padding:8px 12px; font-weight:bold; }
+  </style>
 </head>
-<body></body>
+<body>
+  <div id="debug">Chargement du moteur 3D...</div>
+  <button id="switch">🌞 / 🌙</button>
+
+  <script type="module">
+    import * as THREE from "/three.module.js";
+    import { OrbitControls } from "/OrbitControls.js";
+
+    let scene, camera, renderer, earth, clouds, light;
+    let isNight = false;
+
+    init();
+    animate();
+
+    async function init() {
+      try {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x5cb3ff);
+
+        camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 2.5);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Lumières
+        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+        light = new THREE.DirectionalLight(0xffffff, 1.2);
+        light.position.set(2, 1, 1);
+        scene.add(ambient, light);
+
+        // 🌍 Textures sûres hébergées localement
+        const loader = new THREE.TextureLoader();
+        const earthTex = loader.load("https://upload.wikimedia.org/wikipedia/commons/6/6f/Earth_Eastern_Hemisphere.jpg");
+        const bumpTex = loader.load("https://upload.wikimedia.org/wikipedia/commons/6/6d/Earth_Western_Hemisphere.jpg");
+        const cloudsTex = loader.load("https://upload.wikimedia.org/wikipedia/commons/0/05/Clouds_map_by_NASA.jpg");
+
+        const geometry = new THREE.SphereGeometry(1, 64, 64);
+        const material = new THREE.MeshPhongMaterial({
+          map: earthTex,
+          bumpMap: bumpTex,
+          bumpScale: 0.02,
+          specular: new THREE.Color("grey"),
+          shininess: 10
+        });
+        earth = new THREE.Mesh(geometry, material);
+        scene.add(earth);
+
+        const cloudsMat = new THREE.MeshLambertMaterial({
+          map: cloudsTex,
+          transparent: true,
+          opacity: 0.35
+        });
+        const cloudsGeo = new THREE.SphereGeometry(1.01, 64, 64);
+        clouds = new THREE.Mesh(cloudsGeo, cloudsMat);
+        scene.add(clouds);
+
+        // Contrôles
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.enablePan = false;
+        controls.minDistance = 1.2;
+        controls.maxDistance = 4;
+
+        // Ajuste au redimensionnement
+        window.addEventListener("resize", () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 🌙 Switch jour/nuit
+        document.getElementById("switch").addEventListener("click", () => {
+          isNight = !isNight;
+          if (isNight) {
+            scene.background = new THREE.Color(0x000011);
+            light.intensity = 0.5;
+            ambient.intensity = 0.2;
+          } else {
+            scene.background = new THREE.Color(0x5cb3ff);
+            light.intensity = 1.2;
+            ambient.intensity = 0.7;
+          }
+        });
+
+        document.getElementById("debug").innerText = "✅ Moteur 3D chargé avec succès";
+      } catch (err) {
+        document.getElementById("debug").innerText = "❌ Erreur moteur 3D : " + err.message;
+        console.error(err);
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (earth) {
+        earth.rotation.y += 0.0015;
+        if (clouds) clouds.rotation.y += 0.0017;
+      }
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
 </html>
