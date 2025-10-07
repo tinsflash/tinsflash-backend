@@ -9,6 +9,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import EventEmitter from "events";
+import fetch from "node-fetch";
 
 import { runGlobal } from "./services/runGlobal.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
@@ -48,16 +49,29 @@ app.use("/assets", express.static(path.join(__dirname, "public/assets")));
 app.use("/demo", express.static(path.join(__dirname, "public/demo"))); // ✅ pour la démo météo
 
 // ==========================================================
-// 🌍 Correctif MIME pour modules Three.js (Render HTTPS)
+// 🧩 Correctif MIME pour Three.js et OrbitControls (Render HTTPS)
 // ==========================================================
-app.get("/three.module.js", (_, res) =>
-  res.redirect("https://unpkg.com/three@0.161.0/build/three.module.js")
-);
-app.get("/OrbitControls.js", (_, res) =>
-  res.redirect(
-    "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js"
-  )
-);
+app.get("/three.module.js", async (_, res) => {
+  try {
+    const r = await fetch("https://unpkg.com/three@0.161.0/build/three.module.js");
+    const js = await r.text();
+    res.type("application/javascript").send(js);
+  } catch (err) {
+    console.error("Erreur three.module.js:", err.message);
+    res.status(500).send("// erreur module three.js");
+  }
+});
+
+app.get("/OrbitControls.js", async (_, res) => {
+  try {
+    const r = await fetch("https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js");
+    const js = await r.text();
+    res.type("application/javascript").send(js);
+  } catch (err) {
+    console.error("Erreur OrbitControls:", err.message);
+    res.status(500).send("// erreur module OrbitControls");
+  }
+});
 
 // ==========================================================
 // 🔌 MongoDB
@@ -82,9 +96,9 @@ app.get("/", (_, res) =>
 // ==========================================================
 // 🌤️ Démo publique météo 3D (Open-Meteo + GPS)
 // ==========================================================
-// URL directe : https://tinsflash-backend.onrender.com/demo/meteo3d-gps-jour.html
-app.get("/demo/meteo3d-gps-jour.html", (_, res) =>
-  res.sendFile(path.join(__dirname, "public", "demo", "meteo3d-gps-jour.html"))
+// 👉 https://tinsflash-backend.onrender.com/demo/meteo3d-gps.html
+app.get("/demo/meteo3d-gps.html", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "demo", "meteo3d-gps.html"))
 );
 
 // ==========================================================
@@ -196,7 +210,62 @@ app.get("/api/alerts", async (_, res) => {
   }
 });
 
-// ... [reste de tes routes inchangé] ...
+// ==========================================================
+// 📡 Logs SSE (flux temps réel)
+// ==========================================================
+const logEmitter = new EventEmitter();
+const errorEmitter = new EventEmitter();
+
+app.get("/api/logs/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const sendLog = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
+  const sendErr = (err) =>
+    res.write(`data: ${JSON.stringify({ type: "error", ...err })}\n\n`);
+
+  logEmitter.on("newLog", sendLog);
+  errorEmitter.on("newError", sendErr);
+
+  const ping = setInterval(() => res.write(`: ping\n\n`), 25000);
+  req.on("close", () => {
+    clearInterval(ping);
+    logEmitter.removeListener("newLog", sendLog);
+    errorEmitter.removeListener("newError", sendErr);
+  });
+});
+
+async function addAdminLogWithStream(msg) {
+  const payload = { timestamp: new Date(), message: msg };
+  logEmitter.emit("newLog", payload);
+  try {
+    await adminLogs.addLog(msg);
+  } catch (e) {
+    errorEmitter.emit("newError", {
+      timestamp: new Date(),
+      message: `⚠️ Log error: ${e.message}`,
+    });
+  }
+}
+const addLog = addAdminLogWithStream;
+
+// ==========================================================
+// 🧭 Pages admin protégées
+// ==========================================================
+const pages = [
+  "admin-pp.html",
+  "admin-alerts.html",
+  "admin-chat.html",
+  "admin-index.html",
+  "admin-radar.html",
+  "admin-users.html",
+];
+for (const page of pages)
+  app.get(`/${page}`, (_, res) =>
+    res.sendFile(path.join(__dirname, "public", page))
+  );
 
 // ==========================================================
 // 🚀 Lancement
