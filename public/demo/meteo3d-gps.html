@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>TINSFLASH – Météo 3D Jour (Open-Meteo + GPS)</title>
+<title>TINSFLASH 3D – Jour & Nuit</title>
 
 <style>
 html,body{
@@ -24,11 +24,11 @@ html,body{
   font-size:13px;
   color:#003;
   box-shadow:0 0 6px #0002;
+  transition:background 0.5s,color 0.5s;
 }
-#btn{
+#btnLocate,#btnMode{
   position:fixed;
   top:10px;
-  left:10px;
   padding:8px 14px;
   border-radius:8px;
   background:#0077cc;
@@ -36,16 +36,20 @@ html,body{
   border:none;
   font-weight:600;
   box-shadow:0 2px 4px #0004;
+  transition:background 0.3s;
 }
+#btnLocate:hover,#btnMode:hover{background:#005fa3;}
+#btnLocate{left:10px;}
+#btnMode{right:10px;}
 canvas{touch-action:none;}
 </style>
 
 <script type="module">
-import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
-import { OrbitControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js";
+import * as THREE from "/three.module.js";
+import { OrbitControls } from "/OrbitControls.js";
 
-let scene,camera,renderer,controls,points,lat,lon,city="Localisation GPS";
-let hud;
+let scene,camera,renderer,controls,points,earth,stars,lat,lon,city="Localisation GPS";
+let hud,mode="jour";
 
 init();
 
@@ -66,8 +70,8 @@ function init(){
   sun.position.set(5,3,5);
   scene.add(sun);
 
-  // 🌍 Terre bleutée
-  const earth=new THREE.Mesh(
+  // 🌍 Terre
+  earth=new THREE.Mesh(
     new THREE.SphereGeometry(1,64,64),
     new THREE.MeshStandardMaterial({
       color:0x4da0ff,
@@ -77,18 +81,44 @@ function init(){
   );
   scene.add(earth);
 
+  // 🌌 Étoiles (pour mode nuit)
+  const starGeo=new THREE.BufferGeometry();
+  const starCount=800;
+  const starPos=[];
+  for(let i=0;i<starCount;i++){
+    const r=5+Math.random()*10;
+    const theta=Math.random()*Math.PI*2;
+    const phi=Math.acos(2*Math.random()-1);
+    starPos.push(
+      r*Math.sin(phi)*Math.cos(theta),
+      r*Math.sin(phi)*Math.sin(theta),
+      r*Math.cos(phi)
+    );
+  }
+  starGeo.setAttribute("position",new THREE.Float32BufferAttribute(starPos,3));
+  const starMat=new THREE.PointsMaterial({color:0xffffff,size:0.02});
+  stars=new THREE.Points(starGeo,starMat);
+  stars.visible=false;
+  scene.add(stars);
+
   // HUD
   hud=document.createElement("div");
   hud.id="hud";
   hud.textContent="📍 Appuie sur Localiser pour récupérer la météo";
   document.body.appendChild(hud);
 
-  // Bouton
-  const btn=document.createElement("button");
-  btn.id="btn";
-  btn.textContent="Localiser";
-  btn.onclick=askLocation;
-  document.body.appendChild(btn);
+  // Boutons
+  const btnLocate=document.createElement("button");
+  btnLocate.id="btnLocate";
+  btnLocate.textContent="Localiser";
+  btnLocate.onclick=askLocation;
+  document.body.appendChild(btnLocate);
+
+  const btnMode=document.createElement("button");
+  btnMode.id="btnMode";
+  btnMode.textContent="🌞 Jour";
+  btnMode.onclick=switchMode;
+  document.body.appendChild(btnMode);
 
   window.addEventListener("resize",()=>{ 
     camera.aspect=innerWidth/innerHeight; 
@@ -103,7 +133,29 @@ function animate(){
   requestAnimationFrame(animate);
   controls.update();
   if(points)points.rotation.y+=0.001;
+  if(earth)earth.rotation.y+=0.0005;
   renderer.render(scene,camera);
+}
+
+function switchMode(){
+  mode=(mode==="jour")?"nuit":"jour";
+  const body=document.body;
+  const btn=document.getElementById("btnMode");
+  if(mode==="nuit"){
+    body.style.background="radial-gradient(#000015,#000)";
+    hud.style.background="#000000cc";
+    hud.style.color="#fff";
+    stars.visible=true;
+    earth.material.color.set(0x223355);
+    btn.textContent="🌙 Nuit";
+  }else{
+    body.style.background="linear-gradient(#a9dcff,#e9f7ff)";
+    hud.style.background="#ffffffcc";
+    hud.style.color="#003";
+    stars.visible=false;
+    earth.material.color.set(0x4da0ff);
+    btn.textContent="🌞 Jour";
+  }
 }
 
 async function askLocation(){
