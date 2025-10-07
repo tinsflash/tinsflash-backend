@@ -15,4 +15,5 @@ export async function applyLocalFactors(forecast, lat, lon, country) {
     await addEngineLog("Erreur LocalFactors: " + err.message);
     return forecast;
   }
+  export default { applyLocalFactors };
 }
