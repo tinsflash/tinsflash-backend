@@ -24,7 +24,15 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// ==========================================================
+// 🌍 CORS renforcé pour compatibilité Render / GitHub / Local
+// ==========================================================
+app.use(cors({
+  origin: "*", // ou préciser ton domaine front ex: ["https://tinsflash.onrender.com"]
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 // ==========================================================
 // 🌍 Fichiers publics (Render + GitHub /avatars /videos)
@@ -58,7 +66,7 @@ app.get("/", (_, res) =>
 );
 
 // ==========================================================
-// 🚀 Étape 1 : Extraction réelle
+// 🚀 Étape 1 : Extraction réelle (route principale)
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
@@ -67,6 +75,21 @@ app.post("/api/run-global", async (req, res) => {
     const result = await runGlobal(zone || "All");
     res.json({ success: true, result });
   } catch (e) {
+    console.error("❌ Erreur extraction (POST /api/run-global) :", e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🧩 Compatibilité ancienne route /api/extract (GET)
+// ==========================================================
+app.get("/api/extract", async (_, res) => {
+  try {
+    await checkSourcesFreshness();
+    const result = await runGlobal("All");
+    res.json({ success: true, result });
+  } catch (e) {
+    console.error("❌ Échec extraction (GET /api/extract) :", e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
