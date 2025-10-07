@@ -1,147 +1,226 @@
-<!-- PATH: public/admin-alerts.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <title>🌋 Alertes Mondiales – TINSFLASH Everest v1.1</title>
   <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🚨 TINSFLASH – Global Alerts Console</title>
-  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body{font-family:Inter,system-ui,Arial;background:#0b0f19;color:#eee;margin:0}
-    header{background:#111831;padding:15px;text-align:center;color:#4fc3f7;font-size:22px;font-weight:bold}
-    nav{background:#1a2238;padding:10px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap}
-    nav a{color:#ccc;text-decoration:none;font-weight:600}nav a:hover{color:#4fc3f7}
-    main{padding:15px}
-    h2{color:#4fc3f7;border-bottom:1px solid #333;padding-bottom:6px;margin-top:25px}
-    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
-    th,td{border:1px solid #333;padding:6px;text-align:center}
-    th{background:#1a2238;color:#4fc3f7}
-    .ok{color:#66bb6a}.warn{color:#ffca28}.bad{color:#ef5350}
-    button{background:#4fc3f7;color:#000;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:bold}
-    button:hover{background:#0288d1}
-    .btn-danger{background:#ef5350;color:#fff}
-    #map{height:480px;border-radius:8px;margin:20px 0}
-    .premium{background:#112;padding:10px;border-radius:8px;margin-bottom:10px}
-    .premium h3{margin-top:0;color:#ffd54f}
-    @media(max-width:768px){#map{height:320px}}
+    body {
+      background: #060c14;
+      color: #eaf2ff;
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    header {
+      background: #08121d;
+      padding: 12px 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #6bf3ff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header button {
+      background: #142739;
+      color: #6bf3ff;
+      border: 1px solid #6bf3ff;
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .filters {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px;
+      background: #091626;
+    }
+    button {
+      background: #132334;
+      color: white;
+      border: 1px solid #6bf3ff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #map {
+      height: 420px;
+      margin: 10px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    table {
+      width: 96%;
+      margin: 10px auto 60px;
+      border-collapse: collapse;
+      background: #101a25;
+      color: #cce6ff;
+      font-size: 14px;
+    }
+    th, td {
+      border-bottom: 1px solid #223;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background: #152236;
+      color: #6bf3ff;
+      font-weight: 600;
+    }
+    .status-auto_published { color: #00ffb7; }
+    .status-validated { color: #ffe66b; }
+    .status-under_watch { color: #ff7f50; }
+    .log-box {
+      background: #0d1827;
+      color: #9ad6ff;
+      padding: 8px;
+      height: 160px;
+      overflow-y: auto;
+      margin: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #08121d;
+      text-align: center;
+      padding: 6px;
+      font-size: 12px;
+      color: #6bf3ff;
+    }
   </style>
 </head>
 <body>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-// === Sécurité admin ===
-const storedPin = sessionStorage.getItem("tinsflashPIN");
-if(!storedPin){
-  const pin = prompt("Code d’accès admin ?");
-  if(pin!=="202679"){ alert("⛔ Accès refusé"); location.href="/"; }
-  else { sessionStorage.setItem("tinsflashPIN","ok"); }
-}
+  <header>
+    🌋 Console des Alertes Mondiales – Everest v1.1
+    <button onclick="loadAlerts()">🔄 Rafraîchir</button>
+  </header>
 
-let map;
+  <div class="filters">
+    <button onclick="loadAlerts('all')">🌐 Toutes</button>
+    <button onclick="loadAlerts('auto_published')">🚀 Auto-publiées (≥ 90 %)</button>
+    <button onclick="loadAlerts('validated')">🟡 À valider (70 – 89 %)</button>
+    <button onclick="loadAlerts('under_watch')">🟠 En surveillance (&lt; 70 %)</button>
+  </div>
 
-// === Initialisation carte ===
-function initMap(){
-  map=L.map("map").setView([20,0],2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
-}
-
-// === Chargement alertes ===
-async function loadAlerts(){
-  const res = await fetch("/api/alerts");
-  const alerts = await res.json();
-
-  // Tri par certitude décroissante
-  alerts.sort((a,b)=>b.certainty - a.certainty);
-
-  const tableBody=document.getElementById("alertsBody");
-  tableBody.innerHTML="";
-  const premiumDiv=document.getElementById("premiumZone");
-  premiumDiv.innerHTML="";
-
-  // nettoyage carte
-  map.eachLayer(l=>{if(l instanceof L.CircleMarker) map.removeLayer(l);});
-
-  const now=new Date();
-  const topPremium=alerts.filter(a=>a.certainty>=90);
-
-  // Section Premium
-  if(topPremium.length>0){
-    let html="<h3>🌍 Premium World Alerts</h3>";
-    for(const a of topPremium.slice(0,10)){
-      html+=`<div>⚡ <b>${a.title}</b> (${a.region}) – ${a.certainty}% – ${a.severity.toUpperCase()}</div>`;
-    }
-    premiumDiv.innerHTML=html;
-  }
-
-  for(const a of alerts){
-    const col=a.severity==="extreme"?"#ff0000":a.severity==="high"?"#ff9800":a.severity==="medium"?"#ffca28":"#4caf50";
-    const m=L.circleMarker([a.lat,a.lon],{radius:7,color:col,fillOpacity:0.8})
-      .addTo(map)
-      .bindPopup(`<b>${a.title}</b><br>${a.region}<br>${a.certainty}% – ${a.severity}`);
-
-    const det=new Date(a.detectionAt).toLocaleString();
-    const last=new Date(a.lastCheckedAt).toLocaleString();
-    const row=document.createElement("tr");
-    const cls=a.certainty>=90?"ok":a.certainty>=70?"warn":"bad";
-
-    row.innerHTML=`
-      <td>${a.title}</td>
-      <td>${a.region}</td>
-      <td class="${cls}">${a.certainty}%</td>
-      <td>${a.severity}</td>
-      <td>${det}</td>
-      <td>${last}</td>
-      <td>${a.status}</td>
-      <td>
-        <button onclick="exportAlert('${a._id}')">🚀 Publier</button>
-        <button class="btn-danger" onclick="removeAlert('${a._id}')">🗑️ Supprimer</button>
-      </td>
-    `;
-    tableBody.appendChild(row);
-  }
-}
-
-// === Actions ===
-async function exportAlert(id){
-  const res=await fetch(`/api/alerts/export/${id}`,{method:"POST"});
-  const data=await res.json();
-  if(data.success) alert(`✅ Exportée vers ${data.targets.join(", ")}`);
-  else alert("❌ Échec export");
-  loadAlerts();
-}
-
-async function removeAlert(id){
-  if(!confirm("Supprimer cette alerte ?"))return;
-  await fetch(`/api/alerts/${id}`,{method:"DELETE"});
-  loadAlerts();
-}
-
-// === Auto-refresh ===
-setInterval(loadAlerts,15000);
-window.onload=()=>{initMap();loadAlerts();}
-</script>
-
-<header>🚨 TINSFLASH – Global Alerts Console</header>
-<nav>
-  <a href="/admin-pp.html">Console moteur</a>
-  <a href="/admin-alerts.html">Alertes</a>
-  <a href="/admin-chat.html">Chat</a>
-  <a href="/admin-index.html">Index</a>
-  <a href="/admin-radar.html">Radar & News</a>
-  <a href="/admin-users.html">Utilisateurs</a>
-</nav>
-
-<main>
-  <div class="premium" id="premiumZone"></div>
-  <h2>🌍 Carte mondiale des alertes</h2>
   <div id="map"></div>
 
-  <h2>📋 Liste complète des alertes</h2>
-  <table>
-    <thead><tr><th>Titre</th><th>Région</th><th>Certitude</th><th>Gravité</th><th>Détection</th><th>Dernière vérif</th><th>Statut</th><th>Actions</th></tr></thead>
-    <tbody id="alertsBody"><tr><td colspan="8">Chargement…</td></tr></tbody>
+  <h3 style="padding-left:12px;color:#6bf3ff;">📡 Derniers logs d’alertes (temps réel)</h3>
+  <div id="logBox" class="log-box"></div>
+
+  <table id="alertsTable">
+    <thead>
+      <tr>
+        <th>Pays / Région</th>
+        <th>Type</th>
+        <th>Certitude %</th>
+        <th>Détectée le</th>
+        <th>Dernière vérif.</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
   </table>
-</main>
+
+  <footer>© TINSFLASH – Everest Protocol v1.1 | Toutes données réelles</footer>
+
+  <script>
+    let map = L.map("map").setView([20, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap",
+    }).addTo(map);
+    let markers = [];
+
+    async function loadAlerts(filter = "all") {
+      try {
+        const res = await fetch("/api/alerts");
+        const alerts = await res.json();
+        const tbody = document.querySelector("#alertsTable tbody");
+        tbody.innerHTML = "";
+        markers.forEach((m) => map.removeLayer(m));
+        markers = [];
+
+        for (const a of alerts) {
+          const certainty = a.data?.confidence || 0;
+          const status = 
+            certainty >= 90 ? "auto_published" :
+            certainty >= 70 ? "validated" : "under_watch";
+
+          if (filter !== "all" && status !== filter) continue;
+
+          const color =
+            certainty >= 90 ? "lime" : certainty >= 70 ? "gold" : "orange";
+          const lat = a.lat || a.data?.geo?.lat || 0;
+          const lon = a.lon || a.data?.geo?.lon || 0;
+          const marker = L.circleMarker([lat, lon], {
+            color,
+            radius: 6,
+            fillOpacity: 0.8,
+          })
+            .addTo(map)
+            .bindPopup(`<b>${a.country || "?"}</b><br>${a.region || ""}<br>${a.data?.type || ""}<br><b>${certainty}%</b>`);
+          markers.push(marker);
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${a.country || "-"} / ${a.region || "-"}</td>
+            <td>${a.data?.type || "?"}</td>
+            <td>${certainty}</td>
+            <td>${a.data?.firstDetection ? new Date(a.data.firstDetection).toLocaleString() : "-"}</td>
+            <td>${a.timestamp ? new Date(a.timestamp).toLocaleString() : "-"}</td>
+            <td class="status-${status}">${status.replace("_"," ")}</td>
+            <td>
+              <button onclick="publishAlert('${a._id}')">Publier</button>
+              <button onclick="holdAlert('${a._id}')">Attente</button>
+              <button onclick="deleteAlert('${a._id}')">Suppr.</button>
+            </td>`;
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        console.error("Erreur chargement alertes:", err);
+      }
+    }
+
+    async function publishAlert(id) {
+      const res = await fetch(`/api/alerts/export/${id}`, { method: "POST" });
+      if (res.ok) loadAlerts();
+    }
+    async function holdAlert(id) {
+      await fetch(`/api/alerts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "under_watch" }),
+      });
+      loadAlerts();
+    }
+    async function deleteAlert(id) {
+      await fetch(`/api/alerts/${id}`, { method: "DELETE" });
+      loadAlerts();
+    }
+
+    // 🔥 Flux temps réel (logs)
+    const logBox = document.getElementById("logBox");
+    const evtSrc = new EventSource("/api/logs/stream");
+    evtSrc.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        if (data.message?.includes("🚨")) {
+          const p = document.createElement("div");
+          p.textContent = data.message;
+          logBox.appendChild(p);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+      } catch {}
+    };
+
+    loadAlerts();
+  </script>
 </body>
 </html>
