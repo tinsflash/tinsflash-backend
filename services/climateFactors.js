@@ -10,7 +10,7 @@ import { addEngineLog, addEngineError } from "./engineState.js";
  * - climat urbain
  * - anomalies régionales (à enrichir)
  */
-export function adjustWithLocalFactors(forecast, region = "GENERIC") {
+function adjustWithLocalFactors(forecast, region = "GENERIC") {
   try {
     if (!forecast) {
       addEngineError("❌ Aucun forecast fourni à adjustWithLocalFactors");
@@ -69,7 +69,7 @@ export function adjustWithLocalFactors(forecast, region = "GENERIC") {
   }
 }
 
-// ✅ Double export — compatibilité totale avec Node ESM et imports nommés
+// ✅ Double export stable, sans duplication
 const localFactors = { adjustWithLocalFactors };
 export { adjustWithLocalFactors };
 export default localFactors;
