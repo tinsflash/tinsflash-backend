@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>TINSFLASH – Météo 3D Jour (Open-Meteo + GPS)</title>
+
+<style>
+html,body{
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  font-family:sans-serif;
+  background:linear-gradient(#a9dcff,#e9f7ff);
+  color:#003;
+}
+#hud{
+  position:fixed;
+  bottom:10px;
+  left:10px;
+  background:#ffffffcc;
+  padding:8px 12px;
+  border-radius:10px;
+  font-size:13px;
+  color:#003;
+  box-shadow:0 0 6px #0002;
+}
+#btn{
+  position:fixed;
+  top:10px;
+  left:10px;
+  padding:8px 14px;
+  border-radius:8px;
+  background:#0077cc;
+  color:#fff;
+  border:none;
+  font-weight:600;
+  box-shadow:0 2px 4px #0004;
+}
+canvas{touch-action:none;}
+</style>
+
+<script type="module">
+import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
+import { OrbitControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js";
+
+let scene,camera,renderer,controls,points,lat,lon,city="Localisation GPS";
+let hud;
+
+init();
+
+function init(){
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,100);
+  camera.position.z=3;
+
+  controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;
+
+  scene.add(new THREE.AmbientLight(0xffffff,0.9));
+  const sun=new THREE.DirectionalLight(0xffffff,0.8);
+  sun.position.set(5,3,5);
+  scene.add(sun);
+
+  // 🌍 Terre bleutée
+  const earth=new THREE.Mesh(
+    new THREE.SphereGeometry(1,64,64),
+    new THREE.MeshStandardMaterial({
+      color:0x4da0ff,
+      roughness:0.8,
+      metalness:0.1
+    })
+  );
+  scene.add(earth);
+
+  // HUD
+  hud=document.createElement("div");
+  hud.id="hud";
+  hud.textContent="📍 Appuie sur Localiser pour récupérer la météo";
+  document.body.appendChild(hud);
+
+  // Bouton
+  const btn=document.createElement("button");
+  btn.id="btn";
+  btn.textContent="Localiser";
+  btn.onclick=askLocation;
+  document.body.appendChild(btn);
+
+  window.addEventListener("resize",()=>{ 
+    camera.aspect=innerWidth/innerHeight; 
+    camera.updateProjectionMatrix(); 
+    renderer.setSize(innerWidth,innerHeight);
+  });
+
+  animate();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  if(points)points.rotation.y+=0.001;
+  renderer.render(scene,camera);
+}
+
+async function askLocation(){
+  hud.textContent="📡 Recherche position…";
+  if(!navigator.geolocation){
+    hud.textContent="⚠️ Géolocalisation non supportée";
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async(pos)=>{
+    lat=pos.coords.latitude;
+    lon=pos.coords.longitude;
+    hud.textContent=`Position : ${lat.toFixed(2)}, ${lon.toFixed(2)} – chargement météo…`;
+    await loadData();
+  },err=>{
+    hud.textContent="⚠️ Localisation refusée ou indisponible";
+    console.error(err);
+  });
+}
+
+async function loadData(){
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=1`;
+  try{
+    const r=await fetch(url);
+    const d=await r.json();
+    const T=d.hourly.temperature_2m;
+    const P=d.hourly.precipitation;
+    const W=d.hourly.wind_speed_10m;
+    makeParticles(T,P,W);
+  }catch(e){
+    console.error("Erreur Open-Meteo:",e);
+    hud.textContent="⚠️ Impossible de charger les données météo";
+  }
+}
+
+function makeParticles(T,P,W){
+  if(points)scene.remove(points);
+  const N=1500,pos=[],str=[];
+  for(let i=0;i<N;i++){
+    const t=i%T.length;
+    const r=1+Math.random()*0.1;
+    const latA=(Math.random()-0.5)*Math.PI;
+    const lonA=Math.random()*Math.PI*2;
+    pos.push(
+      r*Math.cos(latA)*Math.cos(lonA),
+      r*Math.sin(latA),
+      r*Math.cos(latA)*Math.sin(lonA)
+    );
+    str.push((P[t]*5+W[t]/20)/2);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("a",new THREE.Float32BufferAttribute(str,1));
+  const mat=new THREE.ShaderMaterial({
+    transparent:true,
+    depthWrite:false,
+    vertexShader:`
+      attribute float a;
+      varying float vA;
+      void main(){
+        vA=a;
+        vec4 mv=modelViewMatrix*vec4(position,1.0);
+        gl_PointSize=1.5*(200.0/-mv.z);
+        gl_Position=projectionMatrix*mv;
+      }`,
+    fragmentShader:`
+      varying float vA;
+      void main(){
+        float d=length(gl_PointCoord-vec2(0.5));
+        if(d>0.5)discard;
+        float i=clamp(vA,0.0,1.0);
+        vec3 c=mix(vec3(0.2,0.6,1.0),vec3(1.0,0.8,0.2),i);
+        gl_FragColor=vec4(c,0.3+0.7*i);
+      }`
+  });
+  points=new THREE.Points(g,mat);
+  scene.add(points);
+  hud.textContent=`${city} | Temp ${T[0]}°C | Vent ${W[0]} km/h`;
+}
+</script>
+</head>
+<body></body>
+</html>
