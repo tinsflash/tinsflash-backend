@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TINSFLASH • Prévisions & Alertes</title>
 
-  <!-- Google Ads (auto) -->
+  <!-- Google Ads auto -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -15,12 +15,12 @@
     body{margin:0;font-family:"Segoe UI",sans-serif;background:#0c1220;color:#eee;}
     header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
     .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:0.9em;}
-    video{width:100%;max-height:260px;object-fit:cover;display:block;}
+    video{width:100%;max-height:180px;object-fit:cover;display:block;}
     main{max-width:1200px;margin:auto;padding:20px;}
     h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
     p.intro{text-align:justify;color:#ccc;font-size:1.05em;line-height:1.6em;}
-    .intro-block{display:flex;align-items:center;gap:18px;margin-top:20px;flex-wrap:wrap;}
-    .intro-block img{border-radius:10px;max-width:140px;}
+    .intro-block{display:flex;align-items:flex-start;gap:18px;margin-top:20px;}
+    .intro-block img{border-radius:10px;width:140px;height:auto;}
     .forecast-section{display:flex;flex-wrap:wrap;gap:20px;}
     .forecast-box{background:#131a2b;border-radius:10px;padding:15px;flex:1;min-width:300px;box-shadow:0 0 10px rgba(0,0,0,0.3);}
     .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
@@ -128,41 +128,39 @@
     const btnAI=document.getElementById("btnAI");
     const premiumBox=document.getElementById("premiumBox");
 
-    btnAI.onclick=()=>chat.style.display=chat.style.display==="flex"?"none":"flex";
-    setTimeout(()=>premiumBox.style.display="block",3000);
+    // 🔁 Premium box cycle
+    function togglePremiumBox(){
+      premiumBox.style.display="block";
+      setTimeout(()=>premiumBox.style.display="none",5000);
+      setTimeout(togglePremiumBox,30000);
+    }
+    setTimeout(togglePremiumBox,3000);
 
+    btnAI.onclick=()=>chat.style.display=chat.style.display==="flex"?"none":"flex";
     document.getElementById("soundBtn").onclick=()=>{
-      const v=document.getElementById("introVideo");
-      v.muted=!v.muted;
+      const v=document.getElementById("introVideo");v.muted=!v.muted;
     };
 
     async function sendChat(){
-      const i=document.getElementById("chatInput");
-      const msg=i.value.trim();
-      if(!msg)return;
+      const i=document.getElementById("chatInput");const msg=i.value.trim();if(!msg)return;
       const m=document.getElementById("chatMessages");
-      m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
-      i.value="";
+      m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;i.value="";
       try{
         const r=await fetch(`${API_BASE}/cohere`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
+          method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({question:msg})
         });
         const d=await r.json();
         if(!d.success)throw new Error(d.error||d.reply);
         m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
-      }catch(e){
-        m.innerHTML+=`<div>❌ ${e.message}</div>`;
-      }
+      }catch(e){m.innerHTML+=`<div>❌ ${e.message}</div>`;}
       m.scrollTop=m.scrollHeight;
     }
 
     async function fetchJSON(url){try{const r=await fetch(url);if(!r.ok)throw new Error("HTTP "+r.status);return await r.json();}catch(e){console.error(e);return null;}}
 
     async function loadForecast(){
-      const d=await fetchJSON(`${API_BASE}/status`);
-      if(!d)return;
+      const d=await fetchJSON(`${API_BASE}/status`);if(!d)return;
       const loc=document.getElementById("local-today");
       const nat=document.getElementById("national-today");
       if(d.forecasts?.local?.today)
@@ -180,14 +178,10 @@
 
     async function loadAlerts(){
       const a=await fetchJSON(`${API_BASE}/alerts`);
-      const div=document.getElementById("alerts");
-      div.innerHTML="";
+      const div=document.getElementById("alerts");div.innerHTML="";
       if(!a||!a.length){div.innerHTML="✅ Aucune alerte active";return;}
       const groups={local:[],national:[],world:[]};
-      a.forEach(e=>{
-        const lvl=e.level||"local";
-        groups[lvl].push(e);
-      });
+      a.forEach(e=>{const lvl=e.level||"local";groups[lvl].push(e);});
       ["local","national","world"].forEach(l=>{
         if(groups[l].length){
           const details=groups[l].map(x=>`<li>${x.country||x.zone}: ${x.title||x.type}</li>`).join("");
@@ -219,12 +213,8 @@
     }
 
     document.addEventListener("DOMContentLoaded",()=>{
-      detectPosition();
-      initMaps();
-      loadForecast();
-      loadAlerts();
-      setInterval(loadForecast,600000);
-      setInterval(loadAlerts,600000);
+      detectPosition();initMaps();loadForecast();loadAlerts();
+      setInterval(loadForecast,600000);setInterval(loadAlerts,600000);
     });
   </script>
 </body>
