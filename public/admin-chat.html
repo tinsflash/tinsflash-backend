@@ -1,118 +1,115 @@
+<!-- PATH: public/admin-chat.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="robots" content="noindex,nofollow">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💬 Admin Chat – TINSFLASH</title>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💬 Console IA J.E.A.N – Chat moteur & météo</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#0b0f19; color:#eee; margin:0; }
-    header { background:#111831; padding:15px; text-align:center; font-size:22px; font-weight:bold; color:#4fc3f7; }
-    nav { background:#1a2238; padding:10px; display:flex; justify-content:center; gap:15px; }
-    nav a { color:#ccc; text-decoration:none; font-weight:bold; }
-    nav a:hover { color:#4fc3f7; }
-    .container { padding:20px; }
-    h3 { margin-top:30px; color:#4fc3f7; }
-    .chat-box { background:#111; padding:10px; border-radius:6px; height:280px; overflow-y:auto; font-size:14px; margin-bottom:10px; }
-    .msg { margin:5px 0; padding:6px 10px; border-radius:6px; max-width:70%; }
-    .user { background:#4fc3f7; color:#000; margin-left:auto; text-align:right; }
-    .bot { background:#333; color:#fff; margin-right:auto; text-align:left; }
-    .input-row { display:flex; gap:10px; }
-    input { flex:1; padding:8px; border-radius:6px; border:1px solid #555; }
-    button { background:#4fc3f7; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold; }
-    button:hover { background:#0288d1; }
+    body{font-family:Inter,system-ui,Arial;background:#0b0f19;color:#eee;margin:0}
+    header{background:#111831;padding:15px;text-align:center;color:#4fc3f7;font-size:22px;font-weight:bold}
+    nav{background:#1a2238;padding:10px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap}
+    nav a{color:#ccc;text-decoration:none;font-weight:600}nav a:hover{color:#4fc3f7}
+    main{padding:15px;max-width:900px;margin:auto}
+    .chat-box{background:#111831;border-radius:10px;box-shadow:0 0 12px #000;overflow:hidden;display:flex;flex-direction:column;height:80vh}
+    .chat-header{background:#4fc3f7;color:#000;text-align:center;font-weight:bold;padding:8px}
+    .chat-messages{flex:1;padding:10px;overflow-y:auto;font-size:15px;line-height:1.5}
+    .msg{margin:6px 0;padding:8px 10px;border-radius:8px;max-width:75%}
+    .user{background:#4fc3f7;color:#000;margin-left:auto}
+    .bot{background:#1e2a48;color:#fff}
+    .chat-input{display:flex;border-top:1px solid #333;background:#0f1629;padding:8px}
+    .chat-input input{flex:1;padding:10px;border-radius:8px;border:none;background:#1b2339;color:#eee}
+    .chat-input button{background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:8px;padding:10px 16px;cursor:pointer}
+    .chat-input button:hover{background:#03a9f4}
+    .mode-switch{display:flex;gap:10px;justify-content:center;margin:10px 0}
+    .mode-switch button{background:#1a2238;color:#ccc;border:none;padding:6px 10px;border-radius:6px;cursor:pointer}
+    .mode-switch button.active{background:#4fc3f7;color:#000;font-weight:bold}
+    .status{font-size:13px;text-align:center;color:#7dd3fc;margin-top:5px}
   </style>
 </head>
 <body>
-  <script>
-    // 🔐 Accès protégé
-    const pin = prompt("Code d'accès admin ?");
-    if (pin !== "202679") {
-      alert("⛔ Accès refusé");
-      window.location.href = "/";
-    }
+<script>
+// === Sécurité admin ===
+const storedPin=sessionStorage.getItem("tinsflashPIN");
+if(!storedPin){
+  const pin=prompt("Code d’accès admin ?");
+  if(pin!=="202679"){alert("⛔ Accès refusé");location.href="/";}
+  else{sessionStorage.setItem("tinsflashPIN","ok");}
+}
 
-    // 💬 Utilitaire d'affichage messages
-    function addMsg(chatId, text, type="bot") {
-      const div = document.getElementById(chatId);
-      const msg = document.createElement("div");
-      msg.className = "msg " + type;
-      msg.innerText = text;
-      div.appendChild(msg);
-      div.scrollTop = div.scrollHeight;
-    }
+let mode="moteur"; // moteur / meteo
+const messagesDiv=document.createElement("div");
+let chatMessages;
 
-    // ⚙️ Chat moteur (GPT-5)
-    async function sendEngine() {
-      const input = document.getElementById("engineInput");
-      const text = input.value.trim();
-      if (!text) return;
-      addMsg("engineChat", text, "user");
-      input.value = "";
-      try {
-        const res = await fetch("/api/chat-engine", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text }),
-        });
-        const data = await res.json();
-        addMsg("engineChat", data.reply || "⚠️ Pas de réponse", "bot");
-      } catch (err) {
-        addMsg("engineChat", "Erreur: " + err.message, "bot");
-      }
-    }
+// === Envoi question IA ===
+async function sendMessage(){
+  const input=document.getElementById("chatInput");
+  const msg=input.value.trim();
+  if(!msg)return;
+  chatMessages.innerHTML+=`<div class="msg user">🧑‍💻 ${msg}</div>`;
+  input.value="";
+  chatMessages.scrollTop=chatMessages.scrollHeight;
 
-    // 🌦️ Chat climat/météo (GPT-3.5)
-    async function sendClimat() {
-      const input = document.getElementById("climatInput");
-      const text = input.value.trim();
-      if (!text) return;
-      addMsg("climatChat", text, "user");
-      input.value = "";
-      try {
-        const res = await fetch("/api/chat-admin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, mode: "meteo" }),
-        });
-        const data = await res.json();
-        addMsg("climatChat", data.reply || "⚠️ Pas de réponse", "bot");
-      } catch (err) {
-        addMsg("climatChat", "Erreur: " + err.message, "bot");
-      }
-    }
-
-    // Entrée clavier pour envoyer
-    document.addEventListener("keypress", e => {
-      if (e.key==="Enter" && document.activeElement.id==="engineInput") sendEngine();
-      if (e.key==="Enter" && document.activeElement.id==="climatInput") sendClimat();
+  try{
+    const res=await fetch("/api/ai-admin",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message:msg,mode})
     });
-  </script>
+    const data=await res.json();
+    if(data.success){
+      chatMessages.innerHTML+=`<div class="msg bot">🤖 ${data.reply}</div>`;
+    }else{
+      chatMessages.innerHTML+=`<div class="msg bot">⚠️ Erreur : ${data.error||"Réponse IA indisponible"}</div>`;
+    }
+  }catch(e){
+    chatMessages.innerHTML+=`<div class="msg bot">❌ ${e.message}</div>`;
+  }
+  chatMessages.scrollTop=chatMessages.scrollHeight;
+}
 
-  <header>💬 Chat Admin – TINSFLASH</header>
-  <nav>
-    <a href="/admin-pp.html">Console</a>
-    <a href="/admin-alerts.html">Alertes</a>
-    <a href="/admin-chat.html">Chat</a>
-    <a href="/admin-index.html">Vue Index</a>
-    <a href="/admin-radar.html">Radar & News</a>
-    <a href="/admin-users.html">Utilisateurs</a>
-  </nav>
+// === Changement de mode ===
+function switchMode(newMode){
+  mode=newMode;
+  document.querySelectorAll(".mode-switch button").forEach(b=>b.classList.remove("active"));
+  document.getElementById("btn-"+newMode).classList.add("active");
+  document.getElementById("statusMode").innerHTML=`Mode actif : <b>${newMode.toUpperCase()}</b>`;
+}
 
-  <div class="container">
-    <h3>⚙️ Chat Moteur IA (GPT-5)</h3>
-    <div class="chat-box" id="engineChat"></div>
-    <div class="input-row">
-      <input type="text" id="engineInput" placeholder="Pose ta question au moteur météo..." />
-      <button onclick="sendEngine()">Envoyer</button>
+window.onload=()=>{
+  chatMessages=document.getElementById("chatMessages");
+  switchMode("moteur");
+}
+</script>
+
+<header>💬 Console IA J.E.A.N – Chat moteur & météo</header>
+<nav>
+  <a href="/admin-pp.html">Console moteur</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-index.html">Index</a>
+  <a href="/admin-radar.html">Radar & News</a>
+  <a href="/admin-users.html">Utilisateurs</a>
+</nav>
+
+<main>
+  <div class="mode-switch">
+    <button id="btn-moteur" onclick="switchMode('moteur')">⚙️ Moteur</button>
+    <button id="btn-meteo" onclick="switchMode('meteo')">🌦️ Météo</button>
+  </div>
+  <div class="status" id="statusMode">Mode actif : <b>MOTEUR</b></div>
+
+  <div class="chat-box">
+    <div class="chat-header">J.E.A.N (GPT-4o-mini)</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg bot">👋 Bonjour Patrick, ici J.E.A.N. – Prêt à analyser le moteur ou la météo mondiale avec le modèle <b>GPT-4o-mini</b>.</div>
     </div>
-
-    <h3>🌦️ Chat Spécialiste Météo & Climat (GPT-3.5)</h3>
-    <div class="chat-box" id="climatChat"></div>
-    <div class="input-row">
-      <input type="text" id="climatInput" placeholder="Pose ta question météo/climat..." />
-      <button onclick="sendClimat()">Envoyer</button>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="Pose ta question ici..." onkeypress="if(event.key==='Enter')sendMessage()" />
+      <button onclick="sendMessage()">Envoyer</button>
     </div>
   </div>
+</main>
 </body>
 </html>
