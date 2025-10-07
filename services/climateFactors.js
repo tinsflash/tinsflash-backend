@@ -39,7 +39,12 @@ export function adjustWithLocalFactors(forecast, region = "GENERIC") {
     // ===============================
     // 🏙️ Climat urbain
     // ===============================
-    if (region && (region.includes("City") || region.includes("Capital") || region.includes("Metropole"))) {
+    if (
+      region &&
+      (region.includes("City") ||
+        region.includes("Capital") ||
+        region.includes("Metropole"))
+    ) {
       forecast.temperature_max = (forecast.temperature_max || 0) + 0.5;
       forecast.reliability = (forecast.reliability || 80) + 1;
       addEngineLog(`🏙️ Ajustement climat urbain (${region}) appliqué`);
@@ -49,7 +54,8 @@ export function adjustWithLocalFactors(forecast, region = "GENERIC") {
     // 🌦️ Ajustement de cohérence générale
     // ===============================
     if (forecast.temperature_max < forecast.temperature_min) {
-      const mid = (forecast.temperature_min + forecast.temperature_max) / 2;
+      const mid =
+        ((forecast.temperature_min || 0) + (forecast.temperature_max || 0)) / 2;
       forecast.temperature_min = mid - 1;
       forecast.temperature_max = mid + 1;
       addEngineLog("⚙️ Correction de cohérence température appliquée");
@@ -57,13 +63,13 @@ export function adjustWithLocalFactors(forecast, region = "GENERIC") {
 
     addEngineLog("✅ Facteurs locaux appliqués avec succès");
     return forecast;
-
   } catch (err) {
     addEngineError(`💥 Erreur adjustWithLocalFactors : ${err.message}`);
     return forecast;
   }
 }
-// ✅ Double export — compatibilité totale avec Node ESM et imports nommés
-export { applyClimateFactors };
-export default { applyClimateFactors };
 
+// ✅ Double export — compatibilité totale avec Node ESM et imports nommés
+const localFactors = { adjustWithLocalFactors };
+export { adjustWithLocalFactors };
+export default localFactors;
