@@ -1,6 +1,6 @@
 // ==========================================================
 // 🧠 TINSFLASH Meteorological Core – Everest Protocol v1
-// 🌍 Serveur principal – 100 % réel, zéro démo
+// 🌍 Serveur principal connecté – 100 % réel, zéro démo
 // ==========================================================
 import express from "express";
 import mongoose from "mongoose";
@@ -18,6 +18,7 @@ import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import Alert from "./models/Alert.js";
 import { askCohere } from "./services/cohereService.js";
+import * as chatService from "./services/chatService.js";
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -36,7 +37,7 @@ app.use(cors({
 }));
 
 // ==========================================================
-// 🌍 Fichiers publics
+// 🌍 Fichiers publics (site et médias)
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
@@ -56,21 +57,21 @@ if (process.env.MONGO_URI) {
 } else console.error("⚠️ MONGO_URI manquant dans .env");
 
 // ==========================================================
-// 🌐 Page publique
+// 🌐 Page publique principale
 // ==========================================================
 app.get("/", (_, res) =>
   res.sendFile(path.join(__dirname, "public", "index.html"))
 );
 
 // ==========================================================
-// 🚀 Extraction réelle
+// 🚀 Étape 1 : Extraction réelle
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
     const { zone } = req.body;
     const result = await runGlobal(zone || "All");
-    await adminLogs.addLog(`⚙️ Extraction complète pour ${zone || "All"}`);
+    await adminLogs.addLog(`⚙️ Extraction complète effectuée pour ${zone || "All"}`);
     res.json({ success: true, result });
   } catch (e) {
     await adminLogs.addLog(`❌ Erreur extraction: ${e.message}`);
@@ -79,7 +80,7 @@ app.post("/api/run-global", async (req, res) => {
 });
 
 // ==========================================================
-// 🧠 Analyse IA J.E.A.N
+// 🧠 Étape 2 : Analyse IA J.E.A.N (moteur GPT-5)
 // ==========================================================
 app.post("/api/ai-analyse", async (_, res) => {
   try {
@@ -93,7 +94,7 @@ app.post("/api/ai-analyse", async (_, res) => {
 });
 
 // ==========================================================
-// 📡 Statut moteur
+// 📡 Status moteur complet
 // ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
@@ -116,7 +117,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 IA Cohere publique (chat utilisateur)
+// 💬 IA Cohere publique (J.E.A.N site public)
 // ==========================================================
 app.post("/api/cohere", async (req, res) => {
   try {
@@ -125,15 +126,45 @@ app.post("/api/cohere", async (req, res) => {
       return res.status(400).json({ error: "Question invalide" });
 
     const { reply, avatar } = await askCohere(question);
-    await adminLogs.addLog(`💬 Question J.E.A.N: "${question}"`);
+    await adminLogs.addLog(`💬 Question publique J.E.A.N: "${question}"`);
     res.json({ success: true, reply, avatar: `/avatars/jean-${avatar}.png` });
   } catch (err) {
-    res.status(500).json({ success: false, reply: "Erreur J.E.A.N.", avatar: "/avatars/jean-default.png" });
+    console.error("❌ Erreur Cohere :", err.message);
+    res.status(500).json({
+      success: false,
+      reply: "Erreur interne J.E.A.N.",
+      avatar: "/avatars/jean-default.png",
+    });
   }
 });
 
 // ==========================================================
-// 🌍 Alertes & export global
+// 💬 IA Console Admin (GPT-4o-mini) – moteur & météo
+// ==========================================================
+app.post("/api/ai-admin", async (req, res) => {
+  try {
+    const { message, mode } = req.body;
+    if (!message || message.trim().length < 2)
+      return res.status(400).json({ success: false, error: "Message vide" });
+
+    let reply = "";
+    if (mode === "meteo") {
+      reply = await chatService.askAIAdmin(message, "meteo");
+    } else {
+      reply = await chatService.askAIAdmin(message, "moteur");
+    }
+
+    await adminLogs.addLog(`💬 Question console (${mode}) : "${message}"`);
+    res.json({ success: true, reply });
+  } catch (e) {
+    console.error("❌ Erreur /api/ai-admin :", e.message);
+    await adminLogs.addLog(`❌ Erreur IA admin : ${e.message}`);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌍 Alertes & export global (Everest Protocol)
 // ==========================================================
 app.get("/api/alerts", async (_, res) => {
   try {
@@ -144,7 +175,7 @@ app.get("/api/alerts", async (_, res) => {
   }
 });
 
-// ✅ Export manuel NASA/NOAA/Copernicus
+// ✅ Export manuel NASA / NOAA / Copernicus
 app.post("/api/alerts/export/:id", async (req, res) => {
   try {
     const alert = await Alert.findById(req.params.id);
@@ -162,7 +193,7 @@ app.post("/api/alerts/export/:id", async (req, res) => {
   }
 });
 
-// ✅ Suppression manuelle (ou après 3 runs)
+// ✅ Suppression manuelle ou après 3 runs sans évolution
 app.delete("/api/alerts/:id", async (req, res) => {
   try {
     await Alert.findByIdAndDelete(req.params.id);
@@ -174,7 +205,7 @@ app.delete("/api/alerts/:id", async (req, res) => {
 });
 
 // ==========================================================
-// 📡 Flux de logs SSE
+// 📡 Flux de logs SSE temps réel
 // ==========================================================
 const logEmitter = new EventEmitter();
 const errorEmitter = new EventEmitter();
@@ -204,15 +235,22 @@ adminLogs.addLog = async msg => {
 };
 
 // ==========================================================
-// 🧭 Pages admin (invisibles moteurs de recherche)
+// 🧭 Pages Admin (protégées et invisibles moteurs)
 // ==========================================================
-const pages=["admin-pp.html","admin-alerts.html","admin-chat.html","admin-index.html","admin-radar.html","admin-users.html"];
+const pages=[
+  "admin-pp.html",
+  "admin-alerts.html",
+  "admin-chat.html",
+  "admin-index.html",
+  "admin-radar.html",
+  "admin-users.html",
+];
 for(const page of pages){
   app.get(`/${page}`,(_,res)=>res.sendFile(path.join(__dirname,"public",page)));
 }
 
 // ==========================================================
-// 🚀 Lancement serveur
+// 🚀 Lancement du serveur
 // ==========================================================
 const PORT=process.env.PORT||5000;
 app.listen(PORT,()=>{
