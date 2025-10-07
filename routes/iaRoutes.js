@@ -1,24 +1,20 @@
-// src/routes/iaRoutes.js
+// routes/iaRoutes.js
+// 🤖 Route d'analyse IA J.E.A.N (manuelle, déclenchée après RUN global)
+
 import express from "express";
-import { getAllForecastZones } from "../services/forecastService.js";
-import { runIAJEANAnalysis } from "../services/iaService.js";
-import { addEngineLog, addEngineError } from "../services/engineState.js";
+import { addEngineLog } from "../services/engineState.js";
+import { analyseIA } from "../services/iaService.js";
 
 const router = express.Router();
 
-router.get("/run", async (req, res) => {
+// 🔹 Lancer uniquement l'analyse IA
+router.post("/ia/analyse", async (req, res) => {
   try {
-    addEngineLog("API /api/ia/run called");
-    const zones = await getAllForecastZones();
-    const result = await runIAJEANAnalysis(zones);
-    if (result.status === "success") {
-      return res.status(200).json(result);
-    } else {
-      return res.status(500).json(result);
-    }
+    addEngineLog("🧠 Requête reçue : lancement de l'analyse IA J.E.A.N...");
+    const result = await analyseIA();
+    res.json({ success: true, result });
   } catch (err) {
-    addEngineError("API /ia/run internal error: " + err.message);
-    return res.status(500).json({ status: "error", message: "Erreur interne IA", details: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
