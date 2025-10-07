@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – Central Meteorological Engine (Everest Protocol v1)
+// 🌍 TINSFLASH – Central Meteorological Engine (Everest Protocol v1.2)
 // 100 % réel – IA J.E.A.N. (GPT-5 moteur / GPT-4o-mini console)
 // ==========================================================
 import express from "express";
@@ -30,11 +30,13 @@ app.use(express.json());
 // ==========================================================
 // 🌐 CORS global
 // ==========================================================
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // ==========================================================
 // 📁 Fichiers statiques
@@ -48,12 +50,13 @@ app.use("/assets", express.static(path.join(__dirname, "public/assets")));
 // 🔌 MongoDB
 // ==========================================================
 if (process.env.MONGO_URI) {
-  mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ MongoDB connecté"))
-  .catch(err => console.error("❌ Erreur MongoDB :", err));
+  mongoose
+    .connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
+    .then(() => console.log("✅ MongoDB connecté"))
+    .catch((err) => console.error("❌ Erreur MongoDB :", err));
 } else console.error("⚠️ MONGO_URI manquant dans .env");
 
 // ==========================================================
@@ -117,7 +120,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 IA Cohere (J.E.A.N. public)
+// 💬 IA publique Cohere (J.E.A.N. grand public)
 // ==========================================================
 app.post("/api/cohere", async (req, res) => {
   try {
@@ -139,7 +142,7 @@ app.post("/api/cohere", async (req, res) => {
 });
 
 // ==========================================================
-// 💬 IA Console Admin (GPT-4o-mini)
+// 💬 IA console admin (GPT-4o-mini)
 // ==========================================================
 app.post("/api/ai-admin", async (req, res) => {
   try {
@@ -161,7 +164,7 @@ app.post("/api/ai-admin", async (req, res) => {
 });
 
 // ==========================================================
-// 🌍 Alertes (Everest Protocol)
+// 🌋 Alertes (Everest Protocol)
 // ==========================================================
 app.get("/api/alerts", async (_, res) => {
   try {
@@ -179,7 +182,12 @@ app.post("/api/alerts/export/:id", async (req, res) => {
 
     const targets = ["NASA", "NOAA / NWS", "Copernicus"];
     alert.status = "auto_published";
-    alert.history.push({ ts: new Date(), note: "Exportée vers organismes internationaux" });
+    alert.validationState = "confirmed";
+    alert.lastCheck = new Date();
+    alert.history.push({
+      ts: new Date(),
+      note: "Exportée vers organismes internationaux",
+    });
     await alert.save();
 
     await addLog(`🚀 Export alerte ${alert._id} vers ${targets.join(", ")}`);
@@ -189,6 +197,39 @@ app.post("/api/alerts/export/:id", async (req, res) => {
   }
 });
 
+// 🕒 Mise à jour du statut d'une alerte
+app.put("/api/alerts/status/:id", async (req, res) => {
+  try {
+    const { action } = req.body;
+    const alert = await Alert.findById(req.params.id);
+    if (!alert)
+      return res.status(404).json({ success: false, error: "Alerte introuvable" });
+
+    const validStatuses = [
+      "under_watch",
+      "validated",
+      "auto_published",
+      "archived",
+    ];
+    if (!validStatuses.includes(action))
+      return res
+        .status(400)
+        .json({ success: false, error: "Statut non reconnu" });
+
+    alert.status = action;
+    alert.lastCheck = new Date();
+    alert.history.push({ ts: new Date(), note: `Statut mis à jour → ${action}` });
+    await alert.save();
+
+    await addLog(`⚙️ Alerte ${alert._id} → ${action.toUpperCase()}`);
+    res.json({ success: true, alert });
+  } catch (e) {
+    await addLog(`❌ Erreur mise à jour alerte: ${e.message}`);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 🗑️ Suppression d'une alerte
 app.delete("/api/alerts/:id", async (req, res) => {
   try {
     await Alert.findByIdAndDelete(req.params.id);
@@ -200,7 +241,7 @@ app.delete("/api/alerts/:id", async (req, res) => {
 });
 
 // ==========================================================
-// 📡 Logs SSE (corrigé – Node 22 ESM safe)
+// 📡 Logs SSE (flux temps réel)
 // ==========================================================
 const logEmitter = new EventEmitter();
 const errorEmitter = new EventEmitter();
@@ -241,7 +282,7 @@ async function addAdminLogWithStream(msg) {
 const addLog = addAdminLogWithStream;
 
 // ==========================================================
-// 🧭 Pages Admin protégées
+// 🧭 Pages admin protégées
 // ==========================================================
 const pages = [
   "admin-pp.html",
