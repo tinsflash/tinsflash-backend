@@ -3,73 +3,37 @@
 
 import { addEngineLog, addEngineError } from "./engineState.js";
 
-/**
- * Ajuste les prévisions météo selon des facteurs locaux :
- * - relief
- * - proximité de la mer
- * - climat urbain
- * - anomalies régionales (à enrichir)
- */
-function adjustWithLocalFactors(forecast, region = "GENERIC") {
+export function adjustWithLocalFactors(forecast, region = "GENERIC") {
   try {
-    if (!forecast) {
-      addEngineError("❌ Aucun forecast fourni à adjustWithLocalFactors");
-      return forecast;
-    }
+    if (!forecast) return forecast;
 
-    // ===============================
-    // 🏔️ Relief
-    // ===============================
+    // 🔹 Ajustement relief
     if (forecast.elevation && forecast.elevation > 500) {
-      forecast.temperature_min = (forecast.temperature_min || 0) - 1.5;
-      forecast.temperature_max = (forecast.temperature_max || 0) - 1.5;
-      forecast.reliability = (forecast.reliability || 80) + 1;
+      forecast.temperature_min -= 1.5;
+      forecast.temperature_max -= 1.5;
       addEngineLog(`🏔️ Ajustement relief appliqué (${forecast.elevation} m)`);
     }
 
-    // ===============================
-    // 🌊 Proximité océanique
-    // ===============================
-    if (forecast.lon && forecast.lon > -10 && forecast.lon < 15) {
-      forecast.humidity = (forecast.humidity || 60) + 5;
-      forecast.reliability = (forecast.reliability || 80) + 2;
-      addEngineLog("🌊 Influence océanique appliquée");
+    // 🔹 Ajustement proximité mer
+    if (forecast.lon > -10 && forecast.lon < 15) {
+      forecast.humidity += 5;
+      forecast.reliability += 2;
+      addEngineLog("🌊 Influence océanique légère appliquée");
     }
 
-    // ===============================
-    // 🏙️ Climat urbain
-    // ===============================
-    if (
-      region &&
-      (region.includes("City") ||
-        region.includes("Capital") ||
-        region.includes("Metropole"))
-    ) {
-      forecast.temperature_max = (forecast.temperature_max || 0) + 0.5;
-      forecast.reliability = (forecast.reliability || 80) + 1;
-      addEngineLog(`🏙️ Ajustement climat urbain (${region}) appliqué`);
+    // 🔹 Ajustement climat urbain
+    if (region.includes("City") || region.includes("Capital")) {
+      forecast.temperature_max += 0.5;
+      forecast.reliability += 1;
+      addEngineLog("🏙️ Ajustement climat urbain appliqué");
     }
 
-    // ===============================
-    // 🌦️ Ajustement de cohérence générale
-    // ===============================
-    if (forecast.temperature_max < forecast.temperature_min) {
-      const mid =
-        ((forecast.temperature_min || 0) + (forecast.temperature_max || 0)) / 2;
-      forecast.temperature_min = mid - 1;
-      forecast.temperature_max = mid + 1;
-      addEngineLog("⚙️ Correction de cohérence température appliquée");
-    }
-
-    addEngineLog("✅ Facteurs locaux appliqués avec succès");
     return forecast;
   } catch (err) {
-    addEngineError(`💥 Erreur adjustWithLocalFactors : ${err.message}`);
+    addEngineError(`Erreur localFactors: ${err.message}`);
     return forecast;
   }
 }
 
-// ✅ Double export stable, sans duplication
-const localFactors = { adjustWithLocalFactors };
-export { adjustWithLocalFactors };
-export default localFactors;
+// ✅ Export explicite compatible Node.js et ESModule
+export default { adjustWithLocalFactors };
