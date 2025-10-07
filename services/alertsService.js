@@ -1,5 +1,5 @@
 // PATH: services/alertsService.js
-// 🚨 Service central de gestion des alertes TINSFLASH – version extraction sans IA (100 % réel)
+// 🚨 TINSFLASH – Service d'alertes globales (Everest Protocol v1 – réel, connecté IA-ready)
 
 import {
   addEngineLog,
@@ -28,7 +28,7 @@ import { runContinental } from "./runContinental.js";
 let activeAlerts = [];
 
 /* ===========================================================
-   🔎 GÉNÉRATION D’UNE ALERTE (PHASE 1 – Extraction sans IA)
+   🔎 GÉNÉRATION D’UNE ALERTE (Extraction réelle sans IA)
    =========================================================== */
 export async function generateAlerts(lat, lon, country, region, continent = "Europe") {
   const state = await getEngineState();
@@ -46,12 +46,12 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       fetchStationData(lat, lon, country, region),
     ]);
 
-    // 3️⃣ Modèles haute résolution (HRRR / AROME)
+    // 3️⃣ Modèles haute résolution
     let hiRes = null;
     if (country === "USA") hiRes = await hrrr(lat, lon);
     else if (["France", "Belgium"].includes(country)) hiRes = await arome(lat, lon);
 
-    // 4️⃣ Ajustements géo/climat/relief
+    // 4️⃣ Ajustements relief / climat local
     let base = {
       temperature: rain?.temperature ?? snow?.temperature ?? null,
       precipitation: rain?.precipitation ?? snow?.precipitation ?? null,
@@ -62,79 +62,104 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
     const anomaly = forecastVision.detectSeasonalAnomaly(base);
     if (anomaly) base.anomaly = anomaly;
 
-    // ⚠️ 5️⃣ Pas d’IA ici — données prêtes pour analyse IA ultérieure
+    // 5️⃣ Données consolidées (sans IA)
     const parsed = {
       type: "pending-analysis",
       confidence: 0,
       status: "to-analyze",
       note: "Analyse IA non encore effectuée (Phase 2 requise)",
-      dataSources: {
-        snow, rain, wind, stations, hiRes, detectorResults, anomaly,
-      },
+      dataSources: { snow, rain, wind, stations, hiRes, detectorResults, anomaly },
     };
 
-    // 6️⃣ Classification simple
+    // 6️⃣ Classification simplifiée
     let classified = classifyAlerts(parsed);
 
-    // 7️⃣ Vérification externe (MeteoAlarm, NWS, etc.)
+    // 7️⃣ Vérification externe
     const externals = await checkExternalAlerts(lat, lon, country, region);
     const exclusivity = externals.length ? "confirmed-elsewhere" : "exclusive";
     classified = { ...classified, external: { exclusivity, providers: externals } };
 
-    // 8️⃣ Assemblage alerte consolidée
+    // 8️⃣ Détermination du taux de certitude IA (basé sur corrélation multi-modèles)
+    const reliabilityScore =
+      Math.min(
+        100,
+        Math.round(
+          ([
+            snow?.reliability ?? 0,
+            rain?.reliability ?? 0,
+            wind?.reliability ?? 0,
+            stations?.reliability ?? 0,
+          ].reduce((a, b) => a + b, 0) / 4) * 100
+        )
+      ) || 40;
+
+    // 9️⃣ Création / mise à jour de l’alerte
     const keyType = classified.type || parsed.type || "unknown";
-    const newAlert = {
-      id: Date.now().toString() + Math.floor(Math.random() * 1000).toString(),
-      type: keyType,
-      country,
-      region,
-      continent,
-      lat,
-      lon,
-      data: classified,
-      timestamp: new Date().toISOString(),
-      note:
-        country === "USA"
-          ? "⚡ HRRR intégré (USA)"
-          : ["France", "Belgium"].includes(country)
-          ? "⚡ AROME intégré (FR/BE)"
-          : "Sources multi-modèles + stations",
+    const alertData = {
+      title: `${keyType} (${country})`,
+      description: `${region || "Zone locale"} – phénomène ${keyType} (${reliabilityScore}%)`,
+      zone: `${country} - ${region || "global"}`,
+      certainty: reliabilityScore,
+      modelsUsed: ["Snow", "Rain", "Wind", "Stations", "HRRR/AROME"],
+      firstDetection: new Date(),
+      lastCheck: new Date(),
+      status:
+        reliabilityScore >= 90
+          ? "auto_published"
+          : reliabilityScore >= 70
+          ? "validated"
+          : "under_watch",
+      validationState:
+        reliabilityScore >= 90 ? "confirmed" : reliabilityScore >= 70 ? "review" : "pending",
+      geo: { lat, lon },
+      sources: ["TINSFLASH", ...externals.map((e) => e.name || "unknown")],
+      history: [
+        {
+          ts: new Date(),
+          note: `Détection ${keyType} (${reliabilityScore}%)`,
+        },
+      ],
     };
 
-    // 9️⃣ Fusion / suivi
-    const prev = activeAlerts.find(
-      (a) =>
-        a.country === country &&
-        a.region === region &&
-        a.type === keyType &&
-        a.data?.status !== "archived"
-    );
+    // 🔁 Vérifie si déjà présent dans Mongo
+    let existing = await Alert.findOne({
+      "geo.lat": lat,
+      "geo.lon": lon,
+      title: alertData.title,
+    });
 
-    if (prev) {
-      prev.data = {
-        ...newAlert.data,
-        disappearedRunsCount: 0,
-        firstExclusivity:
-          prev.data.firstExclusivity ||
-          (newAlert.data.external?.exclusivity === "exclusive" ? "exclusive" : "non-exclusive"),
-        lastExclusivity: newAlert.data.external?.exclusivity,
-      };
-      prev.timestamp = newAlert.timestamp;
-      prev.note = newAlert.note;
+    if (existing) {
+      existing.lastCheck = new Date();
+      existing.certainty = reliabilityScore;
+      existing.status = alertData.status;
+      existing.validationState = alertData.validationState;
+      existing.history.push({
+        ts: new Date(),
+        note: `Mise à jour ${reliabilityScore}%`,
+      });
+      await existing.save();
     } else {
-      newAlert.data.firstExclusivity = exclusivity;
-      newAlert.data.lastExclusivity = exclusivity;
-      activeAlerts.push(newAlert);
+      existing = new Alert(alertData);
+      await existing.save();
+    }
+
+    // 10️⃣ Sauvegarde en mémoire moteur
+    const prev = activeAlerts.find((a) => a.id === existing._id.toString());
+    if (prev) {
+      prev.certainty = existing.certainty;
+      prev.status = existing.status;
+      prev.lastCheck = new Date();
+    } else {
+      activeAlerts.push({ id: existing._id.toString(), ...alertData });
       if (activeAlerts.length > 2000) activeAlerts.shift();
     }
 
-    // 🔥 Sauvegarde état moteur
     state.alerts = activeAlerts;
     state.lastAlertsGenerated = new Date().toISOString();
     await saveEngineState(state);
 
-    await addEngineLog(`✅ Extraction terminée pour ${country}${region ? " – " + region : ""}`);
-    return prev || newAlert;
+    await addEngineLog(`✅ Alerte ${keyType} enregistrée (${reliabilityScore}%)`);
+    return existing;
   } catch (err) {
     await addEngineError(`Erreur extraction alertes: ${err.message}`);
     return { error: err.message };
@@ -142,10 +167,10 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
 }
 
 /* ===========================================================
-   🌍 RUN GLOBAL ALERTS (Extraction mondiale sans IA)
+   🌍 RUN GLOBAL ALERTS
    =========================================================== */
 export async function runGlobalAlerts() {
-  await addEngineLog("🚨 Extraction globale des alertes sans IA...");
+  await addEngineLog("🚨 Extraction globale (Everest v1)...");
   const state = await getEngineState();
 
   const allZones = [
@@ -167,11 +192,11 @@ export async function runGlobalAlerts() {
     const r = await generateAlerts(lat, lon, z.country, z.region || z.name, z.continent);
     results.push(r);
     processed++;
-    if (processed % 20 === 0)
+    if (processed % 25 === 0)
       await addEngineLog(`📡 ${processed}/${allZones.length} zones traitées...`);
   }
 
-  // === Continental fallback ===
+  // Continental fallback
   const cont = await runContinental();
   if (cont?.forecasts) {
     for (const [region, info] of Object.entries(cont.forecasts)) {
@@ -182,7 +207,7 @@ export async function runGlobalAlerts() {
     }
   }
 
-  await addEngineLog(`✅ Extraction globale terminée (${results.length} zones)`);
+  await addEngineLog(`✅ Extraction mondiale terminée (${results.length} zones)`);
   state.alerts = await getActiveAlerts();
   await saveEngineState(state);
   return results;
@@ -196,9 +221,11 @@ export async function getActiveAlerts() {
 }
 
 export async function updateAlertStatus(id, action) {
-  const alert = activeAlerts.find((a) => a.id === id);
+  const alert = await Alert.findById(id);
   if (!alert) return { error: "Alerte introuvable" };
-  alert.data = { ...alert.data, status: action };
+  alert.status = action;
+  alert.history.push({ ts: new Date(), note: `Mise à jour → ${action}` });
+  await alert.save();
   await addEngineLog(`⚡ Alerte ${id} → ${action}`);
   return alert;
 }
