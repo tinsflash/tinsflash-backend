@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – Central Meteorological Engine (Everest Protocol v1.2)
+// 🌍 TINSFLASH – Central Meteorological Engine (Everest Protocol v1.3 PRO++)
 // 100 % réel – IA J.E.A.N. (GPT-5 moteur / GPT-4o-mini console)
 // ==========================================================
 import express from "express";
@@ -10,6 +10,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import EventEmitter from "events";
 import fetch from "node-fetch";
+import axios from "axios";
 
 import { runGlobal } from "./services/runGlobal.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
@@ -40,16 +41,16 @@ app.use(
 );
 
 // ==========================================================
-// 📁 Fichiers statiques (public + sous-dossiers)
+// 📁 Fichiers statiques (public + sous-dossiers + démos)
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
 app.use("/videos", express.static(path.join(__dirname, "public/videos")));
 app.use("/assets", express.static(path.join(__dirname, "public/assets")));
-app.use("/demo", express.static(path.join(__dirname, "public/demo"))); // ✅ pour la démo météo
+app.use("/demo", express.static(path.join(__dirname, "public/demo")));
 
 // ==========================================================
-// 🧩 Correctif MIME pour Three.js et OrbitControls (Render HTTPS)
+// 🧩 Correctif MIME – Three.js & OrbitControls
 // ==========================================================
 app.get("/three.module.js", async (_, res) => {
   try {
@@ -61,7 +62,6 @@ app.get("/three.module.js", async (_, res) => {
     res.status(500).send("// erreur module three.js");
   }
 });
-
 app.get("/OrbitControls.js", async (_, res) => {
   try {
     const r = await fetch("https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js");
@@ -78,10 +78,7 @@ app.get("/OrbitControls.js", async (_, res) => {
 // ==========================================================
 if (process.env.MONGO_URI) {
   mongoose
-    .connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
+    .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("✅ MongoDB connecté"))
     .catch((err) => console.error("❌ Erreur MongoDB :", err));
 } else console.error("⚠️ MONGO_URI manquant dans .env");
@@ -94,11 +91,10 @@ app.get("/", (_, res) =>
 );
 
 // ==========================================================
-// 🌤️ Démo publique météo 3D (Open-Meteo + GPS)
+// 🌤️ Démo publique météo 3D (Open-Meteo + GPS + Relief)
 // ==========================================================
-// 👉 https://tinsflash-backend.onrender.com/demo/meteo3d-gps.html
-app.get("/demo/meteo3d-gps.html", (_, res) =>
-  res.sendFile(path.join(__dirname, "public", "demo", "meteo3d-gps.html"))
+app.get("/demo/meteo3d-proplus.html", (_, res) =>
+  res.sendFile(path.join(__dirname, "public", "demo", "meteo3d-proplus.html"))
 );
 
 // ==========================================================
@@ -155,7 +151,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 IA publique Cohere (J.E.A.N. grand public)
+// 💬 IA publique Cohere (grand public J.E.A.N.)
 // ==========================================================
 app.post("/api/cohere", async (req, res) => {
   try {
@@ -207,6 +203,35 @@ app.get("/api/alerts", async (_, res) => {
     res.json(alerts);
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌄 API Altitude + Carte météo dynamique
+// ==========================================================
+app.get("/api/altitude", async (req, res) => {
+  const { lat, lon } = req.query;
+  if (!lat || !lon) return res.status(400).json({ error: "Coordonnées manquantes" });
+  try {
+    const r = await axios.get(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+    const alt = r.data.results?.[0]?.elevation || 0;
+    res.json({ altitude: alt });
+  } catch (e) {
+    res.status(500).json({ error: "Erreur altitude" });
+  }
+});
+
+app.get("/api/weather-map", async (req, res) => {
+  const { lat, lon } = req.query;
+  if (!lat || !lon) return res.status(400).json({ error: "Coordonnées manquantes" });
+  try {
+    const r = await axios.get(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=cloud_cover,precipitation`
+    );
+    const { cloud_cover, precipitation } = r.data.current;
+    res.json({ cloud: cloud_cover || 0, rain: precipitation || 0 });
+  } catch (e) {
+    res.status(500).json({ error: "Erreur météo" });
   }
 });
 
@@ -272,6 +297,6 @@ for (const page of pages)
 // ==========================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`⚡ TINSFLASH prêt sur port ${PORT}`);
+  console.log(`⚡ TINSFLASH PRO++ prêt sur port ${PORT}`);
   console.log("🌍 Zones couvertes :", enumerateCoveredPoints().length);
 });
