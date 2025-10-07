@@ -4,170 +4,148 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🛰 Console IA J.E.A.N – TINSFLASH</title>
+  <title>⚡ Console Moteur – TINSFLASH Centrale</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background-color: #0c111a;
-      color: #cde4ff;
-      margin: 0;
-      padding: 0;
-      text-align: center;
-    }
-    h1 { font-size: 1.3rem; margin: 10px 0; color: #66ccff; }
-    button {
-      border: none; border-radius: 8px; padding: 10px 16px;
-      margin: 5px; cursor: pointer; font-weight: 600;
-    }
-    #runBtn { background: #007bff; color: white; }
-    #aiBtn { background: #28a745; color: white; }
-    #refreshBtn { background: #17a2b8; color: white; }
-    #logBox {
-      background: #000; color: #0f0; padding: 10px; margin: 10px auto;
-      width: 95%; height: 200px; overflow-y: auto;
-      border: 1px solid #333; border-radius: 8px;
-      text-align: left; font-family: monospace;
-    }
-    table {
-      margin: 10px auto; width: 90%;
-      border-collapse: collapse; background: #131a24;
-    }
-    th, td {
-      padding: 6px 8px;
-      border-bottom: 1px solid #333;
-    }
-    th { color: #66ccff; }
-    #map { height: 250px; width: 95%; margin: 10px auto; border-radius: 10px; }
-    #chat {
-      width: 95%; margin: 10px auto; background: #111820; border-radius: 8px;
-      padding: 10px; text-align: left;
-    }
-    #chatInput {
-      width: 80%; padding: 10px; border-radius: 5px; border: none;
-      background: #222; color: #fff;
-    }
-    #sendChat {
-      padding: 10px 16px; background: #007bff; color: white; border: none; border-radius: 5px;
-    }
-    .msg { margin: 6px 0; }
-    .user { color: #0af; }
-    .ai { color: #0f0; }
+    body{font-family:"Segoe UI",sans-serif;background:#0b111a;color:#d3e8ff;margin:0;}
+    header{background:#08131f;color:#4fc3f7;text-align:center;padding:10px 0;font-weight:bold;font-size:22px;}
+    nav{background:#101a2a;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;padding:10px;}
+    nav a{color:#b9d8ff;text-decoration:none;padding:6px 10px;border-radius:6px;}
+    nav a:hover{background:#1b2940;color:#fff;}
+    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin:20px;}
+    table{width:92%;margin:10px auto;border-collapse:collapse;background:#131a24;}
+    th,td{padding:6px 8px;border-bottom:1px solid #223;}
+    th{color:#6bf3ff;}
+    #map{height:350px;width:94%;margin:10px auto;border-radius:10px;box-shadow:0 0 10px #000;}
+    #logBox{background:#000;color:#0f0;font-family:monospace;width:92%;margin:10px auto;padding:10px;height:200px;overflow-y:auto;border-radius:6px;}
+    #chatInput{width:75%;padding:8px;border:none;border-radius:6px;background:#1a253a;color:#fff;}
+    #sendChat{padding:9px 16px;background:#4fc3f7;color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
+    button{border:none;border-radius:8px;padding:8px 14px;margin:4px;font-weight:bold;cursor:pointer;}
+    #runBtn{background:#007bff;color:#fff;} #aiBtn{background:#28a745;color:#fff;} #refreshBtn{background:#17a2b8;color:#fff;}
+    footer{text-align:center;font-size:12px;color:#6bf3ff;padding:10px;background:#08131f;margin-top:20px;}
   </style>
 </head>
-
 <body>
-  <h1>🧠 Console IA J.E.A.N – TINSFLASH</h1>
+  <header>🛰️ Console IA J.E.A.N – TINSFLASH Centrale Météo</header>
 
-  <div>
-    <button id="runBtn">⚡ Lancer Extraction (sans IA)</button>
-    <button id="aiBtn">🧠 Lancer Analyse IA J.E.A.N</button>
-    <button id="refreshBtn">🔄 Tout rafraîchir</button>
+  <nav>
+    <a href="/admin-pp.html">⚡ Moteur</a>
+    <a href="/admin-alerts.html">🚨 Alertes</a>
+    <a href="/admin-chat.html">💬 Chat IA</a>
+    <a href="/admin-radar.html">🌦️ Radar</a>
+    <a href="/admin-users.html">👥 Utilisateurs</a>
+  </nav>
+
+  <div style="text-align:center;">
+    <button id="runBtn">⚙️ Lancer Extraction (sans IA)</button>
+    <button id="aiBtn">🧠 Analyse IA J.E.A.N</button>
+    <button id="refreshBtn">🔄 Rafraîchir</button>
   </div>
 
-  <h2>⚙️ État du moteur</h2>
-  <p>Statut : <span id="status">—</span></p>
-  <p>Dernier run : <span id="lastRun">Jamais</span></p>
-  <p>Modèles actifs : <span id="models">—</span></p>
+  <h2>📊 État du moteur</h2>
+  <p style="text-align:center;">Statut : <span id="status">—</span> | Dernier run : <span id="lastRun">Jamais</span></p>
 
-  <h2>📊 Résumés</h2>
-  <table>
-    <thead><tr><th>Type</th><th>Nombre</th></tr></thead>
-    <tbody id="summary"><tr><td>—</td><td>—</td></tr></tbody>
-  </table>
-
-  <h2>📘 Détail par modèle</h2>
   <table>
     <thead><tr><th>Modèle</th><th>OK</th><th>Fail</th></tr></thead>
     <tbody id="modelTable"><tr><td colspan="3">Chargement…</td></tr></tbody>
   </table>
 
-  <h2>🌍 Carte alertes</h2>
+  <h2>🌍 Carte des zones couvertes et prévisions</h2>
   <div id="map"></div>
 
   <h2>📜 Logs moteur (temps réel)</h2>
   <div id="logBox">Connexion aux logs…</div>
 
-  <h2>💬 Chat IA J.E.A.N</h2>
-  <div id="chat"></div>
-  <input id="chatInput" placeholder="Parle à J.E.A.N (moteur GPT-4o-mini)" />
-  <button id="sendChat">Envoyer</button>
+  <h2>💬 Dialogue IA J.E.A.N</h2>
+  <div style="width:92%;margin:auto;text-align:left;background:#0f172a;padding:10px;border-radius:8px;">
+    <div id="chatBox"></div>
+    <input id="chatInput" placeholder="Parle à J.E.A.N (GPT-4o-mini)" />
+    <button id="sendChat">Envoyer</button>
+  </div>
+
+  <footer>© 2025 TINSFLASH – Interface interne (non indexée) | Moteur IA réel connecté</footer>
 
   <script>
-    const API = "https://tinsflash-backend.onrender.com";
-    const logBox = document.getElementById("logBox");
-    const modelTable = document.getElementById("modelTable");
-    const summary = document.getElementById("summary");
+    const API="https://tinsflash-backend.onrender.com";
+    const logBox=document.getElementById("logBox");
+    const modelTable=document.getElementById("modelTable");
+    let map=L.map('map').setView([25,0],2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let zoneMarkers=[];
 
-    async function updateStatus() {
-      try {
-        const r = await fetch(`${API}/api/status`);
-        const d = await r.json();
-        document.getElementById("status").innerText = d.status;
-        document.getElementById("lastRun").innerText = d.lastRun ? new Date(d.lastRun).toLocaleString() : "Jamais";
-        document.getElementById("models").innerText = Object.keys(d.models || {}).join(", ");
+    async function updateStatus(){
+      try{
+        const r=await fetch(`${API}/api/status`);
+        const d=await r.json();
+        document.getElementById("status").innerText=d.status;
+        document.getElementById("lastRun").innerText=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
 
         // modèles
-        modelTable.innerHTML = "";
-        for (const [k,v] of Object.entries(d.models || {})) {
-          const ok = v === "ok" ? "✅" : "";
-          const fail = v === "fail" ? "❌" : "";
-          modelTable.innerHTML += `<tr><td>${k}</td><td>${ok}</td><td>${fail}</td></tr>`;
+        modelTable.innerHTML="";
+        for(const [k,v] of Object.entries(d.models||{})){
+          modelTable.innerHTML+=`<tr><td>${k}</td><td>${v.ok||"—"}</td><td>${v.fail||"—"}</td></tr>`;
         }
-        summary.innerHTML = `<tr><td>Alertes locales</td><td>${d.alertsCount}</td></tr>`;
-      } catch(e) {
-        console.error("Erreur statut:", e);
-      }
+
+        // Zones vertes si couvertes, rouges sinon
+        zoneMarkers.forEach(m=>map.removeLayer(m)); zoneMarkers=[];
+        const covered=d.coveredZones||[];
+        covered.forEach(z=>{
+          const col=z.covered?"#00ff88":"#ff4444";
+          const c=L.circleMarker([z.lat,z.lon],{
+            radius:5,color:col,fillOpacity:.8
+          }).addTo(map).bindPopup(`${z.country} – ${z.region}`);
+          zoneMarkers.push(c);
+        });
+      }catch(e){console.error(e);}
     }
 
-    // Boutons
-    document.getElementById("runBtn").onclick = async () => {
-      const res = await fetch(`${API}/api/run-global`, { method: "POST", headers: {"Content-Type": "application/json"} });
-      const data = await res.json();
-      alert(data.success ? "✅ Extraction complète !" : "❌ Échec extraction");
+    // === Actions ===
+    document.getElementById("runBtn").onclick=async()=>{
+      const res=await fetch(`${API}/api/run-global`,{method:"POST",headers:{"Content-Type":"application/json"}});
+      const data=await res.json();
+      alert(data.success?"✅ Extraction complète !":"❌ Échec extraction");
       updateStatus();
     };
-
-    document.getElementById("aiBtn").onclick = async () => {
-      const res = await fetch(`${API}/api/ai-analyse`, { method: "POST" });
-      const data = await res.json();
-      alert(data.success ? "🧠 IA J.E.A.N terminée" : "❌ Erreur IA");
+    document.getElementById("aiBtn").onclick=async()=>{
+      const res=await fetch(`${API}/api/ai-analyse`,{method:"POST"});
+      const data=await res.json();
+      alert(data.success?"🧠 Analyse IA terminée":"❌ Erreur IA");
       updateStatus();
     };
+    document.getElementById("refreshBtn").onclick=updateStatus;
 
-    document.getElementById("refreshBtn").onclick = updateStatus;
-
-    // Logs temps réel SSE
-    const evtSrc = new EventSource(`${API}/api/logs/stream`);
-    evtSrc.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      logBox.innerHTML += `[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}<br>`;
-      logBox.scrollTop = logBox.scrollHeight;
+    // === Logs temps réel SSE ===
+    const evtSrc=new EventSource(`${API}/api/logs/stream`);
+    evtSrc.onmessage=(e)=>{
+      try{
+        const data=JSON.parse(e.data);
+        if(!data.message)return;
+        logBox.innerHTML+=`[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}<br>`;
+        logBox.scrollTop=logBox.scrollHeight;
+      }catch{}
     };
 
-    // Carte Leaflet
-    const map = L.map('map').setView([20,0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    // Chat IA
-    const chat = document.getElementById("chat");
-    document.getElementById("sendChat").onclick = async () => {
-      const txt = document.getElementById("chatInput").value.trim();
-      if (!txt) return;
-      chat.innerHTML += `<div class='msg user'>👨‍🚀 Toi : ${txt}</div>`;
-      document.getElementById("chatInput").value = "";
-      const res = await fetch(`${API}/api/cohere`, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ question: txt })
-      });
-      const data = await res.json();
-      chat.innerHTML += `<div class='msg ai'>🤖 J.E.A.N : ${data.reply}</div>`;
-      chat.scrollTop = chat.scrollHeight;
+    // === Chat IA connecté Cohere ===
+    const chatBox=document.getElementById("chatBox");
+    document.getElementById("sendChat").onclick=async()=>{
+      const q=document.getElementById("chatInput").value.trim();
+      if(!q)return;
+      chatBox.innerHTML+=`<div class='user'>🧑‍💻 ${q}</div>`;
+      document.getElementById("chatInput").value="";
+      try{
+        const r=await fetch(`${API}/api/cohere`,{
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({question:q})
+        });
+        const d=await r.json();
+        chatBox.innerHTML+=`<div class='ai'>🤖 ${d.reply}</div>`;
+      }catch(err){chatBox.innerHTML+=`<div class='ai'>⚠️ ${err.message}</div>`;}
+      chatBox.scrollTop=chatBox.scrollHeight;
     };
 
+    // Rafraîchissement auto
+    setInterval(updateStatus,10000);
     updateStatus();
   </script>
 </body>
