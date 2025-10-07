@@ -1,184 +1,182 @@
+<!-- PATH: public/admin-pp.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚡ Console moteur – TINSFLASH Centrale</title>
+  <title>🛰 Centrale de Contrôle – TINSFLASH</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body{font-family:"Segoe UI",sans-serif;background:#0c111a;color:#cde4ff;margin:0;}
-    header{background:#08131f;color:#4fc3f7;text-align:center;padding:10px;font-weight:bold;font-size:22px;}
-    nav{background:#101a2a;display:flex;justify-content:center;flex-wrap:wrap;gap:12px;padding:10px;}
-    nav a{color:#b9d8ff;text-decoration:none;padding:6px 10px;border-radius:6px;}
-    nav a:hover{background:#1b2940;color:#fff;}
-    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin:20px;}
-    table{width:92%;margin:10px auto;border-collapse:collapse;background:#131a24;}
-    th,td{padding:8px;border-bottom:1px solid #223;text-align:center;}
-    th{color:#6bf3ff;}
-    .status-indicator{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:6px;}
-    #map,#mapAlerts{height:340px;width:94%;margin:10px auto;border-radius:10px;box-shadow:0 0 10px #000;}
-    #logBox{background:#000;color:#0f0;font-family:monospace;width:92%;margin:10px auto;padding:10px;height:200px;overflow-y:auto;border-radius:6px;}
-    #chatInput{width:75%;padding:8px;border:none;border-radius:6px;background:#1a253a;color:#fff;}
-    #sendChat{padding:9px 16px;background:#4fc3f7;color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
-    button{border:none;border-radius:8px;padding:8px 14px;margin:4px;font-weight:bold;cursor:pointer;}
-    #runBtn{background:#007bff;color:#fff;} #aiBtn{background:#28a745;color:#fff;} #refreshBtn{background:#17a2b8;color:#fff;}
-    footer{text-align:center;font-size:12px;color:#6bf3ff;padding:10px;background:#08131f;margin-top:20px;}
+    body{font-family:"Segoe UI",sans-serif;background:#0b101a;color:#d9e9ff;margin:0;padding:0;text-align:center}
+    header{background:#08121d;padding:10px;font-size:22px;font-weight:bold;color:#6bf3ff}
+    nav{background:#091626;display:flex;justify-content:center;flex-wrap:wrap;padding:8px;gap:10px}
+    nav a{color:#9ad6ff;text-decoration:none;font-weight:600;padding:6px 10px;border-radius:6px}
+    nav a:hover{background:#102030;color:#fff}
+    button{border:none;border-radius:8px;padding:10px 16px;margin:5px;cursor:pointer;font-weight:600}
+    #runBtn{background:#007bff;color:white}
+    #aiBtn{background:#28a745;color:white}
+    #refreshBtn{background:#17a2b8;color:white}
+    #logBox{background:#000;color:#0f0;padding:10px;margin:10px auto;width:95%;height:180px;overflow-y:auto;
+      border:1px solid #333;border-radius:8px;text-align:left;font-family:monospace}
+    table{margin:10px auto;width:90%;border-collapse:collapse;background:#131a24}
+    th,td{padding:6px 8px;border-bottom:1px solid #333;text-align:left}
+    th{color:#6bf3ff}
+    #mapForecast,#mapAlerts{height:240px;width:95%;margin:10px auto;border-radius:10px}
+    .status-ok{color:#00ff7f}.status-fail{color:#ff4f4f}
+    /* === POPUP FINAL === */
+    #summaryPopup{
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.8);
+      background:#fff;color:#000;border-radius:12px;box-shadow:0 0 25px rgba(0,0,0,0.6);
+      width:360px;max-width:90%;padding:20px;text-align:left;display:none;z-index:9999;
+      animation:fadeInZoom .3s forwards;
+    }
+    @keyframes fadeInZoom{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+    #summaryPopup h2{margin-top:0;text-align:center;color:#007bff}
+    #summaryPopup p{margin:8px 0;font-size:15px}
+    #summaryPopup button{background:#007bff;color:#fff;border:none;border-radius:6px;padding:8px 12px;
+      display:block;margin:15px auto 0;cursor:pointer;font-weight:600}
   </style>
 </head>
 
 <body>
-<script>
-// === Sécurité admin ===
-const storedPin=sessionStorage.getItem("tinsflashPIN");
-if(!storedPin){
-  const pin=prompt("Code d’accès admin ?");
-  if(pin!=="202679"){alert("⛔ Accès refusé");location.href="/";}
-  else{sessionStorage.setItem("tinsflashPIN","ok");}
-}
-</script>
-
-  <header>🛰️ Console IA J.E.A.N – TINSFLASH Centrale</header>
+  <header>🛰 Centrale de Contrôle – TINSFLASH</header>
 
   <nav>
-    <a href="/admin-pp.html">⚡ Moteur</a>
-    <a href="/admin-alerts.html">🚨 Alertes</a>
-    <a href="/admin-chat.html">💬 Chat IA</a>
-    <a href="/admin-radar.html">🌦️ Radar</a>
-    <a href="/admin-users.html">👥 Utilisateurs</a>
-    <a href="/admin-index.html">🏠 Index Preview</a>
+    <a href="/admin-pp.html">Console</a>
+    <a href="/admin-alerts.html">Alertes</a>
+    <a href="/admin-chat.html">Chat IA</a>
+    <a href="/admin-radar.html">Radar</a>
+    <a href="/admin-users.html">Utilisateurs</a>
+    <a href="/admin-index.html">Index</a>
   </nav>
 
-  <div style="text-align:center;">
-    <button id="runBtn">⚙️ Lancer Extraction</button>
-    <button id="aiBtn">🧠 Lancer IA J.E.A.N</button>
+  <div style="margin-top:10px;">
+    <button id="runBtn">⚡ RUN Complet</button>
+    <button id="aiBtn">🧠 Analyse IA J.E.A.N</button>
     <button id="refreshBtn">🔄 Rafraîchir</button>
   </div>
 
-  <h2>📊 État du moteur</h2>
-  <p style="text-align:center;">
-    Statut :
-    <span id="statusIcon" class="status-indicator" style="background:gray;"></span>
-    <span id="status">—</span> |
-    Dernier run : <span id="lastRun">Jamais</span>
-  </p>
+  <h3>📊 État du moteur</h3>
+  <p>Statut : <span id="status">—</span></p>
+  <p>Dernier run : <span id="lastRun">Jamais</span></p>
 
-  <table>
-    <thead><tr><th>Modèle</th><th>OK</th><th>Fail</th></tr></thead>
-    <tbody id="modelTable"><tr><td colspan="3">Chargement…</td></tr></tbody>
-  </table>
+  <h3>🌍 Carte Prévisions</h3>
+  <div id="mapForecast"></div>
 
-  <h2>🌍 Carte des zones couvertes (prévisions)</h2>
-  <div id="map"></div>
-
-  <h2>🌎 Carte mondiale des alertes</h2>
+  <h3>🚨 Carte Alertes</h3>
   <div id="mapAlerts"></div>
 
-  <h2>📈 Statistiques alertes</h2>
-  <table>
-    <thead><tr><th>Total</th><th>Premium</th><th>Taux Premium (%)</th></tr></thead>
-    <tbody id="alertStats"><tr><td>—</td><td>—</td><td>—</td></tr></tbody>
-  </table>
-
-  <h2>📜 Logs moteur (temps réel)</h2>
+  <h3>📜 Logs moteur (temps réel)</h3>
   <div id="logBox">Connexion aux logs…</div>
 
-  <footer>© 2025 TINSFLASH – Interface interne sécurisée (non indexée)</footer>
+  <!-- === POPUP FINAL === -->
+  <div id="summaryPopup">
+    <h2>✅ Résumé du RUN</h2>
+    <div id="summaryContent">Chargement…</div>
+    <button onclick="closeSummary()">Fermer</button>
+  </div>
 
   <script>
-    const API="https://tinsflash-backend.onrender.com";
+    const API = "https://tinsflash-backend.onrender.com";
     const logBox=document.getElementById("logBox");
-    const modelTable=document.getElementById("modelTable");
-    const alertStats=document.getElementById("alertStats");
-    const statusIcon=document.getElementById("statusIcon");
 
-    // === Cartes ===
-    const map=L.map('map').setView([25,0],2);
-    const mapAlerts=L.map('mapAlerts').setView([25,0],2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapAlerts);
-    let zoneMarkers=[],alertMarkers=[];
+    // === Carte Prévisions ===
+    const mapForecast=L.map("mapForecast").setView([20,0],2);
+    const mapAlerts=L.map("mapAlerts").setView([20,0],2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(mapForecast);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(mapAlerts);
+    let forecastMarkers=[],alertMarkers=[];
 
     async function updateStatus(){
       try{
         const r=await fetch(`${API}/api/status`);
         const d=await r.json();
-        document.getElementById("status").innerText=d.status;
-        document.getElementById("lastRun").innerText=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
+        document.getElementById("status").textContent=d.status||"—";
+        document.getElementById("lastRun").textContent=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
+        updateMaps(d);
+      }catch(e){console.error(e);}
+    }
 
-        statusIcon.style.background=(d.status==="ok")?"#00ff88":(d.status==="running")?"orange":"#ff3333";
+    function updateMaps(d){
+      forecastMarkers.forEach(m=>mapForecast.removeLayer(m));
+      alertMarkers.forEach(m=>mapAlerts.removeLayer(m));
+      forecastMarkers=[];alertMarkers=[];
 
-        // modèles
-        modelTable.innerHTML="";
-        for(const [k,v] of Object.entries(d.models||{})){
-          modelTable.innerHTML+=`<tr><td>${k}</td><td>${v.ok||"—"}</td><td>${v.fail||"—"}</td></tr>`;
+      // Forecasts : zones couvertes = vert
+      if(d.coveredZones&&Array.isArray(d.coveredZones)){
+        d.coveredZones.forEach(z=>{
+          const m=L.circleMarker([z.lat,z.lon],{color:"lime",radius:4}).addTo(mapForecast)
+            .bindPopup(`Prévisions OK<br>${z.name||"Zone"}`);
+          forecastMarkers.push(m);
+        });
+      }
+
+      // Alertes : rouges ou oranges selon gravité
+      if(d.alertsWorld){
+        for(const [region,alerts] of Object.entries(d.alertsWorld)){
+          for(const [k,v] of Object.entries(alerts)){
+            const lat=v?.geo?.lat||0,lon=v?.geo?.lon||0;
+            const col=v.certainty>=90?"red":v.certainty>=70?"orange":"yellow";
+            const mark=L.circleMarker([lat,lon],{color:col,radius:5}).addTo(mapAlerts)
+              .bindPopup(`${region}<br>${v.title||"Alerte"} (${v.certainty||"?"}%)`);
+            alertMarkers.push(mark);
+          }
         }
-
-        // zones
-        zoneMarkers.forEach(m=>map.removeLayer(m));zoneMarkers=[];
-        (d.coveredZones||[]).forEach(z=>{
-          const col=z.covered?"#00ff88":"#ff4444";
-          const c=L.circleMarker([z.lat,z.lon],{radius:5,color:col,fillOpacity:.8})
-            .addTo(map).bindPopup(`${z.country} – ${z.region}`);
-          zoneMarkers.push(c);
-        });
-
-        updateAlerts();
-      }catch(e){console.error(e);}
+      }
     }
 
-    async function updateAlerts(){
-      try{
-        const r=await fetch(`${API}/api/alerts`);
-        const d=await r.json();
-        alertMarkers.forEach(m=>mapAlerts.removeLayer(m));alertMarkers=[];
-
-        if(!Array.isArray(d)||!d.length){alertStats.innerHTML="<tr><td>0</td><td>0</td><td>0%</td></tr>";return;}
-
-        const total=d.length;
-        const premium=d.filter(a=>a.level==="premium"||a.certainty>80).length;
-        const taux=((premium/total)*100).toFixed(1);
-        alertStats.innerHTML=`<tr><td>${total}</td><td>${premium}</td><td>${taux}</td></tr>`;
-
-        d.forEach(a=>{
-          const color=(a.certainty>85)?"#ff3333":(a.certainty>60)?"#ffa500":"#00b7ff";
-          const marker=L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{
-            radius:6,color,fillOpacity:.8
-          }).addTo(mapAlerts)
-            .bindPopup(`<b>${a.title}</b><br>${a.zone||""}<br>Fiabilité : ${a.certainty}%`);
-          alertMarkers.push(marker);
-        });
-      }catch(e){console.error(e);}
-    }
-
-    // === Logs temps réel ===
+    // === Logs SSE ===
     const evtSrc=new EventSource(`${API}/api/logs/stream`);
     evtSrc.onmessage=(e)=>{
-      try{
-        const data=JSON.parse(e.data);
-        if(!data.message)return;
-        logBox.innerHTML+=`[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}<br>`;
-        logBox.scrollTop=logBox.scrollHeight;
-      }catch{}
+      const data=JSON.parse(e.data);
+      logBox.innerHTML+=`[${new Date(data.timestamp).toLocaleTimeString()}] ${data.message}<br>`;
+      logBox.scrollTop=logBox.scrollHeight;
     };
 
     // === Boutons ===
-    document.getElementById("runBtn").onclick=async()=>{
-      const res=await fetch(`${API}/api/run-global`,{method:"POST"});
-      const data=await res.json();
-      alert(data.success?"✅ Extraction complète !":"❌ Échec extraction");
-      updateStatus();
-    };
-    document.getElementById("aiBtn").onclick=async()=>{
-      const res=await fetch(`${API}/api/ai-analyse`,{method:"POST"});
-      const data=await res.json();
-      alert(data.success?"🧠 Analyse IA terminée":"❌ Erreur IA");
-      updateStatus();
-    };
     document.getElementById("refreshBtn").onclick=updateStatus;
 
-    setInterval(updateStatus,10000);
+    document.getElementById("runBtn").onclick=async()=>{
+      try{
+        const r=await fetch(`${API}/api/run-global`,{method:"POST",headers:{"Content-Type":"application/json"}});
+        const d=await r.json();
+        if(!d.success)throw new Error(d.error||"Échec du RUN");
+        await showSummary();
+      }catch(e){alert("❌ "+e.message);}
+    };
+
+    document.getElementById("aiBtn").onclick=async()=>{
+      try{
+        const r=await fetch(`${API}/api/ai-analyse`,{method:"POST"});
+        const d=await r.json();
+        alert(d.success?"🧠 IA J.E.A.N terminée":"❌ Erreur IA");
+      }catch(e){alert("❌ "+e.message);}
+    };
+
+    async function showSummary(){
+      const r=await fetch(`${API}/api/status`);
+      const d=await r.json();
+      const s=document.getElementById("summaryPopup");
+      const c=document.getElementById("summaryContent");
+      const a=d.alertsWorldSummary||{};
+      const total=d.coveredZones?.length||0;
+      c.innerHTML=`
+        <p>✅ <b>${d.alertsWorldSummary?.europeAlerts + d.alertsWorldSummary?.usaAlerts || 0}</b> prévisions OK sur <b>${total}</b> zones couvertes</p>
+        <p style="color:#e60000">🚨 ${a.premium||0} alertes Premium (≥90%) à examiner</p>
+        <p style="color:#ff8c00">⚠️ ${a.validated||0} alertes à valider (70–89%)</p>
+        <p style="color:#ffaa00">🟠 ${a.watch||0} alertes en surveillance (<70%)</p>
+        <p style="font-size:13px;margin-top:10px;color:#444;">🕒 Dernier run : ${d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais"}</p>
+      `;
+      s.style.display="block";
+    }
+
+    function closeSummary(){
+      document.getElementById("summaryPopup").style.display="none";
+      updateStatus();
+    }
+
     updateStatus();
   </script>
 </body>
