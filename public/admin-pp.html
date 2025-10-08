@@ -1,261 +1,180 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🛰️ Console IA J.E.A.N – TINSFLASH</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    :root {
-      --accent: #4fc3f7;
-      --bg: #0b1220;
-      --card: #0f1724;
-      --muted: #9fbfce;
-    }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: #e6f6ff;
-      font-family: Inter, system-ui, Arial;
-    }
-    header {
-      background: linear-gradient(90deg, #08101f, #15294d);
-      padding: 14px;
-      text-align: center;
-      color: var(--accent);
-      font-weight: 700;
-    }
-    nav {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      padding: 10px;
-      background: #0d1624;
-    }
-    nav a {
-      color: #cfefff;
-      text-decoration: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-    }
-    nav a:hover {
-      background: #0b2b3a;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 16px auto;
-      padding: 12px;
-    }
-    .toolbar {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-bottom: 12px;
-    }
-    button {
-      background: var(--accent);
-      color: #001;
-      border: none;
-      padding: 10px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 700;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 420px;
-      gap: 12px;
-    }
-    .card {
-      background: var(--card);
-      padding: 12px;
-      border-radius: 10px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
-    }
-    .status-grid {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: space-between;
-    }
-    .status-box {
-      flex: 1;
-      min-width: 120px;
-      background: #0c1722;
-      padding: 8px;
-      border-radius: 8px;
-      text-align: center;
-    }
-    #mapForecast,
-    #mapAlerts {
-      height: 300px;
-      border-radius: 8px;
-    }
-    #logs {
-      height: 220px;
-      overflow: auto;
-      background: #061119;
-      padding: 8px;
-      border-radius: 8px;
-      font-family: monospace;
-    }
-    input[type="text"] {
-      width: 80%;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #123;
-      background: #07121a;
-      color: #e6f6ff;
-    }
-    .chat-panel {
-      display: flex;
-      flex-direction: column;
-      height: 300px;
-    }
-    .chat-messages {
-      flex: 1;
-      overflow: auto;
-      background: #07131a;
-      border-radius: 8px;
-      padding: 8px;
-      margin-bottom: 8px;
-    }
-    @media (max-width: 920px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
+    body{margin:0;background:#0b1220;color:#e0e6f0;font-family:"Segoe UI",sans-serif;}
+    header{background:#111b2e;padding:15px;text-align:center;color:#4fc3f7;font-weight:bold;font-size:1.4em;text-shadow:0 0 10px #4fc3f7;}
+    nav{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;background:#141e33;padding:8px;}
+    nav a{color:#a9b7d0;text-decoration:none;padding:8px 14px;border-radius:8px;transition:0.3s;background:#1a2744;}
+    nav a:hover,nav a.active{background:#4fc3f7;color:#000;}
+    main{max-width:1200px;margin:auto;padding:20px;}
+    h2{color:#4fc3f7;margin-top:25px;}
+    .section{background:#101a30;border-radius:12px;padding:18px;margin-bottom:25px;box-shadow:0 0 10px rgba(0,0,0,0.4);}
+    .btn{background:#1a2744;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:bold;margin:4px;transition:0.3s;}
+    .btn:hover{background:#4fc3f7;color:#000;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;}
+    #map-forecast,#map-alerts{height:320px;border-radius:10px;overflow:hidden;}
+    #logStream{background:#000;color:#4fc3f7;font-family:monospace;padding:10px;border-radius:6px;height:200px;overflow-y:auto;}
+    small{color:#7a8cab;}
   </style>
 </head>
+
 <body>
-<script>
-const pin = sessionStorage.getItem("tinsflashPIN");
-if (!pin) {
-  const p = prompt("Code d’accès admin ?");
-  if (p !== "202679") { alert("⛔ Accès refusé"); location.href = "/"; }
-  else sessionStorage.setItem("tinsflashPIN", "ok");
-}
-</script>
+  <header>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</header>
 
-<header>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</header>
-<nav>
-  <a href="/admin-pp.html">Console</a>
-  <a href="/admin-alerts.html">Alertes</a>
-  <a href="/admin-chat.html">Chat</a>
-  <a href="/admin-radar.html">Radar</a>
-  <a href="/admin-users.html">Utilisateurs</a>
-  <a href="/admin-index.html">Index</a>
-</nav>
+  <nav>
+    <a href="admin-alerts.html">Alertes</a>
+    <a href="admin-chat.html">Chat</a>
+    <a href="admin-radar.html">Radar</a>
+    <a href="admin-users.html">Utilisateurs</a>
+    <a href="index.html">Index</a>
+  </nav>
 
-<div class="container">
-  <div class="toolbar">
-    <button id="runBtn">⚡ Extraction</button>
-    <button id="aiBtn">🧠 Analyse IA J.E.A.N</button>
-    <button id="refreshBtn">🔄 Rafraîchir</button>
-    <button id="integrateBtn">⚡ Intégrer alertes IA → moteur</button>
-  </div>
+  <main>
+    <div class="section">
+      <h2>🧠 Commandes moteur</h2>
+      <button class="btn" data-action="extract" onclick="runExtraction()">⚡ Extraction</button>
+      <button class="btn" data-action="ai" onclick="runIAJEAN()">🧠 Analyse IA J.E.A.N.</button>
+      <button class="btn" data-action="refresh" onclick="refreshStatus()">🔄 Rafraîchir</button>
+      <button class="btn" data-action="integrate" onclick="integrateAlerts()">⚡ Intégrer alertes IA → moteur</button>
+    </div>
 
-  <div class="grid">
-    <div>
-      <div class="card">
-        <h3>⚙️ État du moteur</h3>
-        <div class="status-grid">
-          <div class="status-box"><strong>Statut</strong><div id="engineStatus">—</div></div>
-          <div class="status-box"><strong>Dernier run</strong><div id="lastRun">—</div></div>
-          <div class="status-box"><strong>Alertes actives</strong><div id="alertsCount">0</div></div>
-        </div>
+    <div class="section">
+      <h2>⚙️ État du moteur</h2>
+      <div id="engineStatus">Chargement...</div>
+    </div>
+
+    <div class="section grid">
+      <div>
+        <h2>🌍 Carte prévisions</h2>
+        <div id="map-forecast"></div>
       </div>
-
-      <div class="card" style="margin-top:12px">
-        <h3>🌍 Carte prévisions</h3>
-        <div id="mapForecast"></div>
-      </div>
-
-      <div class="card" style="margin-top:12px">
-        <h3>🌋 Carte alertes</h3>
-        <div id="mapAlerts"></div>
+      <div>
+        <h2>🌋 Carte alertes</h2>
+        <div id="map-alerts"></div>
       </div>
     </div>
 
-    <div>
-      <div class="card">
-        <h3>📜 Logs moteur</h3>
-        <div id="logs">Connexion...</div>
-      </div>
-      <div class="card" style="margin-top:12px">
-        <h3>💬 Chat console</h3>
-        <div class="chat-panel">
-          <div class="chat-messages" id="chatMessages"><div style="color:#9ad6ff">🤖 J.E.A.N prêt</div></div>
-          <div>
-            <input type="text" id="chatInput" placeholder="Pose ta question..." />
-            <button id="sendChat">Envoyer</button>
-          </div>
-        </div>
-      </div>
+    <div class="section">
+      <h2>📜 Logs moteur</h2>
+      <div id="logStream">Connexion...</div>
     </div>
-  </div>
-</div>
+  </main>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const API = location.origin;
-const mapF = L.map("mapForecast").setView([20,0],2);
-const mapA = L.map("mapAlerts").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+  <script>
+    const API="/api";
+    const logDiv=document.getElementById("logStream");
 
-async function getJSON(u){ try{ const r=await fetch(u); return r.ok?await r.json():null;}catch{return null;} }
+    // === Flux SSE temps réel ===
+    function startLogStream(){
+      const evtSource=new EventSource(`${API}/logs/stream`);
+      evtSource.onmessage=(e)=>{
+        try{
+          const d=JSON.parse(e.data);
+          const t=new Date(d.timestamp).toLocaleTimeString();
+          logDiv.innerHTML+=`<div>[${t}] [${d.level.toUpperCase()}][${d.module}] ${d.message}</div>`;
+          logDiv.scrollTop=logDiv.scrollHeight;
+        }catch{}
+      };
+      evtSource.onerror=()=>logDiv.innerHTML+="<div>⚠️ Connexion SSE perdue...</div>";
+    }
 
-async function updateStatus(){
-  const d = await getJSON(API+"/api/status");
-  if(!d)return;
-  document.getElementById("engineStatus").textContent=d.status||"—";
-  document.getElementById("lastRun").textContent=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
-  document.getElementById("alertsCount").textContent=(d.alerts||[]).length;
+    // === État du moteur ===
+    async function refreshStatus(){
+      const e=document.getElementById("engineStatus");
+      e.innerHTML="Mise à jour...";
+      try{
+        const r=await fetch(`${API}/status`);
+        const d=await r.json();
+        e.innerHTML=`<b>Statut:</b> ${d.status}<br>
+          <b>Dernier run:</b> ${new Date(d.lastRun).toLocaleString()}<br>
+          <b>Alertes actives:</b> ${d.alerts?.length||0}<br>
+          <b>Zones couvertes:</b> ${d.coveredZones?.length||0}`;
+      }catch(err){e.innerHTML="❌ Erreur statut: "+err.message;}
+    }
 
-  L.layerGroup().addTo(mapF);
-  L.layerGroup().addTo(mapA);
-  (d.coveredZones||[]).slice(0,500).forEach(p=>{
-    L.circleMarker([p.lat,p.lon],{radius:3,color:"#4fc3f7"}).addTo(mapF);
-  });
-  (d.alerts||[]).forEach(a=>{
-    const c=a.certainty||0;
-    const col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
-    L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{radius:5,color:col})
-      .bindPopup(`<b>${a.title}</b><br>${a.zone}<br>${c}%`).addTo(mapA);
-  });
-}
-document.getElementById("runBtn").onclick=async()=>{await fetch(API+"/api/run-global",{method:"POST"});updateStatus();};
-document.getElementById("aiBtn").onclick=async()=>{await fetch(API+"/api/ai-analyse",{method:"POST"});updateStatus();};
-document.getElementById("refreshBtn").onclick=updateStatus;
-document.getElementById("integrateBtn").onclick=async()=>{
-  alert("⚡ Intégration complète IA → moteur déclenchée !");
-  await fetch(API+"/api/ai-analyse",{method:"POST"});
-};
+    // === Extraction complète ===
+    async function runExtraction(){
+      showPopup("⚙️ Extraction des modèles en cours...","Fusion GFS / ECMWF / ICON / NASA");
+      try{
+        const r=await fetch(`${API}/run-global`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})});
+        const d=await r.json();
+        closePopup();
+        if(!d.success)throw new Error(d.error||"Erreur inconnue");
+        alert("✅ Extraction complète réussie !");
+        refreshStatus();
+      }catch(e){closePopup();alert("❌ Extraction échouée: "+e.message);}
+    }
 
-const es = new EventSource(API+"/api/logs/stream");
-es.onmessage = e => {
-  try{
-    const d=JSON.parse(e.data);
-    const line=document.createElement("div");
-    line.textContent=`[${new Date(d.timestamp||Date.now()).toLocaleTimeString()}] ${d.message}`;
-    logs.appendChild(line); logs.scrollTop=logs.scrollHeight;
-  }catch{}
-};
+    // === IA J.E.A.N. avec popup animé ===
+    async function runIAJEAN(){
+      const btn=document.querySelector("button[data-action='ai']");
+      btn.disabled=true;btn.style.opacity="0.6";
+      showPopup("🧠 Analyse IA J.E.A.N. en cours...","Fusion IA / modèles / relief / climat");
+      try{
+        const r=await fetch(`${API}/ai-analyse`,{method:"POST"});
+        const d=await r.json();
+        closePopup();btn.disabled=false;btn.style.opacity="1";
+        if(!d.success)throw new Error(d.error||"Erreur inconnue");
+        alert("✅ Analyse IA J.E.A.N. terminée avec succès !");
+        refreshStatus();
+      }catch(e){
+        closePopup();btn.disabled=false;btn.style.opacity="1";
+        alert("❌ Erreur IA J.E.A.N : "+e.message);
+      }
+    }
 
-document.getElementById("sendChat").onclick=async()=>{
-  const txt=document.getElementById("chatInput").value.trim();
-  if(!txt)return;
-  const msgBox=document.getElementById("chatMessages");
-  msgBox.innerHTML+=`<div style='color:#9ad6ff'>Vous : ${txt}</div>`;
-  const r=await fetch(API+"/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt,mode:"moteur"})});
-  const j=await r.json();
-  msgBox.innerHTML+=`<div style='color:#b2f5c9'>J.E.A.N : ${j.reply}</div>`;
-  msgBox.scrollTop=msgBox.scrollHeight;
-};
-updateStatus(); setInterval(updateStatus,20000);
-</script>
+    // === Intégration alertes ===
+    async function integrateAlerts(){
+      showPopup("⚡ Intégration des alertes IA...","Mise à jour du moteur en cours");
+      try{
+        const r=await fetch(`${API}/alerts`);
+        const d=await r.json();
+        closePopup();
+        if(!Array.isArray(d))throw new Error("Aucune alerte disponible");
+        alert(`✅ ${d.length} alertes prêtes à être intégrées !`);
+      }catch(e){closePopup();alert("❌ Erreur intégration: "+e.message);}
+    }
+
+    // === Carte Leaflet ===
+    function initMaps(){
+      const mapF=L.map("map-forecast").setView([30,10],2);
+      const mapA=L.map("map-alerts").setView([30,10],2);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+    }
+
+    // === Popups animés ===
+    function showPopup(title,subtitle=""){
+      const overlay=document.createElement("div");
+      overlay.id="popupOverlay";
+      overlay.style.cssText=`
+        position:fixed;inset:0;background:rgba(0,0,0,0.85);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        color:#4fc3f7;font-family:'Segoe UI',sans-serif;z-index:9999;text-align:center;
+      `;
+      overlay.innerHTML=`
+        <div style="border:4px solid #4fc3f7;border-top-color:transparent;border-radius:50%;
+          width:80px;height:80px;animation:spin 1.2s linear infinite;margin-bottom:20px"></div>
+        <p style="font-size:1.2em;font-weight:bold">${title}</p>
+        <small>${subtitle}</small>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      `;
+      document.body.appendChild(overlay);
+    }
+    function closePopup(){const p=document.getElementById("popupOverlay");if(p)p.remove();}
+
+    // === Init ===
+    document.addEventListener("DOMContentLoaded",()=>{
+      initMaps();
+      refreshStatus();
+      startLogStream();
+    });
+  </script>
 </body>
 </html>
