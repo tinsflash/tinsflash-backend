@@ -1,54 +1,102 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>🏠 Admin Index – TINSFLASH</title>
-  <style>
-    body{margin:0;background:#071423;color:#e6f6ff;font-family:Inter,system-ui}
-    header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:1100px;margin:12px auto;padding:12px}
-    .card{background:#0c1722;padding:12px;border-radius:8px}
-    button{background:#4fc3f7;border:none;padding:8px 12px;border-radius:8px;color:#001}
-  </style>
+<meta charset="utf-8" />
+<meta name="robots" content="noindex,nofollow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🌍 Vision utilisateur en temps réel – TINSFLASH</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+body{margin:0;background:#030b14;color:#eaf7ff;font-family:Inter,system-ui}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:#08121d;color:#6bf3ff;font-weight:700}
+input{width:60%;padding:8px;border-radius:6px;border:1px solid #0f3244;background:#081a2a;color:#eaf7ff;font-size:14px}
+button{background:#4fc3f7;color:#001;border:none;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer;margin-left:6px}
+#map{height:520px;margin-top:10px;border-radius:8px}
+.info{background:#07121d;padding:10px;border-radius:8px;margin-top:12px}
+.sidebar{position:fixed;left:0;top:0;height:100%;width:200px;background:#08121d;padding-top:70px}
+.sidebar a{display:block;padding:10px 14px;color:#9ad6ff;text-decoration:none}
+.main{margin-left:210px;padding:10px}
+@media(max-width:800px){.sidebar{display:none}.main{margin-left:0}}
+</style>
 </head>
 <body>
 <script>
-  const pin = sessionStorage.getItem("tinsflashPIN");
-  if(!pin){ const p=prompt("Code d’accès admin ?"); if(p!=="202679"){ alert("Accès refusé"); location.href="/"; } else sessionStorage.setItem("tinsflashPIN","ok"); }
+const pin=sessionStorage.getItem("tinsflashPIN");
+if(!pin){const p=prompt("Code ?");if(p!=="202679"){alert("⛔");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
 </script>
-<header>🏠 Aperçu Admin – TINSFLASH</header>
 
-<div class="grid">
-  <div class="card">
-    <h3>Statut moteur</h3><div id="st">Chargement…</div>
-    <button onclick="refresh()">🔄 Rafraîchir</button>
+<header>
+  <div>🌍 Vision utilisateur – Index public TINSFLASH</div>
+  <div>
+    <input id="address" placeholder="Ex: Rue du Paradis Paris France" />
+    <button onclick="locate()">Voir</button>
   </div>
-  <div class="card">
-    <h3>Alertes</h3><div id="al">Chargement…</div>
-  </div>
-  <div class="card">
-    <h3>Derniers logs</h3><div id="lg">...</div>
-  </div>
-  <div class="card">
-    <h3>Actions</h3>
-    <button onclick="run()">⚡ Run Extraction</button>
-    <button onclick="ai()">🧠 Run IA</button>
+</header>
+
+<div class="sidebar">
+  <a href="/admin-index.html">🏠 Vision Index</a>
+  <a href="/admin-pp.html">🛰️ Console</a>
+  <a href="/admin-alerts.html">🌋 Alertes</a>
+  <a href="/admin-radar.html">🌦️ Radar</a>
+  <a href="/admin-chat.html">💬 Chat</a>
+  <a href="/admin-users.html">👥 Utilisateurs</a>
+</div>
+
+<div class="main">
+  <div id="map"></div>
+  <div class="info" id="infoBox">
+    <b>🌐 En attente d’adresse...</b><br>
+    Entrez une adresse ci-dessus pour visualiser l’index réel utilisateur correspondant.
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  async function refresh(){
-    const r = await fetch("/api/status"); const d = await r.json();
-    document.getElementById("st").innerText = d.status || "-";
-    document.getElementById("al").innerText = (d.alerts || []).length || 0;
-    const logs = await (await fetch("/api/logs/stream")).text().catch(()=>"");
-    document.getElementById("lg").innerText = logs.slice(0,200);
-  }
-  async function run(){ await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})}); alert("Run lancé"); }
-  async function ai(){ await fetch("/api/ai-analyse",{method:"POST"}); alert("IA lancée"); }
-  refresh();
+const API=location.origin;
+const map=L.map("map").setView([48.8566,2.3522],5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{opacity:0.9}).addTo(map);
+let marker=null;
+
+async function locate(){
+  const addr=document.getElementById("address").value.trim();
+  if(!addr)return alert("⚠️ Adresse vide");
+  document.getElementById("infoBox").innerHTML=`🔎 Recherche de "${addr}"...`;
+  // Geocoding gratuit via Nominatim
+  const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`).then(r=>r.json()).catch(()=>[]);
+  if(!geo.length)return document.getElementById("infoBox").innerHTML="❌ Adresse introuvable.";
+  const {lat,lon,display_name}=geo[0];
+  map.setView([lat,lon],10);
+  if(marker)map.removeLayer(marker);
+  marker=L.marker([lat,lon]).addTo(map).bindPopup(display_name).openPopup();
+  document.getElementById("infoBox").innerHTML=`📍 <b>${display_name}</b><br>Coordonnées: ${lat}, ${lon}<br>Chargement des conditions...`;
+
+  // Appels TINSFLASH backend (Render)
+  const alt=await fetch(`${API}/api/altitude?lat=${lat}&lon=${lon}`).then(r=>r.json()).catch(()=>({altitude:0}));
+  const meteo=await fetch(`${API}/api/weather-map?lat=${lat}&lon=${lon}`).then(r=>r.json()).catch(()=>({cloud:0,rain:0}));
+
+  const cloud=meteo.cloud||0, rain=meteo.rain||0, altitude=alt.altitude||0;
+  const risk=(rain*altitude)/800;
+
+  document.getElementById("infoBox").innerHTML=`
+    <h3>📊 Données réelles TINSFLASH</h3>
+    <ul>
+      <li><b>Adresse :</b> ${display_name}</li>
+      <li><b>Latitude :</b> ${lat}</li>
+      <li><b>Longitude :</b> ${lon}</li>
+      <li><b>Altitude :</b> ${altitude} m</li>
+      <li><b>Couverture nuageuse :</b> ${cloud}%</li>
+      <li><b>Précipitations :</b> ${rain} mm</li>
+      <li><b>Indice HydroRisk :</b> ${(risk).toFixed(2)}</li>
+    </ul>
+    <button onclick="openPublic('${lat}','${lon}')">🌐 Voir l’index public simulé</button>
+  `;
+}
+
+// Ouvre l’index public (rendu utilisateur) centré sur les coordonnées
+function openPublic(lat,lon){
+  const url=`https://tinsflash-backend.onrender.com/index.html?lat=${lat}&lon=${lon}`;
+  window.open(url,"_blank");
+}
 </script>
 </body>
 </html>
