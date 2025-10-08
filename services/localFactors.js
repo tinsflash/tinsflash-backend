@@ -5,17 +5,13 @@ import fetch from "node-fetch";
 import { addEngineLog } from "./engineState.js";
 
 /**
- * Ajuste les prévisions météo selon des facteurs locaux :
- * - relief
- * - proximité de la mer
- * - climat urbain
- * - anomalies régionales (à enrichir)
+ * Fonction principale : ajuste les prévisions météo selon des facteurs locaux
  */
 export async function adjustWithLocalFactors(forecast, lat = 0, lon = 0, region = "GENERIC", country = "GLOBAL") {
   try {
     if (!forecast) return forecast;
 
-    // 🌄 Relief : correction selon altitude (via API Open-Elevation)
+    // 🌄 Relief (API Open-Elevation)
     let elevation = 0;
     try {
       const res = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
@@ -24,40 +20,41 @@ export async function adjustWithLocalFactors(forecast, lat = 0, lon = 0, region 
       elevation = 0;
     }
 
-    // 🏔️ Ajustement température & humidité selon altitude
+    // 🏔️ Ajustement altitude
     if (elevation > 400) {
       forecast.temperature_min -= 2;
       forecast.temperature_max -= 2;
       forecast.humidity = (forecast.humidity || 70) + 5;
     }
 
-    // 🌆 Microclimat urbain
+    // 🌆 Climat urbain
     if (region.includes("Urban") || ["Belgium", "France"].includes(country)) {
       forecast.temperature_max += 0.5;
       forecast.humidity = (forecast.humidity || 70) - 2;
     }
 
-    // 🌊 Proximité maritime
+    // 🌊 Influence maritime
     if (region.includes("Coast")) {
       forecast.humidity += 5;
       forecast.reliability = (forecast.reliability || 50) + 3;
     }
 
-    // 🧠 Enrichissement de l’objet
-    forecast.localAdjust = {
-      elevation,
-      region,
-      country,
-      microfactor: "terrain+urbanisation+climat"
-    };
-
-    await addEngineLog(`🌡️ adjustWithLocalFactors appliqué (${country} - alt ${elevation} m)`);
+    forecast.localAdjust = { elevation, region, country, microfactor: "terrain+urbanisation+climat" };
+    await addEngineLog(`🌡️ LocalFactors appliqués (${country} - alt ${elevation} m)`);
     return forecast;
   } catch (err) {
-    await addEngineLog(`⚠️ adjustWithLocalFactors erreur : ${err.message}`);
+    await addEngineLog(`⚠️ LocalFactors erreur : ${err.message}`);
     return forecast;
   }
 }
 
-// ✅ Compatibilité CommonJS / ES modules
-export default { adjustWithLocalFactors };
+/**
+ * 🔁 Compatibilité ancienne version (superForecast.js)
+ * Certaines parties du moteur utilisent encore applyLocalFactors()
+ */
+export async function applyLocalFactors(forecast, lat, lon, country) {
+  return await adjustWithLocalFactors(forecast, lat, lon, "GENERIC", country);
+}
+
+// ✅ Export commun
+export default { adjustWithLocalFactors, applyLocalFactors };
