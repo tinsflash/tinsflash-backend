@@ -1,1 +1,44 @@
-<!-- Radar Windy -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🌦️ Radar & News – TINSFLASH</title>
+  <style>
+    body{margin:0;background:#06121a;color:#e6f6ff;font-family:Inter,system-ui}
+    header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+    .wrap{max-width:1100px;margin:12px auto;padding:12px}
+    iframe{width:100%;height:520px;border-radius:8px;border:0}
+    .controls{display:flex;gap:8px;margin:8px 0}
+    button{background:#4fc3f7;border:none;padding:8px 12px;border-radius:8px;color:#001}
+  </style>
+</head>
+<body>
+<script>
+  const pin = sessionStorage.getItem("tinsflashPIN");
+  if(!pin){ const p=prompt("Code d’accès admin ?"); if(p!=="202679"){ alert("Accès refusé"); location.href="/"; } else sessionStorage.setItem("tinsflashPIN","ok"); }
+</script>
+<header>🌦️ Radar & News – TINSFLASH</header>
+<div class="wrap">
+  <div class="controls">
+    <button onclick="refresh()">🔄 Rafraîchir</button>
+    <button onclick="zoomWorld()">🌍 Zoom Monde</button>
+  </div>
+
+  <!-- Windy/embed or public radar widget; replace src with your real widget embed -->
+  <iframe id="radarIframe" src="https://embed.windy.com/embed2.html?lat=20&lon=0&detailLat=20&detailLon=0&width=650&height=450&zoom=2&level=surface&overlay=wind"></iframe>
+
+  <h3>Dernières infos météo</h3>
+  <div id="newsList">Chargement news…</div>
+</div>
+
+<script>
+  function refresh(){ document.getElementById("radarIframe").contentWindow.location.reload(); }
+  function zoomWorld(){ document.getElementById("radarIframe").src = "https://embed.windy.com/embed2.html?lat=20&lon=0&zoom=2"; }
+  // news via /api/news if exists
+  async function loadNews(){ try{ const r=await fetch('/api/news'); const j=await r.json(); document.getElementById('newsList').innerText = (j.articles||[]).slice(0,6).map(a=>a.title).join('\n\n') }catch(e){document.getElementById('newsList').innerText='Aucune news';} }
+  loadNews();
+</script>
+</body>
+</html>
