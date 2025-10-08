@@ -25,6 +25,7 @@ import {
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import Alert from "./models/Alert.js";
+import { runGlobalAlerts } from "./services/alertsService.js";
 import { askCohere } from "./services/cohereService.js";
 import * as chatService from "./services/chatService.js";
 
@@ -103,17 +104,26 @@ app.get("/demo/meteo3d-proplus.html", (_, res) =>
 );
 
 // ==========================================================
-// 🚀 Extraction réelle
+// 🚀 Extraction réelle + génération alertes
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
     const zone = req.body?.zone || "All";
+
+    // 1️⃣ Extraction météo complète
     const result = await runGlobal(zone);
     await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`, "success", "runGlobal");
-    res.json({ success: true, result });
+
+    // 2️⃣ Génération d’alertes Everest v1
+    await addEngineLog("🚨 Lancement génération des alertes globales...", "info", "alerts");
+    const alerts = await runGlobalAlerts();
+    await addEngineLog(`✅ ${alerts.length} alertes générées et sauvegardées`, "success", "alerts");
+
+    // 3️⃣ Réponse finale
+    res.json({ success: true, result, alertsCount: alerts.length });
   } catch (e) {
-    await addEngineError(`❌ Erreur extraction: ${e.message}`, "runGlobal");
+    await addEngineError(`❌ Erreur extraction/alertes: ${e.message}`, "runGlobal");
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -142,7 +152,7 @@ app.get("/api/status", async (_, res) => {
       status: state?.checkup?.engineStatus || state?.status || "IDLE",
       lastRun: state?.lastRun,
       models: state?.checkup?.models || {},
-      alerts: state?.alertsLocal || [],
+      alerts: state?.alerts || [],
       partialReport: state?.partialReport || null,
       finalReport: state?.finalReport || null,
       errors: state?.errors || [],
