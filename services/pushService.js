@@ -1,57 +1,60 @@
+// ==========================================================
+// 🔔 TINSFLASH – Push Notifications Service (Everest Protocol)
+// ==========================================================
+
 import webpush from "web-push";
+import { addEngineLog } from "./engineState.js";
 
-// ✅ Config avec tes clés VAPID
-webpush.setVapidDetails(
-  "mailto:info@tinsflash.com",
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+// ✅ Si pas de clés VAPID, mode console
+const vapidPublic = process.env.VAPID_PUBLIC_KEY || "demo-public";
+const vapidPrivate = process.env.VAPID_PRIVATE_KEY || "demo-private";
 
-// Stockage temporaire des abonnements
-// Format : { sub, zone }
+try {
+  webpush.setVapidDetails("mailto:info@tinsflash.com", vapidPublic, vapidPrivate);
+  console.log("✅ WebPush configuré");
+} catch {
+  console.warn("⚠️ WebPush non configuré (mode console uniquement)");
+}
+
 let subscriptions = [];
 
-// 🔹 Enregistrer un nouvel abonnement (avec zone)
+/* ===========================================================
+   ➕ Enregistrer un nouvel abonnement
+   =========================================================== */
 export function addSubscription({ sub, zone = "GLOBAL" }) {
-  if (!sub || !sub.endpoint) {
-    console.warn("⚠️ Abonnement invalide ignoré");
-    return;
-  }
-
-  // Évite les doublons
+  if (!sub || !sub.endpoint) return;
   const exists = subscriptions.find(
     (s) => s.sub.endpoint === sub.endpoint && s.zone === zone
   );
   if (!exists) {
     subscriptions.push({ sub, zone });
-    console.log(`✅ Nouvel abonnement ajouté (zone: ${zone})`);
+    console.log(`✅ Abonnement ajouté (zone ${zone})`);
   }
 }
 
-// 🔹 Envoyer une notification (option: filtrage par zone)
+/* ===========================================================
+   🚀 Envoyer une notification
+   =========================================================== */
 export async function sendNotification(title, message, zone = "GLOBAL") {
   const payload = JSON.stringify({ title, message });
-  const results = [];
-
-  // Cible abonnés selon la zone (ou tous si GLOBAL)
-  const targets = zone === "GLOBAL"
-    ? subscriptions
-    : subscriptions.filter((s) => s.zone === zone);
-
+  const targets =
+    zone === "GLOBAL" ? subscriptions : subscriptions.filter((s) => s.zone === zone);
   if (targets.length === 0) {
-    console.log(`⚠️ Aucun abonné pour la zone ${zone}`);
+    console.log(`⚠️ Aucun abonné pour ${zone}`);
     return [];
   }
 
+  const results = [];
   for (const { sub, zone: z } of targets) {
     try {
-      const res = await webpush.sendNotification(sub, payload);
-      results.push({ zone: z, endpoint: sub.endpoint, status: "ok" });
+      await webpush.sendNotification(sub, payload);
+      results.push({ zone: z, status: "ok" });
     } catch (err) {
-      console.error(`❌ Push error (${z}):`, err.message);
-      results.push({ zone: z, endpoint: sub.endpoint, status: "fail", error: err.message });
+      console.error(`❌ Push ${z}:`, err.message);
+      results.push({ zone: z, status: "fail" });
     }
   }
 
+  await addEngineLog(`🔔 Push envoyé (${title}) vers ${targets.length} abonné(s)`);
   return results;
 }
