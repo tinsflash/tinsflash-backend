@@ -4,7 +4,7 @@
 <meta charset="utf-8"/><meta name="robots" content="noindex,nofollow"/>
 <title>🌋 Alertes – TINSFLASH</title>
 <style>
-body{background:#0b1220;color:#e6f6ff;font-family:Inter,Arial;margin:0;padding:0}
+body{background:#0b1220;color:#e6f6ff;font-family:Inter,Arial;margin:0}
 header{background:#08101f;padding:14px;text-align:center;font-weight:700;color:#4fc3f7}
 .alertCard{background:#0f1724;margin:10px;padding:10px;border-radius:8px}
 button{margin-top:6px;margin-right:6px;background:#4fc3f7;color:#001;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:700}
@@ -15,10 +15,8 @@ button{margin-top:6px;margin-right:6px;background:#4fc3f7;color:#001;border:none
 const pin=sessionStorage.getItem("tinsflashPIN");
 if(!pin){const p=prompt("Code d’accès admin ?");if(p!=="202679"){alert("⛔");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
 </script>
-
 <header>🌋 Gestion des Alertes – IA J.E.A.N</header>
 <div id="alertsList" style="padding:10px"></div>
-
 <script>
 const API=location.origin;
 async function getJSON(u){try{const r=await fetch(u);return r.ok?await r.json():[]}catch{return[]}}
@@ -30,8 +28,8 @@ function renderAlerts(list){
   const div=document.createElement("div");
   div.className="alertCard";div.style.borderLeft=`4px solid ${col}`;
   div.innerHTML=`<b>${a.title}</b><br>🌍 ${a.zone} – ${c}%<br><small>${a.description||"—"}</small><br>
-  <button onclick="exportAlert('${a._id}')">📤 Exporter (détail complet)</button>
-  <button onclick="assignExpert('${a._id}')">👨‍🔬 Soumettre à expert</button>`;
+  <button onclick="exportAlert('${a._id}')">📤 Exporter PDF</button>
+  <button onclick="assignExpert('${a._id}')">👨‍🔬 Soumettre expert</button>`;
   zone.appendChild(div);
  });}
 async function exportAlert(id){
