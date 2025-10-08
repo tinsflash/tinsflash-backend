@@ -39,83 +39,135 @@ await initEngineState();
 app.use(
   cors({
     origin: "*",
-    methods: ["GET","POST","PUT","DELETE"],
-    allowedHeaders: ["Content-Type","Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
-);
-
-// ==========================================================
-// 📁 Static
-// ==========================================================
-app.use(express.static(path.join(__dirname,"public")));
-["avatars","videos","assets","demo"].forEach(d =>
-  app.use(`/${d}`,express.static(path.join(__dirname,`public/${d}`)))
 );
 
 // ==========================================================
 // 🔌 MongoDB
 // ==========================================================
-if(process.env.MONGO_URI){
-  mongoose.connect(process.env.MONGO_URI,{useNewUrlParser:true,useUnifiedTopology:true})
-    .then(()=>console.log("✅ MongoDB connecté"))
-    .catch(e=>console.error("❌ Erreur MongoDB:",e.message));
+if (process.env.MONGO_URI) {
+  mongoose
+    .connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
+    .then(() => console.log("✅ MongoDB connecté"))
+    .catch((e) => console.error("❌ Erreur MongoDB:", e.message));
 }
 
 // ==========================================================
-// 🚀 Run global
+// 🚀 RUN GLOBAL
 // ==========================================================
-app.post("/api/run-global",async(req,res)=>{
-  try{
+app.post("/api/run-global", async (req, res) => {
+  try {
     await checkSourcesFreshness();
-    const zone=req.body?.zone||"All";
-    const r=await runGlobal(zone);
-    await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`,"success","runGlobal");
-    res.json({success:true,result:r});
-  }catch(e){
-    await addEngineError(`Erreur extraction: ${e.message}`,"runGlobal");
-    res.status(500).json({success:false,error:e.message});
+    const zone = req.body?.zone || "All";
+    const r = await runGlobal(zone);
+    await addEngineLog(
+      `⚙️ Extraction complète effectuée pour ${zone}`,
+      "success",
+      "runGlobal"
+    );
+    res.json({ success: true, result: r });
+  } catch (e) {
+    await addEngineError(`Erreur extraction: ${e.message}`, "runGlobal");
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // ==========================================================
-// 📊 Status moteur
+// 🧠 ANALYSE IA J.E.A.N. (phase 2 moteur)
 // ==========================================================
-app.get("/api/status",async(_,res)=>{
-  try{
-    const s=await getEngineState();
+app.post("/api/ai-analyse", async (req, res) => {
+  try {
+    await addEngineLog("🧠 Lancement IA J.E.A.N. – Analyse en cours...", "info", "IA.JEAN");
+    const result = await runAIAnalysis(); // fonction déjà importée, inchangée
+    await addEngineLog("✅ IA J.E.A.N. – Analyse terminée avec succès", "success", "IA.JEAN");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError(`Erreur IA J.E.A.N. : ${e.message}`, "IA.JEAN");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 📊 STATUS MOTEUR
+// ==========================================================
+app.get("/api/status", async (_, res) => {
+  try {
+    const s = await getEngineState();
     res.json({
-      status:s?.checkup?.engineStatus||s?.status||"IDLE",
-      lastRun:s?.lastRun,
-      errors:s?.errors||[],
-      coveredZones:enumerateCoveredPoints(),
+      status: s?.checkup?.engineStatus || s?.status || "IDLE",
+      lastRun: s?.lastRun,
+      errors: s?.errors || [],
+      coveredZones: enumerateCoveredPoints(),
     });
-  }catch(e){res.status(500).json({success:false,error:e.message});}
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ==========================================================
-// 📡 Logs SSE
+// 📡 LOGS SSE
 // ==========================================================
-app.get("/api/logs/stream",(req,res)=>{
+app.get("/api/logs/stream", (req, res) => {
   console.log("🌐 Flux SSE connecté depuis console admin...");
-  res.setHeader("Content-Type","text/event-stream");
-  res.setHeader("Cache-Control","no-cache");
-  res.setHeader("Connection","keep-alive");
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
-  const send=l=>res.write(`data: ${JSON.stringify(l)}\n\n`);
-  engineEvents.on("log",send);
-  const ping=setInterval(()=>res.write(": ping\n\n"),20000);
-  req.on("close",()=>{clearInterval(ping);engineEvents.off("log",send);});
+  const send = (l) => res.write(`data: ${JSON.stringify(l)}\n\n`);
+  engineEvents.on("log", send);
+  const ping = setInterval(() => res.write(": ping\n\n"), 20000);
+  req.on("close", () => {
+    clearInterval(ping);
+    engineEvents.off("log", send);
+  });
 });
 
 // ==========================================================
-// 🧭 Pages admin
+// ⚡ ALERTES IA (lecture directe pour intégration)
 // ==========================================================
-["admin-pp.html","admin-alerts.html","admin-chat.html","admin-index.html","admin-radar.html","admin-users.html"]
-  .forEach(p=>app.get(`/${p}`,(_,res)=>res.sendFile(path.join(__dirname,"public",p))));
+app.get("/api/alerts", async (_, res) => {
+  try {
+    const alerts = await Alert.find().lean();
+    res.json(alerts || []);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 // ==========================================================
-const PORT=process.env.PORT||10000;
-app.listen(PORT,()=>{
+// 🧭 PAGES ADMIN
+// ==========================================================
+[
+  "admin-pp.html",
+  "admin-alerts.html",
+  "admin-chat.html",
+  "admin-index.html",
+  "admin-radar.html",
+  "admin-users.html",
+].forEach((p) =>
+  app.get(`/${p}`, (_, res) =>
+    res.sendFile(path.join(__dirname, "public", p))
+  )
+);
+
+// ==========================================================
+// 📁 STATIC FILES (APRÈS les routes API !)
+// ==========================================================
+app.use(express.static(path.join(__dirname, "public")));
+["avatars", "videos", "assets", "demo"].forEach((d) =>
+  app.use(`/${d}`, express.static(path.join(__dirname, `public/${d}`)))
+);
+
+// ==========================================================
+// 🚀 LANCEMENT SERVEUR
+// ==========================================================
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
   console.log(`⚡ TINSFLASH PRO++ prêt sur port ${PORT}`);
-  console.log("🌍 Zones couvertes:",enumerateCoveredPoints().length);
+  console.log("🌍 Zones couvertes:", enumerateCoveredPoints().length);
 });
