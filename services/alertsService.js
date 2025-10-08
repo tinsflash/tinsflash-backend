@@ -1,5 +1,7 @@
-// PATH: services/alertsService.js
-// 🚨 TINSFLASH – Service d'alertes globales (Everest Protocol v1 – réel, connecté IA-ready)
+// ==========================================================
+// 🚨 TINSFLASH – Service d'alertes globales
+// Everest Protocol v1 – 100 % réel, IA-ready
+// ==========================================================
 
 import {
   addEngineLog,
@@ -20,7 +22,6 @@ import hrrr from "./hrrr.js";
 import arome from "./arome.js";
 import { checkExternalAlerts } from "./externalAlerts.js";
 import Alert from "../models/Alert.js";
-
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
 import { runContinental } from "./runContinental.js";
@@ -28,14 +29,14 @@ import { runContinental } from "./runContinental.js";
 let activeAlerts = [];
 
 /* ===========================================================
-   🔎 GÉNÉRATION D’UNE ALERTE (Extraction réelle sans IA)
+   🔎 Génération d’une alerte (extraction réelle, sans IA)
    =========================================================== */
 export async function generateAlerts(lat, lon, country, region, continent = "Europe") {
   const state = await getEngineState();
   try {
     await addEngineLog(`🚨 Extraction brute pour ${country}${region ? " - " + region : ""}`);
 
-    // 1️⃣ Détection brute multi-modèles
+    // 1️⃣ Détection multi-modèles
     const detectorResults = await detectAlerts({ lat, lon, country }, { scope: continent, country });
 
     // 2️⃣ Modules spécialisés
@@ -46,7 +47,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       fetchStationData(lat, lon, country, region),
     ]);
 
-    // 3️⃣ Modèles haute résolution
+    // 3️⃣ Modèles HRRR / AROME selon la zone
     let hiRes = null;
     if (country === "USA") hiRes = await hrrr(lat, lon);
     else if (["France", "Belgium"].includes(country)) hiRes = await arome(lat, lon);
@@ -62,7 +63,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
     const anomaly = forecastVision.detectSeasonalAnomaly(base);
     if (anomaly) base.anomaly = anomaly;
 
-    // 5️⃣ Données consolidées (sans IA)
+    // 5️⃣ Données consolidées
     const parsed = {
       type: "pending-analysis",
       confidence: 0,
@@ -71,7 +72,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
       dataSources: { snow, rain, wind, stations, hiRes, detectorResults, anomaly },
     };
 
-    // 6️⃣ Classification simplifiée
+    // 6️⃣ Classification simple
     let classified = classifyAlerts(parsed);
 
     // 7️⃣ Vérification externe
@@ -79,7 +80,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
     const exclusivity = externals.length ? "confirmed-elsewhere" : "exclusive";
     classified = { ...classified, external: { exclusivity, providers: externals } };
 
-    // 8️⃣ Détermination du taux de certitude IA (basé sur corrélation multi-modèles)
+    // 8️⃣ Taux de certitude
     const reliabilityScore =
       Math.min(
         100,
@@ -93,7 +94,7 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
         )
       ) || 40;
 
-    // 9️⃣ Création / mise à jour de l’alerte
+    // 9️⃣ Création / mise à jour Mongo
     const keyType = classified.type || parsed.type || "unknown";
     const alertData = {
       title: `${keyType} (${country})`,
@@ -113,43 +114,26 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
         reliabilityScore >= 90 ? "confirmed" : reliabilityScore >= 70 ? "review" : "pending",
       geo: { lat, lon },
       sources: ["TINSFLASH", ...externals.map((e) => e.name || "unknown")],
-      history: [
-        {
-          ts: new Date(),
-          note: `Détection ${keyType} (${reliabilityScore}%)`,
-        },
-      ],
+      history: [{ ts: new Date(), note: `Détection ${keyType} (${reliabilityScore}%)` }],
     };
 
-    // 🔁 Vérifie si déjà présent dans Mongo
-    let existing = await Alert.findOne({
-      "geo.lat": lat,
-      "geo.lon": lon,
-      title: alertData.title,
-    });
-
+    let existing = await Alert.findOne({ "geo.lat": lat, "geo.lon": lon, title: alertData.title });
     if (existing) {
       existing.lastCheck = new Date();
       existing.certainty = reliabilityScore;
       existing.status = alertData.status;
       existing.validationState = alertData.validationState;
-      existing.history.push({
-        ts: new Date(),
-        note: `Mise à jour ${reliabilityScore}%`,
-      });
+      existing.history.push({ ts: new Date(), note: `Mise à jour ${reliabilityScore}%` });
       await existing.save();
     } else {
       existing = new Alert(alertData);
       await existing.save();
     }
 
-    // 10️⃣ Sauvegarde en mémoire moteur
+    // 10️⃣ Sauvegarde mémoire moteur
     const prev = activeAlerts.find((a) => a.id === existing._id.toString());
-    if (prev) {
-      prev.certainty = existing.certainty;
-      prev.status = existing.status;
-      prev.lastCheck = new Date();
-    } else {
+    if (prev) Object.assign(prev, existing.toObject());
+    else {
       activeAlerts.push({ id: existing._id.toString(), ...alertData });
       if (activeAlerts.length > 2000) activeAlerts.shift();
     }
@@ -157,7 +141,6 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
     state.alerts = activeAlerts;
     state.lastAlertsGenerated = new Date().toISOString();
     await saveEngineState(state);
-
     await addEngineLog(`✅ Alerte ${keyType} enregistrée (${reliabilityScore}%)`);
     return existing;
   } catch (err) {
@@ -172,7 +155,6 @@ export async function generateAlerts(lat, lon, country, region, continent = "Eur
 export async function runGlobalAlerts() {
   await addEngineLog("🚨 Extraction globale (Everest v1)...");
   const state = await getEngineState();
-
   const allZones = [
     ...Object.entries(EUROPE_ZONES).flatMap(([country, zones]) =>
       zones.map((z) => ({ ...z, country, continent: "Europe" }))
@@ -181,10 +163,8 @@ export async function runGlobalAlerts() {
       zones.map((z) => ({ ...z, country, continent: "USA" }))
     ),
   ];
-
   const results = [];
   let processed = 0;
-
   for (const z of allZones) {
     const lat = z.lat ?? z.latitude;
     const lon = z.lon ?? z.longitude;
@@ -200,10 +180,8 @@ export async function runGlobalAlerts() {
   const cont = await runContinental();
   if (cont?.forecasts) {
     for (const [region, info] of Object.entries(cont.forecasts)) {
-      if (info?.lat && info?.lon) {
-        const r = await generateAlerts(info.lat, info.lon, region, region, "World");
-        results.push(r);
-      }
+      if (info?.lat && info?.lon)
+        results.push(await generateAlerts(info.lat, info.lon, region, region, "World"));
     }
   }
 
