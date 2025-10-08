@@ -32,8 +32,6 @@
     footer a{color:#4fc3f7;text-decoration:none;}
     footer a:hover{text-decoration:underline;}
     .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
-
-    /* Chat IA */
     .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
       border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);
       font-size:18px;transition:transform .3s ease;z-index:999;}
@@ -81,16 +79,10 @@
     <input type="text" id="manualAddress" placeholder="Ou entrez votre adresse complète (rue, ville, pays)" style="width:100%;padding:8px;margin-top:8px;border-radius:6px;border:none;background:#1b2339;color:#eee;" />
     <button class="notif-btn" onclick="askNotifications()">🔔 Activer les notifications météo</button>
 
-    <h2>Prévisions du jour</h2>
-    <div class="forecast-section">
-      <div class="forecast-box"><h3>🌍 Locales</h3><div id="local-today">Chargement...</div></div>
-      <div class="forecast-box"><h3>📡 Nationales</h3><div id="national-today">Chargement...</div></div>
-    </div>
+    <h2>Prévisions locales instantanées</h2>
+    <div id="forecast-box" class="forecast-section">Chargement...</div>
 
-    <h2>Prévisions sur 7 jours</h2>
-    <div id="forecast-7days" class="forecast-section">Chargement...</div>
-
-    <h2>Alertes actives</h2>
+    <h2>Alertes à proximité</h2>
     <div id="alerts">Chargement des alertes...</div>
 
     <h2>Carte couverture & prévisions</h2>
@@ -132,96 +124,72 @@
   </div>
 
   <script>
-    const API_BASE="https://tinsflash-backend.onrender.com/api";
-    const chat=document.getElementById("chatJean");
-    const btnAI=document.getElementById("btnAI");
-    const premiumBox=document.getElementById("premiumBox");
+    const API_BASE = "/api"; // rendu connecté
 
-    // 🔁 Rectangle premium cyclique
-    function togglePremiumBox(){
-      premiumBox.style.display="block";
-      setTimeout(()=>premiumBox.style.display="none",5000);
-      setTimeout(togglePremiumBox,30000);
-    }
-    setTimeout(togglePremiumBox,3000);
-
-    btnAI.onclick=()=>chat.style.display=chat.style.display==="flex"?"none":"flex";
-
-    // 🔊 Gestion du son vidéo
-    const soundBtn=document.getElementById("soundBtn");
+    // 🔊 Son intro
     soundBtn.onclick=()=>{
       const v=document.getElementById("introVideo");
       v.muted=!v.muted;
       soundBtn.textContent=v.muted?"🔇":"🔊";
     };
 
-    // 💬 IA Cohere connectée
+    // 💬 Chat IA Cohere
     async function sendChat(){
-      const i=document.getElementById("chatInput");
-      const msg=i.value.trim();if(!msg)return;
+      const msg=document.getElementById("chatInput").value.trim();
+      if(!msg)return;
       const m=document.getElementById("chatMessages");
-      m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;i.value="";
+      m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
+      document.getElementById("chatInput").value="";
       try{
-        const r=await fetch(`${API_BASE}/cohere`,{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({question:msg})
-        });
+        const r=await fetch(`${API_BASE}/cohere`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:msg})});
         const d=await r.json();
-        if(!d.success)throw new Error(d.error||d.reply);
         m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
       }catch(e){m.innerHTML+=`<div>❌ ${e.message}</div>`;}
       m.scrollTop=m.scrollHeight;
     }
 
-    // 🌦 Chargement des prévisions et alertes
-    async function fetchJSON(url){try{const r=await fetch(url);if(!r.ok)throw new Error("HTTP "+r.status);return await r.json();}catch(e){console.error(e);return null;}}
+    // ⚡ Forecast utilisateur instantané
+    async function getForecast(){
+      try{
+        const ps=document.getElementById("position-status");
+        if(!navigator.geolocation){ps.textContent="❌ Géolocalisation non supportée";return;}
+        navigator.geolocation.getCurrentPosition(async(pos)=>{
+          const {latitude,longitude}=pos.coords;
+          ps.textContent=`✅ Position détectée : ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
+          const r=await fetch(`${API_BASE}/forecast?lat=${latitude}&lon=${longitude}`);
+          const d=await r.json();
+          const box=document.getElementById("forecast-box");
+          box.innerHTML="";
+          if(d.forecast){
+            const f=d.forecast;
+            box.innerHTML=`
+              <div class='forecast-box'>
+                <h3>Température : ${f.temperature?.toFixed(1)} °C</h3>
+                <p>Précipitations : ${f.precipitation?.toFixed(1)} mm</p>
+                <p>Vent : ${f.wind?.toFixed(1)} km/h</p>
+                <p>Fiabilité ${(f.reliability*100).toFixed(0)}%</p>
+                <small>Données issues du dernier run TINSFLASH 🛰️</small>
+              </div>`;
+          }else box.innerHTML="<b>⚠️ Aucune donnée locale disponible</b>";
 
-    async function loadForecast(){
-      const d=await fetchJSON(`${API_BASE}/status`);if(!d)return;
-      const loc=document.getElementById("local-today");
-      const nat=document.getElementById("national-today");
-      if(d.forecasts?.local?.today)
-        loc.innerHTML=`<b>${d.forecasts.local.today.summary}</b><br>🌡 ${d.forecasts.local.today.temp_min}°C / ${d.forecasts.local.today.temp_max}°C`;
-      else loc.innerHTML="⚠️ Données locales indisponibles";
-      if(d.forecasts?.national?.today)
-        nat.innerHTML=`<b>${d.forecasts.national.today.summary}</b><br>🌡 ${d.forecasts.national.today.temp_min}°C / ${d.forecasts.national.today.temp_max}°C`;
-      else nat.innerHTML="⚠️ Données nationales indisponibles";
-      if(d.forecasts?.week){
-        document.getElementById("forecast-7days").innerHTML=d.forecasts.week.map(f=>
-          `<div class='forecast-box'><h3>${f.date}</h3><p>${f.summary}</p><p>🌡 ${f.temp_min}°C / ${f.temp_max}°C</p></div>`
-        ).join("");
-      }
+          // alertes proches
+          const al=document.getElementById("alerts");
+          if(d.alerts?.length){
+            al.innerHTML=d.alerts.map(a=>
+              `<div class='forecast-box' style='border-left:4px solid ${a.certainty>=90?"#00ff80":a.certainty>=70?"#ffc107":"#ff7043"}'>
+                 <b>${a.title}</b><br>${a.zone}<br><small>Fiabilité ${a.certainty}%</small>
+               </div>`).join("");
+          }else al.innerHTML="✅ Aucune alerte détectée à proximité.";
+        },()=>{ps.textContent="⚠️ Position non détectée";});
+      }catch(e){console.error(e);}
     }
 
-    async function loadAlerts(){
-      const a=await fetchJSON(`${API_BASE}/alerts`);
-      const div=document.getElementById("alerts");div.innerHTML="";
-      if(!a||!a.length){div.innerHTML="✅ Aucune alerte active";return;}
-      const groups={local:[],national:[],world:[]};
-      a.forEach(e=>{const lvl=e.level||"local";groups[lvl].push(e);});
-      ["local","national","world"].forEach(l=>{
-        if(groups[l].length){
-          const details=groups[l].map(x=>`<li>${x.country||x.zone}: ${x.title||x.type}</li>`).join("");
-          div.innerHTML+=`<details><summary>⚠️ ${l.toUpperCase()}</summary><ul>${details}</ul></details>`;
-        }
-      });
-    }
-
-    // 🗺️ Cartes connectées
+    // 🗺️ Cartes
     function initMaps(){
-      const mF=L.map("map-forecast").setView([20,10],2);
-      const mA=L.map("map-alerts").setView([20,10],2);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mF);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mA);
-    }
-
-    // 📍 Position utilisateur
-    function detectPosition(){
-      const ps=document.getElementById("position-status");
-      if(!navigator.geolocation){ps.textContent="❌ Géolocalisation non supportée";return;}
-      navigator.geolocation.getCurrentPosition(p=>{
-        ps.textContent=`✅ Position détectée : ${p.coords.latitude.toFixed(2)}, ${p.coords.longitude.toFixed(2)}`;
-      },()=>{ps.textContent="⚠️ Position non détectée, entrez votre adresse manuellement."});
+      const mf=L.map("map-forecast").setView([20,10],2);
+      const ma=L.map("map-alerts").setView([20,10],2);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mf);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(ma);
     }
 
     // 🔔 Notifications
@@ -232,26 +200,16 @@
       });
     }
 
-    // 🎞️ Effet d’apparition fade-in
+    // 🎞️ Apparition intro
     window.addEventListener("scroll",()=>{
       const el=document.getElementById("introBlock");
-      const rect=el.getBoundingClientRect();
-      if(rect.top<window.innerHeight-100)el.classList.add("visible");
-    });
-
-    // 🔽 Cache la bulle IA près du footer
-    window.addEventListener("scroll",()=>{
-      const btn=document.getElementById("btnAI");
-      const footer=document.querySelector("footer");
-      const footerTop=footer.getBoundingClientRect().top;
-      const vh=window.innerHeight;
-      btn.style.opacity=(footerTop<vh-60)?"0":"1";
+      if(el.getBoundingClientRect().top<window.innerHeight-100)el.classList.add("visible");
     });
 
     // 🚀 Init
     document.addEventListener("DOMContentLoaded",()=>{
-      detectPosition();initMaps();loadForecast();loadAlerts();
-      setInterval(loadForecast,600000);setInterval(loadAlerts,600000);
+      initMaps();
+      getForecast();
     });
   </script>
 </body>
