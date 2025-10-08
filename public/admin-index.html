@@ -1,101 +1,150 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8" />
-<meta name="robots" content="noindex,nofollow" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>🌍 Vision utilisateur en temps réel – TINSFLASH</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-body{margin:0;background:#030b14;color:#eaf7ff;font-family:Inter,system-ui}
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:#08121d;color:#6bf3ff;font-weight:700}
-input{width:60%;padding:8px;border-radius:6px;border:1px solid #0f3244;background:#081a2a;color:#eaf7ff;font-size:14px}
-button{background:#4fc3f7;color:#001;border:none;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer;margin-left:6px}
-#map{height:520px;margin-top:10px;border-radius:8px}
-.info{background:#07121d;padding:10px;border-radius:8px;margin-top:12px}
-.sidebar{position:fixed;left:0;top:0;height:100%;width:200px;background:#08121d;padding-top:70px}
-.sidebar a{display:block;padding:10px 14px;color:#9ad6ff;text-decoration:none}
-.main{margin-left:210px;padding:10px}
-@media(max-width:800px){.sidebar{display:none}.main{margin-left:0}}
-</style>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🏠 Index Utilisateur – TINSFLASH</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body {
+      margin: 0;
+      background: #0b1220;
+      color: #e6f6ff;
+      font-family: Inter, system-ui, Arial;
+    }
+    header {
+      background: #08101f;
+      color: #4fc3f7;
+      text-align: center;
+      padding: 14px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      background: #0d1624;
+      padding: 8px;
+      gap: 10px;
+    }
+    nav a {
+      color: #cfefff;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+    nav a:hover {
+      background: #0b2b3a;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 20px auto;
+      padding: 10px;
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #123;
+      background: #07121a;
+      color: #e6f6ff;
+      font-size: 15px;
+    }
+    button {
+      background: #4fc3f7;
+      color: #001;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+    button:hover {
+      background: #6ed6ff;
+    }
+    #map {
+      height: 380px;
+      border-radius: 10px;
+      margin-top: 16px;
+    }
+    #iframePreview {
+      width: 100%;
+      height: 500px;
+      border: none;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+    }
+    #coords, #weather {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #9ad6ff;
+    }
+  </style>
 </head>
 <body>
 <script>
-const pin=sessionStorage.getItem("tinsflashPIN");
-if(!pin){const p=prompt("Code ?");if(p!=="202679"){alert("⛔");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
+const pin = sessionStorage.getItem("tinsflashPIN");
+if(!pin){
+  const p = prompt("Code d’accès admin ?");
+  if(p !== "202679"){ alert("⛔ Accès refusé"); location.href="/"; }
+  else sessionStorage.setItem("tinsflashPIN","ok");
+}
 </script>
 
-<header>
-  <div>🌍 Vision utilisateur – Index public TINSFLASH</div>
-  <div>
-    <input id="address" placeholder="Ex: Rue du Paradis Paris France" />
-    <button onclick="locate()">Voir</button>
-  </div>
-</header>
+<header>🏠 Index Utilisateur – Vue réelle</header>
+<nav>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-radar.html">Radar</a>
+  <a href="/admin-users.html">Utilisateurs</a>
+  <a href="/admin-index.html" style="background:#0b2b3a">Index</a>
+</nav>
 
-<div class="sidebar">
-  <a href="/admin-index.html">🏠 Vision Index</a>
-  <a href="/admin-pp.html">🛰️ Console</a>
-  <a href="/admin-alerts.html">🌋 Alertes</a>
-  <a href="/admin-radar.html">🌦️ Radar</a>
-  <a href="/admin-chat.html">💬 Chat</a>
-  <a href="/admin-users.html">👥 Utilisateurs</a>
-</div>
+<div class="container">
+  <h3>🔍 Entrer une adresse pour voir la page index réelle :</h3>
+  <input type="text" id="addressInput" placeholder="Exemple : Rue du Paradis, Paris, France" />
+  <button onclick="searchAddress()">Rechercher</button>
 
-<div class="main">
+  <div id="coords">🛰️ Coordonnées : —</div>
+  <div id="weather">🌤️ Météo : —</div>
   <div id="map"></div>
-  <div class="info" id="infoBox">
-    <b>🌐 En attente d’adresse...</b><br>
-    Entrez une adresse ci-dessus pour visualiser l’index réel utilisateur correspondant.
-  </div>
+
+  <iframe id="iframePreview" src=""></iframe>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const API=location.origin;
-const map=L.map("map").setView([48.8566,2.3522],5);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{opacity:0.9}).addTo(map);
+const API = location.origin;
+const map = L.map("map").setView([48.85, 2.35], 4);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 let marker=null;
 
-async function locate(){
-  const addr=document.getElementById("address").value.trim();
-  if(!addr)return alert("⚠️ Adresse vide");
-  document.getElementById("infoBox").innerHTML=`🔎 Recherche de "${addr}"...`;
-  // Geocoding gratuit via Nominatim
-  const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`).then(r=>r.json()).catch(()=>[]);
-  if(!geo.length)return document.getElementById("infoBox").innerHTML="❌ Adresse introuvable.";
-  const {lat,lon,display_name}=geo[0];
-  map.setView([lat,lon],10);
-  if(marker)map.removeLayer(marker);
-  marker=L.marker([lat,lon]).addTo(map).bindPopup(display_name).openPopup();
-  document.getElementById("infoBox").innerHTML=`📍 <b>${display_name}</b><br>Coordonnées: ${lat}, ${lon}<br>Chargement des conditions...`;
+async function searchAddress(){
+  const address = document.getElementById("addressInput").value.trim();
+  if(!address){alert("Veuillez entrer une adresse complète.");return;}
 
-  // Appels TINSFLASH backend (Render)
-  const alt=await fetch(`${API}/api/altitude?lat=${lat}&lon=${lon}`).then(r=>r.json()).catch(()=>({altitude:0}));
-  const meteo=await fetch(`${API}/api/weather-map?lat=${lat}&lon=${lon}`).then(r=>r.json()).catch(()=>({cloud:0,rain:0}));
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data.length){alert("Adresse introuvable.");return;}
 
-  const cloud=meteo.cloud||0, rain=meteo.rain||0, altitude=alt.altitude||0;
-  const risk=(rain*altitude)/800;
+  const {lat, lon, display_name} = data[0];
+  document.getElementById("coords").textContent = `🛰️ Coordonnées : ${lat}, ${lon}`;
+  if(marker) map.removeLayer(marker);
+  marker = L.marker([lat, lon]).addTo(map).bindPopup(display_name).openPopup();
+  map.setView([lat, lon], 9);
 
-  document.getElementById("infoBox").innerHTML=`
-    <h3>📊 Données réelles TINSFLASH</h3>
-    <ul>
-      <li><b>Adresse :</b> ${display_name}</li>
-      <li><b>Latitude :</b> ${lat}</li>
-      <li><b>Longitude :</b> ${lon}</li>
-      <li><b>Altitude :</b> ${altitude} m</li>
-      <li><b>Couverture nuageuse :</b> ${cloud}%</li>
-      <li><b>Précipitations :</b> ${rain} mm</li>
-      <li><b>Indice HydroRisk :</b> ${(risk).toFixed(2)}</li>
-    </ul>
-    <button onclick="openPublic('${lat}','${lon}')">🌐 Voir l’index public simulé</button>
-  `;
-}
+  // Météo locale
+  const wx = await fetch(`${API}/api/weather-map?lat=${lat}&lon=${lon}`);
+  const wdata = await wx.json();
+  document.getElementById("weather").textContent = `🌤️ Nuages : ${wdata.cloud || 0}% | Pluie : ${wdata.rain || 0} mm`;
 
-// Ouvre l’index public (rendu utilisateur) centré sur les coordonnées
-function openPublic(lat,lon){
-  const url=`https://tinsflash-backend.onrender.com/index.html?lat=${lat}&lon=${lon}`;
-  window.open(url,"_blank");
+  // Prévisualisation de l'index utilisateur
+  document.getElementById("iframePreview").src = `${API}/?lat=${lat}&lon=${lon}`;
 }
 </script>
 </body>
