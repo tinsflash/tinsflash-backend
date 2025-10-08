@@ -2,28 +2,41 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
     body{margin:0;background:#0b1220;color:#e0e6f0;font-family:"Segoe UI",sans-serif;}
     header{background:#111b2e;padding:15px;text-align:center;color:#4fc3f7;font-weight:bold;font-size:1.4em;text-shadow:0 0 10px #4fc3f7;}
     nav{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;background:#141e33;padding:8px;}
-    nav a{color:#a9b7d0;text-decoration:none;padding:8px 14px;border-radius:8px;transition:0.3s;background:#1a2744;}
+    nav a{color:#a9b7d0;text-decoration:none;padding:8px 14px;border-radius:8px;transition:.3s;background:#1a2744;}
     nav a:hover,nav a.active{background:#4fc3f7;color:#000;}
     main{max-width:1200px;margin:auto;padding:20px;}
     h2{color:#4fc3f7;margin-top:25px;}
-    .section{background:#101a30;border-radius:12px;padding:18px;margin-bottom:25px;box-shadow:0 0 10px rgba(0,0,0,0.4);}
-    .btn{background:#1a2744;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:bold;margin:4px;transition:0.3s;}
+    .section{background:#101a30;border-radius:12px;padding:18px;margin-bottom:25px;box-shadow:0 0 10px rgba(0,0,0,.4);}
+    .btn{background:#1a2744;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:bold;margin:4px;transition:.3s;}
     .btn:hover{background:#4fc3f7;color:#000;}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;}
     #map-forecast,#map-alerts{height:320px;border-radius:10px;overflow:hidden;}
     #logStream{background:#000;color:#4fc3f7;font-family:monospace;padding:10px;border-radius:6px;height:200px;overflow-y:auto;}
     small{color:#7a8cab;}
+    /* === POPUP NASA === */
+    #popupOverlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.88);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      color:#4fc3f7;font-family:'Segoe UI',sans-serif;z-index:9999;text-align:center;
+      backdrop-filter:blur(4px);
+    }
+    #popupOverlay .spinner{
+      border:4px solid #4fc3f7;border-top-color:transparent;border-radius:50%;
+      width:90px;height:90px;margin-bottom:25px;
+      animation:spin 1.3s linear infinite;
+      box-shadow:0 0 15px rgba(79,195,247,0.6);
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
-
 <body>
   <header>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</header>
 
@@ -38,10 +51,10 @@
   <main>
     <div class="section">
       <h2>🧠 Commandes moteur</h2>
-      <button class="btn" data-action="extract" onclick="runExtraction()">⚡ Extraction</button>
-      <button class="btn" data-action="ai" onclick="runIAJEAN()">🧠 Analyse IA J.E.A.N.</button>
-      <button class="btn" data-action="refresh" onclick="refreshStatus()">🔄 Rafraîchir</button>
-      <button class="btn" data-action="integrate" onclick="integrateAlerts()">⚡ Intégrer alertes IA → moteur</button>
+      <button class="btn" onclick="runExtraction()">⚡ Extraction</button>
+      <button class="btn" onclick="runIAJEAN()">🧠 Analyse IA J.E.A.N.</button>
+      <button class="btn" onclick="integrateAlerts()">⚡ Intégrer alertes IA → moteur</button>
+      <button class="btn" onclick="refreshStatus()">🔄 Rafraîchir</button>
     </div>
 
     <div class="section">
@@ -50,14 +63,8 @@
     </div>
 
     <div class="section grid">
-      <div>
-        <h2>🌍 Carte prévisions</h2>
-        <div id="map-forecast"></div>
-      </div>
-      <div>
-        <h2>🌋 Carte alertes</h2>
-        <div id="map-alerts"></div>
-      </div>
+      <div><h2>🌍 Carte prévisions</h2><div id="map-forecast"></div></div>
+      <div><h2>🌋 Carte alertes</h2><div id="map-alerts"></div></div>
     </div>
 
     <div class="section">
@@ -70,10 +77,10 @@
     const API="/api";
     const logDiv=document.getElementById("logStream");
 
-    // === Flux SSE temps réel ===
+    // === Flux SSE ===
     function startLogStream(){
-      const evtSource=new EventSource(`${API}/logs/stream`);
-      evtSource.onmessage=(e)=>{
+      const evt=new EventSource(`${API}/logs/stream`);
+      evt.onmessage=(e)=>{
         try{
           const d=JSON.parse(e.data);
           const t=new Date(d.timestamp).toLocaleTimeString();
@@ -81,10 +88,10 @@
           logDiv.scrollTop=logDiv.scrollHeight;
         }catch{}
       };
-      evtSource.onerror=()=>logDiv.innerHTML+="<div>⚠️ Connexion SSE perdue...</div>";
+      evt.onerror=()=>logDiv.innerHTML+="<div>⚠️ Flux SSE interrompu...</div>";
     }
 
-    // === État du moteur ===
+    // === Status moteur ===
     async function refreshStatus(){
       const e=document.getElementById("engineStatus");
       e.innerHTML="Mise à jour...";
@@ -92,41 +99,43 @@
         const r=await fetch(`${API}/status`);
         const d=await r.json();
         e.innerHTML=`<b>Statut:</b> ${d.status}<br>
-          <b>Dernier run:</b> ${new Date(d.lastRun).toLocaleString()}<br>
-          <b>Alertes actives:</b> ${d.alerts?.length||0}<br>
-          <b>Zones couvertes:</b> ${d.coveredZones?.length||0}`;
-      }catch(err){e.innerHTML="❌ Erreur statut: "+err.message;}
+        <b>Dernier run:</b> ${new Date(d.lastRun).toLocaleString()}<br>
+        <b>Alertes actives:</b> ${d.alerts?.length||0}<br>
+        <b>Zones couvertes:</b> ${d.coveredZones?.length||0}`;
+      }catch(err){e.innerHTML="❌ "+err.message;}
     }
 
-    // === Extraction complète ===
+    // === Popups animés ===
+    function showPopup(t,st=""){
+      const o=document.createElement("div");
+      o.id="popupOverlay";
+      o.innerHTML=`<div class='spinner'></div><h3>${t}</h3><small>${st}</small>`;
+      document.body.appendChild(o);
+    }
+    function closePopup(){const p=document.getElementById("popupOverlay");if(p)p.remove();}
+
+    // === Extraction ===
     async function runExtraction(){
-      showPopup("⚙️ Extraction des modèles en cours...","Fusion GFS / ECMWF / ICON / NASA");
+      showPopup("⚙️ Extraction en cours...","Fusion des modèles réels GFS / ECMWF / ICON / NASA");
       try{
         const r=await fetch(`${API}/run-global`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})});
-        const d=await r.json();
-        closePopup();
+        const d=await r.json();closePopup();
         if(!d.success)throw new Error(d.error||"Erreur inconnue");
         alert("✅ Extraction complète réussie !");
         refreshStatus();
-      }catch(e){closePopup();alert("❌ Extraction échouée: "+e.message);}
+      }catch(e){closePopup();alert("❌ "+e.message);}
     }
 
-    // === IA J.E.A.N. avec popup animé ===
+    // === IA J.E.A.N ===
     async function runIAJEAN(){
-      const btn=document.querySelector("button[data-action='ai']");
-      btn.disabled=true;btn.style.opacity="0.6";
       showPopup("🧠 Analyse IA J.E.A.N. en cours...","Fusion IA / modèles / relief / climat");
       try{
         const r=await fetch(`${API}/ai-analyse`,{method:"POST"});
-        const d=await r.json();
-        closePopup();btn.disabled=false;btn.style.opacity="1";
+        const d=await r.json();closePopup();
         if(!d.success)throw new Error(d.error||"Erreur inconnue");
-        alert("✅ Analyse IA J.E.A.N. terminée avec succès !");
+        alert("✅ Analyse IA J.E.A.N. terminée !");
         refreshStatus();
-      }catch(e){
-        closePopup();btn.disabled=false;btn.style.opacity="1";
-        alert("❌ Erreur IA J.E.A.N : "+e.message);
-      }
+      }catch(e){closePopup();alert("❌ "+e.message);}
     }
 
     // === Intégration alertes ===
@@ -134,46 +143,24 @@
       showPopup("⚡ Intégration des alertes IA...","Mise à jour du moteur en cours");
       try{
         const r=await fetch(`${API}/alerts`);
-        const d=await r.json();
-        closePopup();
+        const d=await r.json();closePopup();
         if(!Array.isArray(d))throw new Error("Aucune alerte disponible");
-        alert(`✅ ${d.length} alertes prêtes à être intégrées !`);
-      }catch(e){closePopup();alert("❌ Erreur intégration: "+e.message);}
+        alert(`✅ ${d.length} alertes intégrées !`);
+      }catch(e){closePopup();alert("❌ "+e.message);}
     }
 
-    // === Carte Leaflet ===
+    // === Cartes ===
     function initMaps(){
-      const mapF=L.map("map-forecast").setView([30,10],2);
-      const mapA=L.map("map-alerts").setView([30,10],2);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+      const f=L.map("map-forecast").setView([30,10],2);
+      const a=L.map("map-alerts").setView([30,10],2);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(f);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(a);
     }
 
-    // === Popups animés ===
-    function showPopup(title,subtitle=""){
-      const overlay=document.createElement("div");
-      overlay.id="popupOverlay";
-      overlay.style.cssText=`
-        position:fixed;inset:0;background:rgba(0,0,0,0.85);
-        display:flex;flex-direction:column;align-items:center;justify-content:center;
-        color:#4fc3f7;font-family:'Segoe UI',sans-serif;z-index:9999;text-align:center;
-      `;
-      overlay.innerHTML=`
-        <div style="border:4px solid #4fc3f7;border-top-color:transparent;border-radius:50%;
-          width:80px;height:80px;animation:spin 1.2s linear infinite;margin-bottom:20px"></div>
-        <p style="font-size:1.2em;font-weight:bold">${title}</p>
-        <small>${subtitle}</small>
-        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-      `;
-      document.body.appendChild(overlay);
-    }
-    function closePopup(){const p=document.getElementById("popupOverlay");if(p)p.remove();}
-
-    // === Init ===
     document.addEventListener("DOMContentLoaded",()=>{
       initMaps();
-      refreshStatus();
       startLogStream();
+      refreshStatus();
     });
   </script>
 </body>
