@@ -16,14 +16,11 @@
     .container{max-width:1200px;margin:16px auto;padding:12px}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
     button{background:var(--accent);color:#001;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:700}
+    #fusionBtn{background:#f5b642;color:#000}
     .grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
     .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
-    .status-grid{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between}
-    .status-box{flex:1;min-width:120px;background:#0c1722;padding:8px;border-radius:8px;text-align:center}
     #mapForecast,#mapAlerts{height:300px;border-radius:8px}
     #logs{height:220px;overflow:auto;background:#061119;padding:8px;border-radius:8px;font-family:monospace}
-    .models-table{width:100%;border-collapse:collapse;color:#d6f0ff}
-    .models-table th,.models-table td{padding:6px;border-bottom:1px solid #07202a;text-align:left}
     .chat-panel{height:300px;display:flex;flex-direction:column}
     .chat-messages{flex:1;overflow:auto;padding:8px;background:#07131a;border-radius:8px;margin-bottom:8px}
     .chat-input{display:flex;gap:8px}
@@ -33,10 +30,10 @@
 </head>
 <body>
 <script>
-  const pin = sessionStorage.getItem("tinsflashPIN");
+  const pin=sessionStorage.getItem("tinsflashPIN");
   if(!pin){
-    const p = prompt("Code d’accès admin ?");
-    if(p !== "202679"){ alert("⛔ Accès refusé"); location.href="/"; }
+    const p=prompt("Code d’accès admin ?");
+    if(p!=="202679"){alert("⛔ Accès refusé");location.href="/";}
     else sessionStorage.setItem("tinsflashPIN","ok");
   }
 </script>
@@ -53,8 +50,9 @@
 
 <div class="container">
   <div class="toolbar">
-    <button id="runBtn">⚡ Extraction</button>
+    <button id="runBtn">⚙️ Extraction</button>
     <button id="aiBtn">🧠 Analyse IA J.E.A.N</button>
+    <button id="fusionBtn">⚡ Fusion & Diffusion</button>
     <button id="refreshBtn">🔄 Rafraîchir</button>
   </div>
 
@@ -62,23 +60,12 @@
     <div>
       <div class="card">
         <h3>⚙️ État du moteur</h3>
-        <div class="status-grid">
-          <div class="status-box"><strong>Statut</strong><div id="engineStatus">—</div></div>
-          <div class="status-box"><strong>Dernier run</strong><div id="lastRun">—</div></div>
-          <div class="status-box"><strong>Alertes actives</strong><div id="alertsCount">0</div></div>
-        </div>
-
-        <h4>📊 Modèles</h4>
-        <table class="models-table" id="modelsTable">
-          <thead><tr><th>Modèle</th><th>OK</th><th>Fail</th></tr></thead>
-          <tbody id="modelsBody"><tr><td colspan="3">Chargement…</td></tr></tbody>
-        </table>
+        <div><b>Statut :</b> <span id="engineStatus">—</span> | <b>Dernier run :</b> <span id="lastRun">—</span></div>
+        <div><b>Alertes actives :</b> <span id="alertsCount">0</span></div>
       </div>
-
       <div class="card" style="margin-top:12px">
         <h3>🌍 Carte prévisions</h3><div id="mapForecast"></div>
       </div>
-
       <div class="card" style="margin-top:12px">
         <h3>🌋 Carte alertes</h3><div id="mapAlerts"></div>
       </div>
@@ -86,7 +73,7 @@
 
     <div>
       <div class="card">
-        <h3>📜 Logs moteur</h3><div id="logs">Connexion...</div>
+        <h3>📜 Logs moteur</h3><div id="logs">Connexion…</div>
       </div>
 
       <div class="card" style="margin-top:12px">
@@ -94,7 +81,7 @@
         <div class="chat-panel">
           <div class="chat-messages" id="chatMessages"><div style="color:#9ad6ff">🤖 J.E.A.N prêt</div></div>
           <div class="chat-input">
-            <input type="text" id="chatInput" placeholder="Pose ta question..." />
+            <input type="text" id="chatInput" placeholder="Pose ta question…" />
             <button id="sendChat">Envoyer</button>
           </div>
         </div>
@@ -105,9 +92,9 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const API = location.origin;
-const mapF=L.map("mapForecast").setView([20,0],2),
-      mapA=L.map("mapAlerts").setView([20,0],2);
+const API=location.origin;
+const mapF=L.map("mapForecast").setView([20,0],2);
+const mapA=L.map("mapAlerts").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
 let fMarks=[],aMarks=[];
@@ -115,21 +102,12 @@ let fMarks=[],aMarks=[];
 async function getJSON(u){try{const r=await fetch(u);return r.ok?await r.json():null}catch{return null}}
 
 async function updateStatus(){
-  const d=await getJSON(API+"/api/status"); if(!d)return;
+  const d=await getJSON(API+"/api/status");if(!d)return;
   engineStatus.textContent=d.status||"—";
   lastRun.textContent=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
   alertsCount.textContent=(d.alerts||[]).length;
-  const models=d.models||{};
-  modelsBody.innerHTML="";
-  for(const [m,v] of Object.entries(models)){
-    const ok=v==="ok"?"✅":"";const fail=v==="fail"?"❌":"";
-    modelsBody.innerHTML+=`<tr><td>${m}</td><td>${ok}</td><td>${fail}</td></tr>`;
-  }
-  fMarks.forEach(m=>mapF.removeLayer(m)); aMarks.forEach(m=>mapA.removeLayer(m));
-  fMarks=[]; aMarks=[];
-  (d.coveredZones||[]).slice(0,500).forEach(p=>{
-    fMarks.push(L.circleMarker([p.lat,p.lon],{radius:4,color:"#4caf50"}).addTo(mapF));
-  });
+  fMarks.forEach(m=>mapF.removeLayer(m));aMarks.forEach(m=>mapA.removeLayer(m));fMarks=[];aMarks=[];
+  (d.coveredZones||[]).slice(0,500).forEach(p=>fMarks.push(L.circleMarker([p.lat,p.lon],{radius:4,color:"#4caf50"}).addTo(mapF)));
   (d.alerts||[]).forEach(a=>{
     const c=a.certainty||0;
     const col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
@@ -140,11 +118,10 @@ async function updateStatus(){
 
 const es=new EventSource(API+"/api/logs/stream");
 es.onmessage=e=>{
-  try{
-    const d=JSON.parse(e.data);
+  try{const d=JSON.parse(e.data);
     const line=document.createElement("div");
     line.textContent=`[${new Date(d.timestamp||Date.now()).toLocaleTimeString()}] ${d.message}`;
-    logs.appendChild(line); logs.scrollTop=logs.scrollHeight;
+    logs.appendChild(line);logs.scrollTop=logs.scrollHeight;
   }catch{}
 };
 
@@ -152,8 +129,23 @@ runBtn.onclick=async()=>{await fetch(API+"/api/run-global",{method:"POST"});upda
 aiBtn.onclick=async()=>{await fetch(API+"/api/ai-analyse",{method:"POST"});updateStatus()};
 refreshBtn.onclick=updateStatus;
 
+// ⚡ Fusion complète : extraction + IA + push
+fusionBtn.onclick=async()=>{
+  if(!confirm("⚡ Lancer la Fusion complète ?"))return;
+  try{
+    logs.innerHTML+="<div>⚙️ Fusion en cours…</div>";
+    await fetch(API+"/api/run-global",{method:"POST"});
+    await fetch(API+"/api/ai-analyse",{method:"POST"});
+    await fetch(API+"/api/push/broadcast",{method:"POST"});
+    logs.innerHTML+="<div>✅ Fusion & Diffusion terminées !</div>";
+  }catch(e){
+    logs.innerHTML+=`<div>❌ Erreur Fusion : ${e.message}</div>`;
+  }
+  updateStatus();
+};
+
 sendChat.onclick=async()=>{
-  const txt=chatInput.value.trim(); if(!txt)return;
+  const txt=chatInput.value.trim();if(!txt)return;
   chatMessages.innerHTML+=`<div style='color:#9ad6ff'>Vous : ${txt}</div>`;
   chatInput.value="";
   const r=await fetch(API+"/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt,mode:"moteur"})});
@@ -161,7 +153,7 @@ sendChat.onclick=async()=>{
   chatMessages.innerHTML+=`<div style='color:#b2f5c9'>J.E.A.N : ${j.reply}</div>`;
   chatMessages.scrollTop=chatMessages.scrollHeight;
 };
-updateStatus(); setInterval(updateStatus,15000);
+updateStatus();setInterval(updateStatus,15000);
 </script>
 </body>
 </html>
