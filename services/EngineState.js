@@ -3,7 +3,6 @@
 
 import mongoose from "mongoose";
 
-// Empêche le buffering quand la DB tarde à répondre
 mongoose.set("bufferCommands", false);
 mongoose.set("strictQuery", false);
 
@@ -28,10 +27,10 @@ const EngineStateSchema = new mongoose.Schema({
   logs: [LogSchema],
 });
 
-// === Modèle principal ===
 const EngineState = mongoose.models.EngineState || mongoose.model("EngineState", EngineStateSchema);
 
 let engineCache = null;
+let saveInProgress = false; // 🔒 verrou asynchrone
 
 // =====================================
 // 🔄 Connexion Mongo + état mémoire local
@@ -64,33 +63,44 @@ export function getEngineState() {
   return engineCache || { status: "idle", logs: [], errors: [], checkup: {} };
 }
 
-export async function saveEngineState(newState) {
+export async function saveEngineState(newState = {}) {
+  if (saveInProgress) return; // 🔁 évite les appels simultanés
+  saveInProgress = true;
+
   try {
     if (!engineCache) await initEngineState();
     Object.assign(engineCache, newState);
     await engineCache.save();
   } catch (err) {
     console.warn("⚠️ EngineState save skipped:", err.message);
+  } finally {
+    saveInProgress = false;
   }
 }
 
 // =====================================
 // 🪶 Logs et erreurs
 // =====================================
-export function addEngineLog(message) {
-  const log = { message, timestamp: new Date() };
-  console.log("[LOG]", message);
-  if (engineCache) {
+export async function addEngineLog(message) {
+  try {
+    const log = { message, timestamp: new Date() };
+    console.log("[LOG]", message);
+    if (!engineCache) await initEngineState();
     engineCache.logs.push(log);
-    engineCache.save().catch(() => {});
+    await saveEngineState({});
+  } catch (err) {
+    console.warn("⚠️ addEngineLog erreur:", err.message);
   }
 }
 
-export function addEngineError(message) {
-  const error = { message, timestamp: new Date() };
-  console.error("[ERROR]", message);
-  if (engineCache) {
+export async function addEngineError(message) {
+  try {
+    const error = { message, timestamp: new Date() };
+    console.error("[ERROR]", message);
+    if (!engineCache) await initEngineState();
     engineCache.errors.push(error);
-    engineCache.save().catch(() => {});
+    await saveEngineState({});
+  } catch (err) {
+    console.warn("⚠️ addEngineError erreur:", err.message);
   }
 }
