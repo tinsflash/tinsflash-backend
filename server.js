@@ -12,7 +12,6 @@ import { fileURLToPath } from "url";
 import fetch from "node-fetch";
 import axios from "axios";
 
-// === Moteur interne & IA ===
 import { runGlobal } from "./services/runGlobal.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
 import {
@@ -65,7 +64,7 @@ app.get("/three.module.js", async (_, res) => {
   try {
     const r = await fetch("https://unpkg.com/three@0.161.0/build/three.module.js");
     res.type("application/javascript").send(await r.text());
-  } catch (err) {
+  } catch {
     res.status(500).send("// erreur module three.js");
   }
 });
@@ -73,7 +72,7 @@ app.get("/OrbitControls.js", async (_, res) => {
   try {
     const r = await fetch("https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js");
     res.type("application/javascript").send(await r.text());
-  } catch (err) {
+  } catch {
     res.status(500).send("// erreur module OrbitControls");
   }
 });
@@ -104,23 +103,22 @@ app.get("/demo/meteo3d-proplus.html", (_, res) =>
 );
 
 // ==========================================================
-// 🚀 Extraction réelle + génération alertes
+// 🚀 Extraction réelle + génération d’alertes
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
     const zone = req.body?.zone || "All";
 
-    // 1️⃣ Extraction météo complète
+    // Extraction météo réelle
     const result = await runGlobal(zone);
     await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`, "success", "runGlobal");
 
-    // 2️⃣ Génération d’alertes Everest v1
+    // Génération des alertes (sans toucher à superForecast)
     await addEngineLog("🚨 Lancement génération des alertes globales...", "info", "alerts");
     const alerts = await runGlobalAlerts();
-    await addEngineLog(`✅ ${alerts.length} alertes générées et sauvegardées`, "success", "alerts");
+    await addEngineLog(`✅ ${alerts.length} alertes générées`, "success", "alerts");
 
-    // 3️⃣ Réponse finale
     res.json({ success: true, result, alertsCount: alerts.length });
   } catch (e) {
     await addEngineError(`❌ Erreur extraction/alertes: ${e.message}`, "runGlobal");
@@ -153,10 +151,8 @@ app.get("/api/status", async (_, res) => {
       lastRun: state?.lastRun,
       models: state?.checkup?.models || {},
       alerts: state?.alerts || [],
-      partialReport: state?.partialReport || null,
-      finalReport: state?.finalReport || null,
-      errors: state?.errors || [],
       coveredZones: enumerateCoveredPoints(),
+      errors: state?.errors || [],
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -205,26 +201,6 @@ app.get("/api/alerts", async (_, res) => {
   } catch (e) {
     await addEngineError(`Erreur récupération alertes: ${e.message}`, "alerts");
     res.status(500).json({ success: false, error: e.message });
-  }
-});
-app.put("/api/alerts/status/:id", async (req, res) => {
-  try {
-    await Alert.findByIdAndUpdate(req.params.id, { status: req.body.action });
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-app.post("/api/alerts/export/:id", async (req, res) => {
-  await addEngineLog(`🚨 Alerte ${req.params.id} publiée`, "info", "alerts");
-  res.json({ ok: true });
-});
-app.delete("/api/alerts/:id", async (req, res) => {
-  try {
-    await Alert.findByIdAndDelete(req.params.id);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
   }
 });
 
