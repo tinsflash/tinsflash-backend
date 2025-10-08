@@ -1,79 +1,95 @@
 // ==========================================================
-// 🧠 TINSFLASH – SuperForecast Engine (Everest Protocol v1.3)
-// Fusion multi-modèles météo : GFS, ECMWF, ICON, Open-Meteo
-// 100 % réel – IA J.E.A.N compatible
+// 🌍 TINSFLASH – Service SuperForecast (Everest Protocol v1.3 PRO++)
+// 100 % réel – Fusion multi-modèles + IA locale + correction relief
 // ==========================================================
 
 import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import adjustWithLocalFactors from "./localFactors.js";
-import { enumerateCoveredPoints } from "./zonesCovered.js";
-import { analyzeRain } from "./rainService.js";
-import { analyzeSnow } from "./snowService.js";
-import { analyzeWind } from "./windService.js";
+import { climateAdjust } from "./climateFactors.js";
 
-export async function superForecast() {
+// ==========================================================
+// 🧠 SuperForecast : fusion multi-modèles + ajustements locaux
+// ==========================================================
+export async function superForecast(lat, lon, country = "Unknown") {
   try {
-    await addEngineLog("🧭 Lancement SuperForecast (fusion multi-modèles)");
-    const zones = enumerateCoveredPoints();
-    const forecasts = {};
+    await addEngineLog(`🛰️ SuperForecast : lancement fusion multi-modèles pour ${country}`);
 
-    for (const zone of zones.slice(0, 400)) {
-      const { lat, lon, name, country } = zone;
-      try {
-        const [gfs, ecmwf, icon, open] = await Promise.all([
-          axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation&forecast_model=gfs`),
-          axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation&forecast_model=ecmwf`),
-          axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation&forecast_model=icon`),
-          axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation`),
-        ]);
+    // ---- 1️⃣ Modèles bruts : GFS + ECMWF + ICON + Open-Meteo
+    const [gfs, ecmwf, icon, open] = await Promise.all([
+      axios
+        .get(
+          `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+        )
+        .then((r) => r.data?.current)
+        .catch(() => null),
+      axios
+        .get(
+          `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+        )
+        .then((r) => r.data?.current)
+        .catch(() => null),
+      axios
+        .get(
+          `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+        )
+        .then((r) => r.data?.current)
+        .catch(() => null),
+      axios
+        .get(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+        )
+        .then((r) => r.data?.current)
+        .catch(() => null),
+    ]);
 
-        const temperature =
-          (gfs.data.hourly.temperature_2m[0] +
-            ecmwf.data.hourly.temperature_2m[0] +
-            icon.data.hourly.temperature_2m[0] +
-            open.data.hourly.temperature_2m[0]) /
-          4;
+    const sources = { gfs, ecmwf, icon, open };
 
-        const precipitation =
-          (gfs.data.hourly.precipitation[0] +
-            ecmwf.data.hourly.precipitation[0] +
-            icon.data.hourly.precipitation[0] +
-            open.data.hourly.precipitation[0]) /
-          4;
+    // ---- 2️⃣ Fusion pondérée
+    const valid = Object.values(sources).filter(Boolean);
+    if (valid.length === 0) throw new Error("Aucune source météo valide");
 
-        let base = { temperature, precipitation, wind: 0 };
-        base = await applyGeoFactors(base, lat, lon, country);
-        base = await adjustWithLocalFactors(base, country, lat, lon);
+    const avg = (key) =>
+      valid.reduce((a, s) => a + (s?.[key] ?? 0), 0) / valid.length;
 
-        const [rain, snow, wind] = await Promise.all([
-          analyzeRain(lat, lon, country),
-          analyzeSnow(lat, lon, country),
-          analyzeWind(lat, lon, country),
-        ]);
+    const fusion = {
+      temperature: avg("temperature_2m"),
+      precipitation: avg("precipitation"),
+      wind_speed: avg("wind_speed_10m"),
+      modelsUsed: Object.keys(sources).filter((k) => sources[k]),
+    };
 
-        forecasts[`${country}_${name}`] = {
-          lat,
-          lon,
-          temperature: base.temperature,
-          precipitation: base.precipitation,
-          wind: wind?.speed ?? 0,
-          rainIndex: rain?.index ?? 0,
-          snowIndex: snow?.index ?? 0,
-          reliability: 0.85,
-        };
-      } catch (err) {
-        await addEngineError(`Erreur SuperForecast zone ${zone.name}: ${err.message}`);
-      }
-    }
+    // ---- 3️⃣ Ajustements relief + climat + micro-facteurs
+    let adjusted = await applyGeoFactors(fusion, lat, lon, country);
+    adjusted = await adjustWithLocalFactors(adjusted, country, lat, lon);
+    adjusted = await climateAdjust(adjusted, country);
 
-    await addEngineLog(`✅ SuperForecast terminé (${Object.keys(forecasts).length} zones)`);
-    return forecasts;
+    // ---- 4️⃣ Score de fiabilité
+    const reliability = Math.min(
+      1,
+      (valid.length / 4) *
+        (1 -
+          Math.abs((fusion.temperature - adjusted.temperature) / (fusion.temperature || 1)))
+    );
+
+    // ---- 5️⃣ Résultat final
+    const result = {
+      lat,
+      lon,
+      country,
+      reliability,
+      ...adjusted,
+      timestamp: new Date(),
+    };
+
+    await addEngineLog(
+      `✅ SuperForecast terminé pour ${country} (${lat.toFixed(2)}, ${lon.toFixed(2)}) – Fiabilité ${(reliability * 100).toFixed(0)}%`
+    );
+
+    return result;
   } catch (err) {
-    await addEngineError(`Erreur superForecast global: ${err.message}`);
-    return {};
+    await addEngineError(`Erreur SuperForecast : ${err.message}`);
+    return { error: err.message };
   }
 }
-
-export { superForecast };
