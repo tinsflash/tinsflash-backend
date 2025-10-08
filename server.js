@@ -24,13 +24,9 @@ import {
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import Alert from "./models/Alert.js";
-import { runGlobalAlerts } from "./services/alertsService.js";
 import { askCohere } from "./services/cohereService.js";
 import * as chatService from "./services/chatService.js";
 
-// ==========================================================
-// 🧩 Initialisation
-// ==========================================================
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,9 +34,6 @@ const app = express();
 app.use(express.json());
 await initEngineState();
 
-// ==========================================================
-// 🌐 CORS global
-// ==========================================================
 app.use(
   cors({
     origin: "*",
@@ -49,22 +42,16 @@ app.use(
   })
 );
 
-// ==========================================================
-// 📁 Fichiers statiques
-// ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 ["avatars", "videos", "assets", "demo"].forEach((dir) =>
   app.use(`/${dir}`, express.static(path.join(__dirname, `public/${dir}`)))
 );
 
-// ==========================================================
-// 🧠 Correctif MIME – Three.js & OrbitControls
-// ==========================================================
 app.get("/three.module.js", async (_, res) => {
   try {
     const r = await fetch("https://unpkg.com/three@0.161.0/build/three.module.js");
     res.type("application/javascript").send(await r.text());
-  } catch {
+  } catch (err) {
     res.status(500).send("// erreur module three.js");
   }
 });
@@ -72,14 +59,11 @@ app.get("/OrbitControls.js", async (_, res) => {
   try {
     const r = await fetch("https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js");
     res.type("application/javascript").send(await r.text());
-  } catch {
+  } catch (err) {
     res.status(500).send("// erreur module OrbitControls");
   }
 });
 
-// ==========================================================
-// 🔌 MongoDB
-// ==========================================================
 if (process.env.MONGO_URI) {
   mongoose
     .connect(process.env.MONGO_URI, {
@@ -90,45 +74,21 @@ if (process.env.MONGO_URI) {
     .catch((err) => console.error("❌ Erreur MongoDB :", err.message));
 } else console.error("⚠️ MONGO_URI manquant dans .env");
 
-// ==========================================================
-// 🌍 Index public
-// ==========================================================
 app.get("/", (_, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// ==========================================================
-// 🌤️ Démo publique météo 3D
-// ==========================================================
-app.get("/demo/meteo3d-proplus.html", (_, res) =>
-  res.sendFile(path.join(__dirname, "public/demo/meteo3d-proplus.html"))
-);
-
-// ==========================================================
-// 🚀 Extraction réelle + génération d’alertes
-// ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
     const zone = req.body?.zone || "All";
-
-    // Extraction météo réelle
     const result = await runGlobal(zone);
     await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`, "success", "runGlobal");
-
-    // Génération des alertes (sans toucher à superForecast)
-    await addEngineLog("🚨 Lancement génération des alertes globales...", "info", "alerts");
-    const alerts = await runGlobalAlerts();
-    await addEngineLog(`✅ ${alerts.length} alertes générées`, "success", "alerts");
-
-    res.json({ success: true, result, alertsCount: alerts.length });
+    res.json({ success: true, result });
   } catch (e) {
-    await addEngineError(`❌ Erreur extraction/alertes: ${e.message}`, "runGlobal");
+    await addEngineError(`❌ Erreur extraction: ${e.message}`, "runGlobal");
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// ==========================================================
-// 🧠 Analyse IA J.E.A.N.
-// ==========================================================
 app.post("/api/ai-analyse", async (_, res) => {
   try {
     const r = await runAIAnalysis();
@@ -140,9 +100,6 @@ app.post("/api/ai-analyse", async (_, res) => {
   }
 });
 
-// ==========================================================
-// 📊 Statut moteur
-// ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
     const state = await getEngineState();
@@ -150,50 +107,17 @@ app.get("/api/status", async (_, res) => {
       status: state?.checkup?.engineStatus || state?.status || "IDLE",
       lastRun: state?.lastRun,
       models: state?.checkup?.models || {},
-      alerts: state?.alerts || [],
-      coveredZones: enumerateCoveredPoints(),
+      alerts: state?.alertsLocal || [],
+      alertsContinental: state?.alertsContinental || [],
+      alertsWorld: state?.alertsWorld || [],
       errors: state?.errors || [],
+      coveredZones: enumerateCoveredPoints(),
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// ==========================================================
-// 💬 IA publique Cohere
-// ==========================================================
-app.post("/api/cohere", async (req, res) => {
-  try {
-    const { question } = req.body;
-    if (!question) return res.status(400).json({ error: "Question invalide" });
-    const { reply, avatar } = await askCohere(question);
-    await addEngineLog(`💬 Question publique: "${question}"`, "info", "Cohere");
-    res.json({ success: true, reply, avatar: `/avatars/jean-${avatar}.png` });
-  } catch (err) {
-    await addEngineError(`Erreur Cohere: ${err.message}`, "Cohere");
-    res.status(500).json({ success: false, reply: "Erreur interne J.E.A.N." });
-  }
-});
-
-// ==========================================================
-// 💬 IA console admin
-// ==========================================================
-app.post("/api/ai-admin", async (req, res) => {
-  try {
-    const { message, mode } = req.body;
-    if (!message) return res.status(400).json({ success: false, error: "Message vide" });
-    const reply = await chatService.askAIAdmin(message, mode || "moteur");
-    await addEngineLog(`💬 Console admin (${mode}) : "${message}"`, "info", "admin");
-    res.json({ success: true, reply });
-  } catch (e) {
-    await addEngineError(`Erreur IA admin: ${e.message}`, "admin");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 🌋 Alertes – Everest Protocol
-// ==========================================================
 app.get("/api/alerts", async (_, res) => {
   try {
     const alerts = await Alert.find().sort({ certainty: -1 });
@@ -204,10 +128,7 @@ app.get("/api/alerts", async (_, res) => {
   }
 });
 
-// ==========================================================
-// 📡 Flux SSE – Logs moteur (temps réel)
-// ==========================================================
-app.get("/api/logs/stream", (req, res) => {
+app.get("/api/logs-stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -221,23 +142,10 @@ app.get("/api/logs/stream", (req, res) => {
   });
 });
 
-// ==========================================================
-// 🧭 Pages admin protégées
-// ==========================================================
-[
-  "admin-pp.html",
-  "admin-alerts.html",
-  "admin-chat.html",
-  "admin-index.html",
-  "admin-radar.html",
-  "admin-users.html",
-].forEach((page) =>
+["admin-pp.html", "admin-alerts.html", "admin-chat.html"].forEach((page) =>
   app.get(`/${page}`, (_, res) => res.sendFile(path.join(__dirname, "public", page)))
 );
 
-// ==========================================================
-// 🚀 Lancement
-// ==========================================================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`⚡ TINSFLASH PRO++ prêt sur port ${PORT}`);
