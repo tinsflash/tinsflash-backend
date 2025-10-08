@@ -1,1 +1,222 @@
-<!-- Console principale -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🛰️ Console IA J.E.A.N – TINSFLASH</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* Minimal, readable dark theme */
+    :root{--accent:#4fc3f7;--bg:#0b1220;--card:#0f1724;--muted:#9fbfce}
+    body{margin:0;background:var(--bg);color:#e6f6ff;font-family:Inter,system-ui,Arial}
+    header{background:linear-gradient(90deg,#08101f,#15294d);padding:14px;text-align:center;color:var(--accent);font-weight:700}
+    nav{display:flex;gap:10px;justify-content:center;padding:10px;background:#0d1624}
+    nav a{color:#cfefff;text-decoration:none;padding:8px 12px;border-radius:6px}
+    nav a:hover{background:#0b2b3a}
+    .container{max-width:1200px;margin:16px auto;padding:12px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
+    button{background:var(--accent);color:#001;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:700}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
+    .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+    .status-grid{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between}
+    .status-box{flex:1;min-width:120px;background:#0c1722;padding:8px;border-radius:8px;text-align:center}
+    #mapForecast,#mapAlerts{height:300px;border-radius:8px}
+    #logs{height:220px;overflow:auto;background:#061119;padding:8px;border-radius:8px;font-family:monospace}
+    .models-table{width:100%;border-collapse:collapse;color:#d6f0ff}
+    .models-table th,.models-table td{padding:6px;border-bottom:1px solid #07202a;text-align:left}
+    .chat-panel{height:300px;display:flex;flex-direction:column}
+    .chat-messages{flex:1;overflow:auto;padding:8px;background:#07131a;border-radius:8px;margin-bottom:8px}
+    .chat-input{display:flex;gap:8px}
+    input[type="text"]{flex:1;padding:10px;border-radius:8px;border:1px solid #123;background:#07121a;color:#e6f6ff}
+    @media(max-width:920px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<script>
+  // PIN protection
+  const pin = sessionStorage.getItem("tinsflashPIN");
+  if(!pin){
+    const p = prompt("Code d’accès admin ?");
+    if(p !== "202679"){ alert("⛔ Accès refusé"); location.href="/"; } else sessionStorage.setItem("tinsflashPIN","ok");
+  }
+</script>
+
+<header>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</header>
+<nav>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-radar.html">Radar</a>
+  <a href="/admin-users.html">Utilisateurs</a>
+  <a href="/admin-index.html">Index</a>
+</nav>
+
+<div class="container">
+  <div class="toolbar">
+    <button id="runBtn">⚡ Lancer Extraction (sans IA)</button>
+    <button id="aiBtn">🧠 Lancer Analyse IA J.E.A.N.</button>
+    <button id="refreshBtn">🔄 Rafraîchir status</button>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>⚙️ État du moteur</h3>
+        <div class="status-grid">
+          <div class="status-box"><strong>Statut</strong><div id="engineStatus">—</div></div>
+          <div class="status-box"><strong>Dernier run</strong><div id="lastRun">Jamais</div></div>
+          <div class="status-box"><strong>Alertes actives</strong><div id="alertsCount">0</div></div>
+        </div>
+
+        <h4 style="margin-top:12px">📊 Modèles – résumé</h4>
+        <table class="models-table" id="modelsTable">
+          <thead><tr><th>Modèle</th><th>OK</th><th>Fail</th></tr></thead>
+          <tbody id="modelsBody"><tr><td colspan="3">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>🌍 Carte Prévisions (zones traitées en vert)</h3>
+        <div id="mapForecast"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>🌋 Carte Alertes (monde)</h3>
+        <div id="mapAlerts"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h3>📜 Logs moteur (temps réel)</h3>
+        <div id="logs">Connexion aux logs…</div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>💬 Chat console (GPT-4o-mini)</h3>
+        <div class="chat-panel">
+          <div class="chat-messages" id="chatMessages">
+            <div style="color:#9ad6ff">🤖 J.E.A.N console prêt (GPT-4o-mini)</div>
+          </div>
+          <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Pose ta question au console (moteur/ météo)" />
+            <button id="sendChat">Envoyer</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const API = location.origin; // assume same origin; adapt si nécessaire
+
+  // maps
+  const mapF = L.map("mapForecast").setView([20,0],2);
+  const mapA = L.map("mapAlerts").setView([20,0],2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+  let forecastMarkers = [], alertMarkers = [];
+
+  async function fetchJSON(url){
+    try{ const r = await fetch(url); if(!r.ok) throw new Error(r.status); return await r.json(); }
+    catch(e){ console.error(url,e); return null; }
+  }
+
+  async function updateStatus(){
+    const d = await fetchJSON(API + "/api/status");
+    if(!d) return;
+    document.getElementById("engineStatus").innerText = d.status || "—";
+    document.getElementById("lastRun").innerText = d.lastRun ? new Date(d.lastRun).toLocaleString() : "Jamais";
+    document.getElementById("alertsCount").innerText = (d.alerts || []).length || (d.alertsCount ?? 0);
+
+    // models table
+    const models = d.models || d.checkup?.models || {};
+    const body = document.getElementById("modelsBody");
+    body.innerHTML = "";
+    if(Object.keys(models).length === 0){ body.innerHTML = "<tr><td colspan='3'>Aucun modèle</td></tr>"; }
+    else{
+      for(const [k,v] of Object.entries(models)){
+        const ok = v === "ok" ? "✅" : "";
+        const fail = v === "fail" ? "❌" : "";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${k}</td><td>${ok}</td><td>${fail}</td>`;
+        body.appendChild(tr);
+      }
+    }
+
+    // forecast markers: use partialReport.countriesOK if available
+    forecastMarkers.forEach(m=>mapF.removeLayer(m)); forecastMarkers=[];
+    const okCountries = d.partialReport?.extraction?.countriesOK || d.partialReport?.extraction?.countriesTotal ? d.partialReport?.extraction?.countriesOK || [] : [];
+    // If no countries list, fallback to coveredZones lat/lon if available
+    const covered = d.coveredZones || [];
+    covered.slice(0,500).forEach(p=>{
+      const m = L.circleMarker([p.lat, p.lon],{radius:5,color:"#4caf50",fillOpacity:0.8}).addTo(mapF).bindPopup(`${p.country||p.name || "zone"}`);
+      forecastMarkers.push(m);
+    });
+
+    // alerts markers
+    alertMarkers.forEach(m=>mapA.removeLayer(m)); alertMarkers=[];
+    const alerts = d.alerts || d.alertsLocal || [];
+    (alerts || []).forEach(a=>{
+      const c = (a.certainty ?? a.data?.confidence) || 0;
+      const color = c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
+      const lat = a.geo?.lat || a.lat || (a.data?.geo?.lat) || 0;
+      const lon = a.geo?.lon || a.lon || (a.data?.geo?.lon) || 0;
+      const m = L.circleMarker([lat,lon],{radius:6,color,fillOpacity:0.9}).addTo(mapA).bindPopup(`<b>${a.zone||a.country||"?"}</b><br>${a.title||a.data?.type||""}<br>${c}%`);
+      alertMarkers.push(m);
+    });
+  }
+
+  // SSE logs
+  const logsBox = document.getElementById("logs");
+  const evt = new EventSource(API + "/api/logs/stream");
+  evt.onmessage = e => {
+    try{
+      const obj = JSON.parse(e.data);
+      const ts = new Date(obj.timestamp || obj.ts || Date.now()).toLocaleTimeString();
+      const line = document.createElement("div");
+      line.textContent = `[${ts}] ${obj.message || obj.text || obj.msg || JSON.stringify(obj)}`;
+      logsBox.appendChild(line);
+      logsBox.scrollTop = logsBox.scrollHeight;
+    }catch(err){ console.error("SSE parse err", err); }
+  };
+
+  // Buttons
+  document.getElementById("runBtn").onclick = async () => {
+    if(!confirm("Lancer l'extraction (Phase 1) ?")) return;
+    const r = await fetch(API + "/api/run-global", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({zone:"All"})});
+    const d = await r.json();
+    alert(d.success ? "✅ Extraction lancée" : "❌ Erreur: " + (d.error||""));
+    updateStatus();
+  };
+  document.getElementById("aiBtn").onclick = async () => {
+    if(!confirm("Lancer l'analyse IA J.E.A.N (Phase 2) ?")) return;
+    const r = await fetch(API + "/api/ai-analyse", {method:"POST"});
+    const d = await r.json();
+    alert(d.success || d.ok ? "🧠 Analyse IA lancée" : "❌ Erreur IA: " + (d.error||""));
+    updateStatus();
+  };
+  document.getElementById("refreshBtn").onclick = updateStatus;
+
+  // Chat console to /api/ai-admin (GPT-4o-mini)
+  document.getElementById("sendChat").onclick = async () => {
+    const txt = document.getElementById("chatInput").value.trim(); if(!txt) return;
+    const cm = document.getElementById("chatMessages");
+    cm.innerHTML += `<div style="color:#9ad6ff">Vous: ${txt}</div>`;
+    document.getElementById("chatInput").value = "";
+    const res = await fetch(API + "/api/ai-admin", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({message:txt, mode:"moteur"})});
+    const j = await res.json();
+    cm.innerHTML += `<div style="color:#b2f5c9">J.E.A.N: ${j.reply || j}</div>`;
+    cm.scrollTop = cm.scrollHeight;
+  };
+
+  // auto refresh
+  updateStatus();
+  setInterval(updateStatus, 10000);
+</script>
+</body>
+</html>
