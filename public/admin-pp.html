@@ -7,7 +7,6 @@
   <title>🛰️ Console IA J.E.A.N – TINSFLASH</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    /* Minimal, readable dark theme */
     :root{--accent:#4fc3f7;--bg:#0b1220;--card:#0f1724;--muted:#9fbfce}
     body{margin:0;background:var(--bg);color:#e6f6ff;font-family:Inter,system-ui,Arial}
     header{background:linear-gradient(90deg,#08101f,#15294d);padding:14px;text-align:center;color:var(--accent);font-weight:700}
@@ -34,11 +33,11 @@
 </head>
 <body>
 <script>
-  // PIN protection
   const pin = sessionStorage.getItem("tinsflashPIN");
   if(!pin){
     const p = prompt("Code d’accès admin ?");
-    if(p !== "202679"){ alert("⛔ Accès refusé"); location.href="/"; } else sessionStorage.setItem("tinsflashPIN","ok");
+    if(p !== "202679"){ alert("⛔ Accès refusé"); location.href="/"; }
+    else sessionStorage.setItem("tinsflashPIN","ok");
   }
 </script>
 
@@ -54,9 +53,9 @@
 
 <div class="container">
   <div class="toolbar">
-    <button id="runBtn">⚡ Lancer Extraction (sans IA)</button>
-    <button id="aiBtn">🧠 Lancer Analyse IA J.E.A.N.</button>
-    <button id="refreshBtn">🔄 Rafraîchir status</button>
+    <button id="runBtn">⚡ Extraction</button>
+    <button id="aiBtn">🧠 Analyse IA J.E.A.N</button>
+    <button id="refreshBtn">🔄 Rafraîchir</button>
   </div>
 
   <div class="grid">
@@ -65,11 +64,11 @@
         <h3>⚙️ État du moteur</h3>
         <div class="status-grid">
           <div class="status-box"><strong>Statut</strong><div id="engineStatus">—</div></div>
-          <div class="status-box"><strong>Dernier run</strong><div id="lastRun">Jamais</div></div>
+          <div class="status-box"><strong>Dernier run</strong><div id="lastRun">—</div></div>
           <div class="status-box"><strong>Alertes actives</strong><div id="alertsCount">0</div></div>
         </div>
 
-        <h4 style="margin-top:12px">📊 Modèles – résumé</h4>
+        <h4>📊 Modèles</h4>
         <table class="models-table" id="modelsTable">
           <thead><tr><th>Modèle</th><th>OK</th><th>Fail</th></tr></thead>
           <tbody id="modelsBody"><tr><td colspan="3">Chargement…</td></tr></tbody>
@@ -77,146 +76,92 @@
       </div>
 
       <div class="card" style="margin-top:12px">
-        <h3>🌍 Carte Prévisions (zones traitées en vert)</h3>
-        <div id="mapForecast"></div>
+        <h3>🌍 Carte prévisions</h3><div id="mapForecast"></div>
       </div>
 
       <div class="card" style="margin-top:12px">
-        <h3>🌋 Carte Alertes (monde)</h3>
-        <div id="mapAlerts"></div>
+        <h3>🌋 Carte alertes</h3><div id="mapAlerts"></div>
       </div>
     </div>
 
     <div>
       <div class="card">
-        <h3>📜 Logs moteur (temps réel)</h3>
-        <div id="logs">Connexion aux logs…</div>
+        <h3>📜 Logs moteur</h3><div id="logs">Connexion...</div>
       </div>
 
       <div class="card" style="margin-top:12px">
         <h3>💬 Chat console (GPT-4o-mini)</h3>
         <div class="chat-panel">
-          <div class="chat-messages" id="chatMessages">
-            <div style="color:#9ad6ff">🤖 J.E.A.N console prêt (GPT-4o-mini)</div>
-          </div>
+          <div class="chat-messages" id="chatMessages"><div style="color:#9ad6ff">🤖 J.E.A.N prêt</div></div>
           <div class="chat-input">
-            <input type="text" id="chatInput" placeholder="Pose ta question au console (moteur/ météo)" />
+            <input type="text" id="chatInput" placeholder="Pose ta question..." />
             <button id="sendChat">Envoyer</button>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  const API = location.origin; // assume same origin; adapt si nécessaire
+const API = location.origin;
+const mapF=L.map("mapForecast").setView([20,0],2),
+      mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+let fMarks=[],aMarks=[];
 
-  // maps
-  const mapF = L.map("mapForecast").setView([20,0],2);
-  const mapA = L.map("mapAlerts").setView([20,0],2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-  let forecastMarkers = [], alertMarkers = [];
+async function getJSON(u){try{const r=await fetch(u);return r.ok?await r.json():null}catch{return null}}
 
-  async function fetchJSON(url){
-    try{ const r = await fetch(url); if(!r.ok) throw new Error(r.status); return await r.json(); }
-    catch(e){ console.error(url,e); return null; }
+async function updateStatus(){
+  const d=await getJSON(API+"/api/status"); if(!d)return;
+  engineStatus.textContent=d.status||"—";
+  lastRun.textContent=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
+  alertsCount.textContent=(d.alerts||[]).length;
+  const models=d.models||{};
+  modelsBody.innerHTML="";
+  for(const [m,v] of Object.entries(models)){
+    const ok=v==="ok"?"✅":"";const fail=v==="fail"?"❌":"";
+    modelsBody.innerHTML+=`<tr><td>${m}</td><td>${ok}</td><td>${fail}</td></tr>`;
   }
+  fMarks.forEach(m=>mapF.removeLayer(m)); aMarks.forEach(m=>mapA.removeLayer(m));
+  fMarks=[]; aMarks=[];
+  (d.coveredZones||[]).slice(0,500).forEach(p=>{
+    fMarks.push(L.circleMarker([p.lat,p.lon],{radius:4,color:"#4caf50"}).addTo(mapF));
+  });
+  (d.alerts||[]).forEach(a=>{
+    const c=a.certainty||0;
+    const col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
+    aMarks.push(L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{radius:5,color:col}).addTo(mapA)
+      .bindPopup(`<b>${a.zone}</b><br>${a.title}<br>${c}%`));
+  });
+}
 
-  async function updateStatus(){
-    const d = await fetchJSON(API + "/api/status");
-    if(!d) return;
-    document.getElementById("engineStatus").innerText = d.status || "—";
-    document.getElementById("lastRun").innerText = d.lastRun ? new Date(d.lastRun).toLocaleString() : "Jamais";
-    document.getElementById("alertsCount").innerText = (d.alerts || []).length || (d.alertsCount ?? 0);
+const es=new EventSource(API+"/api/logs/stream");
+es.onmessage=e=>{
+  try{
+    const d=JSON.parse(e.data);
+    const line=document.createElement("div");
+    line.textContent=`[${new Date(d.timestamp||Date.now()).toLocaleTimeString()}] ${d.message}`;
+    logs.appendChild(line); logs.scrollTop=logs.scrollHeight;
+  }catch{}
+};
 
-    // models table
-    const models = d.models || d.checkup?.models || {};
-    const body = document.getElementById("modelsBody");
-    body.innerHTML = "";
-    if(Object.keys(models).length === 0){ body.innerHTML = "<tr><td colspan='3'>Aucun modèle</td></tr>"; }
-    else{
-      for(const [k,v] of Object.entries(models)){
-        const ok = v === "ok" ? "✅" : "";
-        const fail = v === "fail" ? "❌" : "";
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${k}</td><td>${ok}</td><td>${fail}</td>`;
-        body.appendChild(tr);
-      }
-    }
+runBtn.onclick=async()=>{await fetch(API+"/api/run-global",{method:"POST"});updateStatus()};
+aiBtn.onclick=async()=>{await fetch(API+"/api/ai-analyse",{method:"POST"});updateStatus()};
+refreshBtn.onclick=updateStatus;
 
-    // forecast markers: use partialReport.countriesOK if available
-    forecastMarkers.forEach(m=>mapF.removeLayer(m)); forecastMarkers=[];
-    const okCountries = d.partialReport?.extraction?.countriesOK || d.partialReport?.extraction?.countriesTotal ? d.partialReport?.extraction?.countriesOK || [] : [];
-    // If no countries list, fallback to coveredZones lat/lon if available
-    const covered = d.coveredZones || [];
-    covered.slice(0,500).forEach(p=>{
-      const m = L.circleMarker([p.lat, p.lon],{radius:5,color:"#4caf50",fillOpacity:0.8}).addTo(mapF).bindPopup(`${p.country||p.name || "zone"}`);
-      forecastMarkers.push(m);
-    });
-
-    // alerts markers
-    alertMarkers.forEach(m=>mapA.removeLayer(m)); alertMarkers=[];
-    const alerts = d.alerts || d.alertsLocal || [];
-    (alerts || []).forEach(a=>{
-      const c = (a.certainty ?? a.data?.confidence) || 0;
-      const color = c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
-      const lat = a.geo?.lat || a.lat || (a.data?.geo?.lat) || 0;
-      const lon = a.geo?.lon || a.lon || (a.data?.geo?.lon) || 0;
-      const m = L.circleMarker([lat,lon],{radius:6,color,fillOpacity:0.9}).addTo(mapA).bindPopup(`<b>${a.zone||a.country||"?"}</b><br>${a.title||a.data?.type||""}<br>${c}%`);
-      alertMarkers.push(m);
-    });
-  }
-
-  // SSE logs
-  const logsBox = document.getElementById("logs");
-  const evt = new EventSource(API + "/api/logs/stream");
-  evt.onmessage = e => {
-    try{
-      const obj = JSON.parse(e.data);
-      const ts = new Date(obj.timestamp || obj.ts || Date.now()).toLocaleTimeString();
-      const line = document.createElement("div");
-      line.textContent = `[${ts}] ${obj.message || obj.text || obj.msg || JSON.stringify(obj)}`;
-      logsBox.appendChild(line);
-      logsBox.scrollTop = logsBox.scrollHeight;
-    }catch(err){ console.error("SSE parse err", err); }
-  };
-
-  // Buttons
-  document.getElementById("runBtn").onclick = async () => {
-    if(!confirm("Lancer l'extraction (Phase 1) ?")) return;
-    const r = await fetch(API + "/api/run-global", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({zone:"All"})});
-    const d = await r.json();
-    alert(d.success ? "✅ Extraction lancée" : "❌ Erreur: " + (d.error||""));
-    updateStatus();
-  };
-  document.getElementById("aiBtn").onclick = async () => {
-    if(!confirm("Lancer l'analyse IA J.E.A.N (Phase 2) ?")) return;
-    const r = await fetch(API + "/api/ai-analyse", {method:"POST"});
-    const d = await r.json();
-    alert(d.success || d.ok ? "🧠 Analyse IA lancée" : "❌ Erreur IA: " + (d.error||""));
-    updateStatus();
-  };
-  document.getElementById("refreshBtn").onclick = updateStatus;
-
-  // Chat console to /api/ai-admin (GPT-4o-mini)
-  document.getElementById("sendChat").onclick = async () => {
-    const txt = document.getElementById("chatInput").value.trim(); if(!txt) return;
-    const cm = document.getElementById("chatMessages");
-    cm.innerHTML += `<div style="color:#9ad6ff">Vous: ${txt}</div>`;
-    document.getElementById("chatInput").value = "";
-    const res = await fetch(API + "/api/ai-admin", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({message:txt, mode:"moteur"})});
-    const j = await res.json();
-    cm.innerHTML += `<div style="color:#b2f5c9">J.E.A.N: ${j.reply || j}</div>`;
-    cm.scrollTop = cm.scrollHeight;
-  };
-
-  // auto refresh
-  updateStatus();
-  setInterval(updateStatus, 10000);
+sendChat.onclick=async()=>{
+  const txt=chatInput.value.trim(); if(!txt)return;
+  chatMessages.innerHTML+=`<div style='color:#9ad6ff'>Vous : ${txt}</div>`;
+  chatInput.value="";
+  const r=await fetch(API+"/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt,mode:"moteur"})});
+  const j=await r.json();
+  chatMessages.innerHTML+=`<div style='color:#b2f5c9'>J.E.A.N : ${j.reply}</div>`;
+  chatMessages.scrollTop=chatMessages.scrollHeight;
+};
+updateStatus(); setInterval(updateStatus,15000);
 </script>
 </body>
 </html>
