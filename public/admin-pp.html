@@ -19,7 +19,8 @@
     #fusionBtn{background:#f5b642;color:#000}
     .grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
     .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
-    #mapForecast,#mapAlerts{height:300px;border-radius:8px}
+    #mapForecast,#mapAlerts,#mapPremium{height:300px;border-radius:8px}
+    #mapPremium{height:220px;margin-top:8px}
     #logs{height:220px;overflow:auto;background:#061119;padding:8px;border-radius:8px;font-family:monospace}
     .chat-panel{height:300px;display:flex;flex-direction:column}
     .chat-messages{flex:1;overflow:auto;padding:8px;background:#07131a;border-radius:8px;margin-bottom:8px}
@@ -63,9 +64,11 @@
         <div><b>Statut :</b> <span id="engineStatus">—</span> | <b>Dernier run :</b> <span id="lastRun">—</span></div>
         <div><b>Alertes actives :</b> <span id="alertsCount">0</span></div>
       </div>
+
       <div class="card" style="margin-top:12px">
         <h3>🌍 Carte prévisions</h3><div id="mapForecast"></div>
       </div>
+
       <div class="card" style="margin-top:12px">
         <h3>🌋 Carte alertes</h3><div id="mapAlerts"></div>
       </div>
@@ -74,6 +77,8 @@
     <div>
       <div class="card">
         <h3>📜 Logs moteur</h3><div id="logs">Connexion…</div>
+        <h4 style="margin-top:10px">💎 Zones Premium actives (≥ 90 %)</h4>
+        <div id="mapPremium"></div>
       </div>
 
       <div class="card" style="margin-top:12px">
@@ -95,9 +100,11 @@
 const API=location.origin;
 const mapF=L.map("mapForecast").setView([20,0],2);
 const mapA=L.map("mapAlerts").setView([20,0],2);
+const mapP=L.map("mapPremium").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-let fMarks=[],aMarks=[];
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapP);
+let fMarks=[],aMarks=[],pMarks=[];
 
 async function getJSON(u){try{const r=await fetch(u);return r.ok?await r.json():null}catch{return null}}
 
@@ -106,19 +113,23 @@ async function updateStatus(){
   engineStatus.textContent=d.status||"—";
   lastRun.textContent=d.lastRun?new Date(d.lastRun).toLocaleString():"Jamais";
   alertsCount.textContent=(d.alerts||[]).length;
-  fMarks.forEach(m=>mapF.removeLayer(m));aMarks.forEach(m=>mapA.removeLayer(m));fMarks=[];aMarks=[];
-  (d.coveredZones||[]).slice(0,500).forEach(p=>fMarks.push(L.circleMarker([p.lat,p.lon],{radius:4,color:"#4caf50"}).addTo(mapF)));
+
+  fMarks.forEach(m=>mapF.removeLayer(m));aMarks.forEach(m=>mapA.removeLayer(m));pMarks.forEach(m=>mapP.removeLayer(m));
+  fMarks=[];aMarks=[];pMarks=[];
+  (d.coveredZones||[]).slice(0,500).forEach(p=>fMarks.push(L.circleMarker([p.lat,p.lon],{radius:3,color:"#4caf50"}).addTo(mapF)));
   (d.alerts||[]).forEach(a=>{
     const c=a.certainty||0;
     const col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
-    aMarks.push(L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{radius:5,color:col}).addTo(mapA)
+    aMarks.push(L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{radius:4,color:col}).addTo(mapA).bindPopup(`<b>${a.zone}</b><br>${a.title}<br>${c}%`));
+    if(c>=90)pMarks.push(L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{radius:5,color:"#00ffcc"}).addTo(mapP)
       .bindPopup(`<b>${a.zone}</b><br>${a.title}<br>${c}%`));
   });
 }
 
 const es=new EventSource(API+"/api/logs/stream");
 es.onmessage=e=>{
-  try{const d=JSON.parse(e.data);
+  try{
+    const d=JSON.parse(e.data);
     const line=document.createElement("div");
     line.textContent=`[${new Date(d.timestamp||Date.now()).toLocaleTimeString()}] ${d.message}`;
     logs.appendChild(line);logs.scrollTop=logs.scrollHeight;
@@ -129,7 +140,7 @@ runBtn.onclick=async()=>{await fetch(API+"/api/run-global",{method:"POST"});upda
 aiBtn.onclick=async()=>{await fetch(API+"/api/ai-analyse",{method:"POST"});updateStatus()};
 refreshBtn.onclick=updateStatus;
 
-// ⚡ Fusion complète : extraction + IA + push
+// ⚡ Fusion complète
 fusionBtn.onclick=async()=>{
   if(!confirm("⚡ Lancer la Fusion complète ?"))return;
   try{
@@ -153,7 +164,9 @@ sendChat.onclick=async()=>{
   chatMessages.innerHTML+=`<div style='color:#b2f5c9'>J.E.A.N : ${j.reply}</div>`;
   chatMessages.scrollTop=chatMessages.scrollHeight;
 };
-updateStatus();setInterval(updateStatus,15000);
+
+updateStatus();
+setInterval(updateStatus,15000);
 </script>
 </body>
 </html>
