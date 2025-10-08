@@ -9,9 +9,9 @@ import { applyClimateFactors } from "./climateFactors.js";
 import Alert from "../models/Alert.js";
 
 export async function runAIAnalysis() {
+  const state = await getEngineState();
   try {
-    await addEngineLog("🧠 [IA.JEAN] Lancement IA J.E.A.N. – Analyse en cours...", "info", "IA.JEAN");
-    const state = await getEngineState();
+    await addEngineLog("🧠 [IA.JEAN] Analyse IA J.E.A.N en cours...", "info", "IA.JEAN");
 
     if (!state.forecasts || !Array.isArray(state.forecasts) || state.forecasts.length === 0) {
       await addEngineError("Aucune prévision disponible pour IA J.E.A.N.", "IA.JEAN");
@@ -27,53 +27,30 @@ export async function runAIAnalysis() {
         let data = await applyLocalFactors(f, f.lat, f.lon, f.country);
         data = await applyClimateFactors(data, f.lat, f.lon, f.country);
 
-        // 🔎 Calcul de la fiabilité IA
-        const confidence = Math.min(100, 75 + (stations?.data ? 15 : 0) + Math.random() * 10);
+        // 🔎 Fiabilité IA
+        const confidence = Math.min(100, 80 + (stations?.data ? 10 : 0) + Math.random() * 10);
         data.confidence = confidence;
 
-        // ⚠️ Génération d'alertes selon les seuils
-        const alertCandidates = [];
+        // ⚠️ Détection auto d’alertes
+        const newAlerts = [];
 
-        if (data.wind && data.wind > 70) {
-          alertCandidates.push({
-            type: "Vent violent",
-            level: "Severe",
-            message: `Rafales fortes détectées (${Math.round(data.wind)} km/h)`,
-          });
-        }
+        if (data.wind && data.wind > 70)
+          newAlerts.push({ type: "Vent violent", level: "Severe", msg: `Rafales fortes (${Math.round(data.wind)} km/h)` });
+        if (data.precipitation && data.precipitation > 40)
+          newAlerts.push({ type: "Pluie extrême", level: "High", msg: `Précipitations intenses (${data.precipitation.toFixed(1)} mm/h)` });
+        if (data.temperature && data.temperature > 35)
+          newAlerts.push({ type: "Chaleur extrême", level: "Moderate", msg: `Température élevée (${data.temperature.toFixed(1)}°C)` });
+        if (data.temperature && data.temperature < -10)
+          newAlerts.push({ type: "Froid intense", level: "Moderate", msg: `Température très basse (${data.temperature.toFixed(1)}°C)` });
 
-        if (data.precipitation && data.precipitation > 40) {
-          alertCandidates.push({
-            type: "Pluie extrême",
-            level: "High",
-            message: `Précipitations intenses (${data.precipitation.toFixed(1)} mm/h)`,
-          });
-        }
-
-        if (data.temperature && data.temperature > 35) {
-          alertCandidates.push({
-            type: "Chaleur extrême",
-            level: "Moderate",
-            message: `Température élevée (${data.temperature.toFixed(1)}°C)`,
-          });
-        }
-
-        if (data.temperature && data.temperature < -10) {
-          alertCandidates.push({
-            type: "Froid intense",
-            level: "Moderate",
-            message: `Température très basse (${data.temperature.toFixed(1)}°C)`,
-          });
-        }
-
-        // 🧩 Si alertes détectées → création en base
-        for (const a of alertCandidates) {
+        // 💾 Enregistrement Mongo
+        for (const a of newAlerts) {
           const alert = new Alert({
             country: f.country || "Unknown",
             zone: f.zone || "GLOBAL",
             type: a.type,
             level: a.level,
-            title: a.message,
+            title: a.msg,
             lat: f.lat,
             lon: f.lon,
             reliability: confidence,
@@ -85,24 +62,24 @@ export async function runAIAnalysis() {
 
         validated.push(data);
       } catch (innerErr) {
-        await addEngineError(`Erreur analyse locale IA.J.E.A.N. : ${innerErr.message}`, "IA.JEAN");
+        await addEngineError(`Erreur IA.J.E.A.N locale: ${innerErr.message}`, "IA.JEAN");
       }
     }
 
-    // 💾 Mise à jour de l’état global
+    // 💾 Sauvegarde finale
     state.finalReport = validated;
     state.lastAnalysis = new Date();
     await saveEngineState(state);
 
     await addEngineLog(
-      `✅ [IA.JEAN] Analyse terminée : ${validated.length} prévisions validées, ${alerts.length} alertes créées.`,
+      `✅ [IA.JEAN] Analyse terminée – ${validated.length} prévisions validées, ${alerts.length} alertes générées.`,
       "success",
       "IA.JEAN"
     );
 
     return { success: true, validated, alerts };
   } catch (err) {
-    await addEngineError(`Erreur IA J.E.A.N. : ${err.message}`, "IA.JEAN");
+    await addEngineError(`Erreur IA J.E.A.N: ${err.message}`, "IA.JEAN");
     return { success: false, error: err.message };
   }
 }
