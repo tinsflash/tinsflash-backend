@@ -9,7 +9,7 @@
 import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
-import adjustWithLocalFactors from "./localFactors.js";
+import { applyLocalFactors } from "./localFactors.js";
 
 export async function superForecast({ zones = [], runType = "global" }) {
   try {
@@ -18,7 +18,7 @@ export async function superForecast({ zones = [], runType = "global" }) {
     const results = [];
 
     for (const z of zones) {
-      // Zones couvertes → prévisions moteur TINSFLASH IA J.E.A.N.
+      // === ZONES COUVERTES → moteur TINSFLASH IA J.E.A.N. ===
       if (["EU", "USA"].includes(z)) {
         const lat = z === "EU" ? 50 : 40;
         const lon = z === "EU" ? 10 : -95;
@@ -30,20 +30,22 @@ export async function superForecast({ zones = [], runType = "global" }) {
           reliability: 0.95,
         };
 
+        // 🧭 Ajustements multi-couches
         data = await applyGeoFactors(data, lat, lon, z);
-        data = await adjustWithLocalFactors(data, z, lat, lon);
+        data = await applyLocalFactors(data, lat, lon, z);
 
         results.push({ zone: z, lat, lon, ...data, timestamp: new Date() });
-      } else {
-        // Zones non couvertes → Open-Data (appoint)
-        try {
-          const [gfs] = await Promise.all([
-            axios
-              .get(`https://api.open-meteo.com/v1/gfs?latitude=0&longitude=0&current=temperature_2m,precipitation,wind_speed_10m`)
-              .then((r) => r.data?.current),
-          ]);
+      }
 
+      // === ZONES NON COUVERTES → Open-Data appoint ===
+      else {
+        try {
+          const r = await axios.get(
+            `https://api.open-meteo.com/v1/gfs?latitude=0&longitude=0&current=temperature_2m,precipitation,wind_speed_10m`
+          );
+          const gfs = r.data?.current;
           if (!gfs) throw new Error("Aucune donnée Open-Data reçue");
+
           results.push({
             zone: z,
             lat: 0,
