@@ -1,35 +1,37 @@
-// services/runGlobal.js
-// 🌍 Lancement global de la machine TINSFLASH
-import { addEngineLog } from "./engineState.js";
+// ============================================================
+// 🌍 TINSFLASH – runGlobal.js
+// ============================================================
+// Lance la fusion globale via superForecast()
+// ============================================================
+
 import { superForecast } from "./superForecast.js";
-import { enumerateCoveredPoints } from "./zonesCovered.js";
 
-export async function runGlobal(zone = "All") {
+export async function runGlobal() {
+  console.log("[TINSFLASH] 🌍 runGlobal launched");
+
   try {
-    await addEngineLog(`🚀 Lancement Global – Zone ${zone}`, "info", "runGlobal");
+    const result = await superForecast({
+      zones: ["EU", "USA", "WORLD"],
+      runType: "global",
+    });
 
-    const points = enumerateCoveredPoints(zone);
-    const results = [];
+    console.log(
+      `[TINSFLASH] 🌐 RunGlobal success – Reliability: ${Math.round(
+        result.reliability * 100
+      )}%`
+    );
 
-    for (const p of points) {
-      const { lat, lon, country, region } = p;
-
-      // Données météo initiales (issues des modèles Open-Meteo/GFS/ICON)
-      const rawForecast = {
-        temperature: 15,
-        humidity: 60,
-        reliability: 70,
-      };
-
-      // Exécution du moteur SuperForecast (ajustements locaux + climatiques)
-      const adjusted = await superForecast(rawForecast, lat, lon, country, region);
-      results.push({ ...p, forecast: adjusted });
-    }
-
-    await addEngineLog(`✅ RunGlobal terminé (${results.length} points analysés)`, "success", "runGlobal");
-    return results;
+    return result;
   } catch (err) {
-    await addEngineLog(`❌ RunGlobal erreur : ${err.message}`, "error", "runGlobal");
-    return [];
+    console.error("[TINSFLASH] ❌ RunGlobal failed:", err);
+    throw err;
   }
+}
+
+// Auto-lancement si exécuté directement
+if (process.argv[1].includes("runGlobal.js")) {
+  runGlobal().then(() => {
+    console.log("[TINSFLASH] 🏁 Global run complete");
+    process.exit(0);
+  });
 }
