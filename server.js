@@ -2,32 +2,41 @@
 // 🌍 TINSFLASH – Central Meteorological Engine (Everest Protocol v1.3 PRO++)
 // 100 % réel – IA J.E.A.N. (GPT-5 moteur / GPT-4o-mini console)
 // ==========================================================
+
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import EventEmitter from "events";
 import fetch from "node-fetch";
 import axios from "axios";
 
+// === Moteur interne & IA ===
 import { runGlobal } from "./services/runGlobal.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
-import * as engineStateService from "./services/engineState.js";
-import * as adminLogs from "./services/adminLogs.js";
+import {
+  initEngineState,
+  getEngineState,
+  addEngineLog,
+  addEngineError,
+  engineEvents,
+} from "./services/engineState.js";
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import Alert from "./models/Alert.js";
 import { askCohere } from "./services/cohereService.js";
 import * as chatService from "./services/chatService.js";
 
+// ==========================================================
+// 🧩 Initialisation
+// ==========================================================
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
 app.use(express.json());
+await initEngineState();
 
 // ==========================================================
 // 🌐 CORS global
@@ -41,22 +50,22 @@ app.use(
 );
 
 // ==========================================================
-// 📁 Fichiers statiques (public + sous-dossiers + démos)
+// 📁 Fichiers statiques
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
-app.use("/avatars", express.static(path.join(__dirname, "public/avatars")));
-app.use("/videos", express.static(path.join(__dirname, "public/videos")));
-app.use("/assets", express.static(path.join(__dirname, "public/assets")));
-app.use("/demo", express.static(path.join(__dirname, "public/demo")));
+["avatars", "videos", "assets", "demo"].forEach((dir) =>
+  app.use(`/${dir}`, express.static(path.join(__dirname, `public/${dir}`)))
+);
 
 // ==========================================================
-// 🧩 Correctif MIME – Three.js & OrbitControls
+// 🧠 Correctif MIME – Three.js & OrbitControls
 // ==========================================================
 app.get("/three.module.js", async (_, res) => {
   try {
-    const r = await fetch("https://unpkg.com/three@0.161.0/build/three.module.js");
-    const js = await r.text();
-    res.type("application/javascript").send(js);
+    const r = await fetch(
+      "https://unpkg.com/three@0.161.0/build/three.module.js"
+    );
+    res.type("application/javascript").send(await r.text());
   } catch (err) {
     console.error("Erreur three.module.js:", err.message);
     res.status(500).send("// erreur module three.js");
@@ -64,9 +73,10 @@ app.get("/three.module.js", async (_, res) => {
 });
 app.get("/OrbitControls.js", async (_, res) => {
   try {
-    const r = await fetch("https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js");
-    const js = await r.text();
-    res.type("application/javascript").send(js);
+    const r = await fetch(
+      "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js"
+    );
+    res.type("application/javascript").send(await r.text());
   } catch (err) {
     console.error("Erreur OrbitControls:", err.message);
     res.status(500).send("// erreur module OrbitControls");
@@ -78,9 +88,12 @@ app.get("/OrbitControls.js", async (_, res) => {
 // ==========================================================
 if (process.env.MONGO_URI) {
   mongoose
-    .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
     .then(() => console.log("✅ MongoDB connecté"))
-    .catch((err) => console.error("❌ Erreur MongoDB :", err));
+    .catch((err) => console.error("❌ Erreur MongoDB :", err.message));
 } else console.error("⚠️ MONGO_URI manquant dans .env");
 
 // ==========================================================
@@ -91,10 +104,10 @@ app.get("/", (_, res) =>
 );
 
 // ==========================================================
-// 🌤️ Démo publique météo 3D (Open-Meteo + GPS + Relief)
+// 🌤️ Démo publique météo 3D (Open-Meteo + Relief)
 // ==========================================================
 app.get("/demo/meteo3d-proplus.html", (_, res) =>
-  res.sendFile(path.join(__dirname, "public", "demo", "meteo3d-proplus.html"))
+  res.sendFile(path.join(__dirname, "public/demo/meteo3d-proplus.html"))
 );
 
 // ==========================================================
@@ -103,12 +116,12 @@ app.get("/demo/meteo3d-proplus.html", (_, res) =>
 app.post("/api/run-global", async (req, res) => {
   try {
     await checkSourcesFreshness();
-    const { zone } = req.body;
-    const result = await runGlobal(zone || "All");
-    await addLog(`⚙️ Extraction complète effectuée pour ${zone || "All"}`);
+    const zone = req.body?.zone || "All";
+    const result = await runGlobal(zone);
+    await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`, "success", "runGlobal");
     res.json({ success: true, result });
   } catch (e) {
-    await addLog(`❌ Erreur extraction: ${e.message}`);
+    await addEngineError(`❌ Erreur extraction: ${e.message}`, "runGlobal");
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -119,10 +132,10 @@ app.post("/api/run-global", async (req, res) => {
 app.post("/api/ai-analyse", async (_, res) => {
   try {
     const r = await runAIAnalysis();
-    await addLog("🧠 Analyse IA J.E.A.N terminée avec succès");
+    await addEngineLog("🧠 Analyse IA J.E.A.N terminée avec succès", "success", "IA");
     res.json(r);
   } catch (e) {
-    await addLog(`❌ Erreur IA J.E.A.N: ${e.message}`);
+    await addEngineError(`Erreur IA J.E.A.N: ${e.message}`, "IA");
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -132,7 +145,7 @@ app.post("/api/ai-analyse", async (_, res) => {
 // ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
-    const state = await engineStateService.getEngineState();
+    const state = await getEngineState();
     res.json({
       status: state?.checkup?.engineStatus || state?.status || "IDLE",
       lastRun: state?.lastRun,
@@ -151,7 +164,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 IA publique Cohere (grand public J.E.A.N.)
+// 💬 IA publique (Cohere) – Grand public J.E.A.N.
 // ==========================================================
 app.post("/api/cohere", async (req, res) => {
   try {
@@ -160,15 +173,11 @@ app.post("/api/cohere", async (req, res) => {
       return res.status(400).json({ error: "Question invalide" });
 
     const { reply, avatar } = await askCohere(question);
-    await addLog(`💬 Question publique J.E.A.N: "${question}"`);
+    await addEngineLog(`💬 Question publique J.E.A.N: "${question}"`, "info", "Cohere");
     res.json({ success: true, reply, avatar: `/avatars/jean-${avatar}.png` });
   } catch (err) {
-    console.error("❌ Erreur Cohere :", err.message);
-    res.status(500).json({
-      success: false,
-      reply: "Erreur interne J.E.A.N.",
-      avatar: "/avatars/jean-default.png",
-    });
+    await addEngineError(`Erreur Cohere: ${err.message}`, "Cohere");
+    res.status(500).json({ success: false, reply: "Erreur interne J.E.A.N." });
   }
 });
 
@@ -181,27 +190,28 @@ app.post("/api/ai-admin", async (req, res) => {
     if (!message || message.trim().length < 2)
       return res.status(400).json({ success: false, error: "Message vide" });
 
-    let reply = "";
-    if (mode === "meteo") reply = await chatService.askAIAdmin(message, "meteo");
-    else reply = await chatService.askAIAdmin(message, "moteur");
+    const reply =
+      mode === "meteo"
+        ? await chatService.askAIAdmin(message, "meteo")
+        : await chatService.askAIAdmin(message, "moteur");
 
-    await addLog(`💬 Question console (${mode}) : "${message}"`);
+    await addEngineLog(`💬 Console admin (${mode}) : "${message}"`, "info", "admin");
     res.json({ success: true, reply });
   } catch (e) {
-    console.error("❌ Erreur /api/ai-admin :", e.message);
-    await addLog(`❌ Erreur IA admin : ${e.message}`);
+    await addEngineError(`Erreur IA admin: ${e.message}`, "admin");
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // ==========================================================
-// 🌋 Alertes (Everest Protocol)
+// 🌋 Alertes – Everest Protocol
 // ==========================================================
 app.get("/api/alerts", async (_, res) => {
   try {
     const alerts = await Alert.find().sort({ certainty: -1 });
     res.json(alerts);
   } catch (e) {
+    await addEngineError(`Erreur récupération alertes: ${e.message}`, "alerts");
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -213,10 +223,12 @@ app.get("/api/altitude", async (req, res) => {
   const { lat, lon } = req.query;
   if (!lat || !lon) return res.status(400).json({ error: "Coordonnées manquantes" });
   try {
-    const r = await axios.get(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+    const r = await axios.get(
+      `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
+    );
     const alt = r.data.results?.[0]?.elevation || 0;
     res.json({ altitude: alt });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: "Erreur altitude" });
   }
 });
@@ -230,67 +242,45 @@ app.get("/api/weather-map", async (req, res) => {
     );
     const { cloud_cover, precipitation } = r.data.current;
     res.json({ cloud: cloud_cover || 0, rain: precipitation || 0 });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: "Erreur météo" });
   }
 });
 
 // ==========================================================
-// 📡 Logs SSE (flux temps réel)
+// 📡 Flux SSE – Logs moteur temps réel (unifié)
 // ==========================================================
-const logEmitter = new EventEmitter();
-const errorEmitter = new EventEmitter();
-
-app.get("/api/logs/stream", (req, res) => {
+app.get("/api/logs-stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const sendLog = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
-  const sendErr = (err) =>
-    res.write(`data: ${JSON.stringify({ type: "error", ...err })}\n\n`);
+  const send = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
+  engineEvents.on("log", send);
 
-  logEmitter.on("newLog", sendLog);
-  errorEmitter.on("newError", sendErr);
-
-  const ping = setInterval(() => res.write(`: ping\n\n`), 25000);
+  const ping = setInterval(() => res.write(`: ping\n\n`), 20000);
   req.on("close", () => {
     clearInterval(ping);
-    logEmitter.removeListener("newLog", sendLog);
-    errorEmitter.removeListener("newError", sendErr);
+    engineEvents.off("log", send);
   });
 });
-
-async function addAdminLogWithStream(msg) {
-  const payload = { timestamp: new Date(), message: msg };
-  logEmitter.emit("newLog", payload);
-  try {
-    await adminLogs.addLog(msg);
-  } catch (e) {
-    errorEmitter.emit("newError", {
-      timestamp: new Date(),
-      message: `⚠️ Log error: ${e.message}`,
-    });
-  }
-}
-const addLog = addAdminLogWithStream;
 
 // ==========================================================
 // 🧭 Pages admin protégées
 // ==========================================================
-const pages = [
+[
   "admin-pp.html",
   "admin-alerts.html",
   "admin-chat.html",
   "admin-index.html",
   "admin-radar.html",
   "admin-users.html",
-];
-for (const page of pages)
+].forEach((page) =>
   app.get(`/${page}`, (_, res) =>
     res.sendFile(path.join(__dirname, "public", page))
-  );
+  )
+);
 
 // ==========================================================
 // 🚀 Lancement
