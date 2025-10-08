@@ -16,19 +16,18 @@ export async function runGlobal() {
     });
 
     console.log(
-      `[TINSFLASH] 🌐 RunGlobal success – Reliability: ${Math.round(
+      `[TINSFLASH] 🌐 runGlobal success – Reliability: ${Math.round(
         result.reliability * 100
       )}%`
     );
 
     return result;
   } catch (err) {
-    console.error("[TINSFLASH] ❌ RunGlobal failed:", err);
+    console.error("[TINSFLASH] ❌ runGlobal failed:", err);
     throw err;
   }
 }
 
-// Auto-lancement si exécuté directement
 if (process.argv[1].includes("runGlobal.js")) {
   runGlobal().then(() => {
     console.log("[TINSFLASH] 🏁 Global run complete");
