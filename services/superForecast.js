@@ -1,7 +1,7 @@
 // ==========================================================
 // 🧠 TINSFLASH – SuperForecast Engine (Everest Protocol v1.3)
 // Fusion multi-modèles météo : GFS, ECMWF, ICON, Open-Meteo
-// 100 % réel, connecté, IA J.E.A.N compatible
+// 100 % réel – IA J.E.A.N compatible
 // ==========================================================
 
 import axios from "axios";
@@ -29,13 +29,13 @@ export async function superForecast() {
           axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation`),
         ]);
 
-        // Fusion IA pondérée
         const temperature =
           (gfs.data.hourly.temperature_2m[0] +
             ecmwf.data.hourly.temperature_2m[0] +
             icon.data.hourly.temperature_2m[0] +
             open.data.hourly.temperature_2m[0]) /
           4;
+
         const precipitation =
           (gfs.data.hourly.precipitation[0] +
             ecmwf.data.hourly.precipitation[0] +
@@ -43,12 +43,10 @@ export async function superForecast() {
             open.data.hourly.precipitation[0]) /
           4;
 
-        // Facteurs terrain + locaux
         let base = { temperature, precipitation, wind: 0 };
         base = await applyGeoFactors(base, lat, lon, country);
         base = await adjustWithLocalFactors(base, country, lat, lon);
 
-        // Modules physiques internes
         const [rain, snow, wind] = await Promise.all([
           analyzeRain(lat, lon, country),
           analyzeSnow(lat, lon, country),
