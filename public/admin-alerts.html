@@ -1,143 +1,49 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🌋 Command Center Alertes – TINSFLASH</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    body{background:#060c14;color:#eaf2ff;font-family:Inter,system-ui;margin:0}
-    header{background:#08121d;padding:14px;text-align:center;color:#6bf3ff;font-weight:700}
-    .toolbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px;background:#0b1623}
-    .toolbar button{background:#0d2535;color:#9ad6ff;border:none;border-radius:8px;padding:8px 12px;cursor:pointer}
-    .toolbar button:hover{background:#0e2f44}
-    #map{height:420px;margin:10px;border-radius:8px}
-    table{width:100%;border-collapse:collapse;margin-top:10px;background:#0e1a25}
-    th,td{padding:8px;border-bottom:1px solid #08202a;text-align:left}
-    th{background:#0b1722;color:#6bf3ff;position:sticky;top:0}
-    .action-btn{padding:4px 8px;border:none;border-radius:6px;color:white;cursor:pointer;font-size:12px;margin:1px}
-    .ai{background:#00b894}.human{background:#e67e22}.notify{background:#3498db}
-    .validate{background:#27ae60}.hold{background:#f39c12}.watch{background:#c0392b}
-    .relancer{background:#16a085}
-    #logBox{background:#07151d;padding:8px;height:140px;overflow:auto;border-top:1px solid #123}
-  </style>
+<meta charset="utf-8"/><meta name="robots" content="noindex,nofollow"/>
+<title>🌋 Alertes – TINSFLASH</title>
+<style>
+body{background:#0b1220;color:#e6f6ff;font-family:Inter,Arial;margin:0;padding:0}
+header{background:#08101f;padding:14px;text-align:center;font-weight:700;color:#4fc3f7}
+.alertCard{background:#0f1724;margin:10px;padding:10px;border-radius:8px}
+button{margin-top:6px;margin-right:6px;background:#4fc3f7;color:#001;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:700}
+</style>
 </head>
 <body>
 <script>
-  const pin = sessionStorage.getItem("tinsflashPIN");
-  if(!pin){const p=prompt("Code admin ?");if(p!=="202679"){alert("⛔ Accès refusé");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
+const pin=sessionStorage.getItem("tinsflashPIN");
+if(!pin){const p=prompt("Code d’accès admin ?");if(p!=="202679"){alert("⛔");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
 </script>
 
-<header>🌋 Command Center Alertes – TINSFLASH</header>
-<div class="toolbar">
-  <button onclick="loadAlerts('all')">🌍 Toutes</button>
-  <button onclick="loadAlerts('premium')">💎 Premium (≥90%)</button>
-  <button onclick="loadAlerts('verif')">🧩 À vérifier (70–89%)</button>
-  <button onclick="loadAlerts('watch')">👁️ Sous surveillance (<70%)</button>
-  <button onclick="loadAlerts()">🔄 Rafraîchir</button>
-</div>
-
-<div id="map"></div>
-
-<table id="alertsTable">
-  <thead>
-    <tr>
-      <th>Pays / Région</th><th>Type</th><th>Certitude</th><th>Statut</th><th>Sources</th><th>Actions</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-<div id="logBox"><b>📡 Logs d'alerte :</b><br /></div>
+<header>🌋 Gestion des Alertes – IA J.E.A.N</header>
+<div id="alertsList" style="padding:10px"></div>
 
 <script>
-  const map = L.map("map").setView([20,0],2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-  let markers = [];
-
-  async function loadAlerts(filter="all"){
-    try{
-      const res = await fetch("/api/alerts");
-      const alerts = await res.json();
-      const tbody = document.querySelector("#alertsTable tbody");
-      tbody.innerHTML = "";
-      markers.forEach(m=>map.removeLayer(m)); markers=[];
-
-      for(const a of alerts){
-        const c = a.certainty || 0;
-        let cat = "watch";
-        if(c>=90) cat="premium"; else if(c>=70) cat="verif";
-        if(filter!=="all" && cat!==filter) continue;
-        const color = c>=90?"lime":c>=70?"gold":"#e74c3c";
-        const mk = L.circleMarker([a.geo?.lat||0,a.geo?.lon||0],{radius:6,color,fillOpacity:0.9})
-          .addTo(map).bindPopup(`<b>${a.zone||a.country}</b><br>${a.title}<br>${c}%`);
-        markers.push(mk);
-
-        const tr=document.createElement("tr");
-        tr.innerHTML=`
-          <td>${a.zone||"-"}</td>
-          <td>${a.title||"?"}</td>
-          <td>${c}%</td>
-          <td>${a.status||"?"}</td>
-          <td>${(a.sources||[]).join(", ")||"-"}</td>
-          <td>${renderActions(a,c)}</td>`;
-        tbody.appendChild(tr);
-      }
-      logMsg(`✅ ${alerts.length} alertes chargées`);
-    }catch(e){logMsg("Erreur chargement alertes : "+e.message);}
-  }
-
-  function renderActions(a,c){
-    if(c>=90){
-      return `
-        <button class="action-btn ai" onclick="analyzeIA('${a._id}')">🧠 Analyse IA+</button>
-        <button class="action-btn human" onclick="assignHuman('${a._id}')">👤 Expert</button>
-        <button class="action-btn notify" onclick="notify('${a._id}')">📢 Prévenir</button>`;
-    }else if(c>=70){
-      return `
-        <button class="action-btn validate" onclick="updateStatus('${a._id}','validated')">✅ Valider</button>
-        <button class="action-btn hold" onclick="updateStatus('${a._id}','pending')">⏳ Attente</button>
-        <button class="action-btn watch" onclick="updateStatus('${a._id}','under_watch')">👁️ Surv.</button>`;
-    }else{
-      return `
-        <button class="action-btn watch" onclick="updateStatus('${a._id}','under_watch')">👁️ Surv.</button>
-        <button class="action-btn relancer" onclick="analyzeIA('${a._id}')">🔄 Relancer IA</button>`;
-    }
-  }
-
-  async function analyzeIA(id){
-    await fetch(`/api/ai-analyse`,{method:"POST",body:JSON.stringify({alertId:id}),headers:{"Content-Type":"application/json"}});
-    logMsg(`🧠 Analyse IA relancée sur ${id}`);
-  }
-
-  async function assignHuman(id){
-    const name=prompt("Nom de l’expert à assigner ?");
-    if(!name)return;
-    await fetch(`/api/alerts/status/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:`assigned:${name}`})});
-    logMsg(`👤 Alerte ${id} confiée à ${name}`);
-    loadAlerts();
-  }
-
-  async function notify(id){
-    await fetch(`/api/alerts/export/${id}`,{method:"POST"});
-    logMsg(`📢 Notification envoyée pour ${id}`);
-  }
-
-  async function updateStatus(id,action){
-    await fetch(`/api/alerts/status/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({action})});
-    logMsg(`⚙️ Alerte ${id} → ${action}`);
-    loadAlerts();
-  }
-
-  function logMsg(m){const b=document.getElementById("logBox");b.innerHTML+=m+"<br>";b.scrollTop=b.scrollHeight;}
-
-  const evt=new EventSource("/api/logs/stream");
-  evt.onmessage=(e)=>{try{const d=JSON.parse(e.data);if(d.message&&d.message.includes("🚨"))logMsg(d.message);}catch{}};
-
-  loadAlerts();
-  setInterval(loadAlerts,90000);
+const API=location.origin;
+async function getJSON(u){try{const r=await fetch(u);return r.ok?await r.json():[]}catch{return[]}}
+async function loadAlerts(){const d=await getJSON(API+"/api/alerts");renderAlerts(d);}
+function renderAlerts(list){
+ const zone=document.getElementById("alertsList");zone.innerHTML="";
+ list.forEach(a=>{
+  const c=a.certainty||0,col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
+  const div=document.createElement("div");
+  div.className="alertCard";div.style.borderLeft=`4px solid ${col}`;
+  div.innerHTML=`<b>${a.title}</b><br>🌍 ${a.zone} – ${c}%<br><small>${a.description||"—"}</small><br>
+  <button onclick="exportAlert('${a._id}')">📤 Exporter (détail complet)</button>
+  <button onclick="assignExpert('${a._id}')">👨‍🔬 Soumettre à expert</button>`;
+  zone.appendChild(div);
+ });}
+async function exportAlert(id){
+ const r=await fetch(API+"/api/alerts/export/"+id+"?mode=full");
+ if(!r.ok){alert("Erreur export");return;}
+ const blob=await r.blob();const u=URL.createObjectURL(blob);
+ const a=document.createElement("a");a.href=u;a.download="TINSFLASH_Alert_"+id+".pdf";a.click();}
+async function assignExpert(id){
+ const mail=prompt("Adresse expert humain ?");if(!mail)return;
+ await fetch(API+"/api/alerts/export/"+id+"?mode=expert",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:mail})});
+ alert("Alerte transmise à l’expert.");}
+loadAlerts();setInterval(loadAlerts,15000);
 </script>
 </body>
 </html>
