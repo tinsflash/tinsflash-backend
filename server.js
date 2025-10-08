@@ -62,23 +62,17 @@ app.use(express.static(path.join(__dirname, "public")));
 // ==========================================================
 app.get("/three.module.js", async (_, res) => {
   try {
-    const r = await fetch(
-      "https://unpkg.com/three@0.161.0/build/three.module.js"
-    );
+    const r = await fetch("https://unpkg.com/three@0.161.0/build/three.module.js");
     res.type("application/javascript").send(await r.text());
   } catch (err) {
-    console.error("Erreur three.module.js:", err.message);
     res.status(500).send("// erreur module three.js");
   }
 });
 app.get("/OrbitControls.js", async (_, res) => {
   try {
-    const r = await fetch(
-      "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js"
-    );
+    const r = await fetch("https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js");
     res.type("application/javascript").send(await r.text());
   } catch (err) {
-    console.error("Erreur OrbitControls:", err.message);
     res.status(500).send("// erreur module OrbitControls");
   }
 });
@@ -99,12 +93,10 @@ if (process.env.MONGO_URI) {
 // ==========================================================
 // 🌍 Index public
 // ==========================================================
-app.get("/", (_, res) =>
-  res.sendFile(path.join(__dirname, "public", "index.html"))
-);
+app.get("/", (_, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
 // ==========================================================
-// 🌤️ Démo publique météo 3D (Open-Meteo + Relief)
+// 🌤️ Démo publique météo 3D
 // ==========================================================
 app.get("/demo/meteo3d-proplus.html", (_, res) =>
   res.sendFile(path.join(__dirname, "public/demo/meteo3d-proplus.html"))
@@ -127,13 +119,13 @@ app.post("/api/run-global", async (req, res) => {
 });
 
 // ==========================================================
-// 🧠 Analyse IA J.E.A.N. (GPT-5 moteur)
+// 🧠 Analyse IA J.E.A.N.
 // ==========================================================
 app.post("/api/ai-analyse", async (_, res) => {
   try {
     const r = await runAIAnalysis();
     await addEngineLog("🧠 Analyse IA J.E.A.N terminée avec succès", "success", "IA");
-    res.json(r);
+    res.json({ success: true, result: r });
   } catch (e) {
     await addEngineError(`Erreur IA J.E.A.N: ${e.message}`, "IA");
     res.status(500).json({ success: false, error: e.message });
@@ -151,8 +143,6 @@ app.get("/api/status", async (_, res) => {
       lastRun: state?.lastRun,
       models: state?.checkup?.models || {},
       alerts: state?.alertsLocal || [],
-      alertsContinental: state?.alertsContinental || [],
-      alertsWorld: state?.alertsWorld || [],
       partialReport: state?.partialReport || null,
       finalReport: state?.finalReport || null,
       errors: state?.errors || [],
@@ -164,16 +154,14 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 IA publique (Cohere) – Grand public J.E.A.N.
+// 💬 IA publique Cohere
 // ==========================================================
 app.post("/api/cohere", async (req, res) => {
   try {
     const { question } = req.body;
-    if (!question || question.trim().length < 2)
-      return res.status(400).json({ error: "Question invalide" });
-
+    if (!question) return res.status(400).json({ error: "Question invalide" });
     const { reply, avatar } = await askCohere(question);
-    await addEngineLog(`💬 Question publique J.E.A.N: "${question}"`, "info", "Cohere");
+    await addEngineLog(`💬 Question publique: "${question}"`, "info", "Cohere");
     res.json({ success: true, reply, avatar: `/avatars/jean-${avatar}.png` });
   } catch (err) {
     await addEngineError(`Erreur Cohere: ${err.message}`, "Cohere");
@@ -182,19 +170,13 @@ app.post("/api/cohere", async (req, res) => {
 });
 
 // ==========================================================
-// 💬 IA console admin (GPT-4o-mini)
+// 💬 IA console admin
 // ==========================================================
 app.post("/api/ai-admin", async (req, res) => {
   try {
     const { message, mode } = req.body;
-    if (!message || message.trim().length < 2)
-      return res.status(400).json({ success: false, error: "Message vide" });
-
-    const reply =
-      mode === "meteo"
-        ? await chatService.askAIAdmin(message, "meteo")
-        : await chatService.askAIAdmin(message, "moteur");
-
+    if (!message) return res.status(400).json({ success: false, error: "Message vide" });
+    const reply = await chatService.askAIAdmin(message, mode || "moteur");
     await addEngineLog(`💬 Console admin (${mode}) : "${message}"`, "info", "admin");
     res.json({ success: true, reply });
   } catch (e) {
@@ -215,50 +197,37 @@ app.get("/api/alerts", async (_, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-
-// ==========================================================
-// 🌄 API Altitude + Carte météo dynamique
-// ==========================================================
-app.get("/api/altitude", async (req, res) => {
-  const { lat, lon } = req.query;
-  if (!lat || !lon) return res.status(400).json({ error: "Coordonnées manquantes" });
+app.put("/api/alerts/status/:id", async (req, res) => {
   try {
-    const r = await axios.get(
-      `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
-    );
-    const alt = r.data.results?.[0]?.elevation || 0;
-    res.json({ altitude: alt });
-  } catch {
-    res.status(500).json({ error: "Erreur altitude" });
+    await Alert.findByIdAndUpdate(req.params.id, { status: req.body.action });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
-
-app.get("/api/weather-map", async (req, res) => {
-  const { lat, lon } = req.query;
-  if (!lat || !lon) return res.status(400).json({ error: "Coordonnées manquantes" });
+app.post("/api/alerts/export/:id", async (req, res) => {
+  await addEngineLog(`🚨 Alerte ${req.params.id} publiée`, "info", "alerts");
+  res.json({ ok: true });
+});
+app.delete("/api/alerts/:id", async (req, res) => {
   try {
-    const r = await axios.get(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=cloud_cover,precipitation`
-    );
-    const { cloud_cover, precipitation } = r.data.current;
-    res.json({ cloud: cloud_cover || 0, rain: precipitation || 0 });
-  } catch {
-    res.status(500).json({ error: "Erreur météo" });
+    await Alert.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 
 // ==========================================================
-// 📡 Flux SSE – Logs moteur temps réel (unifié)
+// 📡 Flux SSE – Logs moteur (temps réel)
 // ==========================================================
-app.get("/api/logs-stream", (req, res) => {
+app.get("/api/logs/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
-
   const send = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
   engineEvents.on("log", send);
-
   const ping = setInterval(() => res.write(`: ping\n\n`), 20000);
   req.on("close", () => {
     clearInterval(ping);
@@ -277,15 +246,13 @@ app.get("/api/logs-stream", (req, res) => {
   "admin-radar.html",
   "admin-users.html",
 ].forEach((page) =>
-  app.get(`/${page}`, (_, res) =>
-    res.sendFile(path.join(__dirname, "public", page))
-  )
+  app.get(`/${page}`, (_, res) => res.sendFile(path.join(__dirname, "public", page)))
 );
 
 // ==========================================================
 // 🚀 Lancement
 // ==========================================================
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`⚡ TINSFLASH PRO++ prêt sur port ${PORT}`);
   console.log("🌍 Zones couvertes :", enumerateCoveredPoints().length);
