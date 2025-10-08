@@ -1,216 +1,85 @@
 // ==========================================================
-// 🌍 TINSFLASH – Central Meteorological Engine (Everest Protocol v2.6 PRO++)
+// 🌍 TINSFLASH – Service d’export PDF complet (Everest Protocol v2.6 PRO++)
 // 100 % réel – IA J.E.A.N. (GPT-5 moteur / GPT-4o-mini console)
 // ==========================================================
-import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import cors from "cors";
+
+import { jsPDF } from "jspdf";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch";
-import axios from "axios";
-import fs from "fs";
-import { runGlobal } from "./services/runGlobal.js";
-import { runAIAnalysis } from "./services/aiAnalysis.js";
-import {
-  initEngineState,
-  getEngineState,
-  addEngineLog,
-  addEngineError,
-  engineEvents,
-} from "./services/engineState.js";
-import { enumerateCoveredPoints } from "./services/zonesCovered.js";
-import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
-import Alert from "./models/Alert.js";
-import { askCohere } from "./services/cohereService.js";
-import * as chatService from "./services/chatService.js";
-import { createFullReportPDF } from "./services/exportReport.js";
+import { getEngineState } from "./engineState.js";
 
-dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const app = express();
-app.use(express.json());
-await initEngineState();
 
 // ==========================================================
-// 🌐 CORS
+// 🧠 Création d’un rapport PDF complet pour une alerte donnée
 // ==========================================================
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET","POST","PUT","DELETE"],
-    allowedHeaders: ["Content-Type","Authorization"],
-  })
-);
+export async function createFullReportPDF(alert, mode = "simple") {
+  const state = await getEngineState();
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-// ==========================================================
-// 📁 Static
-// ==========================================================
-app.use(express.static(path.join(__dirname,"public")));
-["avatars","videos","assets","demo"].forEach(d =>
-  app.use(`/${d}`,express.static(path.join(__dirname,`public/${d}`)))
-);
+  // === Page 1 : entête
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("🌍 TINSFLASH – Rapport d’Alerte IA J.E.A.N.", 15, 20);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Référence : ${alert._id}`, 15, 35);
+  doc.text(`Zone : ${alert.zone}`, 15, 42);
+  doc.text(`Type d’alerte : ${alert.title || "—"}`, 15, 49);
+  doc.text(`Certitude IA : ${alert.certainty || "?"}%`, 15, 56);
+  doc.text(`Gravité estimée : ${alert.severity || "—"}`, 15, 63);
+  doc.text(`Coordonnées : ${alert.geo?.lat || 0}, ${alert.geo?.lon || 0}`, 15, 70);
+  doc.text(`Date du rapport : ${new Date().toLocaleString("fr-FR")}`, 15, 77);
+  doc.line(15, 82, 195, 82);
 
-// ==========================================================
-// 🧠 Correctifs modules
-// ==========================================================
-app.get("/three.module.js",async(_,res)=>{
-  try{
-    const r=await fetch("https://unpkg.com/three@0.161.0/build/three.module.js");
-    res.type("application/javascript").send(await r.text());
-  }catch{res.status(500).send("// erreur module three.js")}
-});
-app.get("/OrbitControls.js",async(_,res)=>{
-  try{
-    const r=await fetch("https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js");
-    res.type("application/javascript").send(await r.text());
-  }catch{res.status(500).send("// erreur module OrbitControls")}
-});
+  // === Page 1 : résumé IA
+  doc.setFont("helvetica", "bold");
+  doc.text("🧠 Analyse IA J.E.A.N.", 15, 92);
+  doc.setFont("helvetica", "normal");
+  const aiText = alert.analysisIA || "Analyse IA non disponible.";
+  doc.text(doc.splitTextToSize(aiText, 180), 15, 100);
 
-// ==========================================================
-// 🔌 MongoDB
-// ==========================================================
-if(process.env.MONGO_URI){
-  mongoose.connect(process.env.MONGO_URI,{useNewUrlParser:true,useUnifiedTopology:true})
-    .then(()=>console.log("✅ MongoDB connecté"))
-    .catch(e=>console.error("❌ Erreur MongoDB:",e.message));
-}else console.error("⚠️ MONGO_URI manquant");
+  // === Page 2 : données techniques
+  doc.addPage();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("⚙️ Données techniques", 15, 20);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  const infos = [
+    `Modèles utilisés : ${alert.modelsUsed?.join(", ") || "non précisés"}`,
+    `Taux de fiabilité global : ${state?.checkup?.reliability || "—"}%`,
+    `Précipitations : ${alert.data?.precipitation || 0} mm`,
+    `Vent max : ${alert.data?.wind || 0} km/h`,
+    `Température : ${alert.data?.temperature || 0} °C`,
+    `Pression : ${alert.data?.pressure || 0} hPa`
+  ];
+  doc.text(infos, 15, 35);
 
-// ==========================================================
-app.get("/",(_,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+  // === Page 3 : recommandations / validation
+  doc.addPage();
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("👁️ Validation humaine / Expert", 15, 20);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  const humanText =
+    alert.humanReview ||
+    "Ce rapport est en attente de validation par un expert météorologique agréé.";
+  doc.text(doc.splitTextToSize(humanText, 180), 15, 35);
+  doc.text("Signature de l’expert : ____________________________", 15, 120);
+  doc.text("Date : ___________________", 15, 135);
 
-// ==========================================================
-// 🚀 Run global
-// ==========================================================
-app.post("/api/run-global",async(req,res)=>{
-  try{
-    await checkSourcesFreshness();
-    const zone=req.body?.zone||"All";
-    const r=await runGlobal(zone);
-    await addEngineLog(`⚙️ Extraction complète ${zone}`,"success","runGlobal");
-    res.json({success:true,result:r});
-  }catch(e){
-    await addEngineError(`Erreur extraction: ${e.message}`,"runGlobal");
-    res.status(500).json({success:false,error:e.message});
-  }
-});
+  // === Enregistrement
+  const buffer = doc.output("arraybuffer");
+  const pdfBuffer = Buffer.from(buffer);
+  const exportDir = path.join(__dirname, "../exports");
+  if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+  const filePath = path.join(exportDir, `TINSFLASH_Alert_${alert._id}.pdf`);
+  fs.writeFileSync(filePath, pdfBuffer);
 
-// ==========================================================
-// 🧠 Analyse IA J.E.A.N.
-// ==========================================================
-app.post("/api/ai-analyse",async(_,res)=>{
-  try{
-    const r=await runAIAnalysis();
-    await addEngineLog("🧠 Analyse IA J.E.A.N terminée","success","IA");
-    res.json({success:true,result:r});
-  }catch(e){
-    await addEngineError(`Erreur IA J.E.A.N: ${e.message}`,"IA");
-    res.status(500).json({success:false,error:e.message});
-  }
-});
-
-// ==========================================================
-// 📊 Status
-// ==========================================================
-app.get("/api/status",async(_,res)=>{
-  try{
-    const s=await getEngineState();
-    res.json({
-      status:s?.checkup?.engineStatus||s?.status||"IDLE",
-      lastRun:s?.lastRun,
-      models:s?.checkup?.models||{},
-      alerts:s?.alertsLocal||[],
-      alertsContinental:s?.alertsContinental||[],
-      alertsWorld:s?.alertsWorld||[],
-      errors:s?.errors||[],
-      coveredZones:enumerateCoveredPoints(),
-    });
-  }catch(e){res.status(500).json({success:false,error:e.message});}
-});
-
-// ==========================================================
-// 💬 IA publique Cohere
-// ==========================================================
-app.post("/api/cohere",async(req,res)=>{
-  try{
-    const {question}=req.body;
-    if(!question)return res.status(400).json({error:"Question invalide"});
-    const {reply,avatar}=await askCohere(question);
-    await addEngineLog(`💬 Question publique: "${question}"`,"info","Cohere");
-    res.json({success:true,reply,avatar:`/avatars/jean-${avatar}.png`});
-  }catch(e){
-    await addEngineError(`Erreur Cohere: ${e.message}`,"Cohere");
-    res.status(500).json({success:false,reply:"Erreur interne"});
-  }
-});
-
-// ==========================================================
-// 💬 IA admin
-// ==========================================================
-app.post("/api/ai-admin",async(req,res)=>{
-  try{
-    const {message,mode}=req.body;
-    if(!message)return res.status(400).json({success:false,error:"Message vide"});
-    const r=await chatService.askAIAdmin(message,mode||"moteur");
-    await addEngineLog(`💬 Console admin (${mode}) : "${message}"`,"info","admin");
-    res.json({success:true,reply:r});
-  }catch(e){
-    await addEngineError(`Erreur IA admin: ${e.message}`,"admin");
-    res.status(500).json({success:false,error:e.message});
-  }
-});
-
-// ==========================================================
-// 🌋 Alertes
-// ==========================================================
-app.get("/api/alerts",async(_,res)=>{
-  try{res.json(await Alert.find().sort({certainty:-1}));}
-  catch(e){await addEngineError(`Erreur alertes: ${e.message}`,"alerts");res.status(500).json({success:false,error:e.message});}
-});
-
-// ==========================================================
-// 📤 Export PDF / expert
-// ==========================================================
-app.all("/api/alerts/export/:id",async(req,res)=>{
-  try{
-    const alert=await Alert.findById(req.params.id);
-    if(!alert)return res.status(404).json({error:"Not found"});
-    const mode=req.query.mode||req.body.mode||"simple";
-    const pdf=await createFullReportPDF(alert,mode);
-    res.setHeader("Content-Type","application/pdf");
-    res.setHeader("Content-Disposition",`attachment; filename=TINSFLASH_Alert_${alert._id}.pdf`);
-    res.send(Buffer.from(pdf));
-  }catch(e){
-    await addEngineError(`Erreur export: ${e.message}`,"alerts");
-    res.status(500).json({error:e.message});
-  }
-});
-
-// ==========================================================
-// 📡 Logs SSE
-// ==========================================================
-app.get("/api/logs/stream",(req,res)=>{
-  res.setHeader("Content-Type","text/event-stream");
-  res.setHeader("Cache-Control","no-cache");
-  res.setHeader("Connection","keep-alive");
-  res.flushHeaders();
-  const send=l=>res.write(`data: ${JSON.stringify(l)}\n\n`);
-  engineEvents.on("log",send);
-  const ping=setInterval(()=>res.write(": ping\n\n"),20000);
-  req.on("close",()=>{clearInterval(ping);engineEvents.off("log",send);});
-});
-
-// ==========================================================
-// 🧭 Pages admin
-// ==========================================================
-["admin-pp.html","admin-alerts.html","admin-chat.html","admin-index.html","admin-radar.html","admin-users.html"]
-  .forEach(p=>app.get(`/${p}`,(_,res)=>res.sendFile(path.join(__dirname,"public",p))));
-
-// ==========================================================
-const PORT=process.env.PORT||10000;
-app.listen(PORT,()=>{
-  console.log(`⚡ TINSFLASH PRO++ prêt sur port ${PORT}`);
-  console.log("🌍 Zones couvertes:",enumerateCoveredPoints().length);
-});
+  if (mode === "file") return filePath;
+  return pdfBuffer;
+}
