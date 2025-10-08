@@ -1,24 +1,25 @@
-// services/localFactors.js
-// 🌍 Ajustements locaux et géographiques (altitude, urbanisation, côte, microclimat)
-// 🔁 Fusion de geoFactors + localFactors
+// ==========================================================
+// 🌍 localFactors.js – Ajustements micro-climatiques locaux
+// ==========================================================
+// Altitude, urbanisation, côte, microclimat
+// Fusionne les geoFactors + correctifs locaux
+// ==========================================================
+
 import axios from "axios";
 import { addEngineLog } from "./engineState.js";
 
 const cache = new Map();
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/**
- * Ajuste les prévisions météo selon les conditions locales et géographiques
- */
 export async function applyLocalFactors(forecast, lat = 0, lon = 0, country = "GLOBAL", region = "GENERIC") {
   try {
     if (!forecast) return forecast;
     const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
 
-    // 🧠 Cache rapide anti-API 429
+    // ⚙️ Cache rapide anti-limite API
     if (cache.has(key)) return cache.get(key);
 
-    // 🌄 Relief (Open-Elevation)
+    // 🌄 Relief via Open-Elevation
     let elevation = 0;
     try {
       const res = await axios.get(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`, { timeout: 5000 });
@@ -46,7 +47,7 @@ export async function applyLocalFactors(forecast, lat = 0, lon = 0, country = "G
       forecast.reliability = (forecast.reliability ?? 70) + 2;
     }
 
-    // 🧭 Résumé local
+    // 📊 Résumé local
     forecast.localAdjust = {
       elevation,
       region,
@@ -56,12 +57,10 @@ export async function applyLocalFactors(forecast, lat = 0, lon = 0, country = "G
 
     cache.set(key, forecast);
     await delay(200);
-    await addEngineLog(`🌡️ LocalFactors appliqués (${country}, alt ${elevation}m)`, "info", "localFactors");
+    await addEngineLog(`🌡️ LocalFactors appliqués (${country}, alt ${elevation} m)`, "info", "localFactors");
     return forecast;
   } catch (err) {
     await addEngineLog(`⚠️ LocalFactors erreur : ${err.message}`, "error", "localFactors");
     return forecast;
   }
 }
-
-export default { applyLocalFactors };
