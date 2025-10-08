@@ -3,9 +3,9 @@
 // Fusion multi-modèles : Europe, USA, Monde (réel + IA-ready)
 // ==========================================================
 
-import superForecast from "./superForecast.js";            // ✅ export par défaut
-import runGlobalEurope from "./runGlobalEurope.js";         // ✅ export par défaut
-import runGlobalUSA from "./runGlobalUSA.js";               // ✅ export par défaut
+import { superForecast } from "./superForecast.js";   // ✅ export nommé cohérent
+import { runGlobalEurope } from "./runGlobalEurope.js";
+import { runGlobalUSA } from "./runGlobalUSA.js";
 import { addEngineLog, addEngineError, getEngineState, saveEngineState } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import adjustWithLocalFactors from "./localFactors.js";
@@ -17,12 +17,9 @@ import { classifyAlerts } from "./alertsEngine.js";
 import { checkExternalAlerts } from "./externalAlerts.js";
 import Alert from "../models/Alert.js";
 
-// ==========================================================
-// 🧠 RUN CONTINENTAL (EU + USA + WORLD)
-// ==========================================================
 export async function runContinental() {
   try {
-    await addEngineLog("🌎 Lancement du module Continental (Everest Protocol fusion multi-modèles)");
+    await addEngineLog("🌎 Lancement du module Continental (Everest fusion EU/USA/World)");
 
     const state = await getEngineState();
     const europe = await runGlobalEurope();
@@ -43,12 +40,10 @@ export async function runContinental() {
         const { lat, lon, zone, continent } = z;
         if (!lat || !lon) continue;
 
-        // 🔹 Analyses météo physiques (réelles)
         const rain = await analyzeRain(lat, lon, zone, continent);
         const wind = await analyzeWind(lat, lon, zone, continent);
         const snow = await analyzeSnow(lat, lon, zone, continent);
 
-        // 🔹 Ajustements topographiques / microclimatiques
         let base = {
           temperature: rain.temperature ?? snow.temperature ?? 0,
           precipitation: rain.precipitation ?? snow.precipitation ?? 0,
@@ -57,11 +52,9 @@ export async function runContinental() {
         base = await applyGeoFactors(base, lat, lon, zone);
         base = await adjustWithLocalFactors(base, zone, lat, lon);
 
-        // 🔹 Détection & classification d’anomalie météo
         const detected = await detectAlerts({ lat, lon, country: zone }, { scope: continent });
         const classified = classifyAlerts({ ...detected, dataSources: { rain, wind, snow } });
 
-        // 🔹 Vérification externe (comparateurs météo officiels)
         const externals = await checkExternalAlerts(lat, lon, zone);
         const exclusivity = externals.length ? "confirmed-elsewhere" : "exclusive";
 
@@ -100,7 +93,6 @@ export async function runContinental() {
       }
     }
 
-    // 🔹 Sauvegarde moteur
     state.alertsContinental = alerts;
     state.lastRunContinental = new Date();
     await saveEngineState(state);
