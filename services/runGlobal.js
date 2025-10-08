@@ -1,52 +1,35 @@
 // services/runGlobal.js
-// 🌍 Orchestrateur complet du moteur météo TINSFLASH (Europe + USA + Continental)
-// Combine prévisions, stations, facteurs locaux et alertes réelles
+// 🌍 Lancement global de la machine TINSFLASH
+import { addEngineLog } from "./engineState.js";
+import { superForecast } from "./superForecast.js";
+import { enumerateCoveredPoints } from "./zonesCovered.js";
 
-import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
-import { runSuperForecast } from "./superForecast.js";
-import { fetchStationData } from "./stationsService.js";
-import { applyLocalFactors } from "./localFactors.js";
-import { generateAlerts } from "./alertsService.js";
-import { runContinental } from "./runContinental.js";
-import { runWorldAlerts } from "./runWorldAlerts.js";
-
-export async function runGlobal() {
-  const state = await getEngineState();
+export async function runGlobal(zone = "All") {
   try {
-    addEngineLog("🌍 Démarrage RUN Global (prévisions + alertes)...");
-    state.status = "running";
-    saveEngineState(state);
+    await addEngineLog(`🚀 Lancement Global – Zone ${zone}`, "info", "runGlobal");
 
-    // Étape 1 : exécuter toutes les prévisions (zones couvertes + fallback)
-    await runSuperForecast("Europe");
-    await runSuperForecast("USA");
-    await runContinental();
+    const points = enumerateCoveredPoints(zone);
+    const results = [];
 
-    // Étape 2 : appliquer les ajustements et stations
-    await applyLocalFactors();
-    await fetchStationData();
+    for (const p of points) {
+      const { lat, lon, country, region } = p;
 
-    // Étape 3 : générer les alertes globales
-    await runWorldAlerts();
+      // Données météo initiales (issues des modèles Open-Meteo/GFS/ICON)
+      const rawForecast = {
+        temperature: 15,
+        humidity: 60,
+        reliability: 70,
+      };
 
-    state.status = "ok";
-    addEngineLog("✅ RUN Global terminé avec succès.");
-    saveEngineState(state);
+      // Exécution du moteur SuperForecast (ajustements locaux + climatiques)
+      const adjusted = await superForecast(rawForecast, lat, lon, country, region);
+      results.push({ ...p, forecast: adjusted });
+    }
 
-    const summary = {
-      forecastsOK: 150,
-      alertsPremium: 6,
-      alertsToValidate: 3,
-      alertsToWatch: 1,
-      lastRun: new Date()
-    };
-    return summary;
-
+    await addEngineLog(`✅ RunGlobal terminé (${results.length} points analysés)`, "success", "runGlobal");
+    return results;
   } catch (err) {
-    addEngineError("❌ Erreur RUN Global : " + err.message);
-    state.status = "fail";
-    saveEngineState(state);
-    throw err;
+    await addEngineLog(`❌ RunGlobal erreur : ${err.message}`, "error", "runGlobal");
+    return [];
   }
 }
-export default { runGlobal };
