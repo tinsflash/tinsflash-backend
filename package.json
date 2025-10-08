@@ -23,7 +23,8 @@
     "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
     "web-push": "^3.6.6",
-    "geoip-lite": "^1.4.6"
+    "geoip-lite": "^1.4.6",
+    "jspdf": "^2.5.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
