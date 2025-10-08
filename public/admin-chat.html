@@ -1,1 +1,62 @@
-<!-- Chat IA J.E.A.N -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>💬 Console IA J.E.A.N – Chat</title>
+  <style>
+    body{margin:0;background:#0b1220;color:#e6f6ff;font-family:Inter,system-ui}
+    header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+    nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+    .container{max-width:900px;margin:12px auto;padding:12px}
+    .chat-box{background:#0e1721;border-radius:10px;padding:12px;height:75vh;display:flex;flex-direction:column}
+    .messages{flex:1;overflow:auto;padding:8px}
+    .controls{display:flex;gap:8px;margin-top:8px}
+    input{flex:1;padding:10px;border-radius:8px;border:1px solid #123;background:#07121a;color:#e6f6ff}
+    button{background:#4fc3f7;border:none;padding:10px 14px;border-radius:8px;color:#001;font-weight:700}
+    .msg-bot{background:#123045;padding:8px;border-radius:8px;margin:6px 0}
+    .msg-user{background:#4fc3f7;color:#001;padding:8px;border-radius:8px;margin:6px 0;text-align:right}
+  </style>
+</head>
+<body>
+<script>
+  const pin = sessionStorage.getItem("tinsflashPIN");
+  if(!pin){ const p=prompt("Code d’accès admin ?"); if(p!=="202679"){ alert("Accès refusé"); location.href="/"; } else sessionStorage.setItem("tinsflashPIN","ok"); }
+</script>
+<header>💬 Console IA J.E.A.N – Chat (GPT-4o-mini)</header>
+<nav>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+</nav>
+
+<div class="container">
+  <div class="chat-box">
+    <div class="messages" id="messages">
+      <div class="msg-bot">🤖 J.E.A.N: Prêt à aider (mode console, GPT-4o-mini)</div>
+    </div>
+    <div class="controls">
+      <input id="input" placeholder="Pose ta question au console..." onkeypress="if(event.key==='Enter') send()" />
+      <button onclick="send()">Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function send(){
+    const txt = document.getElementById("input").value.trim();
+    if(!txt) return;
+    const messages = document.getElementById("messages");
+    messages.innerHTML += `<div class="msg-user">${txt}</div>`;
+    document.getElementById("input").value = "";
+    try{
+      const res = await fetch("/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt, mode:"moteur"})});
+      const j = await res.json();
+      messages.innerHTML += `<div class="msg-bot">${j.reply || j}</div>`;
+      messages.scrollTop = messages.scrollHeight;
+    }catch(e){ messages.innerHTML += `<div class="msg-bot">❌ Erreur: ${e.message}</div>`; }
+  }
+</script>
+</body>
+</html>
