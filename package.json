@@ -5,9 +5,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "audit": "node tools/auditServices.js",
     "start": "npm run audit && node --max-old-space-size=2048 server.js",
     "dev": "nodemon --max-old-space-size=2048 server.js",
-    "audit": "node tools/auditServices.js",
     "clean": "rm -rf node_modules && npm install"
   },
   "engines": {
