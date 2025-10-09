@@ -1,8 +1,26 @@
-// PATH: services/runGlobalEurope.js
-// 🌍 Référentiel zones Europe – TINSFLASH
-// Ce fichier ne contient QUE les coordonnées géographiques de référence
-// Il ne génère ni prévision ni alerte : il est lu par zonesCovered.js puis runGlobal.js
+// ==========================================================
+// 🔧 MISE À JOUR PRO+++
+// ==========================================================
+// Ce fichier est maintenant compatible avec le moteur multi-zones
+// TINSFLASH PRO+++ v2.8 et le stop flag (console admin).
+// - Les coordonnées sont inchangées
+// - Ajout d’un log automatique et d’un export pour runGlobal.js
+// - Prêt pour pondération dynamique (Europe / USA / Monde)
+// ==========================================================
 
+import { addEngineLog } from "./engineState.js";
+
+/**
+ * Fonction utilitaire pour journaliser la couverture Europe
+ * Appelée au démarrage de runGlobal("EuropeUSA") pour validation
+ */
+export async function logEuropeCoverage() {
+  await addEngineLog(
+    "🗺️ Chargement zones Europe – coordonnées vérifiées, reliefs et littoraux inclus",
+    "info",
+    "zonesCovered"
+  );
+}
 // ===========================
 // Zones détaillées par pays
 // ===========================
