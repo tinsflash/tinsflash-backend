@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v2.6 PRO++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v2.7 PRO+++)
 // ==========================================================
 
 import express from "express";
@@ -16,15 +16,30 @@ import { runAIAnalysis } from "./services/aiAnalysis.js";
 import {
   initEngineState,
   getEngineState,
+  saveEngineState,
   addEngineLog,
   addEngineError,
   engineEvents,
+  stopExtraction,
+  resetStopFlag,
+  isExtractionStopped
 } from "./services/engineState.js";
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
+import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
 import { askCohere } from "./services/cohereService.js";
 import * as chatService from "./services/chatService.js";
+
+// === Import des différents runGlobal par zone ===
+import { runGlobalEurope } from "./services/runGlobalEurope.js";
+import { runGlobalUSA } from "./services/runGlobalUSA.js";
+import { runGlobalCanada } from "./services/runGlobalCanada.js";
+import { runGlobalAfricaNord } from "./services/runGlobalAfricaNord.js";
+import { runGlobalAfricaCentrale } from "./services/runGlobalAfricaCentrale.js";
+import { runGlobalAfricaOuest } from "./services/runGlobalAfricaOuest.js";
+import { runGlobalAfricaSud } from "./services/runGlobalAfricaSud.js";
+import { runGlobalAmericoSud } from "./services/runGlobalAmericoSud.js";
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -58,23 +73,79 @@ if (process.env.MONGO_URI) {
 }
 
 // ==========================================================
-// 🚀 RUN GLOBAL
+// 🛑 STOP / RESET EXTRACTION
+// ==========================================================
+app.post("/api/stop-extraction", async (req, res) => {
+  try {
+    stopExtraction();
+    await addEngineLog("🛑 Extraction stoppée manuellement via API", "warn", "core");
+    res.json({ success: true, message: "Extraction stoppée" });
+  } catch (e) {
+    await addEngineError("Erreur stop-extraction : " + e.message, "core");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post("/api/reset-stop-extraction", async (req, res) => {
+  try {
+    resetStopFlag();
+    await addEngineLog("✅ Flag stop extraction réinitialisé", "info", "core");
+    res.json({ success: true });
+  } catch (e) {
+    await addEngineError("Erreur reset-stop-extraction : " + e.message, "core");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🚀 RUN GLOBAL (global ou zone spécifique)
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
+    if (isExtractionStopped && isExtractionStopped()) {
+      return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
+    }
     await checkSourcesFreshness();
     const zone = req.body?.zone || "All";
     const r = await runGlobal(zone);
-    await addEngineLog(
-      `⚙️ Extraction complète effectuée pour ${zone}`,
-      "success",
-      "runGlobal"
-    );
+    await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`, "success", "runGlobal");
     res.json({ success: true, result: r });
   } catch (e) {
     await addEngineError(`Erreur extraction: ${e.message}`, "runGlobal");
     res.status(500).json({ success: false, error: e.message });
   }
+});
+
+// === RUNS PAR ZONE ===
+const zoneRoutes = [
+  { route: "/api/runGlobalEurope", fn: runGlobalEurope, label: "Europe" },
+  { route: "/api/runGlobalUSA", fn: runGlobalUSA, label: "USA" },
+  { route: "/api/runGlobalCanada", fn: runGlobalCanada, label: "Canada" },
+  { route: "/api/runGlobalAfricaNord", fn: runGlobalAfricaNord, label: "Afrique du Nord" },
+  { route: "/api/runGlobalAfricaCentrale", fn: runGlobalAfricaCentrale, label: "Afrique Centrale" },
+  { route: "/api/runGlobalAfricaOuest", fn: runGlobalAfricaOuest, label: "Afrique de l’Ouest" },
+  { route: "/api/runGlobalAfricaSud", fn: runGlobalAfricaSud, label: "Afrique du Sud" },
+  { route: "/api/runGlobalAmericoSud", fn: runGlobalAmericoSud, label: "Amérique du Sud" },
+];
+
+zoneRoutes.forEach(({ route, fn, label }) => {
+  app.post(route, async (req, res) => {
+    try {
+      if (isExtractionStopped && isExtractionStopped()) {
+        return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
+      }
+      await addEngineLog(`🚀 Lancement extraction ${label}`, "info", "runGlobal");
+      const result = await fn();
+      const state = await getEngineState();
+      state.lastRun = new Date();
+      await saveEngineState(state);
+      await addEngineLog(`✅ Extraction ${label} terminée avec succès`, "success", "runGlobal");
+      res.json({ success: true, result });
+    } catch (e) {
+      await addEngineError(`Erreur extraction ${label}: ${e.message}`, "runGlobal");
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
 });
 
 // ==========================================================
@@ -83,11 +154,26 @@ app.post("/api/run-global", async (req, res) => {
 app.post("/api/ai-analyse", async (req, res) => {
   try {
     await addEngineLog("🧠 Lancement IA J.E.A.N. – Analyse en cours...", "info", "IA.JEAN");
-    const result = await runAIAnalysis(); // fonction déjà importée, inchangée
+    const result = await runAIAnalysis();
     await addEngineLog("✅ IA J.E.A.N. – Analyse terminée avec succès", "success", "IA.JEAN");
     res.json({ success: true, result });
   } catch (e) {
     await addEngineError(`Erreur IA J.E.A.N. : ${e.message}`, "IA.JEAN");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌎 RUN WORLD ALERTS (fusion globale des alertes)
+// ==========================================================
+app.post("/api/runWorldAlerts", async (req, res) => {
+  try {
+    await addEngineLog("🌍 Fusion globale des alertes en cours...", "info", "core");
+    const result = await runWorldAlerts();
+    await addEngineLog("✅ Fusion mondiale terminée", "success", "core");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError(`Erreur runWorldAlerts: ${e.message}`, "core");
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -168,6 +254,6 @@ app.use(express.static(path.join(__dirname, "public")));
 // ==========================================================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`⚡ TINSFLASH PRO++ prêt sur port ${PORT}`);
+  console.log(`⚡ TINSFLASH PRO+++ prêt sur port ${PORT}`);
   console.log("🌍 Zones couvertes:", enumerateCoveredPoints().length);
 });
