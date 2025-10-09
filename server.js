@@ -1,7 +1,7 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v2.8 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.0 PRO+++)
 // ==========================================================
-// Moteur global connecté IA.J.E.A.N.
+// Moteur mondial connecté IA.J.E.A.N
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
 // ==========================================================
 
@@ -44,6 +44,7 @@ import { runGlobalAfricaNord } from "./services/runGlobalAfricaNord.js";
 import { runGlobalAfricaCentrale } from "./services/runGlobalAfricaCentrale.js";
 import { runGlobalAfricaOuest } from "./services/runGlobalAfricaOuest.js";
 import { runGlobalAfricaSud } from "./services/runGlobalAfricaSud.js";
+import { runGlobalAfricaEst } from "./services/runGlobalAfricaEst.js";
 import { runGlobalAmericaSud } from "./services/runGlobalAmericaSud.js";
 import { runGlobalAsiaEst } from "./services/runGlobalAsiaEst.js";
 import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
@@ -135,7 +136,8 @@ const zoneRoutes = [
   { route: "/api/runGlobalAfricaNord", fn: runGlobalAfricaNord, label: "Afrique du Nord" },
   { route: "/api/runGlobalAfricaCentrale", fn: runGlobalAfricaCentrale, label: "Afrique Centrale" },
   { route: "/api/runGlobalAfricaOuest", fn: runGlobalAfricaOuest, label: "Afrique de l’Ouest" },
-  { route: "/api/runGlobalAfricaSud", fn: runGlobalAfricaSud, label: "Afrique du Sud" },
+  { route: "/api/runGlobalAfricaSud", fn: runGlobalAfricaSud, label: "Afrique Australe" },
+  { route: "/api/runGlobalAfricaEst", fn: runGlobalAfricaEst, label: "Afrique de l’Est & Corne" },
   { route: "/api/runGlobalAmericaSud", fn: runGlobalAmericaSud, label: "Amérique du Sud" },
   { route: "/api/runGlobalAsiaEst", fn: runGlobalAsiaEst, label: "Asie Est" },
   { route: "/api/runGlobalAsiaSud", fn: runGlobalAsiaSud, label: "Asie Sud" },
