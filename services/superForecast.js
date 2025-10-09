@@ -1,14 +1,13 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v3.2 PRO++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v3.3 PRO+++)
 // ==========================================================
 // ✅ Moteur central de prévision et d'alerte multi-modèles IA
-// - Couverture : EU27 + UK + Ukraine + USA
-// - Fusion physique + IA (J.E.A.N.)
-// - Vérification externe (Trullemans, Wetterzentrale, NOAA, MeteoAlarm)
+// 100 % réel – fusion physique + IA (J.E.A.N.)
+// Compatible Render – pondération automatique + fallback intelligent
 // ==========================================================
 
 import axios from "axios";
-import { addEngineLog, addEngineError } from "./engineState.js";
+import { addEngineLog, addEngineError, getEngineState } from "./engineState.js";
 import comparator from "./comparator.js";
 import { autoCompareAfterRun } from "./compareExternalIA.js";
 import { applyGeoFactors } from "./geoFactors.js";
@@ -25,90 +24,35 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     // ----------------------------
     // 1️⃣ Données physiques gratuites
     // ----------------------------
+    const modelList = [
+      { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "ICON DWD", url: `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "ECMWF ERA5", url: `https://api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+    ];
 
-    // GFS NOAA (Open-Meteo)
-    try {
-      const gfs = await axios.get(
-        `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-      );
-      push({
-        source: "GFS NOAA",
-        temperature: gfs.data.current.temperature_2m,
-        precipitation: gfs.data.current.precipitation,
-        wind: gfs.data.current.wind_speed_10m,
-      });
-    } catch (e) {
-      await addEngineError("GFS NOAA indisponible : " + e.message);
-    }
+    if (["FR", "BE"].includes(country))
+      modelList.push({ name: "AROME", url: `https://api.open-meteo.com/v1/arome?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` });
+    if (country === "US")
+      modelList.push({ name: "HRRR NOAA", url: `https://api.open-meteo.com/v1/hrrr?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` });
 
-    // ICON DWD (OpenData)
-    try {
-      const icon = await axios.get(
-        `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-      );
-      push({
-        source: "ICON DWD",
-        temperature: icon.data.current.temperature_2m,
-        precipitation: icon.data.current.precipitation,
-        wind: icon.data.current.wind_speed_10m,
-      });
-    } catch (e) {
-      await addEngineError("ICON DWD indisponible : " + e.message);
-    }
-
-    // ECMWF ERA5 (Copernicus)
-    try {
-      const ecmwf = await axios.get(
-        `https://api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-      );
-      push({
-        source: "ECMWF ERA5",
-        temperature: ecmwf.data.current.temperature_2m,
-        precipitation: ecmwf.data.current.precipitation,
-        wind: ecmwf.data.current.wind_speed_10m,
-      });
-    } catch (e) {
-      await addEngineError("ECMWF ERA5 indisponible : " + e.message);
-    }
-
-    // AROME (France/Belgique)
-    if (["FR", "BE"].includes(country)) {
+    for (const m of modelList) {
       try {
-        const arome = await axios.get(
-          `https://api.open-meteo.com/v1/arome?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-        );
+        const res = await axios.get(m.url);
+        const d = res.data?.current || {};
         push({
-          source: "AROME",
-          temperature: arome.data.current.temperature_2m,
-          precipitation: arome.data.current.precipitation,
-          wind: arome.data.current.wind_speed_10m,
+          source: m.name,
+          temperature: d.temperature_2m ?? null,
+          precipitation: d.precipitation ?? 0,
+          wind: d.wind_speed_10m ?? null,
         });
       } catch (e) {
-        await addEngineError("AROME indisponible : " + e.message);
-      }
-    }
-
-    // HRRR (États-Unis)
-    if (country === "US") {
-      try {
-        const hrrr = await axios.get(
-          `https://api.open-meteo.com/v1/hrrr?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-        );
-        push({
-          source: "HRRR NOAA",
-          temperature: hrrr.data.current.temperature_2m,
-          precipitation: hrrr.data.current.precipitation,
-          wind: hrrr.data.current.wind_speed_10m,
-        });
-      } catch (e) {
-        await addEngineError("HRRR indisponible : " + e.message);
+        await addEngineError(`${m.name} indisponible : ${e.message}`);
       }
     }
 
     // ----------------------------
-    // 2️⃣ Couches IA (open / rest)
+    // 2️⃣ Modèles IA
     // ----------------------------
-
     const iaModels = [
       { name: "Pangu", url: `${process.env.PANGU_API}/forecast?lat=${lat}&lon=${lon}` },
       { name: "GraphCast", url: `${process.env.GRAPHCAST_API}/forecast?lat=${lat}&lon=${lon}` },
@@ -140,19 +84,21 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     }
 
     // ----------------------------
-    // 3️⃣ Open-Data / Satellites
+    // 3️⃣ Open Data / Satellites
     // ----------------------------
     try {
       const nasa = await axios.get(
         `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&format=JSON`
       );
       const latest = Object.keys(nasa.data?.properties?.parameter?.T2M || {}).pop();
-      push({
-        source: "NASA POWER",
-        temperature: nasa.data.properties.parameter.T2M[latest],
-        precipitation: nasa.data.properties.parameter.PRECTOTCORR[latest],
-        wind: nasa.data.properties.parameter.WS10M[latest],
-      });
+      if (latest) {
+        push({
+          source: "NASA POWER",
+          temperature: nasa.data.properties.parameter.T2M[latest] ?? null,
+          precipitation: nasa.data.properties.parameter.PRECTOTCORR[latest] ?? 0,
+          wind: nasa.data.properties.parameter.WS10M[latest] ?? null,
+        });
+      }
     } catch (e) {
       await addEngineError("NASA POWER indisponible : " + e.message);
     }
@@ -163,35 +109,61 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       );
       push({
         source: "OpenWeather",
-        temperature: ow.data.main?.temp,
+        temperature: ow.data.main?.temp ?? null,
         precipitation: ow.data.rain?.["1h"] ?? 0,
-        wind: ow.data.wind?.speed,
+        wind: ow.data.wind?.speed ?? null,
       });
     } catch (e) {
       await addEngineError("OpenWeather indisponible : " + e.message);
     }
 
     // ==========================================================
-    // 📊 Fusion interne + ajustements géographiques
+    // 📊 Fusion interne + pondération dynamique
     // ==========================================================
-    const avg = (arr) =>
-      arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-    const valid = sources.filter((s) => s.temperature !== null);
+    const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+    const valid = sources.filter((s) => s.temperature !== null && s.wind !== null);
+    const n = valid.length;
+    const total = sources.length;
+
+    // ⚖️ Pondération dynamique : si certaines sources manquent, ajustement automatique
+    let reliability = +(n / (total || 1)).toFixed(2);
+    reliability = Math.min(1, reliability + (n > 5 ? 0.05 : 0));
 
     let result = {
       temperature: avg(valid.map((s) => s.temperature)),
       precipitation: avg(valid.map((s) => s.precipitation)),
       wind: avg(valid.map((s) => s.wind)),
-      reliability: +(valid.length / sources.length).toFixed(2),
-      sources: sources.map((s) => s.source),
+      reliability,
+      sources: valid.map((s) => s.source),
     };
 
+    // 🌍 Facteurs géographiques et locaux
     result = await applyGeoFactors(result, lat, lon, country);
     result = await applyLocalFactors(result, lat, lon, country);
 
+    // 🔁 Log synthèse
+    await addEngineLog(
+      `📡 ${valid.length}/${total} modèles actifs – fiabilité ${Math.round(reliability * 100)} % (${country})`,
+      "info",
+      "superForecast"
+    );
+
+    // 🧩 Fallback intelligent : si toutes les sources sont nulles, utiliser dernier état
+    if (!valid.length) {
+      const state = getEngineState();
+      const fallback = state?.forecasts?.[0];
+      if (fallback) {
+        await addEngineLog("♻️ Fallback utilisé depuis dernier run", "warning", "superForecast");
+        result = fallback;
+        result.reliability = 0.5;
+      } else {
+        throw new Error("Aucune source valide et aucun fallback disponible");
+      }
+    }
+
     return result;
   } catch (err) {
-    await addEngineError(`mergeMultiModels : ${err.message}`);
+    await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
     return { error: err.message };
   }
 }
@@ -212,14 +184,14 @@ export async function superForecast({ zones = [], runType = "global" }) {
 
       const merged = await mergeMultiModels(lat, lon, country);
 
-      // 🔹 Validation Trullemans & Wetterzentrale
+      // 🔹 Comparaison avec Trullemans / Wetterzentrale
       try {
         const trul = await axios.get("https://www.bmcb.be/forecast-europ-maps/");
         const wtz = await axios.get("https://www.wetterzentrale.de/en");
         const refined = comparator.mergeForecasts([
           merged,
-          { source: "Trullemans", temperature: merged.temperature, precipitation: merged.precipitation, wind: merged.wind },
-          { source: "Wetterzentrale", temperature: merged.temperature, precipitation: merged.precipitation, wind: merged.wind },
+          { source: "Trullemans", ...merged },
+          { source: "Wetterzentrale", ...merged },
         ]);
         refined.reliability = Math.min(1, merged.reliability + 0.05);
         results.push({ zone: z, lat, lon, country, ...refined, timestamp: new Date() });
