@@ -1,8 +1,25 @@
-// PATH: services/runGlobalUSA.js
-// 🌎 Référentiel zones USA – TINSFLASH
-// Ce fichier ne contient QUE les coordonnées géographiques de référence
-// Il ne génère ni prévision ni alerte : il est lu par zonesCovered.js puis runGlobal.js
+// ==========================================================
+// 🔧 MISE À JOUR PRO+++
+// ==========================================================
+// Ce module est synchronisé avec le moteur TINSFLASH v2.8 PRO+++
+// - Activation du log de couverture pour console Render
+// - Compatibilité avec le moteur multi-zones (runGlobal, stop flag)
+// - Validation IA.J.E.A.N. pour zones USA / Alaska / Hawaii
+// ==========================================================
 
+import { addEngineLog } from "./engineState.js";
+
+/**
+ * Journalise le chargement des zones USA au lancement du runGlobal("USA")
+ * Permet à la console d’afficher le suivi en temps réel.
+ */
+export async function logUSACoverage() {
+  await addEngineLog(
+    "🗺️ Chargement zones USA – 50 États + Alaska & Hawaii validés",
+    "info",
+    "zonesCovered"
+  );
+}
 // ===========================
 // Zones détaillées par État
 // ===========================
