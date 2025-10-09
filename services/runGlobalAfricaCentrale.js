@@ -95,4 +95,27 @@ export function getAllAfricaCentraleZones() {
   return all;
 }
 
-export default { AFRICA_CENTRALE_ZONES, getAllAfricaCentraleZones };
+// ===========================================================
+// 🚀 RUN OFFICIEL – Afrique Centrale (utilisé par server.js)
+// ===========================================================
+export async function runGlobalAfricaCentrale() {
+  await addEngineLog("🌍 Démarrage du runGlobalAfricaCentrale (Afrique Centrale)", "info", "runGlobal");
+  const zones = getAllAfricaCentraleZones();
+  const summary = {
+    region: "Africa Centrale",
+    totalZones: zones.length,
+    generatedAt: new Date().toISOString(),
+    status: "ok",
+  };
+  await addEngineLog(`✅ Afrique Centrale : ${zones.length} zones traitées`, "success", "runGlobal");
+  return { summary, zones };
+}
+
+// ===========================================================
+// 🧩 EXPORT FINAL – pour compatibilité globale
+// ===========================================================
+export default {
+  AFRICA_CENTRALE_ZONES,
+  getAllAfricaCentraleZones,
+  runGlobalAfricaCentrale,
+};
