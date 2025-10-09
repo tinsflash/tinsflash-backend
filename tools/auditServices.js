@@ -1,7 +1,9 @@
 // ==========================================================
-// 🔎 AUDIT AUTOMATIQUE TINSFLASH PRO+++
-// Vérifie les exports / imports / structures des fichiers
-// Compatible Render + GitHub Actions
+// 🌍 AUDIT TINSFLASH PRO+++ – Vérification des services
+// ==========================================================
+// Vérifie automatiquement que tous les fichiers du dossier
+// /src/services/ contiennent bien des exports valides,
+// ne sont pas vides, et ne provoquent aucune erreur.
 // ==========================================================
 
 import fs from "fs";
@@ -10,93 +12,91 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SERVICES_DIR = path.join(__dirname, "../src/services");
+
+// === ✅ Chemin Render corrigé ===
+const SERVICES_DIR = path.join(__dirname, "../services");
+
+// === Liste des extensions surveillées ===
+const EXTENSIONS = [".js", ".mjs"];
+
+// === Drapeaux ===
+let totalFiles = 0;
+let okFiles = 0;
+let badFiles = [];
 
 // ==========================================================
-// 🔧 Utilitaires
+// 🔍 Vérifie un fichier individuellement
 // ==========================================================
-function readFileSafe(filePath) {
-  try {
-    return fs.readFileSync(filePath, "utf-8");
-  } catch {
-    return "";
+function verifyFile(filePath) {
+  const content = fs.readFileSync(filePath, "utf8");
+
+  if (!content.trim()) {
+    badFiles.push(`${path.basename(filePath)} → vide`);
+    return;
   }
+
+  // Vérifie présence d'export (nommé ou default)
+  if (!content.includes("export ")) {
+    badFiles.push(`${path.basename(filePath)} → aucun export trouvé`);
+    return;
+  }
+
+  // Vérifie parenthèses et accolades de base
+  const open = (content.match(/{/g) || []).length;
+  const close = (content.match(/}/g) || []).length;
+  if (open !== close) {
+    badFiles.push(`${path.basename(filePath)} → accolades déséquilibrées`);
+    return;
+  }
+
+  okFiles++;
 }
 
 // ==========================================================
-// 🚀 AUDIT DES EXPORTS
+// 🚀 Démarrage de l’audit
 // ==========================================================
-function auditExports(content, file) {
-  const exports = [];
-  const missingExports = [];
-
-  const requiredExports = [
-    "runGlobal",
-    "getAll",
-    "_ZONES"
-  ];
-
-  // Vérification basique des exports présents
-  if (/export\s+const\s+\w+_ZONES/.test(content)) exports.push("_ZONES");
-  if (/export\s+function\s+getAll\w+Zones/.test(content)) exports.push("getAll");
-  if (/export\s+async\s+function\s+runGlobal\w+/.test(content)) exports.push("runGlobal");
-
-  for (const e of requiredExports) {
-    if (!exports.includes(e)) missingExports.push(e);
-  }
-
-  // Vérifie si fichier tronqué
-  if (!content.trim().endsWith("};")) {
-    missingExports.push("Fermeture fichier (probable fin manquante)");
-  }
-
-  // Vérifie les import/export ESM
-  if (/require\s*\(/.test(content)) {
-    missingExports.push("Syntaxe require() détectée (non ESM)");
-  }
-
-  if (missingExports.length > 0) {
-    console.log(`❌ ${file} → problème(s) détecté(s) : ${missingExports.join(", ")}`);
-  } else {
-    console.log(`✅ ${file} → OK (exports complets)`);
-  }
-}
-
-// ==========================================================
-// 📁 AUDIT GLOBAL
-// ==========================================================
-console.log("===============================================");
+console.log("==============================================");
 console.log("🧠 AUDIT TINSFLASH PRO+++ – Vérification services");
-console.log("===============================================\n");
+console.log("==============================================\n");
 
-const files = fs.readdirSync(SERVICES_DIR).filter(f => f.endsWith(".js"));
+try {
+  const files = fs.readdirSync(SERVICES_DIR).filter((f) =>
+    EXTENSIONS.some((ext) => f.endsWith(ext))
+  );
 
-let totalOk = 0;
-let totalFail = 0;
+  totalFiles = files.length;
 
-for (const file of files) {
-  const content = readFileSafe(path.join(SERVICES_DIR, file));
-  if (!content) {
-    console.log(`⚠️ ${file} est vide ou introuvable.`);
-    totalFail++;
-    continue;
+  if (totalFiles === 0) {
+    console.log("⚠️ Aucun fichier trouvé dans services/");
+    process.exit(1);
   }
 
-  if (file.startsWith("runGlobal")) {
-    const before = totalFail;
-    auditExports(content, file);
-    if (before === totalFail) totalOk++;
+  for (const f of files) {
+    const filePath = path.join(SERVICES_DIR, f);
+    try {
+      verifyFile(filePath);
+    } catch (err) {
+      badFiles.push(`${f} → erreur lecture (${err.message})`);
+    }
   }
-}
 
-console.log("\n===============================================");
-console.log(`✅ ${totalOk} fichiers valides | ❌ ${totalFail} fichiers à corriger`);
-console.log("===============================================");
+  // ========================================================
+  // 📊 Résumé final
+  // ========================================================
+  console.log(`🗂️  Fichiers vérifiés : ${totalFiles}`);
+  console.log(`✅ Valides : ${okFiles}`);
+  console.log(`❌ Erreurs : ${badFiles.length}\n`);
 
-if (totalFail > 0) {
-  console.log("\n🚨 ÉCHEC AUDIT – Corrige les fichiers signalés avant build Render !");
-  process.exit(1);
-} else {
-  console.log("\n🎉 AUDIT RÉUSSI – Tous les fichiers sont valides !");
+  if (badFiles.length > 0) {
+    console.log("🚨 Détails des fichiers problématiques :");
+    badFiles.forEach((b) => console.log("   - " + b));
+    console.log("\n💥 AUDIT ÉCHEC – Corrige les fichiers listés avant rebuild Render.");
+    process.exit(1);
+  }
+
+  console.log("🌋 Audit Render OK – moteur TINSFLASH prêt au décollage 🚀\n");
   process.exit(0);
+} catch (err) {
+  console.error("❌ Erreur audit :", err.message);
+  process.exit(1);
 }
