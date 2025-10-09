@@ -1,35 +1,70 @@
-// 🚀 RUN PRINCIPAL TINSFLASH – Europe + USA (2×/jour)
-import { initEngineState, addEngineLog, addEngineError, saveEngineState } from "./engineState.js";
+// PATH: services/runMain.js
+// 🚀 RUN PRINCIPAL TINSFLASH – Europe + USA + Canada (2×/jour)
+// ==========================================================
+// Couvre les régions principales : Europe, États-Unis et Canada
+// Exécution haute fréquence : 2 à 3 fois par jour
+// ==========================================================
+
+import {
+  initEngineState,
+  addEngineLog,
+  addEngineError,
+  saveEngineState,
+} from "./engineState.js";
+
 import { runGlobalEurope } from "./runGlobalEurope.js";
 import { runGlobalUSA } from "./runGlobalUSA.js";
+import { runGlobalCanada } from "./runGlobalCanada.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
 
-console.log("==============================================");
-console.log("🌋 RUN PRINCIPAL – EUROPE + USA (TINSFLASH)");
-console.log("==============================================\n");
+console.log("==================================================");
+console.log("🌋 RUN PRINCIPAL – EUROPE + USA + CANADA (TINSFLASH)");
+console.log("==================================================\n");
 
 try {
+  // ======================================================
+  // 1️⃣ Initialisation du moteur et connexion MongoDB
+  // ======================================================
   await initEngineState();
-  addEngineLog("⚙️ Moteur initialisé (runMain.js)");
+  await addEngineLog("⚙️ Initialisation moteur principale terminée.", "info", "runMain");
 
-  addEngineLog("🌍 Lancement Europe (runGlobalEurope)...");
+  // ======================================================
+  // 2️⃣ Lancement des zones principales
+  // ======================================================
+  await addEngineLog("🌍 Lancement Europe (runGlobalEurope)...", "info", "runMain");
   const europe = await runGlobalEurope();
-  addEngineLog(`✅ Europe terminée (${europe?.forecastCount || 0} prévisions)`);
+  await addEngineLog(`✅ Europe terminée (${europe?.forecastCount || 0} prévisions)`, "success", "runMain");
 
-  addEngineLog("🌎 Lancement USA (runGlobalUSA)...");
+  await addEngineLog("🌎 Lancement USA (runGlobalUSA)...", "info", "runMain");
   const usa = await runGlobalUSA();
-  addEngineLog(`✅ USA terminé (${usa?.forecastCount || 0} prévisions)`);
+  await addEngineLog(`✅ USA terminé (${usa?.forecastCount || 0} prévisions)`, "success", "runMain");
 
-  addEngineLog("🛰️ Fusion des alertes régionales...");
+  await addEngineLog("🇨🇦 Lancement Canada (runGlobalCanada)...", "info", "runMain");
+  const canada = await runGlobalCanada();
+  await addEngineLog(`✅ Canada terminé (${canada?.forecastCount || 0} prévisions)`, "success", "runMain");
+
+  // ======================================================
+  // 3️⃣ Fusion et validation des alertes régionales
+  // ======================================================
+  await addEngineLog("🛰️ Fusion des alertes régionales (Europe + USA + Canada)...", "info", "runMain");
   const alerts = await runWorldAlerts();
-  addEngineLog(`✅ ${alerts?.summary?.totalAlerts || 0} alertes intégrées.`);
+  await addEngineLog(`📡 ${alerts?.summary?.totalAlerts || 0} alertes intégrées.`, "success", "runMain");
 
-  addEngineLog("🏁 RUN PRINCIPAL TERMINÉ AVEC SUCCÈS ✅");
-  await saveEngineState({ status: "ok", lastRun: new Date(), type: "main" });
+  // ======================================================
+  // 4️⃣ Finalisation
+  // ======================================================
+  await addEngineLog("🏁 RUN PRINCIPAL TERMINÉ AVEC SUCCÈS ✅", "success", "runMain");
+  await saveEngineState({
+    status: "ok",
+    lastRun: new Date(),
+    type: "main",
+  });
+
+  console.log("\n✅ RUN PRINCIPAL TERMINÉ AVEC SUCCÈS\n");
   process.exit(0);
 } catch (err) {
   console.error("❌ ERREUR RUN PRINCIPAL :", err);
-  addEngineError("❌ ERREUR RUN PRINCIPAL : " + err.message);
-  await saveEngineState({ status: "fail" });
+  await addEngineError("❌ ERREUR RUN PRINCIPAL : " + err.message, "runMain");
+  await saveEngineState({ status: "fail", type: "main" });
   process.exit(1);
 }
