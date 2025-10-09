@@ -1,30 +1,33 @@
 {
   "name": "tinsflash-backend",
   "version": "1.0.0",
+  "description": "🌍 TINSFLASH PRO+++ — Central Meteorological Engine IA.J.E.A.N. (Everest Protocol v3.0)",
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node --max-old-space-size=2048 server.js",
-    "dev": "nodemon --max-old-space-size=2048 server.js"
+    "start": "npm run audit && node --max-old-space-size=2048 server.js",
+    "dev": "nodemon --max-old-space-size=2048 server.js",
+    "audit": "node tools/auditServices.js",
+    "clean": "rm -rf node_modules && npm install"
   },
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
     "axios": "^1.7.2",
+    "body-parser": "^1.20.2",
     "cheerio": "^1.0.0-rc.12",
     "cohere-ai": "^7.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.19.2",
+    "geoip-lite": "^1.4.6",
+    "jspdf": "^2.5.1",
     "mongoose": "^7.6.1",
-    "path": "^0.12.7",
-    "body-parser": "^1.20.2",
     "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
-    "web-push": "^3.6.6",
-    "geoip-lite": "^1.4.6",
-    "jspdf": "^2.5.1"
+    "path": "^0.12.7",
+    "web-push": "^3.6.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
