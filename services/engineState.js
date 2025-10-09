@@ -1,6 +1,9 @@
-// services/engineState.js
-// ⚙️ Gestion centralisée de l’état du moteur TINSFLASH (logs, erreurs, états)
-// 🛰️ Version enrichie : couleurs, gravité, module, verrou, compatibilité flux SSE
+// ==========================================================
+// ⚙️ TINSFLASH PRO+++ – engineState.js (Everest Protocol v2.7)
+// ==========================================================
+// Gestion centralisée de l’état du moteur TINSFLASH (logs, erreurs, états)
+// Ajout : stop flag, verrou anti-concurrence, compatibilité Render, flux SSE.
+// ==========================================================
 
 import mongoose from "mongoose";
 import EventEmitter from "events";
@@ -37,17 +40,18 @@ const EngineStateSchema = new mongoose.Schema({
   alerts: { type: Object, default: {} },
   errors: [ErrorSchema],
   logs: [LogSchema],
+  stopFlag: { type: Boolean, default: false }, // 🛑 Ajouté : indicateur d’arrêt extraction
 });
 
 const EngineState =
   mongoose.models.EngineState || mongoose.model("EngineState", EngineStateSchema);
 
 let engineCache = null;
-let saveInProgress = false; // 🔒 verrou anti-sauvegarde parallèle
+let saveInProgress = false;
 
-// =====================================
+// ==========================================================
 // 🔄 Connexion Mongo + initialisation
-// =====================================
+// ==========================================================
 export async function initEngineState() {
   try {
     if (!mongoose.connection.readyState) {
@@ -64,6 +68,7 @@ export async function initEngineState() {
         status: "idle",
         logs: [],
         errors: [],
+        stopFlag: false,
       });
       console.log("⚙️ Nouveau document EngineState créé.");
     }
@@ -73,22 +78,20 @@ export async function initEngineState() {
   }
 }
 
-// =====================================
+// ==========================================================
 // 🔍 Lecture / sauvegarde d’état
-// =====================================
+// ==========================================================
 export function getEngineState() {
-  return (
-    engineCache || { status: "idle", logs: [], errors: [], checkup: {} }
-  );
+  return engineCache || { status: "idle", logs: [], errors: [], checkup: {}, stopFlag: false };
 }
 
 export async function saveEngineState(newState = {}) {
-  if (saveInProgress) return; // 🔁 évite les doubles save
+  if (saveInProgress) return;
   saveInProgress = true;
   try {
     if (!engineCache) await initEngineState();
     Object.assign(engineCache, newState);
-    await engineCache.save();
+    await EngineState.updateOne({ _id: engineCache._id }, engineCache, { upsert: true });
   } catch (err) {
     console.warn("⚠️ EngineState save skipped:", err.message);
   } finally {
@@ -96,29 +99,47 @@ export async function saveEngineState(newState = {}) {
   }
 }
 
-// =====================================
+// ==========================================================
+// 🛑 Stop flag – gestion extraction
+// ==========================================================
+export function stopExtraction() {
+  if (engineCache) engineCache.stopFlag = true;
+  engineEvents.emit("log", {
+    level: "warn",
+    module: "core",
+    message: "🛑 Extraction stoppée manuellement",
+    timestamp: new Date(),
+    color: "\x1b[33m",
+  });
+}
+
+export function resetStopFlag() {
+  if (engineCache) engineCache.stopFlag = false;
+  engineEvents.emit("log", {
+    level: "info",
+    module: "core",
+    message: "✅ Flag stop extraction réinitialisé",
+    timestamp: new Date(),
+    color: "\x1b[36m",
+  });
+}
+
+export function isExtractionStopped() {
+  return engineCache?.stopFlag === true;
+}
+
+// ==========================================================
 // 🪶 Gestion des logs (niveau + module)
-// =====================================
-export async function addEngineLog(
-  message,
-  level = "info",
-  module = "core",
-  meta = {}
-) {
+// ==========================================================
+export async function addEngineLog(message, level = "info", module = "core", meta = {}) {
   try {
-    const log = {
-      level,
-      module,
-      message,
-      timestamp: new Date(),
-      meta,
-    };
+    const log = { level, module, message, timestamp: new Date(), meta };
 
     // === Couleurs console Render ===
     const color =
       level === "error"
         ? "\x1b[31m"
-        : level === "warning"
+        : level === "warning" || level === "warn"
         ? "\x1b[33m"
         : level === "success"
         ? "\x1b[32m"
@@ -126,25 +147,21 @@ export async function addEngineLog(
 
     console.log(`${color}[${level.toUpperCase()}][${module}] ${message}\x1b[0m`);
 
-    // 🔊 Émission en temps réel (flux SSE)
-    engineEvents.emit("log", {
-      ...log,
-      color,
-    });
+    engineEvents.emit("log", { ...log, color });
 
     if (!engineCache) await initEngineState();
     engineCache.logs.push(log);
+    if (engineCache.logs.length > 500) engineCache.logs.shift(); // 🔁 limite sécurité mémoire
     await saveEngineState({});
   } catch (err) {
     console.warn("⚠️ addEngineLog erreur:", err.message);
   }
 }
 
-export async function addEngineError(
-  message,
-  module = "core",
-  meta = {}
-) {
+// ==========================================================
+// ❌ Gestion des erreurs
+// ==========================================================
+export async function addEngineError(message, module = "core", meta = {}) {
   try {
     const error = {
       level: "error",
@@ -156,14 +173,11 @@ export async function addEngineError(
 
     console.error(`\x1b[31m[ERROR][${module}] ${message}\x1b[0m`);
 
-    // 🔊 Émission temps réel (flux SSE)
-    engineEvents.emit("log", {
-      ...error,
-      color: "\x1b[31m",
-    });
+    engineEvents.emit("log", { ...error, color: "\x1b[31m" });
 
     if (!engineCache) await initEngineState();
     engineCache.errors.push(error);
+    if (engineCache.errors.length > 500) engineCache.errors.shift();
     await saveEngineState({});
   } catch (err) {
     console.warn("⚠️ addEngineError erreur:", err.message);
