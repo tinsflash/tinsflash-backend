@@ -1,5 +1,8 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v2.7 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v2.8 PRO+++)
+// ==========================================================
+// Moteur global connecté IA.J.E.A.N.
+// Compatible Render / MongoDB / GitHub Actions / Admin Console
 // ==========================================================
 
 import express from "express";
@@ -11,6 +14,7 @@ import { fileURLToPath } from "url";
 import fetch from "node-fetch";
 import axios from "axios";
 import fs from "fs";
+
 import { runGlobal } from "./services/runGlobal.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
 import {
@@ -24,6 +28,7 @@ import {
   resetStopFlag,
   isExtractionStopped
 } from "./services/engineState.js";
+
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
@@ -31,7 +36,7 @@ import Alert from "./models/Alert.js";
 import { askCohere } from "./services/cohereService.js";
 import * as chatService from "./services/chatService.js";
 
-// === Import des différents runGlobal par zone ===
+// === RUNS PAR ZONES ===
 import { runGlobalEurope } from "./services/runGlobalEurope.js";
 import { runGlobalUSA } from "./services/runGlobalUSA.js";
 import { runGlobalCanada } from "./services/runGlobalCanada.js";
@@ -39,7 +44,11 @@ import { runGlobalAfricaNord } from "./services/runGlobalAfricaNord.js";
 import { runGlobalAfricaCentrale } from "./services/runGlobalAfricaCentrale.js";
 import { runGlobalAfricaOuest } from "./services/runGlobalAfricaOuest.js";
 import { runGlobalAfricaSud } from "./services/runGlobalAfricaSud.js";
-import { runGlobalAmericoSud } from "./services/runGlobalAmericoSud.js";
+import { runGlobalAmericaSud } from "./services/runGlobalAmericaSud.js";
+import { runGlobalAsiaEst } from "./services/runGlobalAsiaEst.js";
+import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
+import { runGlobalOceania } from "./services/runGlobalOceania.js";
+import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -98,7 +107,7 @@ app.post("/api/reset-stop-extraction", async (req, res) => {
 });
 
 // ==========================================================
-// 🚀 RUN GLOBAL (global ou zone spécifique)
+// 🚀 RUN GLOBAL (All zones ou spécifique)
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
@@ -116,7 +125,9 @@ app.post("/api/run-global", async (req, res) => {
   }
 });
 
-// === RUNS PAR ZONE ===
+// ==========================================================
+// 🌍 RUNS PAR ZONES INDIVIDUELLES
+// ==========================================================
 const zoneRoutes = [
   { route: "/api/runGlobalEurope", fn: runGlobalEurope, label: "Europe" },
   { route: "/api/runGlobalUSA", fn: runGlobalUSA, label: "USA" },
@@ -125,7 +136,11 @@ const zoneRoutes = [
   { route: "/api/runGlobalAfricaCentrale", fn: runGlobalAfricaCentrale, label: "Afrique Centrale" },
   { route: "/api/runGlobalAfricaOuest", fn: runGlobalAfricaOuest, label: "Afrique de l’Ouest" },
   { route: "/api/runGlobalAfricaSud", fn: runGlobalAfricaSud, label: "Afrique du Sud" },
-  { route: "/api/runGlobalAmericoSud", fn: runGlobalAmericoSud, label: "Amérique du Sud" },
+  { route: "/api/runGlobalAmericaSud", fn: runGlobalAmericaSud, label: "Amérique du Sud" },
+  { route: "/api/runGlobalAsiaEst", fn: runGlobalAsiaEst, label: "Asie Est" },
+  { route: "/api/runGlobalAsiaSud", fn: runGlobalAsiaSud, label: "Asie Sud" },
+  { route: "/api/runGlobalOceania", fn: runGlobalOceania, label: "Océanie" },
+  { route: "/api/runGlobalCaribbean", fn: runGlobalCaribbean, label: "Caraïbes" },
 ];
 
 zoneRoutes.forEach(({ route, fn, label }) => {
@@ -196,7 +211,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 📡 LOGS SSE
+// 📡 LOGS SSE (Console admin)
 // ==========================================================
 app.get("/api/logs/stream", (req, res) => {
   console.log("🌐 Flux SSE connecté depuis console admin...");
@@ -214,7 +229,7 @@ app.get("/api/logs/stream", (req, res) => {
 });
 
 // ==========================================================
-// ⚡ ALERTES IA (lecture directe pour intégration)
+// ⚡ ALERTES IA – Export public
 // ==========================================================
 app.get("/api/alerts", async (_, res) => {
   try {
@@ -242,7 +257,7 @@ app.get("/api/alerts", async (_, res) => {
 );
 
 // ==========================================================
-// 📁 STATIC FILES (APRÈS les routes API !)
+// 📁 STATIC FILES (APRÈS les routes API)
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 ["avatars", "videos", "assets", "demo"].forEach((d) =>
