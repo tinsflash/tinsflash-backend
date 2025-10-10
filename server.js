@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.7 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.8 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -34,6 +34,7 @@ import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
+import { generateForecast } from "./services/forecastService.js"; // ✅ nouvelle API publique
 
 // === RUNS PAR ZONES ===
 import { runGlobalEurope } from "./services/runGlobalEurope.js";
@@ -89,13 +90,13 @@ async function connectMongo() {
   }
 }
 
-// 🔄 Auto-reconnexion en cas de perte
+// 🔄 Auto-reconnexion
 mongoose.connection.on("disconnected", () => {
   console.warn("⚠️ Déconnexion MongoDB détectée – reconnexion automatique...");
   setTimeout(connectMongo, 5000);
 });
 
-// 🔍 Ping régulier pour garder Atlas éveillé
+// 🔍 Ping régulier Atlas
 setInterval(async () => {
   if (mongoose.connection.readyState === 1) {
     try {
@@ -201,6 +202,28 @@ app.post("/api/ai-analyse", async (_, res) => {
   } catch (e) {
     await addEngineError(`Erreur IA J.E.A.N. : ${e.message}`, "IA.JEAN");
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌤️ API publique : /api/forecast (page index.html)
+// ==========================================================
+app.get("/api/forecast", async (req, res) => {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lon = parseFloat(req.query.lon);
+    const country = (req.query.country || "").toString();
+    const region = (req.query.region || "").toString();
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return res.status(400).json({ error: "lat/lon invalides" });
+    }
+
+    const data = await generateForecast(lat, lon, country, region);
+    return res.json(data);
+  } catch (e) {
+    await addEngineError("Erreur /api/forecast: " + e.message, "forecast");
+    res.status(500).json({ error: e.message });
   }
 });
 
