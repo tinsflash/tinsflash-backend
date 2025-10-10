@@ -1,47 +1,88 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"/><meta name="robots" content="noindex,nofollow"/>
-<title>🌋 Alertes – TINSFLASH</title>
+<meta charset="utf-8"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>🌋 Alertes – TINSFLASH PRO+++</title>
 <style>
 body{background:#0b1220;color:#e6f6ff;font-family:Inter,Arial;margin:0}
 header{background:#08101f;padding:14px;text-align:center;font-weight:700;color:#4fc3f7}
-.alertCard{background:#0f1724;margin:10px;padding:10px;border-radius:8px}
+.alertCard{background:#0f1724;margin:10px;padding:10px;border-radius:8px;transition:background .3s}
+.alertCard:hover{background:#16233b}
 button{margin-top:6px;margin-right:6px;background:#4fc3f7;color:#001;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:700}
+button:hover{background:#7be3ff}
+small{color:#9ab6c8}
+.sectionTitle{margin:12px 10px 0;font-weight:bold;color:#4fc3f7;text-shadow:0 0 8px #4fc3f7}
 </style>
 </head>
 <body>
 <script>
+// === Sécurité Admin ===
 const pin=sessionStorage.getItem("tinsflashPIN");
-if(!pin){const p=prompt("Code d’accès admin ?");if(p!=="202679"){alert("⛔");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
+if(!pin){
+  const p=prompt("Code d’accès admin ?");
+  if(p!=="202679"){alert("⛔ Accès refusé");location.href="/";}
+  else sessionStorage.setItem("tinsflashPIN","ok");
+}
 </script>
+
 <header>🌋 Gestion des Alertes – IA J.E.A.N</header>
 <div id="alertsList" style="padding:10px"></div>
+
 <script>
-const API=location.origin;
-async function getJSON(u){try{const r=await fetch(u);return r.ok?await r.json():[]}catch{return[]}}
-async function loadAlerts(){const d=await getJSON(API+"/api/alerts");renderAlerts(d);}
+const API = location.origin;
+
+// === Récupération JSON ===
+async function getJSON(u){
+  try{const r=await fetch(u);return r.ok?await r.json():[];}
+  catch{return [];}
+}
+
+// === Rendu des alertes ===
 function renderAlerts(list){
- const zone=document.getElementById("alertsList");zone.innerHTML="";
- list.forEach(a=>{
-  const c=a.certainty||0,col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
-  const div=document.createElement("div");
-  div.className="alertCard";div.style.borderLeft=`4px solid ${col}`;
-  div.innerHTML=`<b>${a.title}</b><br>🌍 ${a.zone} – ${c}%<br><small>${a.description||"—"}</small><br>
-  <button onclick="exportAlert('${a._id}')">📤 Exporter PDF</button>
-  <button onclick="assignExpert('${a._id}')">👨‍🔬 Soumettre expert</button>`;
-  zone.appendChild(div);
- });}
-async function exportAlert(id){
- const r=await fetch(API+"/api/alerts/export/"+id+"?mode=full");
- if(!r.ok){alert("Erreur export");return;}
- const blob=await r.blob();const u=URL.createObjectURL(blob);
- const a=document.createElement("a");a.href=u;a.download="TINSFLASH_Alert_"+id+".pdf";a.click();}
+  const zone=document.getElementById("alertsList");
+  zone.innerHTML="";
+  if(!list.length){zone.innerHTML="<p>Aucune alerte active pour le moment.</p>";return;}
+
+  // Tri par fiabilité
+  list.sort((a,b)=>(b.reliability||0)-(a.reliability||0));
+
+  list.forEach(a=>{
+    const c=a.reliability||0;
+    const col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
+    const div=document.createElement("div");
+    div.className="alertCard";
+    div.style.borderLeft=`4px solid ${col}`;
+    div.innerHTML=`
+      <b>${a.title||"Alerte"}</b><br>
+      🌍 ${a.zone||"Global"} – <b>${c.toFixed(0)}%</b><br>
+      <small>${a.description||"Aucune description disponible."}</small><br>
+      <button onclick="assignExpert('${a._id}')">👨‍🔬 Soumettre expert</button>
+    `;
+    zone.appendChild(div);
+  });
+}
+
+// === Chargement dynamique sans clignotement ===
+let currentHash = "";
+async function loadAlerts(){
+  const data = await getJSON(API+"/api/alerts");
+  const hash = JSON.stringify(data.map(a=>a._id+a.reliability)).slice(0,200);
+  if(hash!==currentHash){renderAlerts(data);currentHash=hash;}
+}
+loadAlerts();
+setInterval(loadAlerts,15000);
+
+// === Soumission expert (manuel pour l’instant) ===
 async function assignExpert(id){
- const mail=prompt("Adresse expert humain ?");if(!mail)return;
- await fetch(API+"/api/alerts/export/"+id+"?mode=expert",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:mail})});
- alert("Alerte transmise à l’expert.");}
-loadAlerts();setInterval(loadAlerts,15000);
+  const mail=prompt("Adresse expert humain ?");
+  if(!mail)return alert("❌ Aucun email indiqué.");
+  try{
+    await fetch(API+"/api/alerts/export/"+id+"?mode=expert",
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:mail})});
+    alert("✅ Alerte transmise à l’expert "+mail);
+  }catch(e){alert("❌ "+e.message);}
+}
 </script>
 </body>
 </html>
