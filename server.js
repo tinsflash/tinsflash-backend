@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.6 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.7 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -49,9 +49,6 @@ import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
 import { runGlobalOceania } from "./services/runGlobalOceania.js";
 import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
 
-// ==========================================================
-// ⚙️ Initialisation de base
-// ==========================================================
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,32 +67,48 @@ app.use(
 );
 
 // ==========================================================
-// 🔌 MongoDB – Connexion stabilisée Render + Atlas Paris
+// 🔌 MongoDB – Connexion stabilisée Render + Atlas Paris + auto-ping
 // ==========================================================
-if (process.env.MONGO_URI) {
+async function connectMongo() {
   try {
     mongoose.set("suppressReservedKeysWarning", true);
-    mongoose
-      .connect(process.env.MONGO_URI + "&tlsAllowInvalidCertificates=true", {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        serverSelectionTimeoutMS: 60000,
-        connectTimeoutMS: 60000,
-        socketTimeoutMS: 120000,
-      })
-      .then(async () => {
-        console.log("✅ MongoDB connecté avec succès");
-        await initEngineState();
-        const state = await getEngineState();
-        if (state) console.log("🧠 État moteur chargé avec succès");
-      })
-      .catch((e) => console.error("❌ Erreur MongoDB:", e.message));
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 20000,
+      connectTimeoutMS: 20000,
+      socketTimeoutMS: 45000,
+    });
+    console.log("✅ MongoDB connecté");
+    await initEngineState();
+    const state = await getEngineState();
+    if (state) console.log("🧠 État moteur chargé avec succès.");
   } catch (err) {
-    console.error("⚠️ Erreur d'initialisation MongoDB:", err);
+    console.error("❌ Erreur MongoDB:", err.message);
+    setTimeout(connectMongo, 10000); // retry après 10s
   }
-} else {
-  console.warn("⚠️ Aucune variable MONGO_URI définie !");
 }
+
+// 🔄 Auto-reconnexion en cas de perte
+mongoose.connection.on("disconnected", () => {
+  console.warn("⚠️ Déconnexion MongoDB détectée – reconnexion automatique...");
+  setTimeout(connectMongo, 5000);
+});
+
+// 🔍 Ping régulier pour garder Atlas éveillé
+setInterval(async () => {
+  if (mongoose.connection.readyState === 1) {
+    try {
+      await mongoose.connection.db.admin().ping();
+      console.log("💓 MongoDB ping OK");
+    } catch (e) {
+      console.warn("⚠️ Ping MongoDB échoué:", e.message);
+    }
+  }
+}, 60000);
+
+if (process.env.MONGO_URI) connectMongo();
+else console.warn("⚠️ Aucune variable MONGO_URI définie !");
 
 // ==========================================================
 // 🛑 STOP / RESET EXTRACTION
@@ -123,7 +136,7 @@ app.post("/api/reset-stop-extraction", async (req, res) => {
 });
 
 // ==========================================================
-// 🚀 RUN GLOBAL (All zones ou spécifique)
+// 🚀 RUN GLOBAL & PAR ZONES
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
@@ -141,9 +154,6 @@ app.post("/api/run-global", async (req, res) => {
   }
 });
 
-// ==========================================================
-// 🌍 RUNS PAR ZONES INDIVIDUELLES
-// ==========================================================
 const zoneRoutes = [
   { route: "/api/runGlobalEurope", fn: runGlobalEurope, label: "Europe" },
   { route: "/api/runGlobalUSA", fn: runGlobalUSA, label: "USA" },
@@ -160,7 +170,7 @@ const zoneRoutes = [
 ];
 
 zoneRoutes.forEach(({ route, fn, label }) => {
-  app.post(route, async (req, res) => {
+  app.post(route, async (_, res) => {
     try {
       if (isExtractionStopped && isExtractionStopped()) {
         return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
@@ -182,7 +192,7 @@ zoneRoutes.forEach(({ route, fn, label }) => {
 // ==========================================================
 // 🧠 ANALYSE IA J.E.A.N.
 // ==========================================================
-app.post("/api/ai-analyse", async (req, res) => {
+app.post("/api/ai-analyse", async (_, res) => {
   try {
     await addEngineLog("🧠 Lancement IA J.E.A.N. – Analyse en cours...", "info", "IA.JEAN");
     const result = await runAIAnalysis();
@@ -195,9 +205,9 @@ app.post("/api/ai-analyse", async (req, res) => {
 });
 
 // ==========================================================
-// 🌎 FUSION MONDIALE DES ALERTES
+// 🌎 FUSION MONDIALE + STATUS + ADMIN
 // ==========================================================
-app.post("/api/runWorldAlerts", async (req, res) => {
+app.post("/api/runWorldAlerts", async (_, res) => {
   try {
     await addEngineLog("🌍 Fusion globale des alertes en cours...", "info", "core");
     const result = await runWorldAlerts();
@@ -209,9 +219,6 @@ app.post("/api/runWorldAlerts", async (req, res) => {
   }
 });
 
-// ==========================================================
-// 📊 STATUS + LOGS + ADMIN
-// ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
     const s = await getEngineState();
@@ -226,35 +233,8 @@ app.get("/api/status", async (_, res) => {
   }
 });
 
-app.get("/api/logs/stream", (req, res) => {
-  console.log("🌐 Flux SSE connecté depuis console admin...");
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
-  const send = (l) => res.write(`data: ${JSON.stringify(l)}\n\n`);
-  engineEvents.on("log", send);
-  const ping = setInterval(() => res.write(": ping\n\n"), 20000);
-  req.on("close", () => {
-    clearInterval(ping);
-    engineEvents.off("log", send);
-  });
-});
-
 // ==========================================================
-// ⚡ ALERTES IA – EXPORT PUBLIC
-// ==========================================================
-app.get("/api/alerts", async (_, res) => {
-  try {
-    const alerts = await Alert.find().lean();
-    res.json(alerts || []);
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 🧭 PAGES ADMIN
+// 🧭 ADMIN PAGES + STATIC FILES
 // ==========================================================
 [
   "admin-pp.html",
@@ -269,9 +249,6 @@ app.get("/api/alerts", async (_, res) => {
   )
 );
 
-// ==========================================================
-// 📁 STATIC FILES
-// ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 ["avatars", "videos", "assets", "demo"].forEach((d) =>
   app.use(`/${d}`, express.static(path.join(__dirname, `public/${d}`)))
