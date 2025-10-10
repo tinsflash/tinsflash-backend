@@ -23,7 +23,6 @@ import {
   saveEngineState,
   addEngineLog,
   addEngineError,
-  engineEvents,
   stopExtraction,
   resetStopFlag,
   isExtractionStopped
@@ -72,6 +71,7 @@ app.use(
 // ==========================================================
 async function connectMongo() {
   try {
+    // Suppression de l’option erronée "suppressReservedKeysWarning"
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
