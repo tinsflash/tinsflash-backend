@@ -1,7 +1,7 @@
 {
   "name": "tinsflash-backend",
-  "version": "1.0.0",
-  "description": "🌍 TINSFLASH PRO+++ — Central Meteorological Engine IA.J.E.A.N. (Everest Protocol v3.0)",
+  "version": "3.0.0",
+  "description": "🌍 TINSFLASH PRO+++ — Central Meteorological Engine IA J.E.A.N. (Everest Protocol v3.0)",
   "main": "server.js",
   "type": "module",
   "scripts": {
