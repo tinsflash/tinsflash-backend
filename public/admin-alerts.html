@@ -6,9 +6,9 @@
 <title>🌋 Alertes – TINSFLASH PRO+++</title>
 <style>
 body{background:#0b1220;color:#e6f6ff;font-family:Inter,Arial;margin:0}
-header{background:#08101f;padding:14px;text-align:center;font-weight:700;color:#4fc3f7}
-.alertCard{background:#0f1724;margin:10px;padding:10px;border-radius:8px;transition:background .3s}
-.alertCard:hover{background:#16233b}
+header{background:#08101f;padding:14px;text-align:center;font-weight:700;color:#4fc3f7;text-shadow:0 0 8px #4fc3f7}
+.alertCard{background:#0f1724;margin:10px;padding:10px;border-radius:8px;transition:background .3s,transform .3s}
+.alertCard:hover{background:#16233b;transform:scale(1.01)}
 button{margin-top:6px;margin-right:6px;background:#4fc3f7;color:#001;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:700}
 button:hover{background:#7be3ff}
 small{color:#9ab6c8}
@@ -26,7 +26,7 @@ if(!pin){
 }
 </script>
 
-<header>🌋 Gestion des Alertes – IA J.E.A.N</header>
+<header>🌋 Gestion des Alertes – IA J.E.A.N (Console PRO+++)</header>
 <div id="alertsList" style="padding:10px"></div>
 
 <script>
@@ -44,7 +44,7 @@ function renderAlerts(list){
   zone.innerHTML="";
   if(!list.length){zone.innerHTML="<p>Aucune alerte active pour le moment.</p>";return;}
 
-  // Tri par fiabilité
+  // Tri par fiabilité décroissante
   list.sort((a,b)=>(b.reliability||0)-(a.reliability||0));
 
   list.forEach(a=>{
@@ -57,6 +57,8 @@ function renderAlerts(list){
       <b>${a.title||"Alerte"}</b><br>
       🌍 ${a.zone||"Global"} – <b>${c.toFixed(0)}%</b><br>
       <small>${a.description||"Aucune description disponible."}</small><br>
+      <small>📅 ${a.timestamp?new Date(a.timestamp).toLocaleString():"Date inconnue"}</small><br>
+      <button onclick="exportPDF('${a._id}')">📄 Exporter PDF</button>
       <button onclick="assignExpert('${a._id}')">👨‍🔬 Soumettre expert</button>
     `;
     zone.appendChild(div);
@@ -73,7 +75,19 @@ async function loadAlerts(){
 loadAlerts();
 setInterval(loadAlerts,15000);
 
-// === Soumission expert (manuel pour l’instant) ===
+// === Export PDF ===
+async function exportPDF(id){
+  try{
+    const r=await fetch(API+"/api/alerts/export/"+id);
+    if(!r.ok)throw new Error("Erreur export PDF");
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="TINSFLASH_Alert_"+id+".pdf";a.click();
+  }catch(e){alert("❌ "+e.message);}
+}
+
+// === Soumission expert ===
 async function assignExpert(id){
   const mail=prompt("Adresse expert humain ?");
   if(!mail)return alert("❌ Aucun email indiqué.");
