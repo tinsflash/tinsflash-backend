@@ -3,42 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</title>
+  <title>🛰️ Console IA J.E.A.N – TINSFLASH PRO+++ (Cockpit mondial)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
     body{margin:0;background:#0b1220;color:#e0e6f0;font-family:"Segoe UI",sans-serif;}
-    header{background:#111b2e;padding:15px;text-align:center;color:#4fc3f7;font-weight:bold;font-size:1.4em;text-shadow:0 0 10px #4fc3f7;}
-    nav{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;background:#141e33;padding:8px;}
-    nav a{color:#a9b7d0;text-decoration:none;padding:8px 14px;border-radius:8px;transition:.3s;background:#1a2744;}
+    header{background:#111b2e;padding:15px;text-align:center;color:#4fc3f7;font-weight:bold;font-size:1.5em;text-shadow:0 0 12px #4fc3f7;}
+    nav{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;background:#141e33;padding:10px;}
+    nav a{color:#a9b7d0;text-decoration:none;padding:8px 14px;border-radius:8px;background:#1a2744;transition:.3s;}
     nav a:hover,nav a.active{background:#4fc3f7;color:#000;}
-    main{max-width:1200px;margin:auto;padding:20px;}
-    h2{color:#4fc3f7;margin-top:25px;}
+    main{max-width:1300px;margin:auto;padding:20px;}
+    h2{color:#4fc3f7;margin-top:25px;text-shadow:0 0 10px rgba(79,195,247,0.5);}
     .section{background:#101a30;border-radius:12px;padding:18px;margin-bottom:25px;box-shadow:0 0 10px rgba(0,0,0,.4);}
     .btn{background:#1a2744;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:bold;margin:4px;transition:.3s;}
     .btn:hover{background:#4fc3f7;color:#000;}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;}
-    #map-forecast,#map-alerts{height:320px;border-radius:10px;overflow:hidden;}
-    #logStream{background:#000;color:#4fc3f7;font-family:monospace;padding:10px;border-radius:6px;height:200px;overflow-y:auto;}
+    #map-forecast,#map-alerts{height:340px;border-radius:10px;overflow:hidden;}
+    #logStream{background:#000;color:#4fc3f7;font-family:monospace;padding:10px;border-radius:6px;height:220px;overflow-y:auto;}
     small{color:#7a8cab;}
-    /* === POPUP NASA === */
-    #popupOverlay{
-      position:fixed;inset:0;background:rgba(0,0,0,.88);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      color:#4fc3f7;font-family:'Segoe UI',sans-serif;z-index:9999;text-align:center;
-      backdrop-filter:blur(4px);
-    }
-    #popupOverlay .spinner{
-      border:4px solid #4fc3f7;border-top-color:transparent;border-radius:50%;
-      width:90px;height:90px;margin-bottom:25px;
-      animation:spin 1.3s linear infinite;
-      box-shadow:0 0 15px rgba(79,195,247,0.6);
-    }
+    /* === POPUP LOADER === */
+    #popupOverlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;
+      color:#4fc3f7;font-family:'Segoe UI',sans-serif;z-index:9999;text-align:center;backdrop-filter:blur(4px);}
+    #popupOverlay .spinner{border:4px solid #4fc3f7;border-top-color:transparent;border-radius:50%;width:90px;height:90px;margin-bottom:25px;
+      animation:spin 1.2s linear infinite;box-shadow:0 0 15px rgba(79,195,247,0.6);}
     @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* === BULLE CHAT IA === */
+    #chatBubble{
+      position:fixed;bottom:20px;right:20px;background:#4fc3f7;color:#000;border-radius:50%;width:60px;height:60px;
+      display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 20px rgba(79,195,247,0.5);z-index:999;
+    }
+    #chatWindow{
+      position:fixed;bottom:90px;right:20px;width:300px;height:400px;background:#101a30;color:#e0e6f0;
+      border:1px solid #4fc3f7;border-radius:12px;display:none;flex-direction:column;overflow:hidden;
+    }
+    #chatLog{flex:1;overflow-y:auto;padding:10px;font-family:monospace;}
+    #chatInput{border:none;border-top:1px solid #4fc3f7;background:#0b1220;color:#fff;padding:8px;width:100%;outline:none;}
   </style>
 </head>
 <body>
-  <header>🛰️ Console IA J.E.A.N – TINSFLASH (Cockpit)</header>
+  <header>🛰️ Console IA J.E.A.N – TINSFLASH PRO+++ (Cockpit mondial)</header>
 
   <nav>
     <a href="admin-alerts.html">Alertes</a>
@@ -50,11 +54,13 @@
 
   <main>
     <div class="section">
-      <h2>🧠 Commandes moteur</h2>
-      <button class="btn" onclick="runExtraction()">⚡ Extraction</button>
-      <button class="btn" onclick="runIAJEAN()">🧠 Analyse IA J.E.A.N.</button>
-      <button class="btn" onclick="integrateAlerts()">⚡ Intégrer alertes IA → moteur</button>
+      <h2>🧠 Commandes moteur mondial</h2>
+      <button class="btn" onclick="runExtraction('EuropeUSA')">⚡ Extraction Europe / USA / Canada</button>
+      <button class="btn" onclick="runExtraction('World')">🌍 Extraction Reste du Monde</button>
+      <button class="btn" onclick="runIAJEAN()">🧠 Analyse IA J.E.A.N</button>
+      <button class="btn" onclick="runFusion()">🌐 Fusion globale (prévisions + alertes)</button>
       <button class="btn" onclick="refreshStatus()">🔄 Rafraîchir</button>
+      <button class="btn" onclick="stopEngine()">⛔ Arrêt sécurisé</button>
     </div>
 
     <div class="section">
@@ -73,11 +79,19 @@
     </div>
   </main>
 
+  <!-- === Chat IA GPT-4o-mini (bulle) === -->
+  <div id="chatBubble">💬</div>
+  <div id="chatWindow">
+    <div id="chatLog"></div>
+    <input id="chatInput" placeholder="Écrire à IA J.E.A.N... (GPT-4o-mini)" onkeydown="if(event.key==='Enter')sendChat()">
+  </div>
+
   <script>
     const API="/api";
     const logDiv=document.getElementById("logStream");
+    let mapForecast,mapAlerts;
 
-    // === Flux SSE ===
+    // === SSE logs ===
     function startLogStream(){
       const evt=new EventSource(`${API}/logs/stream`);
       evt.onmessage=(e)=>{
@@ -91,6 +105,11 @@
       evt.onerror=()=>logDiv.innerHTML+="<div>⚠️ Flux SSE interrompu...</div>";
     }
 
+    // === Popup ===
+    function showPopup(t,st=""){const o=document.createElement("div");o.id="popupOverlay";
+      o.innerHTML=`<div class='spinner'></div><h3>${t}</h3><small>${st}</small>`;document.body.appendChild(o);}
+    function closePopup(){const p=document.getElementById("popupOverlay");if(p)p.remove();}
+
     // === Status moteur ===
     async function refreshStatus(){
       const e=document.getElementById("engineStatus");
@@ -98,69 +117,88 @@
       try{
         const r=await fetch(`${API}/status`);
         const d=await r.json();
-        e.innerHTML=`<b>Statut:</b> ${d.status}<br>
-        <b>Dernier run:</b> ${new Date(d.lastRun).toLocaleString()}<br>
-        <b>Alertes actives:</b> ${d.alerts?.length||0}<br>
-        <b>Zones couvertes:</b> ${d.coveredZones?.length||0}`;
+        e.innerHTML=`<b>Statut :</b> ${d.status}<br>
+        <b>Dernier run :</b> ${new Date(d.lastRun).toLocaleString()}<br>
+        <b>Alertes actives :</b> ${d.alerts?.length||0}<br>
+        <b>Zones couvertes :</b> ${d.coveredZones?.length||0}<br>
+        <b>IA :</b> ${d.aiStatus||'—'}<br>`;
       }catch(err){e.innerHTML="❌ "+err.message;}
     }
 
-    // === Popups animés ===
-    function showPopup(t,st=""){
-      const o=document.createElement("div");
-      o.id="popupOverlay";
-      o.innerHTML=`<div class='spinner'></div><h3>${t}</h3><small>${st}</small>`;
-      document.body.appendChild(o);
-    }
-    function closePopup(){const p=document.getElementById("popupOverlay");if(p)p.remove();}
-
-    // === Extraction ===
-    async function runExtraction(){
-      showPopup("⚙️ Extraction en cours...","Fusion des modèles réels GFS / ECMWF / ICON / NASA");
+    // === Lancement moteur ===
+    async function runExtraction(type){
+      const label=type==="EuropeUSA"?"Europe/USA/Canada":"Reste du monde";
+      showPopup(`⚙️ Extraction ${label}...`,`Chargement des modèles GFS / ECMWF / ICON / NASA`);
       try{
-        const r=await fetch(`${API}/run-global`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone:"All"})});
+        const endpoint=type==="EuropeUSA"?`${API}/run-europe-usa`:`${API}/run-world`;
+        const r=await fetch(endpoint,{method:"POST"});
         const d=await r.json();closePopup();
         if(!d.success)throw new Error(d.error||"Erreur inconnue");
-        alert("✅ Extraction complète réussie !");
+        alert(`✅ Extraction ${label} réussie !`);
         refreshStatus();
       }catch(e){closePopup();alert("❌ "+e.message);}
     }
 
-    // === IA J.E.A.N ===
     async function runIAJEAN(){
-      showPopup("🧠 Analyse IA J.E.A.N. en cours...","Fusion IA / modèles / relief / climat");
+      showPopup("🧠 IA J.E.A.N en action...","Analyse multi-modèles, relief, climat, stations");
       try{
         const r=await fetch(`${API}/ai-analyse`,{method:"POST"});
         const d=await r.json();closePopup();
-        if(!d.success)throw new Error(d.error||"Erreur inconnue");
-        alert("✅ Analyse IA J.E.A.N. terminée !");
+        if(!d.success)throw new Error(d.error||"Erreur IA");
+        alert("✅ IA J.E.A.N a terminé son analyse !");
         refreshStatus();
       }catch(e){closePopup();alert("❌ "+e.message);}
     }
 
-    // === Intégration alertes ===
-    async function integrateAlerts(){
-      showPopup("⚡ Intégration des alertes IA...","Mise à jour du moteur en cours");
+    async function runFusion(){
+      showPopup("🌐 Fusion mondiale...","Consolidation prévisions + alertes");
       try{
-        const r=await fetch(`${API}/alerts`);
+        const r=await fetch(`${API}/fusion-world`,{method:"POST"});
         const d=await r.json();closePopup();
-        if(!Array.isArray(d))throw new Error("Aucune alerte disponible");
-        alert(`✅ ${d.length} alertes intégrées !`);
+        if(!d.success)throw new Error(d.error||"Erreur fusion");
+        alert("✅ Fusion mondiale terminée !");
+        refreshStatus();
       }catch(e){closePopup();alert("❌ "+e.message);}
     }
 
-    // === Cartes ===
+    async function stopEngine(){
+      if(!confirm("Arrêter le moteur TINSFLASH ?"))return;
+      showPopup("⛔ Arrêt sécurisé du moteur...");
+      try{
+        await fetch(`${API}/stop`,{method:"POST"});
+        closePopup();alert("🛑 Moteur arrêté proprement.");
+      }catch(e){closePopup();alert("❌ "+e.message);}
+    }
+
+    // === CARTES ===
     function initMaps(){
-      const f=L.map("map-forecast").setView([30,10],2);
-      const a=L.map("map-alerts").setView([30,10],2);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(f);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(a);
+      mapForecast=L.map("map-forecast").setView([30,10],2);
+      mapAlerts=L.map("map-alerts").setView([30,10],2);
+      const tiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:8});
+      tiles.addTo(mapForecast);tiles.addTo(mapAlerts);
+    }
+
+    // === CHAT IA (GPT-4o-mini) ===
+    const bubble=document.getElementById("chatBubble");
+    const chatWin=document.getElementById("chatWindow");
+    const chatLog=document.getElementById("chatLog");
+    const chatInput=document.getElementById("chatInput");
+
+    bubble.onclick=()=>chatWin.style.display=chatWin.style.display==="flex"?"none":"flex";
+    async function sendChat(){
+      const text=chatInput.value.trim();if(!text)return;
+      chatLog.innerHTML+=`<div><b>Moi :</b> ${text}</div>`;
+      chatInput.value="";chatLog.scrollTop=chatLog.scrollHeight;
+      try{
+        const r=await fetch(`${API}/chat-mini`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:text})});
+        const d=await r.json();
+        chatLog.innerHTML+=`<div><b>IA.JEAN :</b> ${d.reply||'...'}</div>`;
+      }catch{chatLog.innerHTML+="<div>⚠️ Erreur réseau IA</div>";}
+      chatLog.scrollTop=chatLog.scrollHeight;
     }
 
     document.addEventListener("DOMContentLoaded",()=>{
-      initMaps();
-      startLogStream();
-      refreshStatus();
+      initMaps();startLogStream();refreshStatus();
     });
   </script>
 </body>
