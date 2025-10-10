@@ -72,7 +72,6 @@ app.use(
 // ==========================================================
 async function connectMongo() {
   try {
-    mongoose.set("suppressReservedKeysWarning", true);
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
