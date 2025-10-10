@@ -34,7 +34,6 @@ import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
-// ✅ Import corrigé, cohérent avec forecastService
 import { generateForecast } from "./services/forecastService.js";
 
 // === RUNS PAR ZONES ===
@@ -87,7 +86,7 @@ async function connectMongo() {
     if (state) console.log("🧠 État moteur chargé avec succès.");
   } catch (err) {
     console.error("❌ Erreur MongoDB:", err.message);
-    setTimeout(connectMongo, 10000); // retry après 10s
+    setTimeout(connectMongo, 10000);
   }
 }
 
@@ -254,6 +253,25 @@ app.get("/api/status", async (_, res) => {
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🛰️ EXPORT TEMPS RÉEL DES LOGS POUR CONTRÔLE EXTERNE
+// ==========================================================
+app.get("/api/logs-live", async (_, res) => {
+  try {
+    const s = await getEngineState();
+    res.json({
+      status: s?.status || "unknown",
+      lastRun: s?.lastRun || null,
+      logs: (s?.logs || []).slice(-100),
+      errors: (s?.errors || []).slice(-20),
+      checkup: s?.checkup || {},
+    });
+  } catch (e) {
+    console.error("❌ Erreur /api/logs-live :", e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
