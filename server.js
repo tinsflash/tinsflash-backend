@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.5 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.6 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -68,16 +68,30 @@ app.use(
 );
 
 // ==========================================================
-// 🔌 MongoDB
+// 🔌 MongoDB – Connexion stabilisée Render + Atlas Paris
 // ==========================================================
 if (process.env.MONGO_URI) {
-  mongoose
-    .connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    .then(() => console.log("✅ MongoDB connecté"))
-    .catch((e) => console.error("❌ Erreur MongoDB:", e.message));
+  try {
+    mongoose.set("suppressReservedKeysWarning", true);
+    mongoose
+      .connect(process.env.MONGO_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 20000,
+        connectTimeoutMS: 20000,
+        socketTimeoutMS: 45000,
+      })
+      .then(async () => {
+        console.log("✅ MongoDB connecté");
+        const state = await getEngineState();
+        if (state) console.log("🧠 État moteur chargé avec succès.");
+      })
+      .catch((e) => console.error("❌ Erreur MongoDB:", e.message));
+  } catch (err) {
+    console.error("⚠️ Erreur d'initialisation MongoDB:", err);
+  }
+} else {
+  console.warn("⚠️ Aucune variable MONGO_URI définie !");
 }
 
 // ==========================================================
@@ -193,10 +207,8 @@ app.post("/api/runWorldAlerts", async (req, res) => {
 });
 
 // ==========================================================
-// 🌍 ROUTES COMPLÉMENTAIRES – CONSOLE V3.5 PRO+++
+// 🌍 ROUTES COMPLÉMENTAIRES – CONSOLE V3.6 PRO+++
 // ==========================================================
-
-// Extraction Europe/USA/Canada combinée
 app.post("/api/run-europe-usa", async (req, res) => {
   try {
     await addEngineLog("⚙️ Extraction combinée Europe/USA/Canada", "info", "core");
@@ -212,7 +224,6 @@ app.post("/api/run-europe-usa", async (req, res) => {
   }
 });
 
-// Extraction Reste du monde
 app.post("/api/run-world", async (req, res) => {
   try {
     await addEngineLog("🌍 Extraction Reste du monde", "info", "core");
@@ -233,7 +244,6 @@ app.post("/api/run-world", async (req, res) => {
   }
 });
 
-// Fusion mondiale alias
 app.post("/api/fusion-world", async (req, res) => {
   try {
     const result = await runWorldAlerts();
@@ -244,49 +254,8 @@ app.post("/api/fusion-world", async (req, res) => {
   }
 });
 
-// Stop moteur alias
-app.post("/api/stop", async (req, res) => {
-  try {
-    stopExtraction();
-    await addEngineLog("🛑 Moteur stoppé via /api/stop", "warn", "core");
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// Cartes Prévisions / Alertes
-app.get("/api/forecast-map", async (req, res) => {
-  try {
-    const state = await getEngineState();
-    res.json(state.finalReport || []);
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-app.get("/api/alerts-map", async (req, res) => {
-  try {
-    const state = await getEngineState();
-    res.json(state.alertsWorld || []);
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// Chat GPT-4o-mini – IA J.E.A.N
-app.post("/api/chat-mini", async (req, res) => {
-  try {
-    const prompt = req.body.prompt || "";
-    const reply = await chatService.askGPTmini(prompt);
-    res.json({ reply });
-  } catch (e) {
-    await addEngineError("Erreur chat-mini: " + e.message, "chat");
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // ==========================================================
-// 📊 STATUS MOTEUR
+// 📊 STATUS + LOGS + ADMIN
 // ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
@@ -302,9 +271,6 @@ app.get("/api/status", async (_, res) => {
   }
 });
 
-// ==========================================================
-// 📡 LOGS SSE
-// ==========================================================
 app.get("/api/logs/stream", (req, res) => {
   console.log("🌐 Flux SSE connecté depuis console admin...");
   res.setHeader("Content-Type", "text/event-stream");
@@ -360,7 +326,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // 🚀 LANCEMENT SERVEUR
 // ==========================================================
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`⚡ TINSFLASH PRO+++ prêt sur port ${PORT}`);
   console.log("🌍 Zones couvertes:", enumerateCoveredPoints().length);
 });
