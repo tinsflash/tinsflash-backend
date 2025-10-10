@@ -13,15 +13,30 @@
     header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);
       color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
     .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:0.9em;}
-    video{width:100%;max-height:180px;object-fit:cover;display:block;}
+
+    /* 🎥 Vidéo */
+    .video-container{position:relative;width:100%;max-height:200px;overflow:hidden;}
+    video{width:100%;object-fit:cover;display:block;}
+    #soundToggle{
+      position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.5);
+      color:#4fc3f7;border:none;border-radius:50%;width:42px;height:42px;
+      font-size:20px;cursor:pointer;box-shadow:0 0 10px rgba(0,0,0,0.5);
+      transition:transform 0.2s ease;
+    }
+    #soundToggle:hover{transform:scale(1.1);}
+
     main{max-width:1200px;margin:auto;padding:20px;}
     h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
     p.intro{color:#e0e8f9;line-height:1.7;font-size:1.08em;text-align:justify;}
-    .intro-block{display:flex;align-items:flex-start;gap:18px;margin-top:20px;}
-    .intro-block img{border-radius:12px;width:140px;height:auto;box-shadow:0 0 18px rgba(0,0,0,0.4);}
+
+    /* 🧠 Présentation */
+    .intro-block{display:flex;align-items:center;gap:25px;margin-top:20px;}
+    .intro-block img{border-radius:12px;width:100px;height:auto;box-shadow:0 0 18px rgba(0,0,0,0.4);}
+
     .forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
     .forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,0.3);}
     .forecast-card img{width:50px;height:50px;}
+
     .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
     footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;}
     footer a{color:#4fc3f7;text-decoration:none;}
@@ -36,7 +51,16 @@
     .ask-jean a{color:#4fc3f7;font-weight:bold;cursor:pointer;text-decoration:none;}
     .ask-jean a:hover{text-decoration:underline;}
 
-    /* CHAT J.E.A.N */
+    /* 🌐 Traduction */
+    #google_translate_element{
+      position:fixed;top:10px;right:10px;z-index:1000;
+      background:rgba(10,20,40,0.6);padding:4px 8px;border-radius:6px;
+      box-shadow:0 0 6px rgba(0,0,0,0.4);
+    }
+    .goog-te-gadget-simple{background:none!important;border:none!important;}
+    .goog-te-gadget-icon{display:none!important;}
+
+    /* 💬 Chat J.E.A.N */
     .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
       border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);
       font-size:18px;transition:transform .3s ease;z-index:999;}
@@ -52,12 +76,28 @@
 </head>
 
 <body>
+  <!-- 🌐 Traduction auto -->
+  <div id="google_translate_element"></div>
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'fr',
+        includedLanguages: 'fr,en,es,de,it,pt,nl,pl,sv,fi,ru,ar,zh-CN,ja,ko',
+        layout: google.translate.TranslateElement.InlineLayout.HORIZONTAL
+      }, 'google_translate_element');
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
   <header>TINSFLASH • Prévisions & Alertes</header>
   <div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Spécificités locales (relief, altitude, océans)</div>
 
-  <video autoplay muted loop playsinline id="introVideo">
-    <source src="intro-jean.mp4" type="video/mp4" />
-  </video>
+  <div class="video-container">
+    <video autoplay muted loop playsinline id="introVideo">
+      <source src="intro-jean.mp4" type="video/mp4" />
+    </video>
+    <button id="soundToggle">🔇</button>
+  </div>
 
   <main>
     <div class="intro-block">
@@ -105,9 +145,6 @@
     <h2>Alertes nationales</h2>
     <div id="alerts-national" class="alert-section">Chargement...</div>
 
-    <h2>Alertes mondiales – Primeurs TINSFLASH</h2>
-    <div id="alerts-world" class="alert-section">Chargement...</div>
-
     <h2>Radar mondial Windy</h2>
     <iframe width="100%" height="450" src="https://embed.windy.com/embed2.html?lat=48.0&lon=3.0&zoom=3&level=surface&overlay=rain&menu=true" frameborder="0"></iframe>
 
@@ -138,6 +175,14 @@
   <script>
     const API_BASE = "/api";
 
+    // 🎵 Gestion du son
+    const video=document.getElementById("introVideo");
+    const soundBtn=document.getElementById("soundToggle");
+    soundBtn.addEventListener("click",()=>{
+      video.muted=!video.muted;
+      soundBtn.textContent=video.muted?"🔇":"🔊";
+    });
+
     // 🔔 Notifications
     function askNotifications(){
       if(Notification.permission==="granted"){alert("Notifications déjà activées.");return;}
@@ -156,7 +201,7 @@
         div.innerHTML=`
           <img src="assets/icons/${d.icon||'sun'}.png" alt="">
           <div><b>${d.day||''}</b></div>
-          <div>${d.temp_min}° / ${d.temp_max}°</div>
+          <div>${d.tmin||''}° / ${d.tmax||''}°</div>
           <small>${d.condition||''}</small>`;
         container.appendChild(div);
       });
@@ -166,7 +211,7 @@
     function renderMeteoJour(f){
       const el=document.getElementById("meteoJour");
       if(!f){el.textContent="Prévisions en cours...";return;}
-      let msg=`Aujourd’hui, le temps est dominé par ${f.condition?.toLowerCase()||"des conditions variables"} avec une température comprise entre ${f.temp_min}°C et ${f.temp_max}°C. `;
+      let msg=`Aujourd’hui, le temps est dominé par ${f.condition?.toLowerCase()||"des conditions variables"} avec une température comprise entre ${f.tmin||f.temp_min||"-"}°C et ${f.tmax||f.temp_max||"-"}°C. `;
       msg+=`Le vent souffle à environ ${f.wind?.toFixed(0)||0} km/h et la fiabilité du modèle est estimée à ${(f.reliability*100||80).toFixed(0)} %.`;
       el.textContent=msg;
     }
@@ -196,8 +241,8 @@
         const r=await fetch(`${API_BASE}/forecast?lat=${lat}&lon=${lon}`);
         const data=await r.json();
         renderForecastCards(document.getElementById("forecast-today"), [data.forecast]);
-        renderForecastCards(document.getElementById("forecast-local"), data.nextDays||[]);
-        renderForecastCards(document.getElementById("forecast-national"), data.national||[]);
+        renderForecastCards(document.getElementById("forecast-local"), data.localDaily||[]);
+        renderForecastCards(document.getElementById("forecast-national"), data.nationalDaily||[]);
         renderMeteoJour(data.forecast);
       }catch(e){console.error(e);}
     }
@@ -214,13 +259,13 @@
       m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
       document.getElementById("chatInput").value="";
       try{
-        const r=await fetch(`${API_BASE}/cohere`,{
+        const r=await fetch(`${API_BASE}/chat`,{
           method:"POST",
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify({question:`[METEO ONLY] ${msg}`})
         });
         const d=await r.json();
-        if(d.reply?.toLowerCase().includes("je ne peux pas")||!d.reply){
+        if(!d.reply){
           m.innerHTML+=`<div>J.E.A.N : Je réponds uniquement aux questions liées à la météo et aux alertes TINSFLASH.</div>`;
         }else{
           m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
