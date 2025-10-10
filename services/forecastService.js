@@ -3,7 +3,7 @@
 // Retourne: forecast (local “now”) + localDaily[7j] + nationalDaily[7j] + alerts[]
 // Everest Protocol v3.6 — 100% réel
 
-import { runSuperForecast } from "./superForecast.js";
+import { SuperForecast } from "./superForecast.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import Alert from "../models/Alert.js";
 
