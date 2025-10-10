@@ -19,7 +19,7 @@ export async function runAIComparison(results = []) {
         const resNOAA = await axios.get("https://api.weather.gov/");
         const resECMWF = await axios.get("https://www.ecmwf.int/en/forecasts");
 
-        const deviation = Math.abs((r.fused.temperature ?? 0) -  (resNOAA.data?.temperature ?? 0));
+        const deviation = Math.abs((r.fused.temperature ?? 0) - (resNOAA.data?.temperature ?? 0));
         const info = `ΔTemp NOAA=${deviation.toFixed(1)}°C`;
 
         await addEngineLog(`🔎 ${r.zone} → ${info}`, "info", "IA.JEAN");
@@ -33,3 +33,8 @@ export async function runAIComparison(results = []) {
     await addEngineError(`Erreur audit externe: ${err.message}`, "IA.JEAN");
   }
 }
+
+// ==========================================================
+// ✅ Compatibilité ascendante pour superForecast.js
+// ==========================================================
+export const autoCompareAfterRun = runAIComparison;
