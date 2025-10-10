@@ -3,8 +3,8 @@
 // Retourne: forecast (local “now”) + localDaily[7j] + nationalDaily[7j] + alerts[]
 // Everest Protocol v3.6 — 100% réel
 
-// services/forecastService.js
-import { runSuperForecast } from "./superForecast.js";
+// ✅ Import corrigé : superForecast() (non runSuperForecast)
+import { superForecast } from "./superForecast.js";
 import { addEngineLog, addEngineError, saveEngineState, getEngineState } from "./engineState.js";
 import Alert from "../models/Alert.js";
 
@@ -51,22 +51,22 @@ function pickIcon(d) {
  */
 export async function generateForecast(lat, lon, country = "Unknown", region = "GENERIC") {
   try {
-    // 1) Super forecast (doit renvoyer local + national + daily)
-    const sf = await runSuperForecast({
+    // 1️⃣ Appel du moteur SuperForecast (corrigé)
+    const sf = await superForecast({
       lat,
       lon,
       country,
       region,
-      horizonDays: 7,     // <— on force 7 jours
+      horizonDays: 7,
       includeNational: true
     });
 
-    // Tolérance format (selon implémentation actuelle de runSuperForecast)
+    // Tolérance format
     const nowLocal = sf?.forecast ?? sf?.now ?? {};
     const localDaily = sf?.dailyLocal ?? sf?.daily?.local ?? [];
     const nationalDaily = sf?.dailyNational ?? sf?.daily?.national ?? [];
 
-    // 2) Normalisations minimales pour l’index
+    // 2️⃣ Normalisations
     const forecast = {
       lat, lon, country, region,
       temperature: nowLocal.temperature ?? nowLocal.temp ?? null,
@@ -92,7 +92,7 @@ export async function generateForecast(lat, lon, country = "Unknown", region = "
     const localDaily7 = mapDays(localDaily);
     const nationalDaily7 = mapDays(nationalDaily);
 
-    // 3) Alertes proches (Mongo) — rayon ~250 km, tri par fiabilité desc
+    // 3️⃣ Alertes proches
     let alertsNearby = [];
     try {
       const all = await Alert.find().lean();
@@ -108,7 +108,7 @@ export async function generateForecast(lat, lon, country = "Unknown", region = "
       await addEngineLog("⚠️ Lecture alertes proches échouée (fallback vide)", "warn", "forecast");
     }
 
-    // 4) Persistance légère (limite la mémoire)
+    // 4️⃣ Persistance légère
     const state = await getEngineState();
     if (!state.forecasts) state.forecasts = [];
     state.forecasts.push({ ...forecast, savedAt: new Date() });
@@ -121,7 +121,7 @@ export async function generateForecast(lat, lon, country = "Unknown", region = "
       "forecast"
     );
 
-    // 5) Paquet final pour index.html
+    // 5️⃣ Retour final
     return {
       forecast,
       localDaily: localDaily7,
