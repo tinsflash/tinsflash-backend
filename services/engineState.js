@@ -1,9 +1,12 @@
 // PATH: services/engineState.js
 // ⚙️ Gestion de l’état global du moteur TINSFLASH PRO+++
-// Version : Everest Protocol v3.1 — 100 % réel & connecté
+// Version : Everest Protocol v3.5 — 100 % réel & connecté
 
 import mongoose from "mongoose";
 
+// ==========================================================
+// 🧩 Schémas MongoDB
+// ==========================================================
 const LogSchema = new mongoose.Schema({
   module: { type: String, required: true },
   level: { type: String, enum: ["info", "warn", "error"], default: "info" },
@@ -21,7 +24,7 @@ export const EngineState = mongoose.model("EngineState", EngineStateSchema);
 export const EngineLog = mongoose.model("EngineLog", LogSchema);
 
 // ==========================================================
-// 🔧 Fonctions utilitaires — Logs & statut moteur
+// 🔧 Fonctions utilitaires — Logs, erreurs & statut moteur
 // ==========================================================
 
 export async function addEngineLog(message, level = "info", module = "core") {
@@ -34,6 +37,21 @@ export async function addEngineLog(message, level = "info", module = "core") {
   }
 }
 
+// ✅ Correction ajoutée — fonction manquante dans ta version
+export async function addEngineError(message, module = "core") {
+  try {
+    const log = new EngineLog({ message, level: "error", module });
+    await log.save();
+    console.error(`💥 [ERREUR][${module}] ${message}`);
+  } catch (err) {
+    console.error("❌ Erreur lors de l'enregistrement de l'erreur:", err);
+  }
+}
+
+// ==========================================================
+// 🔁 Gestion de l’état moteur
+// ==========================================================
+
 export async function updateEngineState(status, checkup = {}) {
   try {
     const state = await EngineState.findOneAndUpdate(
@@ -44,7 +62,7 @@ export async function updateEngineState(status, checkup = {}) {
     await addEngineLog(`État moteur mis à jour : ${status}`, "info", "core");
     return state;
   } catch (err) {
-    console.error("❌ Erreur mise à jour EngineState:", err);
+    await addEngineError(`Erreur mise à jour EngineState: ${err.message}`, "core");
   }
 }
 
@@ -53,9 +71,19 @@ export async function getEngineState() {
     const state = await EngineState.findOne({});
     return state || { status: "idle", lastRun: null };
   } catch (err) {
-    console.error("❌ Erreur lecture EngineState:", err);
+    await addEngineError(`Erreur lecture EngineState: ${err.message}`, "core");
     return { status: "fail", lastRun: null };
   }
 }
 
-export default { addEngineLog, updateEngineState, getEngineState };
+// ==========================================================
+// 📤 Exports
+// ==========================================================
+export default {
+  addEngineLog,
+  addEngineError,
+  updateEngineState,
+  getEngineState,
+  EngineState,
+  EngineLog,
+};
