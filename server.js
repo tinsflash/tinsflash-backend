@@ -1,7 +1,7 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.0 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.5 PRO+++)
 // ==========================================================
-// Moteur global connecté IA.J.E.A.N.
+// Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
 // ==========================================================
 
@@ -11,12 +11,12 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import fetch from "node-fetch";
+import axios from "axios";
+import fs from "fs";
 
-import { runGlobal } from "./services/runGlobal.js"; // moteur agrégé si utilisé
-import { runWorld } from "./services/runWorld.js";   // RUN 'reste du monde'
-import { runWorldAlerts } from "./services/runWorldAlerts.js";
-import { runAIAnalysis } from "./services/aiAnalysis.js"; // Phase 2 IA (alias possible de runGlobalAI)
-
+import { runGlobal } from "./services/runGlobal.js";
+import { runAIAnalysis } from "./services/aiAnalysis.js";
 import {
   initEngineState,
   getEngineState,
@@ -31,13 +31,14 @@ import {
 
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
+import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
+import * as chatService from "./services/chatService.js";
 
-// === RUNS PAR ZONES (Europe/USA/Canada séparés du reste du monde) ===
+// === RUNS PAR ZONES ===
 import { runGlobalEurope } from "./services/runGlobalEurope.js";
 import { runGlobalUSA } from "./services/runGlobalUSA.js";
 import { runGlobalCanada } from "./services/runGlobalCanada.js";
-
 import { runGlobalAfricaNord } from "./services/runGlobalAfricaNord.js";
 import { runGlobalAfricaCentrale } from "./services/runGlobalAfricaCentrale.js";
 import { runGlobalAfricaOuest } from "./services/runGlobalAfricaOuest.js";
@@ -51,16 +52,16 @@ import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
 app.use(express.json());
+await initEngineState();
 
 // ==========================================================
 // 🌐 CORS
 // ==========================================================
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -72,22 +73,17 @@ app.use(
 if (process.env.MONGO_URI) {
   mongoose
     .connect(process.env.MONGO_URI, {
-      autoIndex: true,
-      serverSelectionTimeoutMS: 15000,
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     })
     .then(() => console.log("✅ MongoDB connecté"))
     .catch((e) => console.error("❌ Erreur MongoDB:", e.message));
-} else {
-  console.warn("⚠️ MONGO_URI non défini – certaines features ne fonctionneront pas.");
 }
-
-// Init état moteur
-await initEngineState();
 
 // ==========================================================
 // 🛑 STOP / RESET EXTRACTION
 // ==========================================================
-app.post("/api/stop-extraction", async (_req, res) => {
+app.post("/api/stop-extraction", async (req, res) => {
   try {
     stopExtraction();
     await addEngineLog("🛑 Extraction stoppée manuellement via API", "warn", "core");
@@ -98,7 +94,7 @@ app.post("/api/stop-extraction", async (_req, res) => {
   }
 });
 
-app.post("/api/reset-stop-extraction", async (_req, res) => {
+app.post("/api/reset-stop-extraction", async (req, res) => {
   try {
     resetStopFlag();
     await addEngineLog("✅ Flag stop extraction réinitialisé", "info", "core");
@@ -110,113 +106,26 @@ app.post("/api/reset-stop-extraction", async (_req, res) => {
 });
 
 // ==========================================================
-// 🚀 RUNS PRINCIPAUX (boutons console)
+// 🚀 RUN GLOBAL (All zones ou spécifique)
 // ==========================================================
-
-// 1) Europe + USA + Canada (2×/jour)
-app.post("/api/run-main", async (_req, res) => {
+app.post("/api/run-global", async (req, res) => {
   try {
     if (isExtractionStopped && isExtractionStopped()) {
       return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
     }
-    await addEngineLog("⚡ RUN PRINCIPAL – Europe + USA + Canada", "info", "runMain");
-
     await checkSourcesFreshness();
-
-    const eu = await runGlobalEurope();
-    const us = await runGlobalUSA();
-    const ca = await runGlobalCanada();
-
-    await addEngineLog(
-      `✅ EU(${eu?.forecastCount || 0}) + US(${us?.forecastCount || 0}) + CA(${ca?.forecastCount || 0})`,
-      "success",
-      "runMain"
-    );
-
-    // Fusion partielle des alertes (optionnel ici)
-    const fused = await runWorldAlerts();
-    await addEngineLog(
-      `🌍 Fusion alertes (partielle/main) → ${fused?.summary?.totalAlerts || 0} alertes`,
-      "info",
-      "runMain"
-    );
-
-    const s = await getEngineState();
-    s.lastRun = new Date();
-    s.checkup = s.checkup || {};
-    s.checkup.engineStatus = "OK-MAIN";
-    await saveEngineState(s);
-
-    res.json({ success: true, eu, us, ca, fused });
+    const zone = req.body?.zone || "All";
+    const r = await runGlobal(zone);
+    await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`, "success", "runGlobal");
+    res.json({ success: true, result: r });
   } catch (e) {
-    await addEngineError("❌ run-main: " + e.message, "runMain");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// 2) Reste du monde (1×/jour – Afrique/AmSud/Asie/Océanie/Caraïbes)
-app.post("/api/run-world", async (_req, res) => {
-  try {
-    if (isExtractionStopped && isExtractionStopped()) {
-      return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
-    }
-    await addEngineLog("🌍 RUN MONDIAL – Reste du monde", "info", "runWorld");
-
-    await checkSourcesFreshness();
-    const world = await runWorld(); // lance tous les sous-runs hors EU/USA/Canada
-
-    const fused = await runWorldAlerts();
-    await addEngineLog(
-      `🌐 Fusion alertes (monde) → ${fused?.summary?.totalAlerts || 0} alertes`,
-      "info",
-      "runWorld"
-    );
-
-    const s = await getEngineState();
-    s.lastRun = new Date();
-    s.checkup = s.checkup || {};
-    s.checkup.engineStatus = "OK-WORLD";
-    await saveEngineState(s);
-
-    res.json({ success: true, world, fused });
-  } catch (e) {
-    await addEngineError("❌ run-world: " + e.message, "runWorld");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// 3) Analyse IA J.E.A.N. (phase 2)
-app.post("/api/ai-analyse", async (_req, res) => {
-  try {
-    await addEngineLog("🧠 IA J.E.A.N. – Analyse globale", "info", "IA.JEAN");
-    const result = await runAIAnalysis();
-    await addEngineLog("✅ IA J.E.A.N. – Analyse terminée", "success", "IA.JEAN");
-    res.json({ success: true, result });
-  } catch (e) {
-    await addEngineError(`Erreur IA J.E.A.N.: ${e.message}`, "IA.JEAN");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// 4) Fusion globale (prévisions + alertes consolidées)
-app.post("/api/fusion-globale", async (_req, res) => {
-  try {
-    await addEngineLog("📦 Fusion globale (prévisions + alertes)…", "info", "fusion");
-    const fused = await runWorldAlerts();
-    await addEngineLog(
-      `✅ Fusion globale OK – ${fused?.summary?.totalAlerts || 0} alertes`,
-      "success",
-      "fusion"
-    );
-    res.json({ success: true, result: fused });
-  } catch (e) {
-    await addEngineError(`Erreur fusion globale: ${e.message}`, "fusion");
+    await addEngineError(`Erreur extraction: ${e.message}`, "runGlobal");
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // ==========================================================
-// 🔧 RUNS PAR ZONE (routes directes pour la console)
+// 🌍 RUNS PAR ZONES INDIVIDUELLES
 // ==========================================================
 const zoneRoutes = [
   { route: "/api/runGlobalEurope", fn: runGlobalEurope, label: "Europe" },
@@ -227,14 +136,14 @@ const zoneRoutes = [
   { route: "/api/runGlobalAfricaOuest", fn: runGlobalAfricaOuest, label: "Afrique de l’Ouest" },
   { route: "/api/runGlobalAfricaSud", fn: runGlobalAfricaSud, label: "Afrique du Sud" },
   { route: "/api/runGlobalAmericaSud", fn: runGlobalAmericaSud, label: "Amérique du Sud" },
-  { route: "/api/runGlobalAsiaEst", fn: runGlobalAsiaEst, label: "Asie de l’Est" },
-  { route: "/api/runGlobalAsiaSud", fn: runGlobalAsiaSud, label: "Asie du Sud" },
+  { route: "/api/runGlobalAsiaEst", fn: runGlobalAsiaEst, label: "Asie Est" },
+  { route: "/api/runGlobalAsiaSud", fn: runGlobalAsiaSud, label: "Asie Sud" },
   { route: "/api/runGlobalOceania", fn: runGlobalOceania, label: "Océanie" },
   { route: "/api/runGlobalCaribbean", fn: runGlobalCaribbean, label: "Caraïbes" },
 ];
 
 zoneRoutes.forEach(({ route, fn, label }) => {
-  app.post(route, async (_req, res) => {
+  app.post(route, async (req, res) => {
     try {
       if (isExtractionStopped && isExtractionStopped()) {
         return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
@@ -244,7 +153,7 @@ zoneRoutes.forEach(({ route, fn, label }) => {
       const state = await getEngineState();
       state.lastRun = new Date();
       await saveEngineState(state);
-      await addEngineLog(`✅ Extraction ${label} terminée`, "success", "runGlobal");
+      await addEngineLog(`✅ Extraction ${label} terminée avec succès`, "success", "runGlobal");
       res.json({ success: true, result });
     } catch (e) {
       await addEngineError(`Erreur extraction ${label}: ${e.message}`, "runGlobal");
@@ -254,9 +163,24 @@ zoneRoutes.forEach(({ route, fn, label }) => {
 });
 
 // ==========================================================
-// 🌎 RUN WORLD ALERTS (fusion globale des alertes)
+// 🧠 ANALYSE IA J.E.A.N.
 // ==========================================================
-app.post("/api/runWorldAlerts", async (_req, res) => {
+app.post("/api/ai-analyse", async (req, res) => {
+  try {
+    await addEngineLog("🧠 Lancement IA J.E.A.N. – Analyse en cours...", "info", "IA.JEAN");
+    const result = await runAIAnalysis();
+    await addEngineLog("✅ IA J.E.A.N. – Analyse terminée avec succès", "success", "IA.JEAN");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError(`Erreur IA J.E.A.N. : ${e.message}`, "IA.JEAN");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌎 FUSION MONDIALE DES ALERTES
+// ==========================================================
+app.post("/api/runWorldAlerts", async (req, res) => {
   try {
     await addEngineLog("🌍 Fusion globale des alertes en cours...", "info", "core");
     const result = await runWorldAlerts();
@@ -269,9 +193,102 @@ app.post("/api/runWorldAlerts", async (_req, res) => {
 });
 
 // ==========================================================
+// 🌍 ROUTES COMPLÉMENTAIRES – CONSOLE V3.5 PRO+++
+// ==========================================================
+
+// Extraction Europe/USA/Canada combinée
+app.post("/api/run-europe-usa", async (req, res) => {
+  try {
+    await addEngineLog("⚙️ Extraction combinée Europe/USA/Canada", "info", "core");
+    const [r1, r2, r3] = await Promise.all([runGlobalEurope(), runGlobalUSA(), runGlobalCanada()]);
+    const state = await getEngineState();
+    state.lastRunEurope = new Date();
+    await saveEngineState(state);
+    await addEngineLog("✅ Extraction Europe/USA/Canada terminée", "success", "core");
+    res.json({ success: true, result: { r1, r2, r3 } });
+  } catch (e) {
+    await addEngineError("Erreur run-europe-usa: " + e.message, "core");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Extraction Reste du monde
+app.post("/api/run-world", async (req, res) => {
+  try {
+    await addEngineLog("🌍 Extraction Reste du monde", "info", "core");
+    const results = await Promise.all([
+      runGlobalAfricaNord(), runGlobalAfricaCentrale(), runGlobalAfricaOuest(),
+      runGlobalAfricaSud(), runGlobalAmericaSud(),
+      runGlobalAsiaEst(), runGlobalAsiaSud(),
+      runGlobalOceania(), runGlobalCaribbean()
+    ]);
+    const state = await getEngineState();
+    state.lastRunWorld = new Date();
+    await saveEngineState(state);
+    await addEngineLog("✅ Extraction Reste du monde terminée", "success", "core");
+    res.json({ success: true, result: results });
+  } catch (e) {
+    await addEngineError("Erreur run-world: " + e.message, "core");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Fusion mondiale alias
+app.post("/api/fusion-world", async (req, res) => {
+  try {
+    const result = await runWorldAlerts();
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("Erreur fusion-world: " + e.message, "core");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Stop moteur alias
+app.post("/api/stop", async (req, res) => {
+  try {
+    stopExtraction();
+    await addEngineLog("🛑 Moteur stoppé via /api/stop", "warn", "core");
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Cartes Prévisions / Alertes
+app.get("/api/forecast-map", async (req, res) => {
+  try {
+    const state = await getEngineState();
+    res.json(state.finalReport || []);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+app.get("/api/alerts-map", async (req, res) => {
+  try {
+    const state = await getEngineState();
+    res.json(state.alertsWorld || []);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Chat GPT-4o-mini – IA J.E.A.N
+app.post("/api/chat-mini", async (req, res) => {
+  try {
+    const prompt = req.body.prompt || "";
+    const reply = await chatService.askGPTmini(prompt);
+    res.json({ reply });
+  } catch (e) {
+    await addEngineError("Erreur chat-mini: " + e.message, "chat");
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ==========================================================
 // 📊 STATUS MOTEUR
 // ==========================================================
-app.get("/api/status", async (_req, res) => {
+app.get("/api/status", async (_, res) => {
   try {
     const s = await getEngineState();
     res.json({
@@ -286,7 +303,7 @@ app.get("/api/status", async (_req, res) => {
 });
 
 // ==========================================================
-// 📡 LOGS SSE (Console admin)
+// 📡 LOGS SSE
 // ==========================================================
 app.get("/api/logs/stream", (req, res) => {
   console.log("🌐 Flux SSE connecté depuis console admin...");
@@ -304,9 +321,9 @@ app.get("/api/logs/stream", (req, res) => {
 });
 
 // ==========================================================
-// ⚡ ALERTES IA – Export public
+// ⚡ ALERTES IA – EXPORT PUBLIC
 // ==========================================================
-app.get("/api/alerts", async (_req, res) => {
+app.get("/api/alerts", async (_, res) => {
   try {
     const alerts = await Alert.find().lean();
     res.json(alerts || []);
@@ -321,17 +338,18 @@ app.get("/api/alerts", async (_req, res) => {
 [
   "admin-pp.html",
   "admin-alerts.html",
+  "admin-chat.html",
   "admin-index.html",
   "admin-radar.html",
   "admin-users.html",
 ].forEach((p) =>
-  app.get(`/${p}`, (_req, res) =>
+  app.get(`/${p}`, (_, res) =>
     res.sendFile(path.join(__dirname, "public", p))
   )
 );
 
 // ==========================================================
-// 📁 STATIC FILES (APRÈS les routes API)
+// 📁 STATIC FILES
 // ==========================================================
 app.use(express.static(path.join(__dirname, "public")));
 ["avatars", "videos", "assets", "demo"].forEach((d) =>
