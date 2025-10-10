@@ -1,78 +1,43 @@
-// PATH: services/chatService.js
-import { askOpenAI } from "./openaiService.js";
-import { askCohere } from "./cohereService.js";
-import { getEngineState } from "./engineState.js";
-import { getLogs } from "./adminLogs.js";
+// ==========================================================
+// 💬 TINSFLASH – chatService.js
+// Everest Protocol v3.9 PRO+++
+// ==========================================================
+// Chat météo J.E.A.N. – GPT-4o-mini (contexte météo uniquement)
+// ==========================================================
 
-// =====================================================
-// 💬 Chat moteur (GPT-5)
-// =====================================================
-export async function askAIEngine(message = "") {
+import OpenAI from "openai";
+import { addEngineLog, addEngineError } from "./engineState.js";
+import { injectAIProtocol } from "./aiInitProtocol.js";
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function askJean(message, user = "Anonyme") {
   try {
-    const state = await getEngineState();
-    const logs = await getLogs();
-    const context = {
-      checkup: state?.checkup || {},
-      lastRun: state?.lastRun,
-      alerts: state?.alertsLocal || [],
-      logs: logs?.slice(-200) || [],
-    };
+    const systemPrompt = await injectAIProtocol("chat utilisateur");
 
-    const SYSTEM = `
-Tu es ChatGPT-5, cerveau du moteur TINSFLASH.
-Analyse uniquement les données réelles.
-Réponds en français, de manière concise et technique.
-`;
+    const messages = [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Question météo : ${message}. 
+        Ne réponds qu’aux questions concernant la météo, les risques, les alertes ou les prévisions générées par TINSFLASH. 
+        Ignore tout autre sujet.`,
+      },
+    ];
 
-    const prompt = `
-[QUESTION]
-${message}
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      temperature: 0.3,
+      max_tokens: 400,
+    });
 
-[CONTEXTE]
-${JSON.stringify(context, null, 2)}
-`;
-    return await askOpenAI(SYSTEM, prompt, { model: "gpt-5" });
+    const answer = completion.choices?.[0]?.message?.content || "Aucune réponse IA disponible.";
+    await addEngineLog(`💬 J.E.A.N → ${user}: ${answer}`, "info", "chat");
+
+    return { success: true, answer };
   } catch (err) {
-    console.error("❌ askAIEngine error:", err.message);
-    return "Erreur IA moteur (GPT-5).";
+    await addEngineError(`Erreur chat IA: ${err.message}`, "chat");
+    return { success: false, error: err.message };
   }
 }
-
-// =====================================================
-// 💬 Chat console admin (GPT-4o-mini)
-// =====================================================
-export async function askAIAdmin(message = "", mode = "moteur") {
-  try {
-    const SYSTEM = `
-Tu es un assistant technique TINSFLASH basé sur GPT-4o-mini.
-Aide Patrick à interpréter les prévisions, les alertes et l’état du moteur.
-Réponds en français, clair, professionnel et opérationnel.
-`;
-
-    const prefix =
-      mode === "meteo"
-        ? "Analyse météo / climat demandée :"
-        : "Demande liée au moteur ou à la console :";
-
-    const prompt = `${prefix}\n${message}`;
-    return await askOpenAI(SYSTEM, prompt, { model: "gpt-4o-mini" });
-  } catch (err) {
-    console.error("❌ askAIAdmin error:", err.message);
-    return "Erreur IA admin (GPT-4o-mini).";
-  }
-}
-
-// =====================================================
-// 💬 Chat public (Cohere)
-// =====================================================
-export async function askAIGeneral(message = "") {
-  try {
-    const { reply } = await askCohere(message);
-    return reply || "Réponse IA indisponible (Cohere).";
-  } catch (err) {
-    console.error("❌ askAIGeneral error:", err.message);
-    return "Erreur IA publique (Cohere).";
-  }
-}
-
-export default { askAIEngine, askAIAdmin, askAIGeneral };
