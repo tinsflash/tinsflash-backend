@@ -9,29 +9,70 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    body{margin:0;font-family:"Segoe UI",sans-serif;background:#0f172a;color:#f5faff;}
-    header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);
-      color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
-    .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:0.9em;}
-
-    video{
-      width:100%;max-height:180px;object-fit:cover;display:block;
-      object-position:bottom; /* ✅ cadrage sur le sol visible */
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #f5faff;
     }
-    .sound-btn{
-      position:absolute;right:15px;bottom:15px;background:rgba(0,0,0,0.5);
-      border:none;border-radius:50%;color:#4fc3f7;font-size:18px;padding:6px;cursor:pointer;
+    header {
+      text-align: center;
+      padding: 15px;
+      background: linear-gradient(90deg, #08101f, #15294d);
+      color: #4fc3f7;
+      font-size: 1.6em;
+      font-weight: bold;
+      text-shadow: 0 0 12px #4fc3f7;
+    }
+    .subheader {
+      text-align: center;
+      background: #0d1528;
+      color: #7dd3fc;
+      padding: 6px;
+      font-size: 0.9em;
     }
 
-    main{max-width:1200px;margin:auto;padding:20px;}
-    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
-    .intro-title{text-align:center;color:#4fc3f7;font-size:1.5em;margin-top:25px;text-shadow:0 0 10px #4fc3f7;}
-
-    p.intro{color:#e0e8f9;line-height:1.5;font-size:1em;text-align:justify;}
-    .intro-block{display:flex;align-items:flex-start;gap:14px;margin-top:20px;}
-    .intro-block img{
-      border-radius:12px;width:160px;height:auto;box-shadow:0 0 18px rgba(0,0,0,0.4);
+    /* 🎥 Vidéo bandeau */
+    .video-container {
+      position: relative;
+      overflow: hidden;
     }
+    video {
+      width: 100%;
+      max-height: 180px;
+      object-fit: cover;
+      object-position: bottom; /* ✅ cadré sur le sol */
+      display: block;
+      filter: brightness(0.95);
+    }
+    .video-overlay {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 60px;
+      background: linear-gradient(to bottom, rgba(15, 23, 42, 0) 0%, #0f172a 100%);
+      pointer-events: none;
+    }
+    .sound-btn {
+      position: absolute;
+      right: 15px;
+      bottom: 15px;
+      background: rgba(0, 0, 0, 0.5);
+      border: none;
+      border-radius: 50%;
+      color: #4fc3f7;
+      font-size: 18px;
+      padding: 6px;
+      cursor: pointer;
+    }
+
+    /* 🧭 Section principale */
+    main {max-width: 1200px;margin:auto;padding:20px;}
+    h2 {color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
+    .intro-title {text-align:center;color:#4fc3f7;font-size:1.5em;margin-top:25px;text-shadow:0 0 10px #4fc3f7;}
+    p.intro {color:#e0e8f9;line-height:1.5;font-size:1em;text-align:justify;}
+    .intro-block {display:flex;align-items:flex-start;gap:14px;margin-top:20px;}
+    .intro-block img {border-radius:12px;width:160px;height:auto;box-shadow:0 0 18px rgba(0,0,0,0.4);}
 
     .forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
     .forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;
@@ -53,7 +94,7 @@
     .ask-jean a{color:#4fc3f7;font-weight:bold;cursor:pointer;text-decoration:none;}
     .ask-jean a:hover{text-decoration:underline;}
 
-    /* CHAT J.E.A.N */
+    /* 💬 Chat J.E.A.N */
     .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
       border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;
       box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
@@ -66,9 +107,10 @@
     .chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
     .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
 
-    #google_translate_element {text-align:center;margin-top:10px;}
-    .goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon {display:none!important;}
-    body {top:0px!important;}
+    /* 🌐 Google Translate */
+    #google_translate_element{text-align:center;margin-top:10px;}
+    .goog-te-banner-frame.skiptranslate,.goog-te-gadget-icon{display:none!important;}
+    body{top:0!important;}
   </style>
 </head>
 
@@ -76,14 +118,14 @@
   <header>TINSFLASH • Prévisions & Alertes</header>
   <div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Spécificités locales (relief, altitude, océans)</div>
 
-  <div style="position:relative;">
+  <div class="video-container">
     <video autoplay muted loop playsinline id="introVideo">
       <source src="intro-jean.mp4" type="video/mp4" />
     </video>
+    <div class="video-overlay"></div>
     <button class="sound-btn" id="soundToggle">🔇</button>
   </div>
 
-  <!-- 🌍 Google Translate -->
   <div id="google_translate_element"></div>
 
   <main>
@@ -101,11 +143,71 @@
       </div>
     </div>
 
-    <!-- le reste de la page inchangé -->
+    <h2>📍 Votre position</h2>
+    <div id="position-status">Détection de votre position en cours...</div>
+    <input type="text" id="manualAddress" placeholder="Ou entrez votre adresse complète (rue, ville, pays)" />
+    <button class="notif-btn" onclick="askNotifications()">🔔 Activer les notifications météo</button>
+
+    <h2>Prévision locale du jour</h2>
+    <div id="forecast-today" class="forecast-grid">Chargement...</div>
+
+    <h2>Prévisions locales (7 jours)</h2>
+    <div id="forecast-local" class="forecast-grid">Chargement...</div>
+
+    <h2>Prévisions nationales (7 jours)</h2>
+    <div id="forecast-national" class="forecast-grid">Chargement...</div>
+
+    <div id="meteoJour" class="meteo-jour">Analyse du jour en cours...</div>
+
+    <div class="ask-jean">
+      <a id="askJeanLink">💬 Posez vos questions météorologiques à J.E.A.N.</a>
+    </div>
+
+    <h2>Carte mondiale des alertes</h2>
+    <div id="map-alerts" class="map-container"></div>
+
+    <h2>Alertes locales</h2>
+    <div id="alerts-local" class="alert-section">Chargement...</div>
+
+    <h2>Alertes nationales</h2>
+    <div id="alerts-national" class="alert-section">Chargement...</div>
+
+    <h2>Alertes mondiales – Primeurs TINSFLASH</h2>
+    <div id="alerts-world" class="alert-section">Chargement...</div>
+
+    <h2>Radar mondial Windy</h2>
+    <iframe width="100%" height="450"
+      src="https://embed.windy.com/embed2.html?lat=48.0&lon=3.0&zoom=3&level=surface&overlay=rain&menu=true"
+      frameborder="0"></iframe>
+
+    <div class="banner">
+      🔧 Pour vos diagnostics et détections de fuites :
+      <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
+    </div>
   </main>
 
+  <footer>
+    © 2025 TINSFLASH – Tous droits réservés<br/>
+    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 
+    💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp +32 473 26 44 77</a><br/>
+    Une demande de partenariat ou un éventuel rachat de notre système ? Contactez-nous.
+  </footer>
+
+  <!-- 💬 Chat météo -->
+  <button class="btn-ai" id="btnAI">🤖</button>
+  <div class="chat-box" id="chatJean">
+    <div class="chat-header">Assistant Météo J.E.A.N.</div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="Posez votre question météo..." />
+      <button onclick="sendChat()">Envoyer</button>
+    </div>
+  </div>
+
   <script>
-    // 🎚️ Contrôle son vidéo
+    const API_BASE = "/api";
+
+    // 🎚️ Contrôle son
     const video=document.getElementById("introVideo");
     const soundToggle=document.getElementById("soundToggle");
     soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
@@ -116,5 +218,94 @@
     }
   </script>
   <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  <script>
+    // 🛰️ Fonctions principales
+    function askNotifications(){
+      if(Notification.permission==="granted"){alert("Notifications déjà activées.");return;}
+      Notification.requestPermission().then(p=>{if(p==="granted")new Notification("TINSFLASH : notifications météo activées !");});
+    }
+
+    function renderForecastCards(container,data){
+      container.innerHTML="";
+      if(!data||!data.length){container.textContent="Aucune donnée disponible.";return;}
+      data.forEach(d=>{
+        const div=document.createElement("div");
+        div.className="forecast-card";
+        div.innerHTML=`<img src="assets/icons/${d.icon||'sun'}.png"><div><b>${d.day||''}</b></div><div>${d.temp_min}° / ${d.temp_max}°</div><small>${d.condition||''}</small>`;
+        container.appendChild(div);
+      });
+    }
+
+    function renderMeteoJour(f){
+      const el=document.getElementById("meteoJour");
+      if(!f){el.textContent="Prévisions en cours...";return;}
+      let msg=`Aujourd’hui, le temps est dominé par ${f.condition?.toLowerCase()||"des conditions variables"} avec ${f.temp_min}°C à ${f.temp_max}°C. `;
+      msg+=`Vent : ${f.wind?.toFixed(0)||0} km/h – Fiabilité : ${(f.reliability*100||80).toFixed(0)} %.`;
+      el.textContent=msg;
+    }
+
+    function initPosition(){
+      const ps=document.getElementById("position-status");
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(p=>{
+          ps.textContent=`✅ Position : ${p.coords.latitude.toFixed(2)}, ${p.coords.longitude.toFixed(2)}`;
+          loadForecast(p.coords.latitude,p.coords.longitude);
+        },()=>ps.textContent="⚠️ Géolocalisation refusée.");
+      }
+      document.getElementById("manualAddress").addEventListener("change",async e=>{
+        const addr=e.target.value;if(!addr)return;
+        const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+        const g=await geo.json();
+        if(g[0]){const {lat,lon}=g[0];ps.textContent=`📍 ${addr}`;loadForecast(lat,lon);}else ps.textContent="Adresse non trouvée.";
+      });
+    }
+
+    async function loadForecast(lat,lon){
+      try{
+        const r=await fetch(`${API_BASE}/forecast?lat=${lat}&lon=${lon}`);
+        const data=await r.json();
+        renderForecastCards(document.getElementById("forecast-today"),[data.forecast]);
+        renderForecastCards(document.getElementById("forecast-local"),data.nextDays||[]);
+        renderForecastCards(document.getElementById("forecast-national"),data.national||[]);
+        renderMeteoJour(data.forecast);
+      }catch(e){console.error(e);}
+    }
+
+    const chatBox=document.getElementById("chatJean");
+    document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
+    document.getElementById("askJeanLink").onclick=()=>{chatBox.style.display="flex";};
+
+    async function sendChat(){
+      const msg=document.getElementById("chatInput").value.trim();
+      if(!msg)return;
+      const m=document.getElementById("chatMessages");
+      m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
+      document.getElementById("chatInput").value="";
+      try{
+        const r=await fetch(`${API_BASE}/cohere`,{
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({question:`[METEO ONLY] ${msg}`})
+        });
+        const d=await r.json();
+        if(!d.reply||d.reply.toLowerCase().includes("je ne peux pas"))
+          m.innerHTML+=`<div>J.E.A.N : Je réponds uniquement aux questions liées à la météo et aux alertes TINSFLASH.</div>`;
+        else m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
+      }catch(e){m.innerHTML+=`<div>❌ ${e.message}</div>`;}
+      m.scrollTop=m.scrollHeight;
+    }
+
+    function initMapAlerts(){
+      const map=L.map("map-alerts").setView([20,0],2);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      fetch(`${API_BASE}/alerts`).then(r=>r.json()).then(list=>{
+        list.forEach(a=>{
+          if(a.lat&&a.lon)L.marker([a.lat,a.lon]).addTo(map).bindPopup(`<b>${a.title}</b><br>${a.zone}<br>${a.description||''}`);
+        });
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded",()=>{initPosition();initMapAlerts();});
+  </script>
 </body>
 </html>
