@@ -114,7 +114,11 @@ export async function generateForecast(lat, lon, country = "Unknown", region = "
     if (state.forecasts.length > 100) state.forecasts = state.forecasts.slice(-100);
     await saveEngineState(state);
 
-    await addEngineLog(`✅ Prévision packagée pour ${country} ${region || ""} @ ${lat.toFixed(2)},${lon.toFixed(2)}`, "info", "forecast");
+    await addEngineLog(
+      `✅ Prévision packagée pour ${country} ${region || ""} @ ${lat.toFixed(2)},${lon.toFixed(2)}`,
+      "info",
+      "forecast"
+    );
 
     // 5) Paquet final pour index.html
     return {
