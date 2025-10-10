@@ -49,12 +49,14 @@ import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
 import { runGlobalOceania } from "./services/runGlobalOceania.js";
 import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
 
+// ==========================================================
+// ⚙️ Initialisation de base
+// ==========================================================
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
-await initEngineState();
 
 // ==========================================================
 // 🌐 CORS
@@ -74,17 +76,18 @@ if (process.env.MONGO_URI) {
   try {
     mongoose.set("suppressReservedKeysWarning", true);
     mongoose
-      .connect(process.env.MONGO_URI, {
+      .connect(process.env.MONGO_URI + "&tlsAllowInvalidCertificates=true", {
         useNewUrlParser: true,
         useUnifiedTopology: true,
-        serverSelectionTimeoutMS: 20000,
-        connectTimeoutMS: 20000,
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 60000,
+        connectTimeoutMS: 60000,
+        socketTimeoutMS: 120000,
       })
       .then(async () => {
-        console.log("✅ MongoDB connecté");
+        console.log("✅ MongoDB connecté avec succès");
+        await initEngineState();
         const state = await getEngineState();
-        if (state) console.log("🧠 État moteur chargé avec succès.");
+        if (state) console.log("🧠 État moteur chargé avec succès");
       })
       .catch((e) => console.error("❌ Erreur MongoDB:", e.message));
   } catch (err) {
@@ -202,54 +205,6 @@ app.post("/api/runWorldAlerts", async (req, res) => {
     res.json({ success: true, result });
   } catch (e) {
     await addEngineError(`Erreur runWorldAlerts: ${e.message}`, "core");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 🌍 ROUTES COMPLÉMENTAIRES – CONSOLE V3.6 PRO+++
-// ==========================================================
-app.post("/api/run-europe-usa", async (req, res) => {
-  try {
-    await addEngineLog("⚙️ Extraction combinée Europe/USA/Canada", "info", "core");
-    const [r1, r2, r3] = await Promise.all([runGlobalEurope(), runGlobalUSA(), runGlobalCanada()]);
-    const state = await getEngineState();
-    state.lastRunEurope = new Date();
-    await saveEngineState(state);
-    await addEngineLog("✅ Extraction Europe/USA/Canada terminée", "success", "core");
-    res.json({ success: true, result: { r1, r2, r3 } });
-  } catch (e) {
-    await addEngineError("Erreur run-europe-usa: " + e.message, "core");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.post("/api/run-world", async (req, res) => {
-  try {
-    await addEngineLog("🌍 Extraction Reste du monde", "info", "core");
-    const results = await Promise.all([
-      runGlobalAfricaNord(), runGlobalAfricaCentrale(), runGlobalAfricaOuest(),
-      runGlobalAfricaSud(), runGlobalAmericaSud(),
-      runGlobalAsiaEst(), runGlobalAsiaSud(),
-      runGlobalOceania(), runGlobalCaribbean()
-    ]);
-    const state = await getEngineState();
-    state.lastRunWorld = new Date();
-    await saveEngineState(state);
-    await addEngineLog("✅ Extraction Reste du monde terminée", "success", "core");
-    res.json({ success: true, result: results });
-  } catch (e) {
-    await addEngineError("Erreur run-world: " + e.message, "core");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.post("/api/fusion-world", async (req, res) => {
-  try {
-    const result = await runWorldAlerts();
-    res.json({ success: true, result });
-  } catch (e) {
-    await addEngineError("Erreur fusion-world: " + e.message, "core");
     res.status(500).json({ success: false, error: e.message });
   }
 });
