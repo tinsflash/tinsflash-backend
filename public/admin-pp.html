@@ -4,119 +4,146 @@
   <meta charset="utf-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>⚙️ TINSFLASH PRO+++ Console – IA J.E.A.N</title>
+  <title>⚡ TINSFLASH PRO+++ – Console IA J.E.A.N</title>
   <style>
-    body{margin:0;background:#0b1220;color:#e6f6ff;font-family:Inter,system-ui}
-    header{padding:14px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
-    nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
-    nav a{color:#6bf3ff;text-decoration:none;padding:6px 10px;border-radius:8px}
-    nav a:hover{background:#122236}
-    .container{max-width:1100px;margin:12px auto;padding:12px}
-    .panel{background:#0e1721;border-radius:10px;padding:12px;margin-top:10px}
-    .status-board{display:flex;justify-content:space-around;gap:10px;margin-bottom:10px}
-    .status{flex:1;text-align:center;padding:10px;border-radius:10px;font-weight:700}
-    .green{background:#073d24;color:#4cffb3}
-    .red{background:#3d0711;color:#ff4c60}
-    .yellow{background:#3a2a05;color:#ffe073}
-    button{background:#4fc3f7;border:none;padding:10px 16px;border-radius:8px;color:#001;font-weight:700;cursor:pointer}
-    button:hover{background:#6bf3ff}
-    pre{background:#07121a;color:#b4f8ff;padding:10px;border-radius:8px;max-height:45vh;overflow:auto}
+    body{margin:0;background:#0a111d;color:#e6f6ff;font-family:Inter,system-ui}
+    header{padding:14px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700;font-size:1.1rem}
+    nav{display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624}
+    nav a{color:#6bf3ff;text-decoration:none;font-weight:600}
+    nav a:hover{text-decoration:underline}
+    main{max-width:1200px;margin:0 auto;padding:12px}
+    .status-panel{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+    .status{flex:1 1 160px;padding:8px;border-radius:8px;text-align:center;font-weight:600}
+    .ok{background:#003f2d;color:#76ff7a}
+    .warn{background:#4f2a00;color:#ffc978}
+    .fail{background:#3b0000;color:#ff6b6b}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+    .controls button{flex:1 1 180px;padding:10px;border:none;border-radius:8px;font-weight:700;cursor:pointer;color:#001}
+    .controls button:hover{opacity:0.9}
+    .btn-run-eu{background:#6bf3ff}
+    .btn-run-world{background:#49c7f5}
+    .btn-ai{background:#93ff93}
+    .btn-fusion{background:#b3ff6b}
+    .btn-stop{background:#ff6b6b}
+    .btn-reset{background:#ffa86b}
+    .btn-refresh{background:#6bb1ff}
+    .stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+    .stat{flex:1 1 220px;background:#0d1624;padding:10px;border-radius:8px;text-align:center}
+    .stat span{display:block;font-size:1.4rem;margin-top:4px}
+    iframe{width:100%;height:480px;border:0;border-radius:10px;margin-bottom:12px}
+    .logs{background:#0d1624;padding:10px;border-radius:10px;height:300px;overflow:auto;font-family:monospace;font-size:0.9rem}
+    /* chat bubble */
+    #chatBubble{position:fixed;bottom:22px;right:22px;background:#4fc3f7;border-radius:50%;width:58px;height:58px;display:flex;justify-content:center;align-items:center;color:#001;font-weight:700;cursor:pointer;box-shadow:0 0 12px #4fc3f7}
+    #chatBox{position:fixed;bottom:90px;right:22px;width:340px;height:430px;background:#0e1725;border-radius:12px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 0 15px #4fc3f7}
+    #chatMessages{flex:1;overflow:auto;padding:10px}
+    #chatControls{display:flex}
+    #chatControls input{flex:1;padding:8px;border:none;background:#07121a;color:#e6f6ff}
+    #chatControls button{background:#4fc3f7;border:none;color:#001;font-weight:700;padding:8px 10px}
+    .msg-bot{background:#123045;padding:6px;border-radius:8px;margin:5px 0}
+    .msg-user{background:#4fc3f7;color:#001;padding:6px;border-radius:8px;margin:5px 0;text-align:right}
   </style>
 </head>
 <body>
+
 <script>
-  const pin=sessionStorage.getItem("tinsflashPIN");
-  if(!pin){
-    const p=prompt("Code d’accès admin ?");
-    if(p!=="202679"){alert("Accès refusé");location.href="/";} 
-    else sessionStorage.setItem("tinsflashPIN","ok");
-  }
+const pin=sessionStorage.getItem("tinsflashPIN");
+if(!pin){const p=prompt("Code d’accès admin ?");if(p!=="202679"){alert("Accès refusé");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
 </script>
 
-<header>⚙️ Console Administrateur – IA J.E.A.N (GPT-5 Moteur)</header>
+<header>⚡ TINSFLASH PRO+++ – Console IA J.E.A.N (GPT-5 moteur / GPT-4o-mini console)</header>
 <nav>
   <a href="/admin-pp.html">Console</a>
   <a href="/admin-alerts.html">Alertes</a>
   <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-radar.html">Radar</a>
+  <a href="/index.html">Index public</a>
 </nav>
 
-<div class="container">
-
-  <!-- 🟢 Tableau de voyants -->
-  <div class="status-board" id="statusBoard">
-    <div id="statusEngine" class="status red">Moteur ❌</div>
-    <div id="statusIA" class="status red">IA J.E.A.N ❌</div>
-    <div id="statusFusion" class="status red">Fusion ❌</div>
+<main>
+  <div class="status-panel" id="statusPanel">
+    <div class="status ok" id="stModels">Modèles : OK</div>
+    <div class="status ok" id="stEngine">Moteur : OK</div>
+    <div class="status ok" id="stAI">IA J.E.A.N : OK</div>
+    <div class="status ok" id="stMongo">MongoDB : OK</div>
+    <div class="status ok" id="stRender">Render : Connecté</div>
   </div>
 
-  <div class="panel">
-    <button onclick="runGlobal()">🌍 Lancer Run Global</button>
-    <button onclick="runIA()">🧠 Analyse IA J.E.A.N</button>
-    <button onclick="runFusion()">🌐 Fusion Globale</button>
+  <div class="controls">
+    <button class="btn-run-eu" onclick="runZone('Europe')">🌍 Run Europe / USA / Canada</button>
+    <button class="btn-run-world" onclick="runZone('World')">🌍 Run reste du monde</button>
+    <button class="btn-ai" onclick="runIA()">🧠 Lancer IA J.E.A.N</button>
+    <button class="btn-fusion" onclick="fusionIA()">⚙️ Fusion IA</button>
+    <button class="btn-stop" onclick="stopExtraction()">🛑 Stop</button>
+    <button class="btn-reset" onclick="resetStop()">♻️ Reset</button>
+    <button class="btn-refresh" onclick="refreshStatus()">🔄 Rafraîchir</button>
   </div>
 
-  <div class="panel">
-    <h3>🧭 Logs en direct</h3>
-    <pre id="logs">Chargement des logs...</pre>
+  <div class="stats" id="stats">
+    <div class="stat" style="border:2px solid #b36bff;">Primeur 🌐<span id="nPrimeur">0</span></div>
+    <div class="stat" style="border:2px solid #00ff99;">> 90 % ✅<span id="n90">0</span></div>
+    <div class="stat" style="border:2px solid #ffd966;">70–89 % ⚠️<span id="n70">0</span></div>
+    <div class="stat" style="border:2px solid #ff6b6b;">< 70 % 🔍<span id="nSub70">0</span></div>
+  </div>
+
+  <h3>🌎 Carte Prévisions</h3>
+  <iframe src="/admin-radar.html#forecast" id="forecastMap"></iframe>
+
+  <h3>🚨 Carte Alertes</h3>
+  <iframe src="/admin-radar.html#alerts" id="alertsMap"></iframe>
+
+  <h3>📜 Logs moteur</h3>
+  <div class="logs" id="logs"></div>
+</main>
+
+<!-- Chat bubble -->
+<div id="chatBubble">💬</div>
+<div id="chatBox">
+  <div id="chatMessages">
+    <div class="msg-bot">🤖 J.E.A.N : Connecté à la console technique (mode GPT-4o-mini)</div>
+  </div>
+  <div id="chatControls">
+    <input id="chatInput" placeholder="Discuter avec J.E.A.N…" onkeypress="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">→</button>
   </div>
 </div>
 
 <script>
-async function updateStatus(){
+const API="/api";
+async function runZone(zone){
+  const url=zone==="World"?`${API}/runGlobal?zone=World`:`${API}/runGlobal?zone=Europe`;
+  addLog("🚀 Lancement extraction "+zone);
+  await fetch(url,{method:"POST"}).then(r=>r.json()).then(j=>addLog(JSON.stringify(j))).catch(e=>addLog("Erreur run "+e));
+}
+async function runIA(){addLog("🧠 Lancement IA J.E.A.N");await fetch(`${API}/ai-analyse`,{method:"POST"}).then(r=>r.json()).then(j=>addLog(JSON.stringify(j))).catch(e=>addLog("Erreur IA "+e));}
+async function fusionIA(){addLog("⚙️ Fusion IA");await fetch(`${API}/runWorldAlerts`,{method:"POST"}).then(r=>r.json()).then(j=>addLog(JSON.stringify(j))).catch(e=>addLog("Erreur fusion "+e));}
+async function stopExtraction(){await fetch(`${API}/stop-extraction`,{method:"POST"});}
+async function resetStop(){await fetch(`${API}/reset-stop-extraction`,{method:"POST"});}
+async function refreshStatus(){
+  const res=await fetch(`${API}/status`);const j=await res.json();
+  addLog("🔄 Statut moteur actualisé");
+  if(j.errors?.length)addLog("⚠️ "+j.errors.length+" erreurs");
+  if(j.coveredZones)document.getElementById("stModels").innerText="Modèles : "+j.coveredZones.length+" zones";
+}
+function addLog(msg){const l=document.getElementById("logs");l.innerHTML+="<div>"+msg+"</div>";l.scrollTop=l.scrollHeight;}
+setInterval(async()=>{const r=await fetch(`${API}/logs-live`);const j=await r.json();document.getElementById("logs").innerText=j.logs.map(x=>x.message).join("\n");},60000);
+
+/* chat */
+const chatBubble=document.getElementById("chatBubble");
+const chatBox=document.getElementById("chatBox");
+chatBubble.onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
+async function sendChat(){
+  const txt=document.getElementById("chatInput").value.trim();
+  if(!txt)return;
+  const msgs=document.getElementById("chatMessages");
+  msgs.innerHTML+=`<div class='msg-user'>${txt}</div>`;
+  document.getElementById("chatInput").value="";
   try{
-    const res = await fetch("/api/status");
-    const j = await res.json();
-    const eng = document.getElementById("statusEngine");
-    const ia  = document.getElementById("statusIA");
-    const fu  = document.getElementById("statusFusion");
-    const status = (j.status || "").toLowerCase();
-
-    // moteur
-    if(status.includes("ok")||status.includes("running")){eng.className="status green";eng.textContent="Moteur 🟢";}
-    else if(status.includes("idle")){eng.className="status yellow";eng.textContent="Moteur 🟡";}
-    else{eng.className="status red";eng.textContent="Moteur 🔴";}
-
-    // IA J.E.A.N
-    const logs = j.checkup?.logs || [];
-    const lastIA = logs?.slice(-5).find(l=>l.message?.includes("IA J.E.A.N"));
-    if(lastIA){ia.className="status green";ia.textContent="IA J.E.A.N 🟢";}
-    else{ia.className="status yellow";ia.textContent="IA J.E.A.N 🟡";}
-
-    // Fusion
-    if(j.checkup?.lastFusionOK){fu.className="status green";fu.textContent="Fusion 🟢";}
-    else{fu.className="status yellow";fu.textContent="Fusion 🟡";}
-  }catch(e){
-    console.warn("Status error:",e);
-  }
+    const res=await fetch("/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt,mode:"moteur"})});
+    const j=await res.json();
+    msgs.innerHTML+=`<div class='msg-bot'>${j.reply||j}</div>`;
+    msgs.scrollTop=msgs.scrollHeight;
+  }catch(e){msgs.innerHTML+=`<div class='msg-bot'>❌ Erreur : ${e.message}</div>`;}
 }
-
-async function refreshLogs(){
-  try{
-    const res = await fetch("/api/logs-live");
-    const j = await res.json();
-    const out = j.logs?.map(l=>`${l.timestamp} | ${l.message}`).join("\n") || "Aucun log";
-    document.getElementById("logs").textContent = out;
-  }catch(e){
-    document.getElementById("logs").textContent="Erreur logs: "+e.message;
-  }
-}
-
-async function runGlobal(){
-  document.getElementById("logs").textContent="🚀 Run Global en cours...";
-  const r=await fetch("/api/run-global",{method:"POST"});await refreshLogs();updateStatus();
-}
-async function runIA(){
-  document.getElementById("logs").textContent="🧠 Analyse IA J.E.A.N en cours...";
-  const r=await fetch("/api/ai-analyse",{method:"POST"});await refreshLogs();updateStatus();
-}
-async function runFusion(){
-  document.getElementById("logs").textContent="🌐 Fusion Globale en cours...";
-  const r=await fetch("/api/runWorldAlerts",{method:"POST"});await refreshLogs();updateStatus();
-}
-
-setInterval(()=>{updateStatus();refreshLogs();},10000);
-updateStatus();refreshLogs();
 </script>
-
 </body>
 </html>
