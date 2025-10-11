@@ -1,154 +1,181 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH – Console Moteur IA J.E.A.N.</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🛰️ TINSFLASH Console – Admin IA J.E.A.N</title>
   <style>
-    body {
-      background:#020818;
-      color:#d4e7ff;
-      font-family: "Orbitron", sans-serif;
-      margin:0;
-      overflow:hidden;
-    }
-    header {
-      background:linear-gradient(90deg,#00224e,#004ba8);
-      padding:1rem;
-      text-align:center;
-      font-size:1.5rem;
-      color:#fff;
-      text-shadow:0 0 10px #00eaff;
-    }
-    .controls {
-      display:flex;
-      justify-content:center;
-      gap:1rem;
-      margin-top:1rem;
-    }
-    button {
-      background:#001f3f;
-      color:#00eaff;
-      border:1px solid #00eaff;
-      border-radius:8px;
-      padding:0.7rem 1.2rem;
-      cursor:pointer;
-      font-weight:bold;
-      transition:0.3s;
-    }
-    button:hover { background:#00eaff; color:#001f3f; }
-    #mapForecast, #mapAlerts {
-      height:45vh;
-      margin:1rem;
-      border:2px solid #00eaff;
-      border-radius:10px;
-    }
-    .logs {
-      background:#000c1e;
-      height:18vh;
-      overflow-y:auto;
-      padding:0.5rem;
-      border-top:1px solid #00eaff;
-      font-size:0.85rem;
-    }
-    .chat-bubble {
-      position:fixed;
-      bottom:20px;
-      right:20px;
-      background:#002850;
-      color:#00eaff;
-      border-radius:50%;
-      width:60px; height:60px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:1.4rem;
-      box-shadow:0 0 20px #00eaff;
-      cursor:pointer;
-    }
+    body{margin:0;background:#0a101c;color:#d7f1ff;font-family:Inter,system-ui}
+    header{background:#081421;padding:12px;text-align:center;font-weight:700;color:#6bf3ff;font-size:20px}
+    nav{display:flex;justify-content:center;gap:10px;background:#0d1624;padding:8px}
+    nav a{color:#6bf3ff;text-decoration:none;font-weight:600}
+    nav a:hover{color:#fff}
+    .container{padding:12px;max-width:1300px;margin:auto}
+    section{background:#0e1725;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 0 8px #001}
+    button{background:#4fc3f7;color:#001;font-weight:700;border:none;padding:10px 14px;border-radius:8px;margin:4px;cursor:pointer}
+    button:hover{background:#6bf3ff}
+    .map{height:450px;border-radius:12px;margin:10px 0}
+    .alerts-list{margin-top:8px}
+    .alert-item{padding:8px;border-bottom:1px solid #123}
+    .alert-item span{display:inline-block;width:100px;font-weight:600}
+    .green{color:#3eff77}
+    .orange{color:#ffbf47}
+    .red{color:#ff6060}
+    .grey{color:#aaa}
+    .chat-box{background:#09131d;padding:12px;border-radius:10px;margin-top:16px}
+    .messages{height:200px;overflow:auto;background:#0b1522;border-radius:8px;padding:8px}
+    .msg-bot{background:#123045;padding:8px;border-radius:8px;margin:6px 0}
+    .msg-user{background:#4fc3f7;color:#001;padding:8px;border-radius:8px;margin:6px 0;text-align:right}
+    input{flex:1;padding:10px;border-radius:8px;border:1px solid #123;background:#07121a;color:#e6f6ff}
+    .controls{display:flex;gap:8px;margin-top:8px}
   </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-  <header>🌍 TINSFLASH – IA J.E.A.N. Central Cockpit</header>
+<script>
+  const pin = sessionStorage.getItem("tinsflashPIN");
+  if(!pin){
+    const p = prompt("Code d’accès admin ?");
+    if(p!=="202679"){ alert("Accès refusé"); location.href="/"; }
+    else sessionStorage.setItem("tinsflashPIN","ok");
+  }
+</script>
 
-  <div class="controls">
-    <button onclick="runEngine('EU')">Run Europe</button>
-    <button onclick="runEngine('US')">Run USA</button>
-    <button onclick="runWorld()">Run World Alerts</button>
-    <button onclick="runAI()">IA Analyse</button>
-    <button onclick="stopEngine()">🛑 Arrêt</button>
-    <button onclick="resetEngine()">♻️ Reset</button>
-  </div>
+<header>🛰️ TINSFLASH – Console Administrateur IA J.E.A.N (GPT-5 moteur / GPT-4o-mini console)</header>
+<nav>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+</nav>
 
-  <div id="mapForecast"></div>
-  <div id="mapAlerts"></div>
-  <div class="logs" id="logs"></div>
+<div class="container">
 
-  <div class="chat-bubble" onclick="toggleChat()">💬</div>
+  <!-- SECTION 1 : Commandes principales -->
+  <section>
+    <h2>⚙️ Commandes moteur</h2>
+    <button onclick="runZone('Europe')">🌍 Run Europe</button>
+    <button onclick="runZone('USA')">🌎 Run USA</button>
+    <button onclick="runGlobal()">🧩 Run Global</button>
+    <button onclick="runAI()">🧠 IA J.E.A.N Analyse</button>
+    <button onclick="runWorldAlerts()">🌐 Fusion Mondiale</button>
+  </section>
 
-  <script>
-    const logBox = document.getElementById("logs");
-    const forecastMap = L.map("mapForecast").setView([50, 10], 4);
-    const alertMap = L.map("mapAlerts").setView([20, 0], 2);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution:"TINSFLASH" }).addTo(forecastMap);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution:"TINSFLASH" }).addTo(alertMap);
+  <!-- SECTION 2 : Cartes connectées -->
+  <section>
+    <h2>🗺️ Cartes Prévisions et Alertes</h2>
+    <div id="mapForecast" class="map"></div>
+    <div id="mapAlerts" class="map"></div>
+  </section>
 
-    const colors = { primeur:"#0066ff", confirm:"#00ff7f", valider:"#ffcc00", surveiller:"#ff0033" };
-    let layers = { primeur:L.layerGroup().addTo(alertMap), confirm:L.layerGroup().addTo(alertMap),
-                   valider:L.layerGroup().addTo(alertMap), surveiller:L.layerGroup().addTo(alertMap) };
+  <!-- SECTION 3 : Listes d’alertes -->
+  <section>
+    <h2>🚨 Liste des Alertes IA</h2>
+    <p><b>Code couleur :</b> 
+      <span class="green">Vert ≥ 90 %</span> – Publication automatique |
+      <span class="orange">Orange 70–89 %</span> – À valider / en surveillance |
+      <span class="red">Rouge < 70 %</span> – Sous observation |
+      <span class="grey">Bleu Primeur</span> – Premières alertes TINSFLASH
+    </p>
+    <div id="alertsList" class="alerts-list">Chargement...</div>
+  </section>
 
-    async function runEngine(zone){
-      appendLog(`▶️ Lancement ${zone}`);
-      await axios.post("/api/runGlobal", { zone });
-      appendLog("✅ Terminé "+zone);
-    }
-    async function runWorld(){
-      appendLog("🌐 Lancement World Alerts");
-      await axios.post("/api/runWorldAlerts");
-      appendLog("✅ Alertes Monde traitées");
-      refreshAlerts();
-    }
-    async function runAI(){
-      appendLog("🤖 IA Analyse en cours…");
-      await axios.post("/api/ai-analyse");
-      appendLog("✅ IA J.E.A.N. terminé");
-      refreshForecast();
-    }
-    async function stopEngine(){ await axios.post("/api/stop-extraction"); appendLog("🛑 Moteur arrêté"); }
-    async function resetEngine(){ await axios.post("/api/reset-stop-extraction"); appendLog("♻️ Reset complet"); }
+  <!-- SECTION 4 : Chat IA console -->
+  <section class="chat-box">
+    <h2>💬 Chat IA Console (GPT-4o-mini)</h2>
+    <div class="messages" id="messages">
+      <div class="msg-bot">🤖 J.E.A.N Console : Prêt à te répondre.</div>
+    </div>
+    <div class="controls">
+      <input id="input" placeholder="Parle à la console IA..." onkeypress="if(event.key==='Enter') send()">
+      <button onclick="send()">Envoyer</button>
+    </div>
+  </section>
 
-    function appendLog(msg){
-      const time = new Date().toLocaleTimeString();
-      logBox.innerHTML += `<div>[${time}] ${msg}</div>`;
-      logBox.scrollTop = logBox.scrollHeight;
-    }
+</div>
 
-    async function refreshForecast(){
-      const res = await axios.get("/api/forecasts");
-      forecastMap.eachLayer((l)=>{ if(l instanceof L.CircleMarker) forecastMap.removeLayer(l); });
-      res.data.forEach(f=>{
-        const color = f.reliability>=0.9?colors.confirm:(f.reliability>=0.7?colors.valider:colors.surveiller);
-        L.circleMarker([f.lat,f.lon],{radius:6,color,fillOpacity:0.6}).bindTooltip(
-          `Fiabilité: ${Math.round(f.reliability*100)}%<br>${f.temperature}°C<br>${f.precipitation}mm`
-        ).addTo(forecastMap);
-      });
-    }
+<script>
+let mapForecast, mapAlerts;
+let layerForecast, layerAlerts;
 
-    async function refreshAlerts(){
-      const res = await axios.get("/api/alerts");
-      Object.values(layers).forEach(l=>l.clearLayers());
-      res.data.forEach(a=>{
-        let color = a.isPrimeur?colors.primeur:(a.reliability>=0.9?colors.confirm:(a.reliability>=0.7?colors.valider:colors.surveiller));
-        L.circleMarker([a.lat,a.lon],{radius:8,color,fillOpacity:0.8})
-          .bindPopup(`<b>${a.type}</b><br>${Math.round(a.reliability*100)}%<br>${a.country}`)
-          .addTo(a.isPrimeur?layers.primeur:(a.reliability>=0.9?layers.confirm:(a.reliability>=0.7?layers.valider:layers.surveiller)));
-      });
-    }
+window.onload = async () => {
+  mapForecast = L.map('mapForecast').setView([50, 10], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10}).addTo(mapForecast);
 
-    function toggleChat(){ window.open("/admin-chat.html","chat","width=400,height=600"); }
-    refreshForecast(); refreshAlerts();
-  </script>
+  mapAlerts = L.map('mapAlerts').setView([50, 10], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10}).addTo(mapAlerts);
+
+  await loadAlerts();
+};
+
+async function runZone(zone){
+  const res = await fetch(`/api/runGlobal${zone}`,{method:"POST"});
+  const j = await res.json();
+  alert(j.success ? `✅ Extraction ${zone} terminée` : `❌ ${j.error}`);
+  await loadAlerts();
+}
+
+async function runGlobal(){
+  const res = await fetch("/api/run-global",{method:"POST"});
+  const j = await res.json();
+  alert(j.success ? "✅ Run Global terminé" : `❌ ${j.error}`);
+  await loadAlerts();
+}
+
+async function runAI(){
+  const res = await fetch("/api/ai-analyse",{method:"POST"});
+  const j = await res.json();
+  alert(j.success ? "🧠 IA J.E.A.N analyse effectuée" : `❌ ${j.error}`);
+}
+
+async function runWorldAlerts(){
+  const res = await fetch("/api/runWorldAlerts",{method:"POST"});
+  const j = await res.json();
+  alert(j.success ? "🌐 Fusion mondiale terminée" : `❌ ${j.error}`);
+  await loadAlerts();
+}
+
+async function loadAlerts(){
+  const res = await fetch("/api/logs-live");
+  const j = await res.json();
+  const alertsDiv = document.getElementById("alertsList");
+  alertsDiv.innerHTML="";
+  let i=0;
+
+  // simulation des points colorés selon fiabilité
+  j.logs.slice(-30).forEach(l=>{
+    if(!l.message.includes("Alerte")) return;
+    const reliabilityMatch = l.message.match(/(\d+)%/);
+    const reliability = reliabilityMatch ? parseInt(reliabilityMatch[1]) : 50;
+    let color = reliability>=90 ? "green" : reliability>=70 ? "orange" : "red";
+    const marker = L.circleMarker([50+Math.random()*5,10+Math.random()*5],
+      {radius:6,color:color,fillOpacity:0.7}).addTo(mapAlerts);
+    const item = document.createElement("div");
+    item.className="alert-item "+color;
+    item.innerHTML=`<span>${reliability}%</span> ${l.message}`;
+    alertsDiv.appendChild(item);
+    i++;
+  });
+  if(i===0) alertsDiv.innerHTML="Aucune alerte récente enregistrée.";
+}
+
+async function send(){
+  const txt=document.getElementById("input").value.trim();
+  if(!txt)return;
+  const box=document.getElementById("messages");
+  box.innerHTML+=`<div class="msg-user">${txt}</div>`;
+  document.getElementById("input").value="";
+  try{
+    const res=await fetch("/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt})});
+    const j=await res.json();
+    box.innerHTML+=`<div class="msg-bot">${j.reply||"..."}</div>`;
+  }catch(e){
+    box.innerHTML+=`<div class="msg-bot">❌ ${e.message}</div>`;
+  }
+  box.scrollTop=box.scrollHeight;
+}
+</script>
+
 </body>
 </html>
