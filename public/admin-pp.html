@@ -11,8 +11,7 @@
 body{margin:0;background:#0b1220;color:#e6f6ff;font-family:"Segoe UI",sans-serif;}
 header{background:#08121d;color:#4fc3f7;text-align:center;padding:10px;font-size:1.4em;text-shadow:0 0 10px #4fc3f7;}
 nav{display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624;}
-nav a{color:#7dd3fc;text-decoration:none;font-weight:bold;}
-nav a:hover{color:#fff;text-shadow:0 0 10px #4fc3f7;}
+nav a{color:#7dd3fc;text-decoration:none;font-weight:bold;}nav a:hover{color:#fff;text-shadow:0 0 10px #4fc3f7;}
 .container{max-width:1250px;margin:auto;padding:15px;}
 h2{color:#4fc3f7;margin-top:25px;border-left:4px solid #4fc3f7;padding-left:8px;}
 button{background:#4fc3f7;color:#001;border:none;padding:10px 16px;margin:4px;border-radius:8px;font-weight:bold;cursor:pointer;}
@@ -20,15 +19,19 @@ button:hover{background:#7dd3fc;}
 .status-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
 .status-box{flex:1 1 180px;background:#101c2b;padding:10px;border-radius:8px;text-align:center;}
 .status-light{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;}
-.green{background:#00ff88;}.red{background:#ff4444;}.orange{background:#ffaa00;}.blue{background:#4fc3f7;}
+.green{background:#00ff88;} .red{background:#ff4444;} .orange{background:#ffaa00;} .blue{background:#4fc3f7;}
 .map-duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px;}
 .map{height:340px;border-radius:10px;overflow:hidden;}
 .alert-counters{display:flex;justify-content:space-around;margin-top:15px;flex-wrap:wrap;}
-.counter{background:#13233d;padding:10px 16px;border-radius:10px;text-align:center;min-width:150px;box-shadow:0 0 10px rgba(0,0,0,0.3);}
-.counter h3{margin:0;color:#4fc3f7;}
-#logs{background:#0e1721;padding:10px;border-radius:10px;height:200px;overflow-y:auto;font-family:monospace;font-size:13px;margin-top:10px;}
-.btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
-.chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
+.counter{background:#13233d;padding:10px 16px;border-radius:10px;text-align:center;min-width:150px;
+box-shadow:0 0 10px rgba(0,0,0,0.3);} .counter h3{margin:0;color:#4fc3f7;}
+#logs{background:#0e1721;padding:10px;border-radius:10px;height:200px;overflow-y:auto;
+font-family:monospace;font-size:13px;margin-top:10px;}
+.btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
+border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;
+box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
+.chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;
+width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
 .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
 .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
 .chat-input{display:flex;border-top:1px solid #333;}
@@ -57,27 +60,22 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 
 <div class="container">
 <h2>⚙️ Commandes moteur – Phase 1 : Extraction pure et réelle</h2>
-
-<!-- === Boutons Phase 1 === -->
 <button onclick="runEuropeUSA()">⚡ Extraction Europe–USA–Canada</button>
 <button onclick="runWorld()">🌍 Extraction Reste du Monde</button>
 <button onclick="runAll()">🌐 Extraction Planète complète</button>
 
-<!-- === Commandes Shell Render de secours === -->
 <p style="font-style:italic;color:#7dd3fc;margin-top:10px;">
-💻 En cas d’échec des boutons, exécuter manuellement dans Render (Shell) :<br><br>
-⚡ <b>Europe–USA–Canada :</b><br>
-<code>curl -X POST https://tinsflash.onrender.com/api/run-global</code><br><br>
-🌍 <b>Reste du Monde :</b><br>
-<code>curl -X POST https://tinsflash.onrender.com/api/run-world</code><br><br>
-🌐 <b>Planète complète :</b><br>
-<code>curl -X POST https://tinsflash.onrender.com/api/run-all</code>
+💻 En cas d’échec des boutons, exécuter manuellement dans Render :<br><br>
+⚡ <b>Europe–USA–Canada :</b><br><code>curl -X POST https://tinsflash.onrender.com/api/run-global</code><br><br>
+🌍 <b>Reste du Monde :</b><br><code>curl -X POST https://tinsflash.onrender.com/api/run-world</code><br><br>
+🌐 <b>Planète complète :</b><br><code>curl -X POST https://tinsflash.onrender.com/api/run-all</code>
 </p>
 
 <h2>🧩 État moteur</h2>
 <div class="status-grid">
-  <div class="status-box"><span id="motorLight" class="status-light"></span>Moteur: <b id="motorStatus">–</b></div>
+  <div class="status-box"><span id="motorLight" class="status-light"></span>Moteur : <b id="motorStatus">–</b></div>
   <div class="status-box"><span id="mongoLight" class="status-light"></span>MongoDB</div>
+  <div class="status-box"><span id="aiLight" class="status-light blue"></span>IA J.E.A.N : <b id="aiStatus">Vérification...</b></div>
 </div>
 
 <h2>🌍 Cartes de suivi</h2>
@@ -87,9 +85,9 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 </div>
 
 <div class="alert-counters">
-  <div class="counter"><h3 id="count90">0</h3><div>🟢 >90%</div></div>
-  <div class="counter"><h3 id="count7089">0</h3><div>🟠 70–89%</div></div>
-  <div class="counter"><h3 id="count70">0</h3><div>🔴 <70%</div></div>
+  <div class="counter"><h3 id="count90">0</h3><div>🟢 >90 %</div></div>
+  <div class="counter"><h3 id="count7089">0</h3><div>🟠 70–89 %</div></div>
+  <div class="counter"><h3 id="count70">0</h3><div>🔴 <70 %</div></div>
   <div class="counter"><h3 id="countPrimeurs">0</h3><div>🔵 Primeurs</div></div>
 </div>
 
@@ -99,94 +97,29 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 
 <button class="btn-ai" id="btnAI">🤖</button>
 <div class="chat-box" id="chatJean">
-  <div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
-  <div class="chat-messages" id="chatMessages"></div>
-  <div class="chat-input">
-    <input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
-  </div>
-</div>
+<div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
+<div class="chat-messages" id="chatMessages"></div>
+<div class="chat-input">
+<input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
+</div></div>
 
 <script>
 const API="/api";
 
-async function runEuropeUSA(){
-  addLog("🚀 Extraction Europe–USA–Canada en cours...");
-  try{
-    const r=await fetch(`${API}/run-global`,{method:"POST"});
-    const j=await r.json();
-    addLog(j.success?"✅ Extraction Europe–USA terminée":"❌ "+j.error);
-  }catch(e){addLog("⚠️ Erreur API run-global : "+e.message);}
-}
-async function runWorld(){
-  addLog("🌍 Extraction Reste du Monde en cours...");
-  try{
-    const r=await fetch(`${API}/run-world`,{method:"POST"});
-    const j=await r.json();
-    addLog(j.success?"✅ Extraction Monde terminée":"❌ "+j.error);
-  }catch(e){addLog("⚠️ Erreur API run-world : "+e.message);}
-}
-async function runAll(){
-  addLog("🌐 Extraction planète complète en cours...");
-  try{
-    const r=await fetch(`${API}/run-all`,{method:"POST"});
-    const j=await r.json();
-    addLog(j.success?"✅ Extraction complète terminée":"❌ "+j.error);
-  }catch(e){addLog("⚠️ Erreur API run-all : "+e.message);}
-}
+async function runEuropeUSA(){addLog("🚀 Extraction Europe–USA–Canada...");try{
+const r=await fetch(`${API}/run-global`,{method:"POST"});const j=await r.json();
+addLog(j.success?"✅ Extraction Europe–USA terminée":"❌ "+j.error);}catch(e){addLog("⚠️ Erreur run-global : "+e.message);}}
+async function runWorld(){addLog("🌍 Extraction Reste du Monde...");try{
+const r=await fetch(`${API}/run-world`,{method:"POST"});const j=await r.json();
+addLog(j.success?"✅ Extraction Monde terminée":"❌ "+j.error);}catch(e){addLog("⚠️ Erreur run-world : "+e.message);}}
+async function runAll(){addLog("🌐 Extraction planète complète...");try{
+const r=await fetch(`${API}/run-all`,{method:"POST"});const j=await r.json();
+addLog(j.success?"✅ Extraction complète terminée":"❌ "+j.error);}catch(e){addLog("⚠️ Erreur run-all : "+e.message);}}
 
-// === État moteur ===
-async function refreshStatus(){
-  try{
-    const r=await fetch(window.location.origin+"/api/status");
-    const s=await r.json();
-    document.getElementById("motorStatus").textContent=s.status||"–";
-    document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
-    document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");
-  }catch(e){addLog("⚠️ Status "+e.message);}
-}
-setInterval(refreshStatus,10000);refreshStatus();
-
-// === Logs ===
-function addLog(t){const l=document.getElementById("logs");l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;l.scrollTop=l.scrollHeight;}
-
-// === Cartes ===
-const mapF=L.map("mapForecast").setView([20,0],2);
-const mapA=L.map("mapAlerts").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-
-// === Alertes ===
-async function loadAlerts(){
-  const r=await fetch(API+"/alerts");
-  const list=await r.json();
-  let c90=0,c7089=0,c70=0,cP=0;
-  list.forEach(a=>{
-    if(!a.lat)return;
-    let color="red";
-    if(a.reliability>=0.9){color="green";c90++;}
-    else if(a.reliability>=0.7){color="orange";c7089++;}
-    else{c70++;}
-    if(a.isPrimeur){cP++;color="blue";}
-    L.circleMarker([a.lat,a.lon],{radius:6,color}).addTo(mapA).bindPopup(`<b>${a.title}</b><br>${a.zone}`);
-  });
-  document.getElementById("count90").textContent=c90;
-  document.getElementById("count7089").textContent=c7089;
-  document.getElementById("count70").textContent=c70;
-  document.getElementById("countPrimeurs").textContent=cP;
-}
-loadAlerts();
-
-// === Chat technique ===
-const chatBox=document.getElementById("chatJean");
-document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
-async function sendChat(){
-  const msg=document.getElementById("chatInput").value;if(!msg)return;
-  const m=document.getElementById("chatMessages");
-  m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
-  const r=await fetch(API+"/chat-tech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-  const d=await r.json();
-  m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;m.scrollTop=m.scrollHeight;
-}
-</script>
-</body>
-</html>
+// État moteur + IA
+async function refreshStatus(){try{
+const r=await fetch(window.location.origin+"/api/status");const s=await r.json();
+document.getElementById("motorStatus").textContent=s.status||"–";
+document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
+document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");
+}catch(e){addLog("⚠️
