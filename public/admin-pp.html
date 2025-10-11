@@ -4,46 +4,36 @@
   <meta charset="utf-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>🛰️ TINSFLASH Console – Admin IA J.E.A.N</title>
+  <title>⚙️ TINSFLASH PRO+++ Console – IA J.E.A.N</title>
   <style>
-    body{margin:0;background:#0a101c;color:#d7f1ff;font-family:Inter,system-ui}
-    header{background:#081421;padding:12px;text-align:center;font-weight:700;color:#6bf3ff;font-size:20px}
-    nav{display:flex;justify-content:center;gap:10px;background:#0d1624;padding:8px}
-    nav a{color:#6bf3ff;text-decoration:none;font-weight:600}
-    nav a:hover{color:#fff}
-    .container{padding:12px;max-width:1300px;margin:auto}
-    section{background:#0e1725;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 0 8px #001}
-    button{background:#4fc3f7;color:#001;font-weight:700;border:none;padding:10px 14px;border-radius:8px;margin:4px;cursor:pointer}
+    body{margin:0;background:#0b1220;color:#e6f6ff;font-family:Inter,system-ui}
+    header{padding:14px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+    nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+    nav a{color:#6bf3ff;text-decoration:none;padding:6px 10px;border-radius:8px}
+    nav a:hover{background:#122236}
+    .container{max-width:1100px;margin:12px auto;padding:12px}
+    .panel{background:#0e1721;border-radius:10px;padding:12px;margin-top:10px}
+    .status-board{display:flex;justify-content:space-around;gap:10px;margin-bottom:10px}
+    .status{flex:1;text-align:center;padding:10px;border-radius:10px;font-weight:700}
+    .green{background:#073d24;color:#4cffb3}
+    .red{background:#3d0711;color:#ff4c60}
+    .yellow{background:#3a2a05;color:#ffe073}
+    button{background:#4fc3f7;border:none;padding:10px 16px;border-radius:8px;color:#001;font-weight:700;cursor:pointer}
     button:hover{background:#6bf3ff}
-    .map{height:450px;border-radius:12px;margin:10px 0}
-    .alerts-list{margin-top:8px}
-    .alert-item{padding:8px;border-bottom:1px solid #123}
-    .alert-item span{display:inline-block;width:100px;font-weight:600}
-    .green{color:#3eff77}
-    .orange{color:#ffbf47}
-    .red{color:#ff6060}
-    .grey{color:#aaa}
-    .chat-box{background:#09131d;padding:12px;border-radius:10px;margin-top:16px}
-    .messages{height:200px;overflow:auto;background:#0b1522;border-radius:8px;padding:8px}
-    .msg-bot{background:#123045;padding:8px;border-radius:8px;margin:6px 0}
-    .msg-user{background:#4fc3f7;color:#001;padding:8px;border-radius:8px;margin:6px 0;text-align:right}
-    input{flex:1;padding:10px;border-radius:8px;border:1px solid #123;background:#07121a;color:#e6f6ff}
-    .controls{display:flex;gap:8px;margin-top:8px}
+    pre{background:#07121a;color:#b4f8ff;padding:10px;border-radius:8px;max-height:45vh;overflow:auto}
   </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <script>
-  const pin = sessionStorage.getItem("tinsflashPIN");
+  const pin=sessionStorage.getItem("tinsflashPIN");
   if(!pin){
-    const p = prompt("Code d’accès admin ?");
-    if(p!=="202679"){ alert("Accès refusé"); location.href="/"; }
+    const p=prompt("Code d’accès admin ?");
+    if(p!=="202679"){alert("Accès refusé");location.href="/";} 
     else sessionStorage.setItem("tinsflashPIN","ok");
   }
 </script>
 
-<header>🛰️ TINSFLASH – Console Administrateur IA J.E.A.N (GPT-5 moteur / GPT-4o-mini console)</header>
+<header>⚙️ Console Administrateur – IA J.E.A.N (GPT-5 Moteur)</header>
 <nav>
   <a href="/admin-pp.html">Console</a>
   <a href="/admin-alerts.html">Alertes</a>
@@ -52,129 +42,80 @@
 
 <div class="container">
 
-  <!-- SECTION 1 : Commandes principales -->
-  <section>
-    <h2>⚙️ Commandes moteur</h2>
-    <button onclick="runZone('Europe')">🌍 Run Europe</button>
-    <button onclick="runZone('USA')">🌎 Run USA</button>
-    <button onclick="runGlobal()">🧩 Run Global</button>
-    <button onclick="runAI()">🧠 IA J.E.A.N Analyse</button>
-    <button onclick="runWorldAlerts()">🌐 Fusion Mondiale</button>
-  </section>
+  <!-- 🟢 Tableau de voyants -->
+  <div class="status-board" id="statusBoard">
+    <div id="statusEngine" class="status red">Moteur ❌</div>
+    <div id="statusIA" class="status red">IA J.E.A.N ❌</div>
+    <div id="statusFusion" class="status red">Fusion ❌</div>
+  </div>
 
-  <!-- SECTION 2 : Cartes connectées -->
-  <section>
-    <h2>🗺️ Cartes Prévisions et Alertes</h2>
-    <div id="mapForecast" class="map"></div>
-    <div id="mapAlerts" class="map"></div>
-  </section>
+  <div class="panel">
+    <button onclick="runGlobal()">🌍 Lancer Run Global</button>
+    <button onclick="runIA()">🧠 Analyse IA J.E.A.N</button>
+    <button onclick="runFusion()">🌐 Fusion Globale</button>
+  </div>
 
-  <!-- SECTION 3 : Listes d’alertes -->
-  <section>
-    <h2>🚨 Liste des Alertes IA</h2>
-    <p><b>Code couleur :</b> 
-      <span class="green">Vert ≥ 90 %</span> – Publication automatique |
-      <span class="orange">Orange 70–89 %</span> – À valider / en surveillance |
-      <span class="red">Rouge < 70 %</span> – Sous observation |
-      <span class="grey">Bleu Primeur</span> – Premières alertes TINSFLASH
-    </p>
-    <div id="alertsList" class="alerts-list">Chargement...</div>
-  </section>
-
-  <!-- SECTION 4 : Chat IA console -->
-  <section class="chat-box">
-    <h2>💬 Chat IA Console (GPT-4o-mini)</h2>
-    <div class="messages" id="messages">
-      <div class="msg-bot">🤖 J.E.A.N Console : Prêt à te répondre.</div>
-    </div>
-    <div class="controls">
-      <input id="input" placeholder="Parle à la console IA..." onkeypress="if(event.key==='Enter') send()">
-      <button onclick="send()">Envoyer</button>
-    </div>
-  </section>
-
+  <div class="panel">
+    <h3>🧭 Logs en direct</h3>
+    <pre id="logs">Chargement des logs...</pre>
+  </div>
 </div>
 
 <script>
-let mapForecast, mapAlerts;
-let layerForecast, layerAlerts;
+async function updateStatus(){
+  try{
+    const res = await fetch("/api/status");
+    const j = await res.json();
+    const eng = document.getElementById("statusEngine");
+    const ia  = document.getElementById("statusIA");
+    const fu  = document.getElementById("statusFusion");
+    const status = (j.status || "").toLowerCase();
 
-window.onload = async () => {
-  mapForecast = L.map('mapForecast').setView([50, 10], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10}).addTo(mapForecast);
+    // moteur
+    if(status.includes("ok")||status.includes("running")){eng.className="status green";eng.textContent="Moteur 🟢";}
+    else if(status.includes("idle")){eng.className="status yellow";eng.textContent="Moteur 🟡";}
+    else{eng.className="status red";eng.textContent="Moteur 🔴";}
 
-  mapAlerts = L.map('mapAlerts').setView([50, 10], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10}).addTo(mapAlerts);
+    // IA J.E.A.N
+    const logs = j.checkup?.logs || [];
+    const lastIA = logs?.slice(-5).find(l=>l.message?.includes("IA J.E.A.N"));
+    if(lastIA){ia.className="status green";ia.textContent="IA J.E.A.N 🟢";}
+    else{ia.className="status yellow";ia.textContent="IA J.E.A.N 🟡";}
 
-  await loadAlerts();
-};
+    // Fusion
+    if(j.checkup?.lastFusionOK){fu.className="status green";fu.textContent="Fusion 🟢";}
+    else{fu.className="status yellow";fu.textContent="Fusion 🟡";}
+  }catch(e){
+    console.warn("Status error:",e);
+  }
+}
 
-async function runZone(zone){
-  const res = await fetch(`/api/runGlobal${zone}`,{method:"POST"});
-  const j = await res.json();
-  alert(j.success ? `✅ Extraction ${zone} terminée` : `❌ ${j.error}`);
-  await loadAlerts();
+async function refreshLogs(){
+  try{
+    const res = await fetch("/api/logs-live");
+    const j = await res.json();
+    const out = j.logs?.map(l=>`${l.timestamp} | ${l.message}`).join("\n") || "Aucun log";
+    document.getElementById("logs").textContent = out;
+  }catch(e){
+    document.getElementById("logs").textContent="Erreur logs: "+e.message;
+  }
 }
 
 async function runGlobal(){
-  const res = await fetch("/api/run-global",{method:"POST"});
-  const j = await res.json();
-  alert(j.success ? "✅ Run Global terminé" : `❌ ${j.error}`);
-  await loadAlerts();
+  document.getElementById("logs").textContent="🚀 Run Global en cours...";
+  const r=await fetch("/api/run-global",{method:"POST"});await refreshLogs();updateStatus();
+}
+async function runIA(){
+  document.getElementById("logs").textContent="🧠 Analyse IA J.E.A.N en cours...";
+  const r=await fetch("/api/ai-analyse",{method:"POST"});await refreshLogs();updateStatus();
+}
+async function runFusion(){
+  document.getElementById("logs").textContent="🌐 Fusion Globale en cours...";
+  const r=await fetch("/api/runWorldAlerts",{method:"POST"});await refreshLogs();updateStatus();
 }
 
-async function runAI(){
-  const res = await fetch("/api/ai-analyse",{method:"POST"});
-  const j = await res.json();
-  alert(j.success ? "🧠 IA J.E.A.N analyse effectuée" : `❌ ${j.error}`);
-}
-
-async function runWorldAlerts(){
-  const res = await fetch("/api/runWorldAlerts",{method:"POST"});
-  const j = await res.json();
-  alert(j.success ? "🌐 Fusion mondiale terminée" : `❌ ${j.error}`);
-  await loadAlerts();
-}
-
-async function loadAlerts(){
-  const res = await fetch("/api/logs-live");
-  const j = await res.json();
-  const alertsDiv = document.getElementById("alertsList");
-  alertsDiv.innerHTML="";
-  let i=0;
-
-  // simulation des points colorés selon fiabilité
-  j.logs.slice(-30).forEach(l=>{
-    if(!l.message.includes("Alerte")) return;
-    const reliabilityMatch = l.message.match(/(\d+)%/);
-    const reliability = reliabilityMatch ? parseInt(reliabilityMatch[1]) : 50;
-    let color = reliability>=90 ? "green" : reliability>=70 ? "orange" : "red";
-    const marker = L.circleMarker([50+Math.random()*5,10+Math.random()*5],
-      {radius:6,color:color,fillOpacity:0.7}).addTo(mapAlerts);
-    const item = document.createElement("div");
-    item.className="alert-item "+color;
-    item.innerHTML=`<span>${reliability}%</span> ${l.message}`;
-    alertsDiv.appendChild(item);
-    i++;
-  });
-  if(i===0) alertsDiv.innerHTML="Aucune alerte récente enregistrée.";
-}
-
-async function send(){
-  const txt=document.getElementById("input").value.trim();
-  if(!txt)return;
-  const box=document.getElementById("messages");
-  box.innerHTML+=`<div class="msg-user">${txt}</div>`;
-  document.getElementById("input").value="";
-  try{
-    const res=await fetch("/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt})});
-    const j=await res.json();
-    box.innerHTML+=`<div class="msg-bot">${j.reply||"..."}</div>`;
-  }catch(e){
-    box.innerHTML+=`<div class="msg-bot">❌ ${e.message}</div>`;
-  }
-  box.scrollTop=box.scrollHeight;
-}
+setInterval(()=>{updateStatus();refreshLogs();},10000);
+updateStatus();refreshLogs();
 </script>
 
 </body>
