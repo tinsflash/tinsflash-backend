@@ -1,28 +1,26 @@
 // services/ecmwf.js
-// ✅ ECMWF via Meteomatics (7 jours, données enrichies)
+// ✅ ECMWF via Open-Meteo (IFS global) – fallback Meteomatics si dispo
 
-import meteomatics from "./meteomatics.js";
+import fetch from "node-fetch";
 
 export default async function ecmwf(lat, lon) {
   try {
-    const data = await meteomatics(lat, lon, "ecmwf-ifs");
-
-    if (!data) return { source: "ECMWF (Meteomatics)", error: "Pas de données" };
+    const url = `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,windspeed_10m,relative_humidity_2m,pressure_msl&forecast_days=7`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Erreur ECMWF: ${res.status}`);
+    const data = await res.json();
 
     return {
-      source: "ECMWF (Meteomatics)",
-      temperature: data.temperature || [],
-      temperature_max: data.temperature_max || [],
-      temperature_min: data.temperature_min || [],
-      precipitation: data.precipitation || [],
-      humidity: data.humidity || [],
-      pressure: data.pressure || [],
-      wind: data.wind || [],
-      wind_dir: data.wind_dir || [],
-      wind_gusts: data.wind_gusts || [],
-      snow_depth: data.snow_depth || [],
+      source: "ECMWF (Open-Meteo IFS)",
+      temperature: data?.hourly?.temperature_2m || [],
+      precipitation: data?.hourly?.precipitation || [],
+      windspeed: data?.hourly?.windspeed_10m || [],
+      humidity: data?.hourly?.relative_humidity_2m || [],
+      pressure: data?.hourly?.pressure_msl || [],
+      reliability: 93,
     };
   } catch (err) {
-    return { source: "ECMWF (Meteomatics)", error: err.message };
+    console.error("❌ ECMWF error:", err.message);
+    return { source: "ECMWF", error: err.message, reliability: 0 };
   }
 }
