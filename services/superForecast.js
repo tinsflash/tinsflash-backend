@@ -42,7 +42,12 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         ).padStart(2, "0")}/data/air_temperature_at_2_meters.nc`,
       },
 
-      { name: "AROME", url: `https://api.open-meteo.com/v1/arome?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      // 🔥 AROME via MétéoFetch (data.gouv.fr)
+      {
+        name: "AROME MeteoFetch",
+        url: `https://api.meteofetch.fr/v1/arome?lat=${lat}&lon=${lon}&params=temperature_2m,precipitation,wind_speed_10m`,
+      },
+
       { name: "HRRR", url: `https://api.open-meteo.com/v1/hrrr?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
       { name: "NASA POWER", url: `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&longitude=${lon}&latitude=${lat}&format=JSON` },
       { name: "WeatherGov", url: `https://api.weather.gov/points/${lat},${lon}` },
@@ -110,7 +115,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       }
     }
 
-    await addEngineLog("🌐 ERA5 AWS + ICON DWD intégrés", "success", "superForecast");
+    await addEngineLog("🌐 ERA5 AWS + ICON DWD + AROME MeteoFetch intégrés", "success", "superForecast");
 
     // ======================================================
     // 🤖 Modèles IA externes
