@@ -1,110 +1,37 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>💬 TINSFLASH PRO+++ – Chats IA Administrateur</title>
-  <style>
-    body{margin:0;background:#0a111d;color:#e6f6ff;font-family:Inter,system-ui}
-    header{padding:14px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700;font-size:1.1rem}
-    nav{display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624}
-    nav a{color:#6bf3ff;text-decoration:none;font-weight:600}
-    nav a:hover{text-decoration:underline}
-    main{max-width:1100px;margin:0 auto;padding:14px}
-    section{margin-bottom:22px;border-radius:10px;background:#0d1624;padding:12px}
-    h2{color:#6bf3ff;margin-bottom:8px}
-    .chatBox{display:flex;flex-direction:column;height:400px;background:#0e1725;border-radius:10px;overflow:hidden}
-    .messages{flex:1;overflow:auto;padding:8px}
-    .msg-bot{background:#123045;padding:6px;border-radius:8px;margin:5px 0}
-    .msg-user{background:#4fc3f7;color:#001;padding:6px;border-radius:8px;margin:5px 0;text-align:right}
-    .controls{display:flex}
-    .controls input{flex:1;padding:8px;border:none;background:#07121a;color:#e6f6ff}
-    .controls button{background:#4fc3f7;border:none;color:#001;font-weight:700;padding:8px 10px}
-  </style>
-</head>
+<html lang="fr"><head><meta charset="utf-8"/><meta name="robots" content="noindex,nofollow"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>💬 Chat Admin – TINSFLASH</title>
+<style>body{margin:0;font-family:Inter,system-ui;background:#0b1220;color:#e6f6ff}
+header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+a{color:#4fc3f7;text-decoration:none;font-weight:600}
+.container{max-width:900px;margin:auto;padding:12px}
+.chat{background:#0e1721;border-radius:8px;padding:10px;height:80vh;display:flex;flex-direction:column}
+.msg{flex:1;overflow:auto;padding:8px}
+input{flex:1;padding:8px;border:none;border-radius:8px;background:#111a2b;color:#fff}
+button{background:#4fc3f7;border:none;color:#001;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer}
+</style></head>
 <body>
-
-<script>
-const pin=sessionStorage.getItem("tinsflashPIN");
-if(!pin){const p=prompt("Code d’accès admin ?");if(p!=="202679"){alert("Accès refusé");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
-</script>
-
-<header>💬 TINSFLASH PRO+++ – Chats IA Administrateur (GPT-4o-mini / moteur GPT-5)</header>
+<script>const PIN_ADMIN="202679";if(!sessionStorage.getItem("tinsflashPIN")){const p=prompt("Code d’accès admin ?");if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}sessionStorage.setItem("tinsflashPIN","ok");}</script>
+<header>💬 Chat Météo & IA (Admin)</header>
 <nav>
-  <a href="/admin-pp.html">Console</a>
-  <a href="/admin-alerts.html">Alertes</a>
-  <a href="/admin-chat.html">Chat</a>
-  <a href="/admin-radar.html">Radar</a>
-  <a href="/index.html">Index public</a>
+<a href="/admin-pp.html">Console</a><a href="/admin-alerts.html">Alertes</a><a href="/admin-chat.html">Chat</a><a href="/admin-radar.html">Radar</a>
+<a href="/admin-local.html">Local</a><a href="/admin-index.html">Index</a><a href="/admin-news.html">News</a><a href="/admin-users.html">Utilisateurs</a>
 </nav>
-
-<main>
-  <!-- CHAT TECHNIQUE -->
-  <section>
-    <h2>🧠 Chat Technique – Moteur IA J.E.A.N (GPT-4o-mini ↔ GPT-5)</h2>
-    <div class="chatBox">
-      <div class="messages" id="techMsgs">
-        <div class="msg-bot">🤖 J.E.A.N : Canal technique connecté au moteur IA (mode GPT-5)</div>
-      </div>
-      <div class="controls">
-        <input id="techInput" placeholder="Commande, diagnostic, état moteur..." onkeypress="if(event.key==='Enter')sendTech()">
-        <button onclick="sendTech()">→</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- CHAT METEO -->
-  <section>
-    <h2>🌦️ Chat Météo – Prévisions / Alertes (GPT-4o-mini)</h2>
-    <div class="chatBox">
-      <div class="messages" id="meteoMsgs">
-        <div class="msg-bot">🌍 J.E.A.N : Canal météo administrateur connecté (prévisions & alertes)</div>
-      </div>
-      <div class="controls">
-        <input id="meteoInput" placeholder="Question sur les prévisions ou alertes..." onkeypress="if(event.key==='Enter')sendMeteo()">
-        <button onclick="sendMeteo()">→</button>
-      </div>
-    </div>
-  </section>
-</main>
-
+<div class="container">
+<div class="chat">
+<div class="msg" id="msg"></div>
+<div style="display:flex;gap:8px">
+<input id="in" placeholder="Posez votre question météo ou moteur..."/><button onclick="send()">Envoyer</button>
+</div>
+</div>
+</div>
 <script>
-/* CHAT TECHNIQUE */
-async function sendTech(){
-  const txt=document.getElementById("techInput").value.trim();
-  if(!txt)return;
-  const msgs=document.getElementById("techMsgs");
-  msgs.innerHTML+=`<div class='msg-user'>${txt}</div>`;
-  document.getElementById("techInput").value="";
-  try{
-    const res=await fetch("/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message:txt,mode:"moteur"})});
-    const j=await res.json();
-    msgs.innerHTML+=`<div class='msg-bot'>${j.reply||j}</div>`;
-    msgs.scrollTop=msgs.scrollHeight;
-  }catch(e){
-    msgs.innerHTML+=`<div class='msg-bot'>❌ Erreur : ${e.message}</div>`;
-  }
+async function send(){
+const txt=document.getElementById("in").value;if(!txt)return;
+const m=document.getElementById("msg");m.innerHTML+=`<div><b>Vous :</b> ${txt}</div>`;
+document.getElementById("in").value="";
+const r=await fetch("/api/chat-meteo-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt})});
+const j=await r.json();m.innerHTML+=`<div><b>J.E.A.N :</b> ${j.reply}</div>`;m.scrollTop=m.scrollHeight;
 }
-
-/* CHAT METEO */
-async function sendMeteo(){
-  const txt=document.getElementById("meteoInput").value.trim();
-  if(!txt)return;
-  const msgs=document.getElementById("meteoMsgs");
-  msgs.innerHTML+=`<div class='msg-user'>${txt}</div>`;
-  document.getElementById("meteoInput").value="";
-  try{
-    const res=await fetch("/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message:txt,mode:"meteo"})});
-    const j=await res.json();
-    msgs.innerHTML+=`<div class='msg-bot'>${j.reply||j}</div>`;
-    msgs.scrollTop=msgs.scrollHeight;
-  }catch(e){
-    msgs.innerHTML+=`<div class='msg-bot'>❌ Erreur : ${e.message}</div>`;
-  }
-}
-</script>
-</body>
-</html>
+</script></body></html>
