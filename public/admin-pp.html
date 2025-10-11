@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="robots" content="noindex,nofollow"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>TINSFLASH • Console IA J.E.A.N</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🛰️ Console IA J.E.A.N. – TINSFLASH PRO+++</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
@@ -70,9 +70,10 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <div class="status-box"><span id="mongoLight" class="status-light"></span>MongoDB</div>
 </div>
 
+<h2>🌍 Cartes de suivi</h2>
 <div class="map-duo">
-<div id="mapForecast" class="map"></div>
-<div id="mapAlerts" class="map"></div>
+  <div id="mapForecast" class="map"></div>
+  <div id="mapAlerts" class="map"></div>
 </div>
 
 <div class="alert-counters">
@@ -96,25 +97,65 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 
 <script>
 const API="/api";
+
+// === Commandes moteur ===
 async function runZone(zone){addLog("🚀 Extraction "+zone);const r=await fetch(API+"/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone})});const j=await r.json();addLog(j.success?"✅ Extraction ok":"❌ "+j.error);}
 async function runIA(){addLog("🧠 Analyse IA...");const r=await fetch(API+"/ai-analyse",{method:"POST"});const j=await r.json();addLog(j.success?"✅ IA terminée":"❌ "+j.error);}
 async function fusionAlerts(){addLog("🌍 Fusion alertes...");const r=await fetch(API+"/runWorldAlerts",{method:"POST"});const j=await r.json();addLog(j.success?"✅ Fusion ok":"❌ "+j.error);}
-async function refreshStatus(){try{const r=await fetch(window.location.origin+"/api/status");if(!r.ok)throw new Error("HTTP "+r.status);const s=await r.json();document.getElementById("motorStatus").textContent=s.status;
-document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
-document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");}catch(e){addLog("⚠️ Status "+e.message);}}
+
+// === État moteur ===
+async function refreshStatus(){
+ try{
+  const r=await fetch(window.location.origin+"/api/status");
+  const s=await r.json();
+  document.getElementById("motorStatus").textContent=s.status||"–";
+  document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
+  document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");
+ }catch(e){addLog("⚠️ Status "+e.message);}
+}
 setInterval(refreshStatus,10000);refreshStatus();
-async function loadAlerts(){const r=await fetch(API+"/alerts");const list=await r.json();let c90=0,c7089=0,c70=0,cP=0;
-const mA=L.map("mapAlerts").setView([20,0],2);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mA);
-list.forEach(a=>{if(!a.lat)return;let color="red";if(a.reliability>=0.9){color="green";c90++;}else if(a.reliability>=0.7){color="orange";c7089++;}else{c70++;}if(a.isPrimeur){cP++;color="blue";}
-L.circleMarker([a.lat,a.lon],{radius:6,color}).addTo(mA).bindPopup(`<b>${a.title}</b><br>${a.zone}`);});
-document.getElementById("count90").textContent=c90;document.getElementById("count7089").textContent=c7089;
-document.getElementById("count70").textContent=c70;document.getElementById("countPrimeurs").textContent=cP);}
-loadAlerts();
+
+// === Logs moteur ===
 function addLog(t){const l=document.getElementById("logs");l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;l.scrollTop=l.scrollHeight;}
-const chatBox=document.getElementById("chatJean");document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
-async function sendChat(){const msg=document.getElementById("chatInput").value;if(!msg)return;const m=document.getElementById("chatMessages");m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
-const r=await fetch(API+"/chat-tech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});const d=await r.json();
-m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;m.scrollTop=m.scrollHeight;}
+
+// === Cartes Leaflet ===
+const mapF=L.map("mapForecast").setView([20,0],2);
+const mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+
+// === Chargement des alertes ===
+async function loadAlerts(){
+ const r=await fetch(API+"/alerts");
+ const list=await r.json();
+ let c90=0,c7089=0,c70=0,cP=0;
+ list.forEach(a=>{
+   if(!a.lat)return;
+   let color="red";
+   if(a.reliability>=0.9){color="green";c90++;}
+   else if(a.reliability>=0.7){color="orange";c7089++;}
+   else{c70++;}
+   if(a.isPrimeur){cP++;color="blue";}
+   L.circleMarker([a.lat,a.lon],{radius:6,color}).addTo(mapA).bindPopup(`<b>${a.title}</b><br>${a.zone}`);
+ });
+ document.getElementById("count90").textContent=c90;
+ document.getElementById("count7089").textContent=c7089;
+ document.getElementById("count70").textContent=c70;
+ document.getElementById("countPrimeurs").textContent=cP;
+}
+loadAlerts();
+
+// === Chat technique ===
+const chatBox=document.getElementById("chatJean");
+document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
+async function sendChat(){
+ const msg=document.getElementById("chatInput").value;if(!msg)return;
+ const m=document.getElementById("chatMessages");
+ m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
+ const r=await fetch(API+"/chat-tech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+ const d=await r.json();
+ m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;m.scrollTop=m.scrollHeight;
+}
 </script>
 </body>
 </html>
