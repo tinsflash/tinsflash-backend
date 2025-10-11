@@ -1,68 +1,118 @@
 // ==========================================================
-// 🧠 IA ANALYSIS – TINSFLASH PRO+++ (Everest Protocol v3.12)
-// Analyse et pondération intelligente via IA J.E.A.N.
-// Intègre les stations météo réelles
+// 🧠 IA ANALYSIS – TINSFLASH PRO+++ (Everest Protocol v3.9)
+// ==========================================================
+// Fusion intelligente, pondération dynamique et calcul d’indice
+// de fiabilité par IA J.E.A.N.
 // ==========================================================
 
+import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
-import { fetchStationData } from "./fetchStationData.js";
+import { fetchStationData } from "./stationsService.js"; // ✅ correction du nom de fichier
+import { applyGeoFactors } from "./geoFactors.js";
+import { applyLocalFactors } from "./localFactors.js";
 
 // ==========================================================
-// ⚙️  FUSION IA – Analyse des zones du SuperForecast
+// ⚙️ Fonction principale – Analyse IA J.E.A.N.
 // ==========================================================
-export async function runAIAnalysis(resultsPhase1 = []) {
+export async function runAIAnalysis(results = []) {
   try {
-    await addEngineLog("🔍 IA J.E.A.N. – Phase 2 : Analyse et pondération", "info", "aiAnalysis");
-    const enriched = [];
+    console.log("\n🧠 [IA.J.E.A.N.] Démarrage de l’analyse complète…");
+    await addEngineLog("🧠 Analyse IA.J.E.A.N. – démarrage", "info", "aiAnalysis");
 
-    for (const r of resultsPhase1) {
-      const { lat, lon, country, reliability } = r;
+    const enhanced = [];
+    let globalReliability = 0;
+    let totalZones = 0;
 
-      // 1️⃣ Lecture stations locales
+    for (const r of results) {
+      const { lat, lon, country, temperature, precipitation, wind } = r;
+      totalZones++;
+
+      // ==========================================================
+      // 1️⃣ Lecture stations météo locales
+      // ==========================================================
       const stations = await fetchStationData(lat, lon, country);
-      const okSources = stations?.summary?.sourcesOK?.length || 0;
+      const stationData = stations?.data || [];
+      const stationCount = Array.isArray(stationData) ? stationData.length : 0;
 
-      // 2️⃣ Calcul cohérence modèle ↔ stations
-      let coherence = 0;
-      if (stations?.data?.length) {
-        try {
-          const s = stations.data[0];
-          const stTemps = parseFloat(s.temperature_2m || s.T2M || s.temp || 0);
-          const delta = Math.abs((r.temperature ?? 0) - stTemps);
-          coherence = Math.max(0, 1 - delta / 10);
-        } catch {
-          coherence = 0.5;
-        }
-      } else coherence = 0.4;
+      // Pondération station → correction IA
+      const stationFactor = Math.min(1, 0.7 + stationCount * 0.03);
 
-      // 3️⃣ Calcul Indice Global J.E.A.N.
-      const jeanIndex = Math.round(((reliability * 0.6) + (coherence * 0.4)) * 100);
+      // ==========================================================
+      // 2️⃣ Application des facteurs environnementaux
+      // ==========================================================
+      let adjusted = { temperature, precipitation, wind };
+      adjusted = await applyGeoFactors(adjusted, lat, lon, country);
+      adjusted = await applyLocalFactors(adjusted, lat, lon, country);
+
+      // ==========================================================
+      // 3️⃣ Calcul du score local et du taux de confiance IA
+      // ==========================================================
+      const localScore =
+        (1 -
+          Math.abs(adjusted.temperature - temperature) / 50 +
+          Math.abs(adjusted.wind - wind) / 100) *
+        stationFactor;
+
+      const reliability = Math.max(0, Math.min(1, localScore));
+      globalReliability += reliability;
 
       const aiResult = {
         ...r,
-        jeanIndex,
-        coherence,
-        stationSources: stations?.summary?.sourcesOK || [],
-        stationErrors: stations?.summary?.sourcesFail || [],
+        stationCount,
+        adjusted,
+        reliability,
+        aiComment:
+          reliability > 0.9
+            ? "Prévision hautement fiable"
+            : reliability > 0.7
+            ? "Prévision à surveiller"
+            : "Prévision incertaine",
       };
 
-      enriched.push(aiResult);
+      enhanced.push(aiResult);
+
+      console.log(
+        `🧩 Zone ${country} : fiabilité ${(reliability * 100).toFixed(
+          1
+        )}% | ${aiResult.aiComment}`
+      );
+
       await addEngineLog(
-        `🧠 ${country} → Indice J.E.A.N. ${jeanIndex}% (cohérence ${Math.round(coherence*100)}%)`,
-        "info",
+        `🧠 ${country} – ${Math.round(reliability * 100)} % (${stationCount} stations)`,
+        reliability > 0.9 ? "success" : reliability > 0.7 ? "warning" : "info",
         "aiAnalysis"
       );
     }
 
-    const avgJean = Math.round(
-      enriched.reduce((a, b) => a + (b.jeanIndex || 0), 0) / (enriched.length || 1)
+    // ==========================================================
+    // 4️⃣ Synthèse globale IA
+    // ==========================================================
+    const indiceGlobal = +(globalReliability / (totalZones || 1)).toFixed(3);
+    const synthese = {
+      indiceGlobal: +(indiceGlobal * 100).toFixed(1),
+      zones: enhanced.length,
+      commentaire:
+        indiceGlobal >= 0.9
+          ? "Système parfaitement stable"
+          : indiceGlobal >= 0.7
+          ? "Système en légère instabilité – Vérification recommandée"
+          : "Système instable – Réévaluation requise",
+    };
+
+    console.log(
+      `\n✅ [IA.J.E.A.N.] Analyse terminée – Indice global ${synthese.indiceGlobal}% (${synthese.commentaire})`
+    );
+    await addEngineLog(
+      `✅ IA.J.E.A.N. terminée – Indice global ${synthese.indiceGlobal}%`,
+      "success",
+      "aiAnalysis"
     );
 
-    await addEngineLog(`✅ IA J.E.A.N. terminée – Indice Global ${avgJean}%`, "success", "aiAnalysis");
-    return { enriched, indiceGlobal: avgJean };
+    return { synthese, results: enhanced };
   } catch (e) {
-    await addEngineError("Erreur IA J.E.A.N. : " + e.message, "aiAnalysis");
-    return { error: e.message };
+    console.error("❌ Erreur IA.J.E.A.N. :", e.message);
+    await addEngineError("Erreur IA.J.E.A.N. : " + e.message, "aiAnalysis");
+    return { error: e.message, synthese: null, results: [] };
   }
 }
 
