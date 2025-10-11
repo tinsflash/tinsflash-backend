@@ -4,150 +4,151 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH | Console Admin – IA J.E.A.N.</title>
+  <title>TINSFLASH – Console Moteur IA J.E.A.N.</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <style>
     body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at 20% 20%, #00111f, #000814);
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
+      background:#020818;
+      color:#d4e7ff;
+      font-family: "Orbitron", sans-serif;
+      margin:0;
+      overflow:hidden;
     }
     header {
-      text-align: center;
-      padding: 15px;
-      background: rgba(0, 40, 80, 0.8);
-      font-size: 1.3em;
-      letter-spacing: 1px;
-      border-bottom: 2px solid #0ff;
+      background:linear-gradient(90deg,#00224e,#004ba8);
+      padding:1rem;
+      text-align:center;
+      font-size:1.5rem;
+      color:#fff;
+      text-shadow:0 0 10px #00eaff;
     }
-    #cockpit {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      padding: 20px;
+    .controls {
+      display:flex;
+      justify-content:center;
+      gap:1rem;
+      margin-top:1rem;
     }
     button {
-      background: #022c43;
-      color: #0ff;
-      border: 1px solid #0ff;
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 1.1em;
-      cursor: pointer;
-      transition: 0.3s;
+      background:#001f3f;
+      color:#00eaff;
+      border:1px solid #00eaff;
+      border-radius:8px;
+      padding:0.7rem 1.2rem;
+      cursor:pointer;
+      font-weight:bold;
+      transition:0.3s;
     }
-    button:hover {
-      background: #0ff;
-      color: #000;
-      transform: scale(1.05);
+    button:hover { background:#00eaff; color:#001f3f; }
+    #mapForecast, #mapAlerts {
+      height:45vh;
+      margin:1rem;
+      border:2px solid #00eaff;
+      border-radius:10px;
     }
-    #logs {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      height: 35vh;
-      background: rgba(0,0,0,0.75);
-      border-top: 2px solid #0ff;
-      padding: 10px;
-      overflow-y: scroll;
-      font-family: monospace;
-      font-size: 0.9em;
-      color: #0f0;
+    .logs {
+      background:#000c1e;
+      height:18vh;
+      overflow-y:auto;
+      padding:0.5rem;
+      border-top:1px solid #00eaff;
+      font-size:0.85rem;
     }
-    #overlay {
-      display: none;
-      position: fixed;
-      top:0;left:0;width:100%;height:100%;
-      background: rgba(0,0,0,0.9);
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-      color: #0ff;
-      flex-direction: column;
-    }
-    input.pin {
-      background: #022c43;
-      border: 1px solid #0ff;
-      border-radius: 5px;
-      padding: 10px;
-      color: #0ff;
-      text-align: center;
-      width: 150px;
-      font-size: 1.2em;
+    .chat-bubble {
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      background:#002850;
+      color:#00eaff;
+      border-radius:50%;
+      width:60px; height:60px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.4rem;
+      box-shadow:0 0 20px #00eaff;
+      cursor:pointer;
     }
   </style>
 </head>
 <body>
-  <div id="overlay">
-    <h2>🔒 Entrer le code PIN</h2>
-    <input class="pin" id="pinInput" maxlength="6" placeholder="******" />
-    <button onclick="checkPin()">Déverrouiller</button>
-    <p id="pinMsg"></p>
+  <header>🌍 TINSFLASH – IA J.E.A.N. Central Cockpit</header>
+
+  <div class="controls">
+    <button onclick="runEngine('EU')">Run Europe</button>
+    <button onclick="runEngine('US')">Run USA</button>
+    <button onclick="runWorld()">Run World Alerts</button>
+    <button onclick="runAI()">IA Analyse</button>
+    <button onclick="stopEngine()">🛑 Arrêt</button>
+    <button onclick="resetEngine()">♻️ Reset</button>
   </div>
 
-  <header>🚀 Console Admin – IA J.E.A.N. (Everest v3.8 PRO+++)</header>
+  <div id="mapForecast"></div>
+  <div id="mapAlerts"></div>
+  <div class="logs" id="logs"></div>
 
-  <div id="cockpit">
-    <button onclick="runEurope()">🌍 Run Europe</button>
-    <button onclick="runUSA()">🗽 Run USA</button>
-    <button onclick="runWorld()">🌐 Run World Alerts</button>
-    <button onclick="analyseIA()">🤖 IA J.E.A.N. Analyse</button>
-    <button onclick="stopEngine()">🛑 Arrêt Sécurisé</button>
-    <button onclick="resetStop()">♻️ Reset Sécurité</button>
-    <button onclick="location.href='admin-alerts.html'">⚠️ Gestion Alertes</button>
-  </div>
-
-  <div id="logs"></div>
+  <div class="chat-bubble" onclick="toggleChat()">💬</div>
 
   <script>
-    const logsDiv = document.getElementById("logs");
+    const logBox = document.getElementById("logs");
+    const forecastMap = L.map("mapForecast").setView([50, 10], 4);
+    const alertMap = L.map("mapAlerts").setView([20, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution:"TINSFLASH" }).addTo(forecastMap);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution:"TINSFLASH" }).addTo(alertMap);
 
-    async function post(url, data={}) {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        });
-        const json = await res.json();
-        appendLog(`✅ ${url} → OK`);
-        return json;
-      } catch (e) {
-        appendLog(`❌ ${url} → ${e.message}`, true);
-      }
+    const colors = { primeur:"#0066ff", confirm:"#00ff7f", valider:"#ffcc00", surveiller:"#ff0033" };
+    let layers = { primeur:L.layerGroup().addTo(alertMap), confirm:L.layerGroup().addTo(alertMap),
+                   valider:L.layerGroup().addTo(alertMap), surveiller:L.layerGroup().addTo(alertMap) };
+
+    async function runEngine(zone){
+      appendLog(`▶️ Lancement ${zone}`);
+      await axios.post("/api/runGlobal", { zone });
+      appendLog("✅ Terminé "+zone);
+    }
+    async function runWorld(){
+      appendLog("🌐 Lancement World Alerts");
+      await axios.post("/api/runWorldAlerts");
+      appendLog("✅ Alertes Monde traitées");
+      refreshAlerts();
+    }
+    async function runAI(){
+      appendLog("🤖 IA Analyse en cours…");
+      await axios.post("/api/ai-analyse");
+      appendLog("✅ IA J.E.A.N. terminé");
+      refreshForecast();
+    }
+    async function stopEngine(){ await axios.post("/api/stop-extraction"); appendLog("🛑 Moteur arrêté"); }
+    async function resetEngine(){ await axios.post("/api/reset-stop-extraction"); appendLog("♻️ Reset complet"); }
+
+    function appendLog(msg){
+      const time = new Date().toLocaleTimeString();
+      logBox.innerHTML += `<div>[${time}] ${msg}</div>`;
+      logBox.scrollTop = logBox.scrollHeight;
     }
 
-    function appendLog(msg, error=false) {
-      const line = document.createElement("div");
-      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-      line.style.color = error ? "#f33" : "#0f0";
-      logsDiv.appendChild(line);
-      logsDiv.scrollTop = logsDiv.scrollHeight;
+    async function refreshForecast(){
+      const res = await axios.get("/api/forecasts");
+      forecastMap.eachLayer((l)=>{ if(l instanceof L.CircleMarker) forecastMap.removeLayer(l); });
+      res.data.forEach(f=>{
+        const color = f.reliability>=0.9?colors.confirm:(f.reliability>=0.7?colors.valider:colors.surveiller);
+        L.circleMarker([f.lat,f.lon],{radius:6,color,fillOpacity:0.6}).bindTooltip(
+          `Fiabilité: ${Math.round(f.reliability*100)}%<br>${f.temperature}°C<br>${f.precipitation}mm`
+        ).addTo(forecastMap);
+      });
     }
 
-    // --- Sécurité PIN ---
-    const overlay = document.getElementById("overlay");
-    overlay.style.display = "flex";
-    function checkPin() {
-      const val = document.getElementById("pinInput").value.trim();
-      if (val === "202679") overlay.style.display = "none";
-      else document.getElementById("pinMsg").innerText = "❌ Code incorrect";
+    async function refreshAlerts(){
+      const res = await axios.get("/api/alerts");
+      Object.values(layers).forEach(l=>l.clearLayers());
+      res.data.forEach(a=>{
+        let color = a.isPrimeur?colors.primeur:(a.reliability>=0.9?colors.confirm:(a.reliability>=0.7?colors.valider:colors.surveiller));
+        L.circleMarker([a.lat,a.lon],{radius:8,color,fillOpacity:0.8})
+          .bindPopup(`<b>${a.type}</b><br>${Math.round(a.reliability*100)}%<br>${a.country}`)
+          .addTo(a.isPrimeur?layers.primeur:(a.reliability>=0.9?layers.confirm:(a.reliability>=0.7?layers.valider:layers.surveiller)));
+      });
     }
 
-    // --- Actions backend ---
-    function runEurope() { post("/api/runGlobalEurope"); }
-    function runUSA() { post("/api/runGlobalUSA"); }
-    function runWorld() { post("/api/runWorldAlerts"); }
-    function analyseIA() { post("/api/ai-analyse"); }
-    function stopEngine() { post("/api/stop-extraction"); }
-    function resetStop() { post("/api/reset-stop-extraction"); }
-
-    // --- Flux Logs live ---
-    const evtSource = new EventSource("/api/logs-live");
-    evtSource.onmessage = e => appendLog(e.data);
-    evtSource.onerror = () => appendLog("⚠️ Erreur flux logs SSE", true);
+    function toggleChat(){ window.open("/admin-chat.html","chat","width=400,height=600"); }
+    refreshForecast(); refreshAlerts();
   </script>
 </body>
 </html>
