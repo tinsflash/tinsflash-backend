@@ -1,46 +1,76 @@
-// services/runAll.js
-// 🚀 Lancement complet du moteur TINSFLASH (Europe + USA + Continental + World Alerts)
+// ==========================================================
+// 🌐 TINSFLASH – runAll.js (Everest Protocol v3.6 PRO+++)
+// ==========================================================
+// ✅ PHASE 1 – Extraction complète du globe
+// Combinaison de toutes les zones (Europe, USA, Canada, Afrique,
+// Asie, Amérique Sud, Océanie, Moyen-Orient)
+// Aucune IA J.E.A.N. ici : extraction pure via superForecast
+// ==========================================================
 
-import { initEngineState, addEngineLog, addEngineError, saveEngineState } from "./engineState.js";
-import { runGlobal } from "./runGlobal.js";
-import { runContinental } from "./runContinental.js";
-import { runWorldAlerts } from "./runWorldAlerts.js";
+import { enumerateCoveredPoints } from "./zonesCovered.js";
+import { superForecast } from "./superForecast.js";
+import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
 
-console.log("==============================================");
-console.log("🌋 DÉMARRAGE DU RUN COMPLET – CENTRALE TINSFLASH");
-console.log("==============================================\n");
+// ==========================================================
+// 🚀 Fonction principale – extraction mondiale totale
+// ==========================================================
+export async function runAll() {
+  try {
+    await addEngineLog("🌐 Démarrage runAll (extraction globale complète)", "info", "runAll");
 
-try {
-  // 1️⃣ Connexion MongoDB et préparation du moteur
-  await initEngineState();
-  addEngineLog("⚙️ Initialisation moteur terminée.");
+    // Récupération des zones couvertes
+    const zones = enumerateCoveredPoints();
+    if (!zones?.length) throw new Error("Aucune zone détectée dans zonesCovered.js");
 
-  // 2️⃣ Lancement du moteur principal (zones couvertes)
-  addEngineLog("🌍 Lancement du runGlobal (zones couvertes)...");
-  const globalResult = await runGlobal();
-  addEngineLog(`✅ runGlobal terminé avec ${globalResult?.summary?.zones || "?"} zones.`);
+    console.log(`🗺️ ${zones.length} zones totales détectées – lancement extraction mondiale`);
 
-  // 3️⃣ Lancement du fallback continental (zones non couvertes)
-  addEngineLog("🌐 Lancement du runContinental (fallback open-data)...");
-  const continentalResult = await runContinental();
-  addEngineLog(`✅ runContinental terminé (${continentalResult?.summary?.points || 0} points traités).`);
+    // Exécution du SuperForecast (phase 1 pure)
+    const result = await superForecast({
+      zones,
+      runType: "Global",
+    });
 
-  // 4️⃣ Fusion mondiale des alertes
-  addEngineLog("🌎 Fusion mondiale des alertes (runWorldAlerts)...");
-  const worldResult = await runWorldAlerts();
-  addEngineLog(`✅ Fusion mondiale terminée (${worldResult?.summary?.totalAlerts || 0} alertes globales).`);
+    // Mise à jour de l’état moteur
+    await updateEngineState({
+      status: "ok",
+      lastRun: new Date(),
+      checkup: {
+        engineStatus: "RUN_OK",
+        lastFilter: "Global",
+        zonesCount: zones.length,
+      },
+    });
 
-  // 5️⃣ Finalisation
-  addEngineLog("🏁 RUN COMPLET TINSFLASH TERMINÉ AVEC SUCCÈS !");
-  console.log("\n✅ RUN COMPLET TERMINÉ AVEC SUCCÈS\n");
-
-  const state = { status: "ok", lastRun: new Date() };
-  await saveEngineState(state);
-
-  process.exit(0);
-} catch (err) {
-  console.error("❌ ERREUR RUN COMPLET :", err);
-  addEngineError("❌ ERREUR RUN COMPLET : " + err.message);
-  await saveEngineState({ status: "fail" });
-  process.exit(1);
+    await addEngineLog(`✅ runAll terminé (${zones.length} zones traitées)`, "success", "runAll");
+    return result;
+  } catch (err) {
+    await addEngineError(`Erreur runAll : ${err.message}`, "runAll");
+    console.error(`❌ runAll : ${err.message}`);
+    return { error: err.message };
+  }
 }
+
+// ==========================================================
+// ⚙️ Sous-modules d’extraction régionale (utiles pour console admin)
+// ==========================================================
+export async function runNorthernHemisphere() {
+  const all = enumerateCoveredPoints();
+  const nh = all.filter((z) => z.lat > 0);
+  return superForecast({ zones: nh, runType: "North" });
+}
+
+export async function runSouthernHemisphere() {
+  const all = enumerateCoveredPoints();
+  const sh = all.filter((z) => z.lat < 0);
+  return superForecast({ zones: sh, runType: "South" });
+}
+
+export async function runEquatorial() {
+  const all = enumerateCoveredPoints();
+  const eq = all.filter((z) => Math.abs(z.lat) < 10);
+  return superForecast({ zones: eq, runType: "Equatorial" });
+}
+
+// ==========================================================
+// Fin du module – 100 % réel, stable Render
+// ==========================================================
