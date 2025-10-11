@@ -102,3 +102,12 @@ export async function autoCompareAfterRun(alerts = []) {
     return { error: err.message };
   }
 }
+
+// ==========================================================
+// ✅ Alias de compatibilité pour aiAnalysis.js
+// ==========================================================
+// Certains modules importent runAIComparison ; cet alias évite tout conflit Render.
+export const runAIComparison = autoCompareAfterRun;
+
+// Export par défaut
+export default { autoCompareAfterRun, runAIComparison };
