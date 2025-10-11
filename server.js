@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.17 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.18 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -33,7 +33,8 @@ import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
 import { generateForecast } from "./services/forecastService.js";
-import { getNews } from "./services/newsService.js"; // ✅ ajout route météo mondiale
+import { getNews } from "./services/newsService.js"; // ✅ actualités météo mondiales
+import { checkAIHealth } from "./services/aiHealth.js"; // ✅ nouvel import IA Health Check
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -126,6 +127,19 @@ app.get("/api/news", async (_, res) => {
   } catch (e) {
     await addEngineError("Erreur /api/news: " + e.message, "news");
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🧠 Vérification état IA J.E.A.N
+// ==========================================================
+app.get("/api/ai-health", async (_, res) => {
+  try {
+    const result = await checkAIHealth();
+    res.json(result);
+  } catch (e) {
+    await addEngineError("Erreur /api/ai-health: " + e.message, "aiHealth");
+    res.status(500).json({ status: "error", message: e.message });
   }
 });
 
