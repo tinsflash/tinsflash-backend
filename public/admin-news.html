@@ -11,31 +11,71 @@ header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weig
 nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
 a{color:#4fc3f7;text-decoration:none;font-weight:600}
 .container{max-width:1000px;margin:auto;padding:16px}
-.card{background:#0e1721;border-radius:10px;padding:12px;margin-top:12px}
-h3{color:#4fc3f7}
+.card{background:#0e1721;border-radius:10px;padding:12px;margin-top:12px;box-shadow:0 0 10px rgba(0,0,0,0.4);}
+h3{color:#4fc3f7;margin:0 0 6px 0;}
+.news-meta{font-size:12px;color:#8fc7ff;margin-bottom:8px;}
+.news-desc{font-size:14px;color:#cfe9ff;margin-bottom:6px;}
+.news-link{color:#4fc3f7;text-decoration:none;font-weight:600;}
+.news-link:hover{text-decoration:underline;}
+.loader{text-align:center;color:#4fc3f7;margin-top:30px;}
 </style>
 </head>
 <body>
+
+<!-- 🔐 Accès sécurisé -->
 <script>
 const PIN_ADMIN="202679";
 if(!sessionStorage.getItem("tinsflashPIN")){
- const p=prompt("Code d’accès admin ?");
- if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
- sessionStorage.setItem("tinsflashPIN","ok");
+  const p=prompt("Code d’accès admin ?");
+  if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
+  sessionStorage.setItem("tinsflashPIN","ok");
 }
 </script>
-<header>📰 Actualités internes TINSFLASH</header>
+
+<header>📰 Actualités météorologiques mondiales – IA J.E.A.N</header>
 <nav>
-<a href="/admin-pp.html">Console</a><a href="/admin-alerts.html">Alertes</a><a href="/admin-chat.html">Chat</a>
-<a href="/admin-radar.html">Radar</a><a href="/admin-local.html">Local</a><a href="/admin-index.html">Index</a>
-<a href="/admin-news.html">News</a><a href="/admin-users.html">Utilisateurs</a>
+<a href="/admin-pp.html">Console</a>
+<a href="/admin-alerts.html">Alertes</a>
+<a href="/admin-chat.html">Chat</a>
+<a href="/admin-radar.html">Radar</a>
+<a href="/admin-local.html">Local</a>
+<a href="/admin-index.html">Index</a>
+<a href="/admin-news.html">News</a>
+<a href="/admin-users.html">Utilisateurs</a>
 </nav>
+
 <div class="container">
-<div class="card"><h3>🔧 Moteur</h3><p>Dernier run complet : <span id="lastRun">chargement...</span></p></div>
-<div class="card"><h3>🧠 IA J.E.A.N</h3><p>Mises à jour de pondération automatique intégrées.</p></div>
-<div class="card"><h3>🚀 Nouvelles zones</h3><ul><li>Afrique Ouest stabilisée</li><li>Asie Est en test</li></ul></div>
+<h3>🌍 Dernières actualités météo globales</h3>
+<div id="newsZone" class="loader">Chargement des actualités météo...</div>
 </div>
+
 <script>
-fetch("/api/status").then(r=>r.json()).then(d=>{document.getElementById("lastRun").textContent=d.lastRun||"—";});
+async function loadNews(){
+  try{
+    const r=await fetch("/api/news");
+    const d=await r.json();
+    const zone=document.getElementById("newsZone");
+
+    if(!d.success || !d.articles?.length){
+      zone.innerHTML="<p>Aucune actualité disponible pour le moment.</p>";
+      return;
+    }
+
+    zone.innerHTML=d.articles.map(a=>`
+      <div class="card">
+        <h3>${a.title}</h3>
+        <div class="news-meta">${a.source || "Inconnu"} – ${new Date(a.publishedAt).toLocaleString()}</div>
+        ${a.description ? `<div class="news-desc">${a.description}</div>` : ""}
+        <a href="${a.url}" target="_blank" class="news-link">🔗 Lire l’article complet</a>
+      </div>
+    `).join("");
+
+  }catch(e){
+    document.getElementById("newsZone").innerHTML=`<p style="color:#ff6666;">Erreur : ${e.message}</p>`;
+  }
+}
+loadNews();
 </script>
-</body></html>
+
+</body>
+</html>
