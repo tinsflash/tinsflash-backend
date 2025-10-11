@@ -1,151 +1,86 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🏠 Index Utilisateur – TINSFLASH</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    body {
-      margin: 0;
-      background: #0b1220;
-      color: #e6f6ff;
-      font-family: Inter, system-ui, Arial;
-    }
-    header {
-      background: #08101f;
-      color: #4fc3f7;
-      text-align: center;
-      padding: 14px;
-      font-weight: 700;
-      font-size: 18px;
-    }
-    nav {
-      display: flex;
-      justify-content: center;
-      background: #0d1624;
-      padding: 8px;
-      gap: 10px;
-    }
-    nav a {
-      color: #cfefff;
-      text-decoration: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-    }
-    nav a:hover {
-      background: #0b2b3a;
-    }
-    .container {
-      max-width: 1100px;
-      margin: 20px auto;
-      padding: 10px;
-    }
-    input[type="text"] {
-      width: 80%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #123;
-      background: #07121a;
-      color: #e6f6ff;
-      font-size: 15px;
-    }
-    button {
-      background: #4fc3f7;
-      color: #001;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 700;
-      margin-left: 10px;
-    }
-    button:hover {
-      background: #6ed6ff;
-    }
-    #map {
-      height: 380px;
-      border-radius: 10px;
-      margin-top: 16px;
-    }
-    #iframePreview {
-      width: 100%;
-      height: 500px;
-      border: none;
-      margin-top: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
-    }
-    #coords, #weather {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #9ad6ff;
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="robots" content="noindex,nofollow"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🌍 Simulation Utilisateur – TINSFLASH PRO+++</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+body{margin:0;background:#0b1220;color:#e6f6ff;font-family:"Segoe UI",system-ui}
+header{padding:12px;text-align:center;background:#08121d;color:#4fc3f7;font-weight:700;font-size:1.2em}
+nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+nav a{color:#4fc3f7;text-decoration:none;font-weight:600}
+nav a:hover{color:#fff;text-shadow:0 0 8px #4fc3f7}
+section{padding:15px;text-align:center}
+input[type=text]{padding:10px;width:60%;max-width:500px;border-radius:6px;border:none;background:#1b2339;color:#fff;font-size:1em}
+button{background:#4fc3f7;color:#000;font-weight:bold;padding:10px 16px;border:none;border-radius:6px;cursor:pointer;margin-left:8px}
+button:hover{background:#7be0ff}
+iframe{width:100%;height:calc(100vh - 220px);border:none;display:block;margin-top:10px}
+.status{background:#111a2b;color:#7dd3fc;text-align:center;padding:8px;font-size:14px;}
+footer{text-align:center;color:#8fdcff;font-size:13px;padding:8px;background:#0d1624}
+</style>
 </head>
+
 <body>
+
+<!-- 🔐 Sécurité PIN admin -->
 <script>
-const pin = sessionStorage.getItem("tinsflashPIN");
-if(!pin){
-  const p = prompt("Code d’accès admin ?");
-  if(p !== "202679"){ alert("⛔ Accès refusé"); location.href="/"; }
-  else sessionStorage.setItem("tinsflashPIN","ok");
+const PIN_ADMIN="202679";
+if(!sessionStorage.getItem("tinsflashPIN")){
+ const p=prompt("Code d’accès admin ?");
+ if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
+ else sessionStorage.setItem("tinsflashPIN","ok");
 }
 </script>
 
-<header>🏠 Index Utilisateur – Vue réelle</header>
+<header>🌍 Simulation Utilisateur – Vue IA J.E.A.N. mondiale</header>
+
 <nav>
-  <a href="/admin-pp.html">Console</a>
-  <a href="/admin-alerts.html">Alertes</a>
-  <a href="/admin-chat.html">Chat</a>
-  <a href="/admin-radar.html">Radar</a>
-  <a href="/admin-users.html">Utilisateurs</a>
-  <a href="/admin-index.html" style="background:#0b2b3a">Index</a>
+<a href="/admin-pp.html">Console</a>
+<a href="/admin-alerts.html">Alertes</a>
+<a href="/admin-chat.html">Chat</a>
+<a href="/admin-radar.html">Radar</a>
+<a href="/admin-local.html">Local</a>
+<a href="/admin-index.html">Index</a>
+<a href="/admin-news.html">News</a>
+<a href="/admin-users.html">Utilisateurs</a>
 </nav>
 
-<div class="container">
-  <h3>🔍 Entrer une adresse pour voir la page index réelle :</h3>
-  <input type="text" id="addressInput" placeholder="Exemple : Rue du Paradis, Paris, France" />
-  <button onclick="searchAddress()">Rechercher</button>
+<div class="status">🧠 Mode simulateur actif – entrez une adresse pour charger la vue publique correspondante</div>
 
-  <div id="coords">🛰️ Coordonnées : —</div>
-  <div id="weather">🌤️ Météo : —</div>
-  <div id="map"></div>
+<section>
+  <input type="text" id="addressInput" placeholder="Entrez une adresse complète (ville, pays ou coordonnées)"/>
+  <button onclick="simulateUser()">🔍 Simuler</button>
+  <div id="coordInfo" style="margin-top:10px;color:#7dd3fc;font-size:0.95em;"></div>
+</section>
 
-  <iframe id="iframePreview" src=""></iframe>
-</div>
+<iframe id="userFrame" src="about:blank"></iframe>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<footer>
+🌎 TINSFLASH PRO+++ • Simulation de vue utilisateur • IA J.E.A.N connectée
+</footer>
+
 <script>
-const API = location.origin;
-const map = L.map("map").setView([48.85, 2.35], 4);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-let marker=null;
-
-async function searchAddress(){
-  const address = document.getElementById("addressInput").value.trim();
-  if(!address){alert("Veuillez entrer une adresse complète.");return;}
-
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  if(!data.length){alert("Adresse introuvable.");return;}
-
-  const {lat, lon, display_name} = data[0];
-  document.getElementById("coords").textContent = `🛰️ Coordonnées : ${lat}, ${lon}`;
-  if(marker) map.removeLayer(marker);
-  marker = L.marker([lat, lon]).addTo(map).bindPopup(display_name).openPopup();
-  map.setView([lat, lon], 9);
-
-  // Météo locale
-  const wx = await fetch(`${API}/api/weather-map?lat=${lat}&lon=${lon}`);
-  const wdata = await wx.json();
-  document.getElementById("weather").textContent = `🌤️ Nuages : ${wdata.cloud || 0}% | Pluie : ${wdata.rain || 0} mm`;
-
-  // Prévisualisation de l'index utilisateur
-  document.getElementById("iframePreview").src = `${API}/?lat=${lat}&lon=${lon}`;
+async function simulateUser(){
+  const addr=document.getElementById("addressInput").value.trim();
+  if(!addr)return alert("Veuillez entrer une adresse complète.");
+  document.getElementById("coordInfo").textContent="📡 Recherche des coordonnées...";
+  try{
+    const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+    const g=await geo.json();
+    if(!g[0]){document.getElementById("coordInfo").textContent="❌ Adresse introuvable.";return;}
+    const lat=parseFloat(g[0].lat), lon=parseFloat(g[0].lon);
+    document.getElementById("coordInfo").innerHTML=`✅ Coordonnées : <b>${lat.toFixed(2)}, ${lon.toFixed(2)}</b>`;
+    // Chargement de la page publique index.html avec les coordonnées comme paramètres
+    const url=`/index.html?lat=${lat}&lon=${lon}`;
+    document.getElementById("userFrame").src=url;
+  }catch(e){
+    document.getElementById("coordInfo").textContent="Erreur : "+e.message;
+  }
 }
 </script>
+
 </body>
 </html>
