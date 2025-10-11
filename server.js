@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.16 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.17 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -33,6 +33,7 @@ import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
 import { generateForecast } from "./services/forecastService.js";
+import { getNews } from "./services/newsService.js"; // ✅ ajout route météo mondiale
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -116,6 +117,19 @@ app.get("/api/alerts", async (_, res) => {
 });
 
 // ==========================================================
+// 🛰️ Actualités météo mondiales (IA J.E.A.N)
+// ==========================================================
+app.get("/api/news", async (_, res) => {
+  try {
+    const data = await getNews(10, "fr"); // 🌍 10 dernières actus météo
+    res.json(data);
+  } catch (e) {
+    await addEngineError("Erreur /api/news: " + e.message, "news");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
 // 🧠 STATUT MOTEUR IA – route /api/status
 // ==========================================================
 app.get("/api/status", async (_, res) => {
@@ -173,4 +187,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // 🚀 Lancement
 // ==========================================================
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`⚡ TINSFLASH PRO+++ en ligne sur port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`⚡ TINSFLASH PRO+++ en ligne sur port ${PORT}`);
+  console.log("🌍 Zones couvertes :", enumerateCoveredPoints().length);
+});
