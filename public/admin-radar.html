@@ -1,90 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8" />
-<meta name="robots" content="noindex,nofollow" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>🌦️ Radar IA J.E.A.N – TINSFLASH</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-body{margin:0;background:#050b14;color:#d8efff;font-family:Inter,system-ui}
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:#08121d;color:#6bf3ff;font-weight:700}
-.sidebar{position:fixed;left:0;top:0;height:100%;width:200px;background:#08121d;padding-top:70px}
-.sidebar a{display:block;padding:10px 14px;color:#9ad6ff;text-decoration:none}
-.main{margin-left:210px;padding:10px}
-#map{height:550px;border-radius:8px;margin-bottom:10px}
-.panel{background:#0d1725;padding:10px;border-radius:8px;margin-bottom:12px}
-button{background:#4fc3f7;color:#001;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600}
-.chat{background:#07131f;padding:8px;border-radius:8px;height:160px;display:flex;flex-direction:column}
-.chat-messages{flex:1;overflow:auto;margin-bottom:6px}
-.chat-input{display:flex;gap:6px}
-.chat-input input{flex:1;background:#081622;border:1px solid #10344a;border-radius:6px;padding:8px;color:#d8efff}
-@media(max-width:800px){.sidebar{display:none}.main{margin-left:10px}}
-</style>
-</head>
+<html lang="fr"><head><meta charset="utf-8"/><meta name="robots" content="noindex,nofollow"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🌦 Radar – TINSFLASH</title>
+<style>body{margin:0;background:#0b1220;color:#e6f6ff;font-family:Inter,system-ui}
+header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+a{color:#4fc3f7;text-decoration:none;font-weight:600}</style></head>
 <body>
-<script>
-const pin=sessionStorage.getItem("tinsflashPIN");
-if(!pin){const p=prompt("Code ?");if(p!=="202679"){alert("⛔");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
-</script>
-
-<header>
-  <div>🌦️ Radar IA J.E.A.N – TINSFLASH</div>
-  <div>
-    <button onclick="locateUser()">📍 Ma position</button>
-    <button onclick="toggleHydro()">💧 HydroRisk</button>
-    <button onclick="resetView()">🌍 Reset</button>
-  </div>
-</header>
-
-<div class="sidebar">
-  <a href="/admin-pp.html">🛰️ Console</a>
-  <a href="/admin-alerts.html">🌋 Alertes</a>
-  <a href="/admin-radar.html">🌦️ Radar</a>
-  <a href="/admin-chat.html">💬 Chat</a>
-  <a href="/admin-users.html">👥 Utilisateurs</a>
-  <a href="/admin-index.html">🏠 Index</a>
-</div>
-
-<div class="main">
-  <div id="map"></div>
-
-  <div class="panel">
-    <h3>💬 IA J.E.A.N Radar – Explication des phénomènes</h3>
-    <div class="chat">
-      <div id="chatMessages" class="chat-messages">
-        <div style="color:#9ad6ff">🤖 J.E.A.N prêt à expliquer la carte météo.</div>
-      </div>
-      <div class="chat-input">
-        <input id="chatInput" placeholder="Ex: que montre ce front à l’ouest ?" />
-        <button onclick="askJean()">Envoyer</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const API=location.origin;
-const map=L.map("map").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{opacity:0.7}).addTo(map);
-const radar=L.tileLayer("https://tilecache.rainviewer.com/v2/radar/{z}/{x}/{y}/2/1_1.png",{opacity:0.7});
-radar.addTo(map);
-
-let hydroLayer=null,hydroVisible=false;
-
-// === HydroRisk overlay ===
-async function toggleHydro(){
-  if(hydroVisible){map.removeLayer(hydroLayer);hydroVisible=false;return;}
-  hydroVisible=true;
-  const bounds=map.getBounds(),lat=(bounds.getNorth()+bounds.getSouth())/2,lon=(bounds.getWest()+bounds.getEast())/2;
-  const alt=await fetch(`${API}/api/altitude?lat=${lat}&lon=${lon}`).then(r=>r.json()).catch(()=>({altitude:0}));
-  const w=await fetch(`${API}/api/weather-map?lat=${lat}&lon=${lon}`).then(r=>r.json()).catch(()=>({rain:0}));
-  const risk=(w.rain||0)*(alt.altitude/1000);
-  hydroLayer=L.circle([lat,lon],{radius:50000+risk*80000,fillColor:risk>3?"#ff4444":risk>1?"#ffaa33":"#55cc88",color:"#000",fillOpacity:0.4,weight:0}).addTo(map)
-    .bindPopup(`💧 Risque de ruissellement<br>Altitude:${alt.altitude} m<br>Pluie:${w.rain} mm<br>Score:${risk.toFixed(2)}`);
-}
-
-// === Géolocalisation ===
-function locateUser(){
-  navigator.geolocation.getCurrentPosition(pos=>{
+<script>const PIN_ADMIN="202679";if(!sessionStorage.getItem("tinsflashPIN")){const p=prompt("Code d’accès admin ?");if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}sessionStorage.setItem("tinsflashPIN","ok");}</script>
+<header>🌦 Radar Global IA</header>
+<nav>
+<a href="/admin-pp.html">Console</a><a href="/admin-alerts.html">Alertes</a><a href="/admin-chat.html">Chat</a><a href="/admin-radar.html">Radar</a>
+<a href="/admin-local.html">Local</a><a href="/admin-index.html">Index</a><a href="/admin-news.html">News</a><a href="/admin-users.html">Utilisateurs</a>
+</nav>
+<iframe src="https://embed.windy.com/embed2.html?lat=48&lon=3&zoom=4&level=surface&overlay=rain&menu=true"
+width="100%" height="850" frameborder="0"></iframe>
+</body></html>
