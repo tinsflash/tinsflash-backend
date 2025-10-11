@@ -19,8 +19,8 @@ export default async function corrDiff({ lat, lon }) {
       temperature: data?.temperature ?? null,
       precipitation: data?.precipitation ?? null,
       wind: data?.wind ?? null,
-      reliability: 95, // très fort
-      source: "CorrDiff"
+      reliability: 95,
+      source: "CorrDiff (NVIDIA/HuggingFace)"
     };
   } catch (err) {
     console.error("❌ CorrDiff fetch error:", err.message);
