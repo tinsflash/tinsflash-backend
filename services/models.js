@@ -1,34 +1,30 @@
-const axios = require("axios");
+// services/models.js
+// 🔗 Registre central des modèles utilisés dans le moteur TINSFLASH
 
-async function getForecast(lat, lon) {
-  try {
-    // OpenWeather (clé dans .env → process.env.SATELLITE_API)
-    const ow = await axios.get(
-      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${process.env.SATELLITE_API}&units=metric&lang=fr`
-    );
+import gfs from "./gfs.js";
+import ecmwf from "./ecmwf.js";
+import icon from "./icon.js";
+import arome from "./arome.js";
+import graphcast from "./graphcast.js";
+import meteomatics from "./meteomatics.js";
+import corrDiff from "./corrDiff.js";
+import nasaSat from "./nasaSat.js";
+import nowcastnet from "./nowcastnet.js";
+import euroMeteoService from "./euroMeteoService.js";
+import hrrr from "./hrrr.js";
 
-    // GFS (gratuit NOAA → JSON brut)
-    // (ici, un exemple simplifié – dans la vraie version tu parse GRIB/NetCDF)
-    const gfs = {}; // TODO: parser GFS data
-    const icon = {}; // TODO: parser ICON DWD
+export const MODELS = {
+  GFS: { id: "gfs", name: "GFS (NOAA)", fn: gfs },
+  ECMWF: { id: "ecmwf", name: "ECMWF (Europe)", fn: ecmwf },
+  ICON: { id: "icon", name: "ICON (DWD)", fn: icon },
+  AROME: { id: "arome", name: "AROME (Météo-France)", fn: arome },
+  HRRR: { id: "hrrr", name: "HRRR (NOAA Rapid Refresh)", fn: hrrr },
+  GRAPHCAST: { id: "graphcast", name: "GraphCast (DeepMind)", fn: graphcast },
+  METEOMATICS: { id: "meteomatics", name: "Meteomatics (mix ECMWF/ICON)", fn: meteomatics },
+  CORRDIFF: { id: "corrDiff", name: "CorrDiff (NVIDIA AI)", fn: corrDiff },
+  NASA_SAT: { id: "nasaSat", name: "NASA POWER Satellite", fn: nasaSat },
+  NOWCASTNET: { id: "nowcastnet", name: "NowcastNet (Tencent AI)", fn: nowcastnet },
+  EUROMETEO: { id: "euroMeteoService", name: "EuroMeteo (agrégateur)", fn: euroMeteoService },
+};
 
-    // Fusion simplifiée → moyenne + pondération
-    const forecast = ow.data.list.map((f) => ({
-      ts: f.dt,
-      temp: f.main.temp,
-      wind: f.wind.speed,
-      rain: f.rain ? f.rain["3h"] : 0,
-      clouds: f.clouds.all,
-      source: "fusion",
-      reliability: 0.85, // pondération IA
-    }));
-
-    return forecast;
-  } catch (err) {
-    console.error("Forecast error:", err);
-    return [];
-  }
-}
-
-module.exports = { getForecast };
-
+export default MODELS;
