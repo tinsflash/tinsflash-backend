@@ -1,28 +1,26 @@
 // services/gfs.js
-// ✅ GFS via Meteomatics (7 jours, données enrichies)
+// 🌐 GFS (Global Forecast System, NOAA) – Données 0.25° jusqu’à 16 jours
 
-import meteomatics from "./meteomatics.js";
+import fetch from "node-fetch";
 
 export default async function gfs(lat, lon) {
   try {
-    const data = await meteomatics(lat, lon, "gfs");
-
-    if (!data) return { source: "GFS (Meteomatics)", error: "Pas de données" };
+    const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,windspeed_10m,winddirection_10m,pressure_msl&forecast_days=16`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Erreur GFS: ${res.status}`);
+    const data = await res.json();
 
     return {
-      source: "GFS (Meteomatics)",
-      temperature: data.temperature || [],
-      temperature_max: data.temperature_max || [],
-      temperature_min: data.temperature_min || [],
-      precipitation: data.precipitation || [],
-      humidity: data.humidity || [],
-      pressure: data.pressure || [],
-      wind: data.wind || [],
-      wind_dir: data.wind_dir || [],
-      wind_gusts: data.wind_gusts || [],
-      snow_depth: data.snow_depth || [],
+      source: "GFS (NOAA)",
+      temperature: data?.hourly?.temperature_2m || [],
+      precipitation: data?.hourly?.precipitation || [],
+      windspeed: data?.hourly?.windspeed_10m || [],
+      winddirection: data?.hourly?.winddirection_10m || [],
+      pressure: data?.hourly?.pressure_msl || [],
+      reliability: 89,
     };
   } catch (err) {
-    return { source: "GFS (Meteomatics)", error: err.message };
+    console.error("❌ GFS error:", err.message);
+    return { source: "GFS (NOAA)", error: err.message, reliability: 0 };
   }
 }
