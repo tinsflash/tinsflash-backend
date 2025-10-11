@@ -1,44 +1,73 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin — Prévisions locales</title>
-  <style>
-    body { background:#000; color:#eee; font-family:Arial; margin:0; }
-    h1 { background:#111; padding:12px; color:#0f0; margin:0; }
-    section { padding:20px; }
-    input, select, button { margin:5px; padding:6px; background:#222; color:#eee; border:1px solid #555; }
-    iframe { width:100%; height:600px; border:1px solid #333; margin-top:10px; }
-    a { color:#0f0; margin:10px; display:inline-block; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="robots" content="noindex,nofollow"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>📍 Local – TINSFLASH</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+body{margin:0;font-family:Inter,system-ui;background:#0b1220;color:#e6f6ff}
+header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+a{color:#4fc3f7;text-decoration:none;font-weight:600}
+.container{max-width:1000px;margin:auto;padding:16px}
+input,button{padding:8px;border-radius:8px;border:none;font-size:1em}
+input{flex:1;background:#111a2b;color:#fff;margin-right:8px}
+button{background:#4fc3f7;color:#001;font-weight:700;cursor:pointer}
+.map{height:400px;margin-top:14px;border-radius:8px}
+.card{background:#0e1721;border-radius:10px;padding:10px;margin-top:12px}
+</style>
 </head>
 <body>
-  <h1>📍 Prévisions locales (vue utilisateur)</h1>
-  <a href="admin-pp.html">⬅️ Retour Cockpit</a>
+<script>
+const PIN_ADMIN="202679";
+if(!sessionStorage.getItem("tinsflashPIN")){
+ const p=prompt("Code d’accès admin ?");
+ if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
+ sessionStorage.setItem("tinsflashPIN","ok");
+}
+</script>
+<header>📍 Analyse locale IA J.E.A.N</header>
+<nav>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-radar.html">Radar</a>
+  <a href="/admin-local.html">Local</a>
+  <a href="/admin-index.html">Index</a>
+  <a href="/admin-news.html">News</a>
+  <a href="/admin-users.html">Utilisateurs</a>
+</nav>
+<div class="container">
+  <div style="display:flex;margin-bottom:10px">
+    <input id="addr" placeholder="Entrez une adresse, ville ou pays"/>
+    <button onclick="search()">Rechercher</button>
+  </div>
+  <div id="result" class="card">Aucune donnée encore.</div>
+  <div id="map" class="map"></div>
+</div>
 
-  <section>
-    <input type="text" id="city" placeholder="Ville">
-    <select id="country">
-      <option value="FR">France</option>
-      <option value="BE">Belgique</option>
-      <option value="DE">Allemagne</option>
-      <option value="US">USA</option>
-      <option value="GB">UK</option>
-      <option value="ES">Espagne</option>
-      <option value="IT">Italie</option>
-    </select>
-    <button onclick="loadForecast()">Voir comme utilisateur</button>
-    <iframe id="forecast-frame"></iframe>
-  </section>
+<script>
+let map=L.map("map").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-  <script>
-    function loadForecast(){
-      const city = document.getElementById("city").value;
-      const country = document.getElementById("country").value;
-      if(city && country){
-        document.getElementById("forecast-frame").src = `/index.html?city=${encodeURIComponent(city)}&country=${country}`;
-      }
-    }
-  </script>
-</body>
-</html>
+async function search(){
+ const q=document.getElementById("addr").value;
+ if(!q)return;
+ const geo=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`).then(r=>r.json());
+ if(!geo[0])return alert("Adresse non trouvée");
+ const {lat,lon,display_name}=geo[0];
+ map.setView([lat,lon],7);
+ L.marker([lat,lon]).addTo(map).bindPopup(display_name).openPopup();
+ const f=await fetch(`/api/forecast?lat=${lat}&lon=${lon}`).then(r=>r.json());
+ document.getElementById("result").innerHTML=
+ `<h3>${display_name}</h3>
+  🌡️ ${f.forecast?.temp_min}–${f.forecast?.temp_max} °C<br/>
+  💨 ${f.forecast?.wind} km/h<br/>
+  ☔ ${f.forecast?.precipitation||0} mm<br/>
+  📊 Fiabilité ${(f.forecast?.reliability*100||0).toFixed(0)} %`;
+}
+</script>
+</body></html>
