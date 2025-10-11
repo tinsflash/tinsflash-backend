@@ -8,13 +8,13 @@
 
 import axios from "axios";
 import fs from "fs";
+import grib2 from "grib2-simple";
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { autoCompareAfterRun } from "./compareExternalIA.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { runAIAnalysis } from "./aiAnalysis.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
-import { Grib2Parser } from "@meteoer/grib2-parser";
 
 // ==========================================================
 // 🔧 Fusion multi-modèles (OpenData + IA externes)
@@ -92,52 +92,64 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     // ======================================================
     for (const m of openModels) {
       try {
+        // ---------------- HRRR NOAA AWS ----------------
         if (m.name === "HRRR NOAA AWS") {
-          // Téléchargement HRRR
           const tempFile = `/tmp/hrrr_${lat}_${lon}.grib2`;
           const res = await axios.get(m.url, { responseType: "arraybuffer", timeout: 20000 });
           fs.writeFileSync(tempFile, res.data);
 
-          // Lecture GRIB2 réelle via parser Node
+          // Lecture GRIB2 réelle via grib2-simple
           const buffer = fs.readFileSync(tempFile);
-          const records = Grib2Parser.parse(buffer);
+          const records = grib2.parse(buffer);
 
-          const t2m = records.find((r) => r.name?.includes("Temperature") && r.level?.includes("2 m"));
-          const ugrd = records.find((r) => r.name?.includes("U-component") && r.level?.includes("10 m"));
-          const vgrd = records.find((r) => r.name?.includes("V-component") && r.level?.includes("10 m"));
-          const prate = records.find((r) => r.name?.includes("Precipitation") || r.shortName === "prate");
+          const getVal = (key) => {
+            const rec = records.find(
+              (r) =>
+                r.parameterCategoryName?.includes(key) ||
+                r.parameterName?.includes(key)
+            );
+            return rec ? rec.values[0] : null;
+          };
 
-          const temperature = t2m ? t2m.values[0] - 273.15 : null;
-          const wind =
-            ugrd && vgrd ? Math.sqrt(ugrd.values[0] ** 2 + vgrd.values[0] ** 2) * 3.6 : null;
-          const precipitation = prate ? prate.values[0] * 3600 : 0;
+          const tempK = getVal("Temperature");
+          const tempC = tempK ? tempK - 273.15 : null;
+          const prate = getVal("Precipitation") || 0;
+          const ugrd = getVal("U-component") || 0;
+          const vgrd = getVal("V-component") || 0;
+          const wind = Math.sqrt(ugrd ** 2 + vgrd ** 2) * 3.6;
 
-          const ok = temperature !== null;
+          const ok = tempC !== null;
           const model = {
-            source: m.name,
-            temperature: ok ? Math.round(temperature * 10) / 10 : null,
-            precipitation: Math.round(precipitation * 10) / 10,
+            source: "HRRR NOAA AWS",
+            temperature: ok ? Math.round(tempC * 10) / 10 : null,
+            precipitation: Math.round(prate * 3600 * 10) / 10,
             wind: Math.round(wind),
           };
           push(model);
           logModel("🌐", m.name, model.temperature, model.precipitation, model.wind, ok);
-        } else if (m.url.endsWith(".nc")) {
-          const tempFile = `/tmp/era5_${lat}_${lon}.nc`;
+        }
+
+        // ---------------- ERA5 ----------------
+        else if (m.url.endsWith(".nc")) {
           const res = await axios.get(m.url, { responseType: "arraybuffer" });
-          fs.writeFileSync(tempFile, res.data);
-          const stats = fs.statSync(tempFile);
-          const ok = stats.size > 1000;
+          const ok = res.data?.byteLength > 1000;
           const tempVal = ok ? 15 : null;
           const model = { source: m.name, temperature: tempVal, precipitation: 0, wind: null };
           push(model);
           logModel("🌐", m.name, tempVal, 0, null, ok);
-        } else if (m.url.endsWith(".grib2.bz2")) {
+        }
+
+        // ---------------- ICON GRIB ----------------
+        else if (m.url.endsWith(".grib2.bz2")) {
           const res = await axios.get(m.url, { responseType: "arraybuffer", timeout: 15000 });
           const ok = res.data?.byteLength > 1000;
           const model = { source: m.name, temperature: ok ? 14 : null, precipitation: 0, wind: null };
           push(model);
           logModel("🌐", m.name, model.temperature, 0, null, ok);
-        } else {
+        }
+
+        // ---------------- APIs JSON ----------------
+        else {
           const res = await axios.get(m.url, { timeout: 10000 });
           const d = res.data?.current || res.data?.properties?.parameter || res.data?.properties || {};
           const model = {
