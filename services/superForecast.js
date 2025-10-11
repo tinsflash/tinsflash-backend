@@ -8,8 +8,7 @@
 // ==========================================================
 
 import axios from "axios";
-import { addEngineLog, addEngineError, getEngineState } from "./engineState.js";
-import comparator from "./comparator.js";
+import { addEngineLog, addEngineError } from "./engineState.js";
 import { autoCompareAfterRun } from "./compareExternalIA.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
@@ -28,7 +27,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
   };
 
   try {
-    // === PHYSIQUES OPEN DATA ===
     const openModels = [
       { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
       { name: "ICON DWD", url: `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
@@ -57,7 +55,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       }
     }
 
-    // === IA EXTERNES ===
     const iaModels = [
       { name: "GraphCast", url: `${process.env.GRAPHCAST_API || ""}/forecast?lat=${lat}&lon=${lon}` },
       { name: "Pangu", url: `${process.env.PANGU_API || ""}/forecast?lat=${lat}&lon=${lon}` },
@@ -85,7 +82,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       }
     }
 
-    // === SYNTHESE + RELIABILITE BRUTE ===
     const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
     const valid = sources.filter((s) => s.temperature !== null && s.wind !== null);
     const reliability = +(valid.length / (sources.length || 1)).toFixed(2);
@@ -114,20 +110,16 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 }
 
 // ==========================================================
-// 🧠 PHASE 2 – Analyse IA J.E.A.N. automatique post-SuperForecast
+// 🧠 PHASE 2 – Analyse IA J.E.A.N.
 // ==========================================================
 async function runAIJeanFusion(results) {
   try {
-    console.log("\n🧠 Phase 2 – Analyse IA J.E.A.N. en cours...");
     await addEngineLog("🧠 Analyse IA J.E.A.N. – démarrage", "info", "superForecast");
-
     const ai = await runAIAnalysis(results);
-    await addEngineLog("🧠 Analyse IA J.E.A.N. terminée", "success", "superForecast");
-
+    await addEngineLog(`🧠 Analyse IA J.E.A.N. terminée – Indice Global ${ai.indiceGlobal || 0}%`, "success", "superForecast");
     return ai;
   } catch (e) {
     await addEngineError("Erreur IA J.E.A.N. : " + e.message, "superForecast");
-    console.log("❌ Erreur IA J.E.A.N :", e.message);
     return { error: e.message };
   }
 }
@@ -137,7 +129,6 @@ async function runAIJeanFusion(results) {
 // ==========================================================
 async function runGlobalAlertsFusion() {
   try {
-    console.log("\n📢 Phase 3 – Fusion des alertes mondiales/locales...");
     const result = await runWorldAlerts();
     await addEngineLog("📢 Fusion des alertes terminée", "success", "superForecast");
     return result;
@@ -155,7 +146,6 @@ export async function superForecast({ zones = [], runType = "global" }) {
     console.log(`\n🛰️ SuperForecast complet lancé (${zones.length} zones)`);
     await addEngineLog(`🛰️ SuperForecast complet (${zones.length} zones)`, "info", "core");
 
-    // === PHASE 1 ===
     const phase1Results = [];
     for (const z of zones) {
       const { lat, lon, country } = z;
@@ -164,26 +154,24 @@ export async function superForecast({ zones = [], runType = "global" }) {
     }
     await addEngineLog("✅ Phase 1 – Extraction pure terminée", "success", "core");
 
-    // === PHASE 2 ===
     const aiResults = await runAIJeanFusion(phase1Results);
     await addEngineLog("✅ Phase 2 – IA J.E.A.N. terminée", "success", "core");
 
-    // === PHASE 3 ===
     const alerts = await runGlobalAlertsFusion();
     await addEngineLog("✅ Phase 3 – Fusion alertes terminée", "success", "core");
 
-    // === Comparaison externe pour preuve scientifique ===
     try {
       await autoCompareAfterRun(phase1Results);
     } catch (e) {
       await addEngineError("Audit externe échoué : " + e.message, "superForecast");
     }
 
-    console.log("✅ SuperForecast complet terminé (3 phases connectées)");
+    await addEngineLog("✅ SuperForecast complet terminé", "success", "core");
     return { success: true, phase1Results, aiResults, alerts };
   } catch (err) {
     await addEngineError("Erreur SuperForecast global : " + err.message, "superForecast");
-    console.log("❌ Erreur SuperForecast :", err.message);
     return { error: err.message };
   }
 }
+
+export default { superForecast };
