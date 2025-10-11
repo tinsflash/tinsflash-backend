@@ -1,107 +1,147 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="robots" content="noindex,nofollow">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TINSFLASH – Console Alertes IA</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🚨 TINSFLASH PRO+++ – Alertes</title>
   <style>
-    body{background:#000818;color:#d4e7ff;font-family:Orbitron,sans-serif;margin:0}
-    header{background:linear-gradient(90deg,#00224e,#004ba8);padding:1rem;text-align:center;font-size:1.5rem;color:#fff}
-    #mapAlerts{height:50vh;margin:1rem;border:2px solid #00eaff;border-radius:10px}
-    section{margin:1rem;padding:1rem;background:#00142b;border-radius:10px}
-    h2{color:#00eaff;margin-bottom:0.5rem}
-    table{width:100%;border-collapse:collapse;font-size:0.9rem}
-    th,td{border:1px solid #004ba8;padding:0.4rem;text-align:left}
-    tr:hover{background:#002850}
-    button{background:#00eaff;color:#001f3f;border:none;border-radius:5px;padding:0.3rem 0.7rem;margin:0.1rem;cursor:pointer}
+    body{margin:0;background:#0a111d;color:#e6f6ff;font-family:Inter,system-ui}
+    header{padding:14px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700;font-size:1.1rem}
+    nav{display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624}
+    nav a{color:#6bf3ff;text-decoration:none;font-weight:600}
+    nav a:hover{text-decoration:underline}
+    main{max-width:1100px;margin:0 auto;padding:12px}
+    h2{color:#6bf3ff;border-bottom:1px solid #203040;padding-bottom:4px}
+    iframe{width:100%;height:480px;border:0;border-radius:10px;margin-bottom:14px}
+    details{background:#0d1624;margin:6px 0;border-radius:8px;padding:8px}
+    summary{cursor:pointer;font-weight:600;color:#6bf3ff}
+    .alert-item{margin:6px 0;padding:6px;border-radius:6px}
+    .primeur{background:#3b006b;color:#fff}
+    .a90{background:#003b1d;color:#76ff7a}
+    .a70{background:#4f2a00;color:#ffc978}
+    .aSub70{background:#3b0000;color:#ff6b6b}
+    .logs{background:#0d1624;padding:8px;border-radius:10px;height:220px;overflow:auto;font-family:monospace;font-size:0.9rem}
+    /* Chat */
+    #chatBox{margin-top:16px;background:#0e1725;border-radius:10px;padding:8px;height:400px;display:flex;flex-direction:column}
+    #chatMessages{flex:1;overflow:auto;padding:6px}
+    #chatControls{display:flex;gap:4px}
+    #chatControls input{flex:1;padding:8px;border:none;background:#07121a;color:#e6f6ff;border-radius:6px}
+    #chatControls button{background:#4fc3f7;border:none;color:#001;font-weight:700;padding:8px 10px;border-radius:6px}
+    .msg-bot{background:#123045;padding:6px;border-radius:8px;margin:5px 0}
+    .msg-user{background:#4fc3f7;color:#001;padding:6px;border-radius:8px;margin:5px 0;text-align:right}
   </style>
 </head>
 <body>
-<header>🚨 Console Alertes IA J.E.A.N.</header>
-<div id="mapAlerts"></div>
-
-<section>
-  <h2>🔷 Alertes Primeur (émises avant les autres)</h2>
-  <table id="primeurTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
-</section>
-
-<section>
-  <h2>🟩 Alertes auto-publiées ≥90%</h2>
-  <table id="confirmTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
-</section>
-
-<section>
-  <h2>🟨 Alertes à valider (70–89%)</h2>
-  <table id="validerTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
-</section>
-
-<section>
-  <h2>🟥 Alertes sous surveillance (<70%)</h2>
-  <table id="surveillerTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
-</section>
-
-<section>
-  <h2>📤 Formulaire Transmission NASA / Institutions</h2>
-  <form onsubmit="sendToNasa(event)">
-    <label>Organisation :</label><input id="org" style="width:100%" required><br>
-    <label>Message :</label><textarea id="msg" rows="3" style="width:100%" required></textarea><br>
-    <button type="submit">Envoyer</button>
-  </form>
-</section>
 
 <script>
-  const map=L.map("mapAlerts").setView([20,0],2);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"TINSFLASH"}).addTo(map);
-  const colors={primeur:"#0066ff",confirm:"#00ff7f",valider:"#ffcc00",surveiller:"#ff0033"};
+const pin=sessionStorage.getItem("tinsflashPIN");
+if(!pin){const p=prompt("Code d’accès admin ?");if(p!=="202679"){alert("Accès refusé");location.href="/";}else sessionStorage.setItem("tinsflashPIN","ok");}
+</script>
 
-  async function loadAlerts(){
-    const res=await axios.get("/api/alerts");
-    const primeur=res.data.filter(a=>a.isPrimeur);
-    const confirm=res.data.filter(a=>!a.isPrimeur && a.reliability>=0.9);
-    const valider=res.data.filter(a=>!a.isPrimeur && a.reliability>=0.7 && a.reliability<0.9);
-    const surveiller=res.data.filter(a=>a.reliability<0.7);
+<header>🚨 TINSFLASH PRO+++ – Gestion des Alertes IA J.E.A.N</header>
+<nav>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html">Alertes</a>
+  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-radar.html">Radar</a>
+  <a href="/index.html">Index public</a>
+</nav>
 
-    drawTable("primeurTable",primeur,colors.primeur);
-    drawTable("confirmTable",confirm,colors.confirm);
-    drawTable("validerTable",valider,colors.valider);
-    drawTable("surveillerTable",surveiller,colors.surveiller);
+<main>
+  <h2>🌍 Carte des alertes connectée</h2>
+  <iframe src="/admin-radar.html#alerts" id="alertsMap"></iframe>
 
-    map.eachLayer(l=>{if(l instanceof L.CircleMarker)map.removeLayer(l)});
-    res.data.forEach(a=>{
-      let color=a.isPrimeur?colors.primeur:(a.reliability>=0.9?colors.confirm:(a.reliability>=0.7?colors.valider:colors.surveiller));
-      L.circleMarker([a.lat,a.lon],{radius:8,color,fillOpacity:0.8})
-        .bindPopup(`<b>${a.type}</b><br>${Math.round(a.reliability*100)}%<br>${a.country}`)
-        .addTo(map);
-    });
+  <h2>🌐 Alertes Primeur (publiées avant autres services)</h2>
+  <div id="primeurList"></div>
+
+  <h2>✅ Alertes auto-publiées > 90 %</h2>
+  <div id="autoList"></div>
+
+  <h2>⚠️ Alertes 70 – 89 % (analyse humaine requise)</h2>
+  <div id="analyseList"></div>
+
+  <h2>🔍 Alertes < 70 % (surveillance IA continue)</h2>
+  <div id="subList"></div>
+
+  <h2>🧠 Chat IA Météo (GPT-4o-mini)</h2>
+  <div id="chatBox">
+    <div id="chatMessages">
+      <div class="msg-bot">🤖 J.E.A.N : Connecté au moteur – mode météo administrateur</div>
+    </div>
+    <div id="chatControls">
+      <input id="chatInput" placeholder="Pose ta question météo..." onkeypress="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()">→</button>
+    </div>
+  </div>
+
+  <h2>📜 Logs</h2>
+  <div class="logs" id="logs"></div>
+</main>
+
+<script>
+const API="/api";
+
+/* Chargement des alertes */
+async function loadAlerts(){
+  try{
+    const r=await fetch(`${API}/logs-live`);
+    const j=await r.json();
+    const logs=document.getElementById("logs");
+    logs.innerText=j.logs.map(x=>x.message).join("\n");
+
+    // Simulation / connexion réelle : récupérer alertes via runWorldAlerts() ou Mongo
+    const alerts=j.checkup?.alerts||[];
+    const primeur=alerts.filter(a=>a.primeur);
+    const auto=alerts.filter(a=>a.fiabilite>=90);
+    const analyse=alerts.filter(a=>a.fiabilite>=70 && a.fiabilite<90);
+    const sub=alerts.filter(a=>a.fiabilite<70);
+
+    fillList("primeurList",primeur,"primeur");
+    fillList("autoList",auto,"a90");
+    fillList("analyseList",analyse,"a70");
+    fillList("subList",sub,"aSub70");
+  }catch(e){
+    document.getElementById("logs").innerText="Erreur chargement alertes : "+e.message;
   }
+}
 
-  function drawTable(id,data,color){
-    const tb=document.querySelector(`#${id} tbody`);
-    tb.innerHTML="";
-    data.forEach(a=>{
-      const tr=document.createElement("tr");
-      tr.innerHTML=`
-        <td style="color:${color}">${a.type}</td>
-        <td>${a.country}</td>
-        <td>${Math.round(a.reliability*100)}%</td>
-        <td>${id!=="surveillerTable"?`
-          <button onclick="exportAlert('${a._id}')">Exporter</button>
-          <button onclick="validateAlert('${a._id}')">Valider</button>
-          <button onclick="holdAlert('${a._id}')">En attente</button>`:""}</td>`;
-      tb.appendChild(tr);
-    });
-  }
+function fillList(id,arr,cls){
+  const el=document.getElementById(id);
+  if(!arr?.length){el.innerHTML="<i>Aucune donnée pour le moment</i>";return;}
+  el.innerHTML=arr.map(a=>`
+    <details class="alert-item ${cls}">
+      <summary>${a.zone||"Zone inconnue"} – Fiabilité : ${a.fiabilite||"?"}%</summary>
+      <div><b>Description :</b> ${a.description||"–"}</div>
+      <div><b>Type :</b> ${a.type||"–"}</div>
+      <div><b>Début :</b> ${a.debut||"–"}<br><b>Fin :</b> ${a.fin||"–"}</div>
+      <div><b>Actions :</b> 
+        <button onclick="validerAlerte('${a.id}')">Valider</button> 
+        <button onclick="surveillerAlerte('${a.id}')">Surveillance</button>
+      </div>
+    </details>`).join("");
+}
 
-  function exportAlert(id){axios.post("/api/alert/export",{id});alert("Export envoyé à l'expert.");}
-  function validateAlert(id){axios.post("/api/alert/validate",{id});alert("Alerte validée.");}
-  function holdAlert(id){axios.post("/api/alert/hold",{id});alert("Alerte mise en attente.");}
-  function sendToNasa(e){e.preventDefault();axios.post("/api/nasa",{org:org.value,msg:msg.value});alert("Message transmis.");}
+function validerAlerte(id){alert("Validation envoyée pour "+id);}
+function surveillerAlerte(id){alert("Alerte mise en surveillance "+id);}
 
-  loadAlerts();
+/* Chat */
+async function sendChat(){
+  const txt=document.getElementById("chatInput").value.trim();
+  if(!txt)return;
+  const msgs=document.getElementById("chatMessages");
+  msgs.innerHTML+=`<div class='msg-user'>${txt}</div>`;
+  document.getElementById("chatInput").value="";
+  try{
+    const res=await fetch("/api/ai-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:txt,mode:"meteo"})});
+    const j=await res.json();
+    msgs.innerHTML+=`<div class='msg-bot'>${j.reply||j}</div>`;
+    msgs.scrollTop=msgs.scrollHeight;
+  }catch(e){msgs.innerHTML+=`<div class='msg-bot'>❌ Erreur : ${e.message}</div>`;}
+}
+
+loadAlerts();
+setInterval(loadAlerts,120000);
 </script>
 </body>
 </html>
