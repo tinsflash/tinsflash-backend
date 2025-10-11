@@ -1,98 +1,68 @@
 // ==========================================================
-// 🌍 TINSFLASH – runGlobal.js (Everest Protocol v2.8 PRO+++)
+// 🌍 TINSFLASH – runGlobal.js (Everest Protocol v3.6 PRO+++)
 // ==========================================================
-// Extraction multi-zones – 100 % réel – compatible IA.J.E.A.N.
-// Gestion stop flag + multi-runs Europe/USA/Canada vs Monde
+// ✅ PHASE 1 – Extraction pure (Europe + USA + Canada)
+// Orchestration des zones couvertes via zonesCovered.js
+// Aucun appel IA interne (J.E.A.N. désactivée ici)
 // ==========================================================
 
-import {
-  getEngineState,
-  saveEngineState,
-  addEngineLog,
-  addEngineError,
-  isExtractionStopped,
-} from "./engineState.js";
-import { superForecast } from "./superForecast.js";
-import { applyLocalFactors } from "./localFactors.js";
-import { applyClimateFactors } from "./climateFactors.js";
 import { enumerateCoveredPoints } from "./zonesCovered.js";
+import { superForecast } from "./superForecast.js";
+import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
 
-/**
- * Exécute la phase 1 : extraction et stockage des prévisions multi-modèles
- * @param {string} zone - "All" | "EuropeUSA" | "World"
- */
-export async function runGlobal(zone = "All") {
-  const startTime = Date.now();
-  await addEngineLog(`🌐 Lancement runGlobal pour ${zone}`, "info", "runGlobal");
-
+// ==========================================================
+// 🚀 Fonction principale – Extraction mondiale (zones couvertes principales)
+// ==========================================================
+export async function runGlobal(filter = "All") {
   try {
-    const state = await getEngineState();
-    const covered = enumerateCoveredPoints(zone);
-    const allForecasts = [];
-    let processed = 0;
+    await addEngineLog(`🌍 Démarrage runGlobal (${filter})`, "info", "runGlobal");
 
-    if (!covered.length) {
-      await addEngineError(`Aucune coordonnée trouvée pour la zone ${zone}`, "runGlobal");
-      return { success: false, error: "Pas de points d’extraction" };
-    }
+    // Liste de toutes les zones disponibles
+    const allZones = enumerateCoveredPoints();
+    if (!allZones?.length) throw new Error("Aucune zone disponible dans zonesCovered.js");
 
-    // 1️⃣ Extraction par points couverts
-    for (const pt of covered) {
-      if (isExtractionStopped()) {
-        await addEngineLog(`🛑 Extraction arrêtée manuellement`, "warning", "runGlobal");
-        break;
-      }
+    // Filtrage éventuel
+    let zones = allZones;
+    if (filter === "Europe") zones = allZones.filter((z) => z.continent === "Europe");
+    if (filter === "USA") zones = allZones.filter((z) => ["USA", "Canada"].includes(z.country));
+    if (filter === "World") zones = allZones.filter((z) => !["Europe", "USA", "Canada"].includes(z.continent));
 
-      try {
-        const raw = await superForecast({
-          zones: [pt.zone || pt.country || "Unknown"],
-          runType: zone,
-        });
+    console.log(`🗺️ ${zones.length} zones sélectionnées pour extraction (${filter})`);
 
-        let corrected = await applyLocalFactors(raw, pt.lat, pt.lon, pt.country);
-        corrected = await applyClimateFactors(corrected, pt.lat, pt.lon, pt.country);
+    // Extraction via SuperForecast (phase 1 pure)
+    const result = await superForecast({ zones, runType: filter });
 
-        allForecasts.push({
-          ...corrected,
-          lat: pt.lat,
-          lon: pt.lon,
-          country: pt.country,
-          region: pt.region || "",
-        });
+    // Mise à jour état moteur
+    await updateEngineState({
+      status: "ok",
+      lastRun: new Date(),
+      checkup: { engineStatus: "RUN_OK", lastFilter: filter, zonesCount: zones.length },
+    });
 
-        processed++;
-        if (processed % 10 === 0)
-          await addEngineLog(`📡 ${processed}/${covered.length} points traités`, "info", "runGlobal");
-      } catch (err) {
-        await addEngineError(`❌ Erreur ${pt.country} (${pt.lat},${pt.lon}) : ${err.message}`, "runGlobal");
-      }
-    }
-
-    // 2️⃣ Sauvegarde état moteur
-    state.partialReport = allForecasts;
-    state.forecasts = allForecasts;
-    state.lastRun = new Date();
-    state.status = "ok";
-    state.checkup = state.checkup || {};
-    state.checkup.engineStatus = "OK";
-
-    await saveEngineState(state);
-
-    const duration = ((Date.now() - startTime) / 1000 / 60).toFixed(1);
-    await addEngineLog(
-      `✅ Extraction terminée (${processed}/${covered.length} points) – durée ${duration} min`,
-      "success",
-      "runGlobal"
-    );
-
-    return { success: true, forecasts: processed, duration };
+    await addEngineLog(`✅ runGlobal terminé (${zones.length} zones traitées)`, "success", "runGlobal");
+    return result;
   } catch (err) {
     await addEngineError(`Erreur runGlobal : ${err.message}`, "runGlobal");
-    const s = await getEngineState();
-    s.status = "fail";
-    s.checkup = s.checkup || {};
-    s.checkup.engineStatus = "FAIL";
-    await saveEngineState(s);
-    return { success: false, error: err.message };
+    console.error(`❌ runGlobal : ${err.message}`);
+    return { error: err.message };
   }
 }
+
+// ==========================================================
+// 🌍 Fonction d’extraction rapide par région (Europe/USA)
+// ==========================================================
+export async function runEurope() {
+  return runGlobal("Europe");
+}
+
+export async function runUSA() {
+  return runGlobal("USA");
+}
+
+export async function runWorldOnly() {
+  return runGlobal("World");
+}
+
+// ==========================================================
+// Fin du module – 100 % réel, stable Render
+// ==========================================================
