@@ -1,73 +1,213 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"/>
-<meta name="robots" content="noindex,nofollow"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>🛰 Console – TINSFLASH PRO+++</title>
-<style>
-body{margin:0;font-family:Inter,system-ui;background:#0b1220;color:#e6f6ff}
-header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700;font-size:20px}
-nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
-a{color:#4fc3f7;text-decoration:none;font-weight:600}
-.container{max-width:1200px;margin:auto;padding:12px}
-button{background:#4fc3f7;border:none;color:#001;font-weight:700;padding:10px 14px;border-radius:8px;cursor:pointer}
-.card{background:#0e1721;border-radius:10px;padding:12px;margin-top:12px}
-.status{float:right;font-size:0.9em}
-.badge{padding:4px 8px;border-radius:6px;font-weight:700}
-.badge.ok{background:#0f0;color:#000}
-.badge.warn{background:#ff0;color:#000}
-.badge.fail{background:#f33;color:#fff}
-</style>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🛰️ TINSFLASH • Console Moteur IA J.E.A.N.</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body {margin:0;background:#0b1220;color:#e6f6ff;font-family:"Segoe UI",sans-serif;}
+    header {background:#08121d;color:#4fc3f7;text-align:center;padding:10px;font-size:1.4em;
+      text-shadow:0 0 10px #4fc3f7;}
+    nav {display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624;}
+    nav a {color:#7dd3fc;text-decoration:none;font-weight:bold;}
+    nav a:hover {color:#fff;text-shadow:0 0 10px #4fc3f7;}
+    .container {max-width:1250px;margin:auto;padding:15px;}
+    h2 {color:#4fc3f7;margin-top:25px;border-left:4px solid #4fc3f7;padding-left:8px;}
+    button {background:#4fc3f7;color:#001;border:none;padding:10px 16px;margin:4px;border-radius:8px;
+      font-weight:bold;cursor:pointer;}
+    button:hover {background:#7dd3fc;}
+    .panel {background:#0e1721;border-radius:10px;padding:15px;margin-top:15px;}
+    .status-grid {display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+    .status-box {flex:1 1 180px;background:#101c2b;padding:10px;border-radius:8px;text-align:center;}
+    .status-light {width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;}
+    .green{background:#00ff88;} .red{background:#ff4444;} .orange{background:#ffaa00;} .blue{background:#4fc3f7;}
+    .map-duo {display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px;}
+    .map {height:340px;border-radius:10px;overflow:hidden;}
+    .alert-counters {display:flex;justify-content:space-around;margin-top:15px;flex-wrap:wrap;}
+    .counter {background:#13233d;padding:10px 16px;border-radius:10px;text-align:center;min-width:150px;
+      box-shadow:0 0 10px rgba(0,0,0,0.3);}
+    .counter h3{margin:0;color:#4fc3f7;}
+    #logs {background:#0e1721;padding:10px;border-radius:10px;height:200px;overflow-y:auto;
+      font-family:monospace;font-size:13px;margin-top:10px;}
+    /* 💬 Chat */
+    .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
+      border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;
+      box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
+    .btn-ai:hover{transform:scale(1.1);}
+    .chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;
+      width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
+    .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
+    .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
+    .chat-input{display:flex;border-top:1px solid #333;}
+    .chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
+    .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
+  </style>
 </head>
+
 <body>
 <script>
-const PIN_ADMIN="202679";const pin=sessionStorage.getItem("tinsflashPIN");
-if(!pin){const p=prompt("Code d’accès admin ?");if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
-else sessionStorage.setItem("tinsflashPIN","ok");}
+  // 🔒 Sécurité PIN
+  const pin = sessionStorage.getItem("tinsflashPIN");
+  if(!pin){
+    const p = prompt("Code d’accès admin ?");
+    if(p!=="202679"){ alert("Accès refusé."); location.href="/"; }
+    else sessionStorage.setItem("tinsflashPIN","ok");
+  }
 </script>
-<header>🛰 Console Moteur IA J.E.A.N <span id="statusEngine" class="status"></span></header>
+
+<header>🛰️ Console IA J.E.A.N – TINSFLASH PRO+++</header>
+
 <nav>
-  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-pp.html">Dashboard</a>
   <a href="/admin-alerts.html">Alertes</a>
-  <a href="/admin-chat.html">Chat</a>
+  <a href="/admin-chat.html">Chat IA</a>
   <a href="/admin-radar.html">Radar</a>
+  <a href="/admin-index.html">Index Admin</a>
   <a href="/admin-local.html">Local</a>
-  <a href="/admin-index.html">Index</a>
   <a href="/admin-news.html">News</a>
-  <a href="/admin-users.html">Utilisateurs</a>
+  <a href="/admin-users.html">Users</a>
 </nav>
+
 <div class="container">
-  <div class="card">
-    <h3>Contrôle du moteur</h3>
-    <button onclick="run('Europe')">⚡ Extraction Europe-USA-Canada</button>
-    <button onclick="run('Reste')">🌍 Extraction reste du monde</button>
-    <button onclick="analyse()">🧠 Analyse IA J.E.A.N.</button>
-    <button onclick="fusion()">📢 Fusion analyses → Alertes</button>
-    <button onclick="stop()">⛔ Stop extraction</button>
+  <h2>⚙️ Pilotage du moteur</h2>
+  <div class="panel">
+    <button onclick="runZone('All')">⚡ Extraction Europe–USA–Canada</button>
+    <button onclick="runZone('World')">🌍 Extraction Reste du Monde</button>
+    <button onclick="runIA()">🧠 Analyse IA J.E.A.N.</button>
+    <button onclick="fusionAlerts()">📢 Fusion des alertes IA</button>
   </div>
-  <div class="card">
-    <h3>Logs récents</h3>
-    <pre id="logs" style="background:#050a14;height:250px;overflow:auto;padding:8px;border-radius:8px"></pre>
+
+  <h2>🧩 État moteur et sources</h2>
+  <div class="status-grid" id="statusGrid">
+    <div class="status-box"><div><span class="status-light" id="motorLight"></span>Moteur</div><div id="motorStatus">–</div></div>
+    <div class="status-box"><div><span class="status-light" id="modelsLight"></span>Modèles</div><div>–</div></div>
+    <div class="status-box"><div><span class="status-light" id="iaLight"></span>IA</div><div>–</div></div>
+    <div class="status-box"><div><span class="status-light" id="mongoLight"></span>MongoDB</div><div>–</div></div>
+  </div>
+
+  <div class="map-duo">
+    <div id="mapForecast" class="map"></div>
+    <div id="mapAlerts" class="map"></div>
+  </div>
+
+  <div class="alert-counters">
+    <div class="counter"><h3 id="count90">0</h3><div>🟢 Alertes > 90 %</div></div>
+    <div class="counter"><h3 id="count7089">0</h3><div>🟠 70–89 %</div></div>
+    <div class="counter"><h3 id="count70">0</h3><div>🔴 < 70 %</div></div>
+    <div class="counter"><h3 id="countPrimeurs">0</h3><div>🔵 Primeurs IA</div></div>
+  </div>
+
+  <h2>📜 Logs moteur</h2>
+  <div id="logs">Chargement des logs...</div>
+</div>
+
+<!-- 💬 Chat IA -->
+<button class="btn-ai" id="btnAI">🤖</button>
+<div class="chat-box" id="chatJean">
+  <div class="chat-header">Assistant technique J.E.A.N. (GPT-4o-mini)</div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input">
+    <input type="text" id="chatInput" placeholder="Pose ta question technique..." />
+    <button onclick="sendChat()">Envoyer</button>
   </div>
 </div>
+
 <script>
-async function updateStatus(){
- const r=await fetch("/api/status").then(r=>r.json()).catch(()=>({status:"FAIL"}));
- const el=document.getElementById("statusEngine");
- let badge="";if(r.status?.toLowerCase().includes("ok"))badge="🟢 OK";
- else if(r.status?.toLowerCase().includes("run"))badge="🟡 En cours";
- else badge="🔴 Inactif";
- el.innerHTML=`<span class="badge">${badge}</span> Dernier run: ${(r.lastRun||"—")}`;
+const API = "/api";
+
+// ======== Boutons ========
+async function runZone(zone){
+  addLog(`🚀 Lancement extraction ${zone}...`);
+  const res = await fetch(`${API}/run-global`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone})});
+  const j = await res.json();
+  addLog(j.success?`✅ Extraction ${zone} terminée.`:`❌ ${j.error}`);
 }
-async function run(zone){
- await fetch("/api/run-global",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zone})});
- addLog(`Extraction ${zone} lancée`);
+async function runIA(){
+  addLog("🧠 Lancement analyse IA...");
+  const res = await fetch(`${API}/ai-analyse`,{method:"POST"});
+  const j = await res.json();
+  addLog(j.success?"✅ IA terminée.":"❌ "+j.error);
 }
-async function analyse(){await fetch("/api/ai-analyse",{method:"POST"});addLog("Analyse IA lancée")}
-async function fusion(){await fetch("/api/runWorldAlerts",{method:"POST"});addLog("Fusion mondiale lancée")}
-async function stop(){await fetch("/api/stop-extraction",{method:"POST"});addLog("Extraction stoppée")}
-function addLog(t){const l=document.getElementById("logs");l.textContent=`[${new Date().toLocaleTimeString()}] ${t}\n`+l.textContent}
-setInterval(updateStatus,60000);updateStatus();
+async function fusionAlerts(){
+  addLog("🌍 Fusion mondiale en cours...");
+  const res = await fetch(`${API}/runWorldAlerts`,{method:"POST"});
+  const j = await res.json();
+  addLog(j.success?"✅ Fusion terminée.":"❌ "+j.error);
+}
+
+// ======== Statut ========
+async function refreshStatus(){
+  try{
+    const r=await fetch(`${API}/status`);
+    const s=await r.json();
+    document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
+    document.getElementById("motorStatus").textContent=s.status;
+    document.getElementById("mongoLight").className="status-light "+(s.errors?.length? "orange":"green");
+  }catch(e){addLog("⚠️ Erreur status "+e.message);}
+}
+setInterval(refreshStatus,10000);
+refreshStatus();
+
+// ======== Logs SSE ========
+async function loadLogs(){
+  const r=await fetch(`${API}/logs-live`);
+  const j=await r.json();
+  const logsEl=document.getElementById("logs");
+  logsEl.innerHTML="";
+  j.logs.forEach(l=>logsEl.innerHTML+=`<div>[${l.timestamp}] ${l.message}</div>`);
+}
+setInterval(loadLogs,8000);
+loadLogs();
+function addLog(msg){
+  const el=document.getElementById("logs");
+  el.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${msg}</div>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+// ======== Cartes ========
+const mapF=L.map("mapForecast").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+const mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+async function loadAlerts(){
+  try{
+    const r=await fetch(`${API}/alerts`);
+    const list=await r.json();
+    let c90=0,c7089=0,c70=0,cP=0;
+    list.forEach(a=>{
+      if(!a.lat||!a.lon)return;
+      let color="red";
+      if(a.reliability>=0.9){color="green";c90++;}
+      else if(a.reliability>=0.7){color="orange";c7089++;}
+      else{color="red";c70++;}
+      if(a.isPrimeur){color="blue";cP++;}
+      L.circleMarker([a.lat,a.lon],{radius:6,color}).addTo(mapA).bindPopup(`<b>${a.title}</b><br>${a.zone}`);
+    });
+    document.getElementById("count90").textContent=c90;
+    document.getElementById("count7089").textContent=c7089;
+    document.getElementById("count70").textContent=c70;
+    document.getElementById("countPrimeurs").textContent=cP;
+  }catch(e){addLog("⚠️ Erreur loadAlerts "+e.message);}
+}
+loadAlerts();
+
+// ======== Chat IA technique ========
+const chatBox=document.getElementById("chatJean");
+document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
+async function sendChat(){
+  const msg=document.getElementById("chatInput").value.trim();
+  if(!msg)return;
+  const m=document.getElementById("chatMessages");
+  m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
+  document.getElementById("chatInput").value="";
+  const r=await fetch(`${API}/chat-tech`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+  const d=await r.json();
+  m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
+  m.scrollTop=m.scrollHeight;
+}
 </script>
-</body></html>
+</body>
+</html>
