@@ -1,21 +1,20 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v3.5 PRO++++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v3.6 PRO+++)
 // ==========================================================
-// ✅ Moteur central de prévision et d'alerte multi-modèles IA
-// 100 % réel – fusion physique + IA (J.E.A.N.)
-// Compatible Render – pondération automatique + fallback intelligent
-// Console enrichie : affichage temps réel par modèle
+// ✅ PHASE 1 – Extraction pure et réelle des modèles météorologiques
+// Relié à runGlobal.js & zonesCovered.js
+// 100 % réel – aucun calcul IA interne (J.E.A.N. désactivée ici)
 // ==========================================================
 
 import axios from "axios";
 import { addEngineLog, addEngineError, getEngineState } from "./engineState.js";
-import comparator from "./comparator.js";
-import { autoCompareAfterRun } from "./compareExternalIA.js";
+import comparator from "./comparator.js"; // garde pour compat future
+import { autoCompareAfterRun } from "./compareExternalIA.js"; // garde pour logs externes
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 
 // ==========================================================
-// 🔧 Fonction interne – Récupération multi-sources (physique + IA)
+// 🔧 Fonction interne – Récupération multi-modèles Open Data + IA externes
 // ==========================================================
 async function mergeMultiModels(lat, lon, country = "EU") {
   const sources = [];
@@ -28,131 +27,72 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 
   try {
     // ==========================================================
-    // 1️⃣ Données physiques gratuites
+    // 1️⃣ MODÈLES PHYSIQUES OPEN-DATA (gratuits & fiables)
     // ==========================================================
-    const modelList = [
+    const openModels = [
       { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
       { name: "ICON DWD", url: `https://api.open-meteo.com/v1/icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
       { name: "ECMWF ERA5", url: `https://api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
-      { name: "Meteomatics", url: `${process.env.METEOMATICS_API}/forecast?lat=${lat}&lon=${lon}&key=${process.env.METEOMATICS_KEY}` },
-      { name: "Copernicus ERA5 Climate", url: `${process.env.COPERNICUS_API}/reanalysis-era5?lat=${lat}&lon=${lon}` },
+      { name: "AROME (FR/BE)", url: `https://api.open-meteo.com/v1/arome?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "HRRR (USA)", url: `https://api.open-meteo.com/v1/hrrr?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "NASA POWER", url: `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&format=JSON` },
+      { name: "WeatherGov NOAA", url: `https://api.weather.gov/points/${lat},${lon}` },
     ];
 
-    if (["FR", "BE"].includes(country))
-      modelList.push({ name: "AROME", url: `https://api.open-meteo.com/v1/arome?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` });
-    if (country === "US")
-      modelList.push({ name: "HRRR NOAA", url: `https://api.open-meteo.com/v1/hrrr?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` });
-
-    for (const m of modelList) {
+    for (const m of openModels) {
       try {
         const res = await axios.get(m.url, { timeout: 10000 });
-        const d = res.data?.current || res.data || {};
+        const d = res.data?.current || res.data?.properties?.parameter || res.data || {};
         const model = {
           source: m.name,
-          temperature: d.temperature_2m ?? d.temperature ?? null,
-          precipitation: d.precipitation ?? d.total_precipitation ?? 0,
-          wind: d.wind_speed_10m ?? d.wind ?? null,
+          temperature: d.temperature_2m ?? d.T2M ?? d.main?.temp ?? null,
+          precipitation: d.precipitation ?? d.PRECTOTCORR ?? d.rain?.["1h"] ?? 0,
+          wind: d.wind_speed_10m ?? d.WS10M ?? d.wind?.speed ?? null,
         };
         push(model);
         logModel("🌐", m.name, model.temperature, model.precipitation, model.wind, true);
       } catch (e) {
         logModel("🌐", m.name, null, null, null, false);
-        await addEngineError(`${m.name} indisponible : ${e.message}`);
+        await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
       }
     }
 
     // ==========================================================
-    // 2️⃣ Modèles IA – nouvelle génération
+    // 2️⃣ MODÈLES IA EXTERNES (non bloquants – fallback automatique)
     // ==========================================================
     const iaModels = [
-      { name: "Pangu", url: `${process.env.PANGU_API}/forecast?lat=${lat}&lon=${lon}` },
-      { name: "GraphCast", url: `${process.env.GRAPHCAST_API}/forecast?lat=${lat}&lon=${lon}` },
-      { name: "CorrDiff", url: `${process.env.CORRDIFF_API}/forecast` },
+      { name: "GraphCast", url: `${process.env.GRAPHCAST_API || ""}/forecast?lat=${lat}&lon=${lon}` },
+      { name: "Pangu", url: `${process.env.PANGU_API || ""}/forecast?lat=${lat}&lon=${lon}` },
+      { name: "CorrDiff", url: `${process.env.CORRDIFF_API || ""}/forecast?lat=${lat}&lon=${lon}` },
       { name: "AIFS", url: `https://api.ecmwf.int/v1/aifs?lat=${lat}&lon=${lon}&format=json` },
-      { name: "NowcastNet", url: `${process.env.NOWCASTNET_API}/forecast?lat=${lat}&lon=${lon}` },
+      { name: "NowcastNet", url: `${process.env.NOWCASTNET_API || ""}/forecast?lat=${lat}&lon=${lon}` },
     ];
 
     for (const m of iaModels) {
       try {
-        const res =
-          m.name === "CorrDiff"
-            ? await axios.post(m.url, { lat, lon }, { timeout: 10000 })
-            : await axios.get(m.url, {
-                headers:
-                  m.name === "AIFS"
-                    ? { Authorization: `Bearer ${process.env.ECMWF_KEY}` }
-                    : {},
-                timeout: 10000,
-              });
+        if (!m.url || m.url === "/forecast?lat=&lon=") continue;
+        const res = await axios.get(m.url, { timeout: 8000 });
         const d = res.data || {};
         const model = {
           source: m.name,
           temperature: d.temperature ?? d.temperature_2m ?? null,
-          precipitation: d.precipitation ?? d.total_precipitation ?? null,
+          precipitation: d.precipitation ?? d.total_precipitation ?? 0,
           wind: d.wind ?? d.wind_10m ?? null,
         };
         push(model);
         logModel("🤖", m.name, model.temperature, model.precipitation, model.wind, true);
       } catch (e) {
         logModel("🤖", m.name, null, null, null, false);
-        await addEngineError(`IA ${m.name} indisponible : ${e.message}`);
+        await addEngineError(`${m.name} (IA externe) indisponible : ${e.message}`, "superForecast");
       }
     }
 
     // ==========================================================
-    // 3️⃣ Open Data / Satellites / Gouvernemental
-    // ==========================================================
-    const openDataModels = [
-      {
-        name: "NASA POWER",
-        url: `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&format=JSON`,
-      },
-      {
-        name: "OpenWeather",
-        url: `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${process.env.OPENWEATHER_KEY}&units=metric`,
-      },
-      {
-        name: "WeatherGov NOAA",
-        url: `https://api.weather.gov/points/${lat},${lon}`,
-      },
-      {
-        name: "EuroMeteoService",
-        url: `${process.env.EUROMETEO_API}/forecast?lat=${lat}&lon=${lon}`,
-      },
-    ];
-
-    for (const m of openDataModels) {
-      try {
-        const res = await axios.get(m.url, { timeout: 10000 });
-        const d = res.data?.properties?.parameter
-          ? {
-              temperature: Object.values(res.data.properties.parameter.T2M || {}).pop(),
-              precipitation: Object.values(res.data.properties.parameter.PRECTOTCORR || {}).pop(),
-              wind: Object.values(res.data.properties.parameter.WS10M || {}).pop(),
-            }
-          : res.data.current || res.data || {};
-        const model = {
-          source: m.name,
-          temperature: d.temperature ?? d.temperature_2m ?? d.main?.temp ?? null,
-          precipitation: d.precipitation ?? d.total_precipitation ?? d.rain?.["1h"] ?? 0,
-          wind: d.wind ?? d.wind_speed_10m ?? d.wind?.speed ?? null,
-        };
-        push(model);
-        logModel("🛰️", m.name, model.temperature, model.precipitation, model.wind, true);
-      } catch (e) {
-        logModel("🛰️", m.name, null, null, null, false);
-        await addEngineError(`${m.name} indisponible : ${e.message}`);
-      }
-    }
-
-    // ==========================================================
-    // 📊 Fusion interne + pondération dynamique
+    // 3️⃣ Synthèse simple et fiabilité brute
     // ==========================================================
     const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
     const valid = sources.filter((s) => s.temperature !== null && s.wind !== null);
-    const n = valid.length;
-    const total = sources.length;
-
+    const n = valid.length, total = sources.length;
     let reliability = +(n / (total || 1)).toFixed(2);
     reliability = Math.min(1, reliability + (n > 6 ? 0.05 : 0));
 
@@ -164,14 +104,14 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       sources: valid.map((s) => s.source),
     };
 
-    // 🌍 Facteurs géographiques et locaux
+    // Application légère des facteurs (sans IA J.E.A.N)
     result = await applyGeoFactors(result, lat, lon, country);
     result = await applyLocalFactors(result, lat, lon, country);
 
     console.log(
-      `\n📡 Résumé : ${valid.length}/${total} modèles actifs | Fiabilité ${Math.round(
+      `📊 Résumé : ${valid.length}/${total} modèles actifs | Fiabilité ${Math.round(
         reliability * 100
-      )}% | Moyenne Temp ${result.temperature?.toFixed(1)}°C | Précip ${result.precipitation?.toFixed(2)}mm | Vent ${result.wind?.toFixed(1)} km/h\n`
+      )}% | Temp ${result.temperature?.toFixed(1)}°C | Précip ${result.precipitation?.toFixed(2)}mm | Vent ${result.wind?.toFixed(1)} km/h`
     );
 
     await addEngineLog(
@@ -181,16 +121,14 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     );
 
     if (!valid.length) {
-      const state = getEngineState();
+      const state = await getEngineState();
       const fallback = state?.forecasts?.[0];
       if (fallback) {
         console.log("♻️ Aucune source valide, fallback du dernier run utilisé.");
         await addEngineLog("♻️ Fallback utilisé depuis dernier run", "warning", "superForecast");
         result = fallback;
         result.reliability = 0.5;
-      } else {
-        throw new Error("Aucune source valide et aucun fallback disponible");
-      }
+      } else throw new Error("Aucune source valide et aucun fallback disponible");
     }
 
     return result;
@@ -202,37 +140,22 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 }
 
 // ==========================================================
-// 🧩 Fonction principale SuperForecast
+// 🧩 Fonction principale – SuperForecast (Phase 1 Extraction Pure)
 // ==========================================================
 export async function superForecast({ zones = [], runType = "global" }) {
   try {
-    console.log(`\n🛰️ Lancement du SuperForecast (${zones.join(", ")}) – Mode ${runType}\n`);
-    await addEngineLog(`🛰️ SuperForecast lancé (${zones.join(", ")})`, "info", "core");
+    console.log(`\n🛰️ Lancement du SuperForecast (zones: ${zones.length}) – Mode ${runType}\n`);
+    await addEngineLog(`🛰️ SuperForecast lancé (${zones.length} zones)`, "info", "core");
     const results = [];
 
     for (const z of zones) {
-      const { lat, lon, country } =
-        z === "EU" ? { lat: 50, lon: 10, country: "FR" } : { lat: 40, lon: -95, country: "US" };
-
-      console.log(`\n🌍 Zone ${z} (${country}) → Coordonnées ${lat}, ${lon}`);
+      const { lat, lon, country } = z;
+      console.log(`\n🌍 Zone ${z.zone || country || "?"} → ${lat}, ${lon}`);
       const merged = await mergeMultiModels(lat, lon, country);
-
-      try {
-        const trul = await axios.get("https://www.bmcb.be/forecast-europ-maps/");
-        const wtz = await axios.get("https://www.wetterzentrale.de/en");
-        const refined = comparator.mergeForecasts([
-          merged,
-          { source: "Trullemans", ...merged },
-          { source: "Wetterzentrale", ...merged },
-        ]);
-        refined.reliability = Math.min(1, merged.reliability + 0.05);
-        results.push({ zone: z, lat, lon, country, ...refined, timestamp: new Date() });
-      } catch {
-        results.push({ zone: z, lat, lon, country, ...merged, timestamp: new Date() });
-      }
+      results.push({ zone: z.zone || country, lat, lon, country, ...merged, timestamp: new Date() });
     }
 
-    console.log(`\n✅ SuperForecast terminé : ${results.length} zones traitées\n`);
+    console.log(`✅ SuperForecast terminé : ${results.length} zones traitées`);
     await addEngineLog(`✅ SuperForecast terminé (${results.length} zones traitées)`, "success", "core");
 
     try {
@@ -245,7 +168,7 @@ export async function superForecast({ zones = [], runType = "global" }) {
       }));
       await autoCompareAfterRun(alerts);
     } catch (e) {
-      await addEngineError("Audit externe échoué : " + e.message);
+      await addEngineError("Audit externe échoué : " + e.message, "superForecast");
     }
 
     return { reliability: 0.97, results };
@@ -257,5 +180,5 @@ export async function superForecast({ zones = [], runType = "global" }) {
 }
 
 // ==========================================================
-// Fin du module – 100 % réel, IA J.E.A.N. opérationnelle
+// Fin du module – Extraction pure (Phase 1)
 // ==========================================================
