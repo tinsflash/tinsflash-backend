@@ -1,102 +1,107 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"/>
-<meta name="robots" content="noindex,nofollow"/>
-<title>🌋 Alertes – TINSFLASH PRO+++</title>
-<style>
-body{background:#0b1220;color:#e6f6ff;font-family:Inter,Arial;margin:0}
-header{background:#08101f;padding:14px;text-align:center;font-weight:700;color:#4fc3f7;text-shadow:0 0 8px #4fc3f7}
-.alertCard{background:#0f1724;margin:10px;padding:10px;border-radius:8px;transition:background .3s,transform .3s}
-.alertCard:hover{background:#16233b;transform:scale(1.01)}
-button{margin-top:6px;margin-right:6px;background:#4fc3f7;color:#001;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:700}
-button:hover{background:#7be3ff}
-small{color:#9ab6c8}
-.sectionTitle{margin:12px 10px 0;font-weight:bold;color:#4fc3f7;text-shadow:0 0 8px #4fc3f7}
-</style>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH – Console Alertes IA</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body{background:#000818;color:#d4e7ff;font-family:Orbitron,sans-serif;margin:0}
+    header{background:linear-gradient(90deg,#00224e,#004ba8);padding:1rem;text-align:center;font-size:1.5rem;color:#fff}
+    #mapAlerts{height:50vh;margin:1rem;border:2px solid #00eaff;border-radius:10px}
+    section{margin:1rem;padding:1rem;background:#00142b;border-radius:10px}
+    h2{color:#00eaff;margin-bottom:0.5rem}
+    table{width:100%;border-collapse:collapse;font-size:0.9rem}
+    th,td{border:1px solid #004ba8;padding:0.4rem;text-align:left}
+    tr:hover{background:#002850}
+    button{background:#00eaff;color:#001f3f;border:none;border-radius:5px;padding:0.3rem 0.7rem;margin:0.1rem;cursor:pointer}
+  </style>
 </head>
 <body>
+<header>🚨 Console Alertes IA J.E.A.N.</header>
+<div id="mapAlerts"></div>
+
+<section>
+  <h2>🔷 Alertes Primeur (émises avant les autres)</h2>
+  <table id="primeurTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>🟩 Alertes auto-publiées ≥90%</h2>
+  <table id="confirmTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>🟨 Alertes à valider (70–89%)</h2>
+  <table id="validerTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th><th>Actions</th></tr></thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>🟥 Alertes sous surveillance (<70%)</h2>
+  <table id="surveillerTable"><thead><tr><th>Type</th><th>Pays</th><th>Fiabilité</th></tr></thead><tbody></tbody></table>
+</section>
+
+<section>
+  <h2>📤 Formulaire Transmission NASA / Institutions</h2>
+  <form onsubmit="sendToNasa(event)">
+    <label>Organisation :</label><input id="org" style="width:100%" required><br>
+    <label>Message :</label><textarea id="msg" rows="3" style="width:100%" required></textarea><br>
+    <button type="submit">Envoyer</button>
+  </form>
+</section>
+
 <script>
-// === Sécurité Admin ===
-const pin=sessionStorage.getItem("tinsflashPIN");
-if(!pin){
-  const p=prompt("Code d’accès admin ?");
-  if(p!=="202679"){alert("⛔ Accès refusé");location.href="/";}
-  else sessionStorage.setItem("tinsflashPIN","ok");
-}
-</script>
+  const map=L.map("mapAlerts").setView([20,0],2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"TINSFLASH"}).addTo(map);
+  const colors={primeur:"#0066ff",confirm:"#00ff7f",valider:"#ffcc00",surveiller:"#ff0033"};
 
-<header>🌋 Gestion des Alertes – IA J.E.A.N (Console PRO+++)</header>
-<div id="alertsList" style="padding:10px"></div>
+  async function loadAlerts(){
+    const res=await axios.get("/api/alerts");
+    const primeur=res.data.filter(a=>a.isPrimeur);
+    const confirm=res.data.filter(a=>!a.isPrimeur && a.reliability>=0.9);
+    const valider=res.data.filter(a=>!a.isPrimeur && a.reliability>=0.7 && a.reliability<0.9);
+    const surveiller=res.data.filter(a=>a.reliability<0.7);
 
-<script>
-const API = location.origin;
+    drawTable("primeurTable",primeur,colors.primeur);
+    drawTable("confirmTable",confirm,colors.confirm);
+    drawTable("validerTable",valider,colors.valider);
+    drawTable("surveillerTable",surveiller,colors.surveiller);
 
-// === Récupération JSON ===
-async function getJSON(u){
-  try{const r=await fetch(u);return r.ok?await r.json():[];}
-  catch{return [];}
-}
+    map.eachLayer(l=>{if(l instanceof L.CircleMarker)map.removeLayer(l)});
+    res.data.forEach(a=>{
+      let color=a.isPrimeur?colors.primeur:(a.reliability>=0.9?colors.confirm:(a.reliability>=0.7?colors.valider:colors.surveiller));
+      L.circleMarker([a.lat,a.lon],{radius:8,color,fillOpacity:0.8})
+        .bindPopup(`<b>${a.type}</b><br>${Math.round(a.reliability*100)}%<br>${a.country}`)
+        .addTo(map);
+    });
+  }
 
-// === Rendu des alertes ===
-function renderAlerts(list){
-  const zone=document.getElementById("alertsList");
-  zone.innerHTML="";
-  if(!list.length){zone.innerHTML="<p>Aucune alerte active pour le moment.</p>";return;}
+  function drawTable(id,data,color){
+    const tb=document.querySelector(`#${id} tbody`);
+    tb.innerHTML="";
+    data.forEach(a=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML=`
+        <td style="color:${color}">${a.type}</td>
+        <td>${a.country}</td>
+        <td>${Math.round(a.reliability*100)}%</td>
+        <td>${id!=="surveillerTable"?`
+          <button onclick="exportAlert('${a._id}')">Exporter</button>
+          <button onclick="validateAlert('${a._id}')">Valider</button>
+          <button onclick="holdAlert('${a._id}')">En attente</button>`:""}</td>`;
+      tb.appendChild(tr);
+    });
+  }
 
-  // Tri par fiabilité décroissante
-  list.sort((a,b)=>(b.reliability||0)-(a.reliability||0));
+  function exportAlert(id){axios.post("/api/alert/export",{id});alert("Export envoyé à l'expert.");}
+  function validateAlert(id){axios.post("/api/alert/validate",{id});alert("Alerte validée.");}
+  function holdAlert(id){axios.post("/api/alert/hold",{id});alert("Alerte mise en attente.");}
+  function sendToNasa(e){e.preventDefault();axios.post("/api/nasa",{org:org.value,msg:msg.value});alert("Message transmis.");}
 
-  list.forEach(a=>{
-    const c=a.reliability||0;
-    const col=c>=90?"#00ff80":c>=70?"#ffc107":"#ff7043";
-    const div=document.createElement("div");
-    div.className="alertCard";
-    div.style.borderLeft=`4px solid ${col}`;
-    div.innerHTML=`
-      <b>${a.title||"Alerte"}</b><br>
-      🌍 ${a.zone||"Global"} – <b>${c.toFixed(0)}%</b><br>
-      <small>${a.description||"Aucune description disponible."}</small><br>
-      <small>📅 ${a.timestamp?new Date(a.timestamp).toLocaleString():"Date inconnue"}</small><br>
-      <button onclick="exportPDF('${a._id}')">📄 Exporter PDF</button>
-      <button onclick="assignExpert('${a._id}')">👨‍🔬 Soumettre expert</button>
-    `;
-    zone.appendChild(div);
-  });
-}
-
-// === Chargement dynamique sans clignotement ===
-let currentHash = "";
-async function loadAlerts(){
-  const data = await getJSON(API+"/api/alerts");
-  const hash = JSON.stringify(data.map(a=>a._id+a.reliability)).slice(0,200);
-  if(hash!==currentHash){renderAlerts(data);currentHash=hash;}
-}
-loadAlerts();
-setInterval(loadAlerts,15000);
-
-// === Export PDF ===
-async function exportPDF(id){
-  try{
-    const r=await fetch(API+"/api/alerts/export/"+id);
-    if(!r.ok)throw new Error("Erreur export PDF");
-    const blob=await r.blob();
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;a.download="TINSFLASH_Alert_"+id+".pdf";a.click();
-  }catch(e){alert("❌ "+e.message);}
-}
-
-// === Soumission expert ===
-async function assignExpert(id){
-  const mail=prompt("Adresse expert humain ?");
-  if(!mail)return alert("❌ Aucun email indiqué.");
-  try{
-    await fetch(API+"/api/alerts/export/"+id+"?mode=expert",
-      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:mail})});
-    alert("✅ Alerte transmise à l’expert "+mail);
-  }catch(e){alert("❌ "+e.message);}
-}
+  loadAlerts();
 </script>
 </body>
 </html>
