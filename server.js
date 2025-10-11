@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.14 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.15 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -65,7 +65,7 @@ app.use(
 );
 
 // ==========================================================
-// 🔌 MongoDB – Connexion stabilisée Render + Atlas Paris + auto-ping
+// 🔌 MongoDB – connexion & ping Render/Atlas
 // ==========================================================
 async function connectMongo() {
   try {
@@ -79,7 +79,7 @@ async function connectMongo() {
     console.log("✅ MongoDB connecté");
     await initEngineState();
     const state = await getEngineState();
-    if (state) console.log("🧠 État moteur chargé avec succès.");
+    if (state) console.log("🧠 État moteur chargé avec succès");
   } catch (err) {
     console.error("❌ Erreur MongoDB:", err.message);
     setTimeout(connectMongo, 10000);
@@ -87,7 +87,7 @@ async function connectMongo() {
 }
 
 mongoose.connection.on("disconnected", () => {
-  console.warn("⚠️ Déconnexion MongoDB détectée – reconnexion automatique...");
+  console.warn("⚠️ Déconnexion MongoDB détectée – reconnexion...");
   setTimeout(connectMongo, 5000);
 });
 
@@ -108,30 +108,30 @@ else console.warn("⚠️ Aucune variable MONGO_URI définie !");
 // ==========================================================
 // 🛑 STOP / RESET EXTRACTION
 // ==========================================================
-app.post("/api/stop-extraction", async (req, res) => {
+app.post("/api/stop-extraction", async (_, res) => {
   try {
     stopExtraction();
     await addEngineLog("🛑 Extraction stoppée manuellement via API", "warn", "core");
-    res.json({ success: true, message: "Extraction stoppée" });
+    res.json({ success: true });
   } catch (e) {
     await addEngineError("Erreur stop-extraction : " + e.message, "core");
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ error: e.message });
   }
 });
 
-app.post("/api/reset-stop-extraction", async (req, res) => {
+app.post("/api/reset-stop-extraction", async (_, res) => {
   try {
     resetStopFlag();
     await addEngineLog("✅ Flag stop extraction réinitialisé", "info", "core");
     res.json({ success: true });
   } catch (e) {
     await addEngineError("Erreur reset-stop-extraction : " + e.message, "core");
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ error: e.message });
   }
 });
 
 // ==========================================================
-// 🚀 RUN GLOBAL & PAR ZONES
+// 🚀 RUN GLOBAL / PAR ZONE / WORLD
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
@@ -145,12 +145,22 @@ app.post("/api/run-global", async (req, res) => {
     res.json({ success: true, result: r });
   } catch (e) {
     await addEngineError(`Erreur extraction: ${e.message}`, "runGlobal");
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/runWorldAlerts", async (_, res) => {
+  try {
+    const result = await runWorldAlerts();
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError(`Erreur runWorldAlerts: ${e.message}`, "core");
+    res.status(500).json({ error: e.message });
   }
 });
 
 // ==========================================================
-// 🌤️ API publique : /api/forecast (page index.html)
+// 🌤️ API publique : Forecast + Alerts
 // ==========================================================
 app.get("/api/forecast", async (req, res) => {
   try {
@@ -158,24 +168,33 @@ app.get("/api/forecast", async (req, res) => {
     const lon = parseFloat(req.query.lon);
     const country = (req.query.country || "").toString();
     const region = (req.query.region || "").toString();
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon))
       return res.status(400).json({ error: "lat/lon invalides" });
-    }
 
     const data = await generateForecast(lat, lon, country, region);
-    return res.json(data);
+    res.json(data);
   } catch (e) {
     await addEngineError("Erreur /api/forecast: " + e.message, "forecast");
     res.status(500).json({ error: e.message });
   }
 });
 
+// ✅ NOUVELLE ROUTE /api/alerts (pour cartes publiques et admin)
+app.get("/api/alerts", async (_, res) => {
+  try {
+    const alerts = await Alert.find().sort({ start: -1 }).limit(200);
+    res.json(alerts);
+  } catch (e) {
+    await addEngineError("Erreur /api/alerts: " + e.message, "alerts");
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ==========================================================
-// 💬 CHAT INTÉGRÉS : TECH, ADMIN, PUBLIC
+// 💬 CHATS INTÉGRÉS : TECH / ADMIN / PUBLIC
 // ==========================================================
 
-// 1️⃣ Chat technique (admin-pp.html)
+// 1️⃣ Chat technique – admin-pp.html
 app.post("/api/chat-tech", async (req, res) => {
   try {
     const { message } = req.body;
@@ -186,14 +205,14 @@ app.post("/api/chat-tech", async (req, res) => {
     else if (/sources|modèles|data/i.test(message))
       reply = "📡 Sources actives : GFS, ECMWF, ICON, HRRR, AROME, Pangu, GraphCast, CorrDiff, AIFS, NASA, OpenWeather.";
     else if (/alertes/i.test(message))
-      reply = "🚨 Consulte admin-alerts.html pour les alertes validées / primeurs du moteur IA.";
+      reply = "🚨 Consulte admin-alerts.html pour les alertes validées / primeurs.";
     res.json({ reply });
   } catch (e) {
     res.json({ reply: "Erreur chat-tech : " + e.message });
   }
 });
 
-// 2️⃣ Chat météo admin (admin-chat.html)
+// 2️⃣ Chat météo admin – admin-chat.html
 app.post("/api/chat-meteo-admin", async (req, res) => {
   try {
     const { city, lat, lon } = req.body;
@@ -209,13 +228,13 @@ app.post("/api/chat-meteo-admin", async (req, res) => {
   }
 });
 
-// 3️⃣ Chat public limité à 2 demandes par jour (index.html)
+// 3️⃣ Chat public – index.html (limité à 2 requêtes/24h)
 let userRequests = {};
 app.post("/api/chat-public", async (req, res) => {
   try {
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
     const now = Date.now();
-    userRequests[ip] = (userRequests[ip] || []).filter((t) => now - t < 86400000);
+    userRequests[ip] = (userRequests[ip] || []).filter(t => now - t < 86400000);
     if (userRequests[ip].length >= 2)
       return res.json({ reply: "❌ Limite de 2 demandes météo/24h atteinte. Réessayez demain." });
     userRequests[ip].push(now);
@@ -234,33 +253,6 @@ app.post("/api/chat-public", async (req, res) => {
 });
 
 // ==========================================================
-// 🌎 WORLD ALERTS & STATUS
-// ==========================================================
-app.post("/api/runWorldAlerts", async (_, res) => {
-  try {
-    const result = await runWorldAlerts();
-    res.json({ success: true, result });
-  } catch (e) {
-    await addEngineError(`Erreur runWorldAlerts: ${e.message}`, "core");
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/status", async (_, res) => {
-  try {
-    const s = await getEngineState();
-    res.json({
-      status: s?.checkup?.engineStatus || s?.status || "IDLE",
-      lastRun: s?.lastRun,
-      errors: s?.errors || [],
-      coveredZones: enumerateCoveredPoints(),
-    });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
 // 🧭 ADMIN PAGES + STATIC FILES
 // ==========================================================
 [
@@ -268,10 +260,9 @@ app.get("/api/status", async (_, res) => {
   "admin-chat.html",
   "admin-alerts.html",
   "admin-index.html",
-].forEach((p) =>
-  app.get(`/${p}`, (_, res) =>
-    res.sendFile(path.join(__dirname, "public", p))
-  )
+  "admin-radar.html"
+].forEach(p =>
+  app.get(`/${p}`, (_, res) => res.sendFile(path.join(__dirname, "public", p)))
 );
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -282,5 +273,5 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, async () => {
   console.log(`⚡ TINSFLASH PRO+++ prêt sur port ${PORT}`);
-  console.log("🌍 Zones couvertes:", enumerateCoveredPoints().length);
+  console.log("🌍 Zones couvertes :", enumerateCoveredPoints().length);
 });
