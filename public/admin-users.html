@@ -1,48 +1,49 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>👥 Utilisateurs – TINSFLASH</title>
-  <style>
-    body{margin:0;background:#0a1318;color:#e6f6ff;font-family:Inter,system-ui}
-    header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
-    .wrap{max-width:1100px;margin:12px auto;padding:12px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:8px;border-bottom:1px solid #062428}
-    th{background:#0b1820;color:#6bf3ff}
-    button{background:#4fc3f7;border:none;padding:6px 10px;border-radius:6px;color:#001}
-  </style>
+<meta charset="utf-8"/>
+<meta name="robots" content="noindex,nofollow"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>👥 Utilisateurs – TINSFLASH</title>
+<style>
+body{margin:0;font-family:Inter,system-ui;background:#0b1220;color:#e6f6ff}
+header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+a{color:#4fc3f7;text-decoration:none;font-weight:600}
+.container{max-width:900px;margin:auto;padding:16px}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid #223;color:#ddd;padding:8px;text-align:left}
+th{color:#4fc3f7}
+button{background:#4fc3f7;color:#001;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:700}
+</style>
 </head>
 <body>
 <script>
-  const pin = sessionStorage.getItem("tinsflashPIN");
-  if(!pin){ const p=prompt("Code d’accès admin ?"); if(p!=="202679"){ alert("Accès refusé"); location.href="/"; } else sessionStorage.setItem("tinsflashPIN","ok"); }
+const PIN_ADMIN="202679";
+if(!sessionStorage.getItem("tinsflashPIN")){
+ const p=prompt("Code d’accès admin ?");
+ if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
+ sessionStorage.setItem("tinsflashPIN","ok");
+}
 </script>
-<header>👥 Gestion Utilisateurs</header>
-<div class="wrap">
-  <table id="usersTable">
-    <thead><tr><th>Email</th><th>Zone</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody></tbody>
-  </table>
+<header>👥 Gestion des utilisateurs</header>
+<nav>
+<a href="/admin-pp.html">Console</a><a href="/admin-alerts.html">Alertes</a><a href="/admin-chat.html">Chat</a>
+<a href="/admin-radar.html">Radar</a><a href="/admin-local.html">Local</a><a href="/admin-index.html">Index</a>
+<a href="/admin-news.html">News</a><a href="/admin-users.html">Utilisateurs</a>
+</nav>
+<div class="container">
+<table id="tab"><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Dernière connexion</th><th>Action</th></tr></table>
 </div>
-
 <script>
-  async function loadUsers(){
-    try{
-      const res = await fetch('/api/users'); const j = await res.json();
-      const tbody = document.querySelector('#usersTable tbody'); tbody.innerHTML='';
-      (j.users || []).forEach(u=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${u.email}</td><td>${u.zone||'-'}</td><td>${u.type||'-'}</td><td>${u.status||'-'}</td>
-                        <td><button onclick="impersonate('${u._id}')">Imperson</button></td>`;
-        tbody.appendChild(tr);
-      });
-    }catch(e){ console.error(e); }
-  }
-  function impersonate(id){ alert('Fonction impersonation: ' + id); }
-  loadUsers();
+const fake=[
+ {nom:"Patrick Pynnaert",email:"pynnaertpat@gmail.com",role:"Admin",last:"Aujourd’hui"},
+ {nom:"Michael Darge",email:"michael@uman-detect.com",role:"Tech Field",last:"Hier"},
+];
+const t=document.getElementById("tab");
+fake.forEach(u=>{
+ t.innerHTML+=`<tr><td>${u.nom}</td><td>${u.email}</td><td>${u.role}</td><td>${u.last}</td>
+ <td><button onclick="alert('Gestion ${u.nom}')">Gérer</button></td></tr>`;
+});
 </script>
-</body>
-</html>
+</body></html>
