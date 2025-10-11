@@ -38,6 +38,7 @@ width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px 
 .chat-input{display:flex;border-top:1px solid #333;}
 .chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
 .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
+code{background:#0e1721;padding:3px 6px;border-radius:6px;color:#7dd3fc;display:block;margin:4px 0;}
 </style>
 </head>
 <body>
@@ -60,20 +61,37 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 </nav>
 
 <div class="container">
-<h2>⚙️ Commandes moteur – Phase 1 : Extraction pure et réelle</h2>
+<h2>⚙️ Phase 1 : Extraction pure et réelle</h2>
 <button onclick="runEuropeUSA()">⚡ Extraction Europe–USA–Canada</button>
 <button onclick="runWorld()">🌍 Extraction Reste du Monde</button>
 <button onclick="runAll()">🌐 Extraction Planète complète</button>
 
-<h2>🧠 Phase 2 – Analyse IA J.E.A.N.</h2>
-<button onclick="runAIJean()">🤖 Lancer IA J.E.A.N. (Phase 2)</button>
+<p style="color:#7dd3fc;font-size:0.9em;">
+💻 Commandes Render manuelles :<br>
+<code>curl -X POST https://tinsflash.onrender.com/api/run-global</code>
+<code>curl -X POST https://tinsflash.onrender.com/api/run-world</code>
+<code>curl -X POST https://tinsflash.onrender.com/api/run-all</code>
+</p>
 
-<h2>📢 Phase 3 – Fusion des alertes mondiales</h2>
+<h2>🧠 Phase 2 : Analyse IA J.E.A.N.</h2>
+<button onclick="runAIJean()">🤖 Lancer IA J.E.A.N. (Phase 2)</button>
+<p style="color:#7dd3fc;font-size:0.9em;">
+<code>curl -X POST https://tinsflash.onrender.com/api/runAI</code>
+</p>
+
+<h2>📢 Phase 3 : Fusion des alertes mondiales</h2>
 <button onclick="runAlerts()">🚨 Fusion des alertes (Phase 3)</button>
+<p style="color:#7dd3fc;font-size:0.9em;">
+<code>curl -X POST https://tinsflash.onrender.com/api/runWorldAlerts</code>
+</p>
 
 <h2>🛑 Commandes de sécurité</h2>
 <button onclick="stopMotor()">🟥 Arrêt d’urgence</button>
 <button onclick="refreshSections()">🔄 Rafraîchir toutes les sections</button>
+<p style="color:#7dd3fc;font-size:0.9em;">
+<code>curl -X POST https://tinsflash.onrender.com/api/stop</code>
+<code>curl -X GET  https://tinsflash.onrender.com/api/status</code>
+</p>
 
 <h2>🧩 État moteur</h2>
 <div class="status-grid">
@@ -110,32 +128,32 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <script>
 const API="/api";
 
-// === Phase 1 ===
+// === PHASE 1 ===
 async function runEuropeUSA(){execute("/api/run-global","Extraction Europe–USA–Canada");}
 async function runWorld(){execute("/api/run-world","Extraction Reste du Monde");}
 async function runAll(){execute("/api/run-all","Extraction Planète complète");}
 
-// === Phase 2 ===
+// === PHASE 2 ===
 async function runAIJean(){execute("/api/runAI","Analyse IA J.E.A.N.");}
 
-// === Phase 3 ===
-async function runAlerts(){execute("/api/runWorldAlerts","Fusion alertes mondiales");}
+// === PHASE 3 ===
+async function runAlerts(){execute("/api/runWorldAlerts","Fusion des alertes mondiales");}
 
-// === Arrêt d’urgence ===
+// === ARRÊT URGENCE ===
 async function stopMotor(){
   addLog("🛑 Arrêt d’urgence demandé !");
   try{await fetch("/api/stop",{method:"POST"});addLog("🟥 Extraction stoppée !");}
   catch(e){addLog("⚠️ Erreur arrêt : "+e.message);}
 }
 
-// === Rafraîchir toutes les sections ===
+// === RAFRAÎCHIR SECTIONS ===
 async function refreshSections(){
   addLog("🔄 Rafraîchissement complet des sections…");
   await Promise.all([refreshStatus(),checkAI(),loadAlerts()]);
   addLog("✅ Sections rafraîchies sans rechargement total.");
 }
 
-// === Exécution générique ===
+// === EXEC GÉNÉRIQUE ===
 async function execute(endpoint,label){
   addLog(`🚀 ${label} en cours...`);
   try{
@@ -145,7 +163,7 @@ async function execute(endpoint,label){
   }catch(e){addLog(`⚠️ ${label} : ${e.message}`);}
 }
 
-// === Statuts moteur ===
+// === STATUTS ===
 async function refreshStatus(){
   try{
     const r=await fetch("/api/status");
@@ -158,7 +176,7 @@ async function refreshStatus(){
 setInterval(refreshStatus,10000);
 refreshStatus();
 
-// === IA Health ===
+// === IA ===
 async function checkAI(){
   try{
     const r=await fetch("/api/ai-health");
@@ -176,20 +194,20 @@ async function checkAI(){
 setInterval(checkAI,12000);
 checkAI();
 
-// === Logs ===
+// === LOGS ===
 function addLog(t){
   const l=document.getElementById("logs");
   l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;
   l.scrollTop=l.scrollHeight;
 }
 
-// === Cartes Leaflet ===
+// === CARTES ===
 const mapF=L.map("mapForecast").setView([20,0],2);
 const mapA=L.map("mapAlerts").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
 
-// === Alertes ===
+// === ALERTES ===
 async function loadAlerts(){
   const r=await fetch(API+"/alerts");
   const list=await r.json();
@@ -210,7 +228,7 @@ async function loadAlerts(){
 }
 loadAlerts();
 
-// === Chat technique ===
+// === CHAT ===
 const chatBox=document.getElementById("chatJean");
 document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
 async function sendChat(){
