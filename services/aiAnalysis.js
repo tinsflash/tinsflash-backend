@@ -1,47 +1,69 @@
 // ==========================================================
-// 🧠 TINSFLASH – aiAnalysis.js
-// Everest Protocol v3.9 PRO+++
-// ==========================================================
-// Analyse IA J.E.A.N. – fusion intelligente des données météorologiques
+// 🧠 IA ANALYSIS – TINSFLASH PRO+++ (Everest Protocol v3.12)
+// Analyse et pondération intelligente via IA J.E.A.N.
+// Intègre les stations météo réelles
 // ==========================================================
 
-import { getEngineState, addEngineLog, addEngineError, saveEngineState } from "./engineState.js";
-import { injectAIProtocol } from "./aiInitProtocol.js";
-import { runAIComparison } from "./compareExternalIA.js";
-import { fuseModels } from "./aiFusionService.js";
+import { addEngineLog, addEngineError } from "./engineState.js";
+import { fetchStationData } from "./fetchStationData.js";
 
-export async function runAIAnalysis() {
-  const state = await getEngineState();
+// ==========================================================
+// ⚙️  FUSION IA – Analyse des zones du SuperForecast
+// ==========================================================
+export async function runAIAnalysis(resultsPhase1 = []) {
   try {
-    const protocol = await injectAIProtocol("analyse globale");
-    await addEngineLog(protocol, "info", "IA.JEAN");
+    await addEngineLog("🔍 IA J.E.A.N. – Phase 2 : Analyse et pondération", "info", "aiAnalysis");
+    const enriched = [];
 
-    await addEngineLog("🧠 IA J.E.A.N. – Démarrage analyse multi-modèles", "info", "IA.JEAN");
+    for (const r of resultsPhase1) {
+      const { lat, lon, country, reliability } = r;
 
-    const zones = Object.keys(state.zones || {});
-    const results = [];
+      // 1️⃣ Lecture stations locales
+      const stations = await fetchStationData(lat, lon, country);
+      const okSources = stations?.summary?.sourcesOK?.length || 0;
 
-    for (const zone of zones) {
-      try {
-        const modelsData = state.zones[zone]?.models || {};
-        const fused = await fuseModels(modelsData, zone);
-        results.push({ zone, fused });
-        await addEngineLog(`✅ Fusion IA terminée pour ${zone}`, "success", "IA.JEAN");
-      } catch (err) {
-        await addEngineError(`Erreur fusion IA pour ${zone}: ${err.message}`, "IA.JEAN");
-      }
+      // 2️⃣ Calcul cohérence modèle ↔ stations
+      let coherence = 0;
+      if (stations?.data?.length) {
+        try {
+          const s = stations.data[0];
+          const stTemps = parseFloat(s.temperature_2m || s.T2M || s.temp || 0);
+          const delta = Math.abs((r.temperature ?? 0) - stTemps);
+          coherence = Math.max(0, 1 - delta / 10);
+        } catch {
+          coherence = 0.5;
+        }
+      } else coherence = 0.4;
+
+      // 3️⃣ Calcul Indice Global J.E.A.N.
+      const jeanIndex = Math.round(((reliability * 0.6) + (coherence * 0.4)) * 100);
+
+      const aiResult = {
+        ...r,
+        jeanIndex,
+        coherence,
+        stationSources: stations?.summary?.sourcesOK || [],
+        stationErrors: stations?.summary?.sourcesFail || [],
+      };
+
+      enriched.push(aiResult);
+      await addEngineLog(
+        `🧠 ${country} → Indice J.E.A.N. ${jeanIndex}% (cohérence ${Math.round(coherence*100)}%)`,
+        "info",
+        "aiAnalysis"
+      );
     }
 
-    await runAIComparison(results);
-    await addEngineLog("📊 Comparaison IA externe terminée", "info", "IA.JEAN");
+    const avgJean = Math.round(
+      enriched.reduce((a, b) => a + (b.jeanIndex || 0), 0) / (enriched.length || 1)
+    );
 
-    state.lastAIAnalysis = new Date();
-    await saveEngineState(state);
-
-    await addEngineLog("✅ IA J.E.A.N. – Analyse complète réussie", "success", "IA.JEAN");
-    return { success: true, results };
-  } catch (err) {
-    await addEngineError(`Erreur IA.JEAN analyse: ${err.message}`, "IA.JEAN");
-    return { success: false, error: err.message };
+    await addEngineLog(`✅ IA J.E.A.N. terminée – Indice Global ${avgJean}%`, "success", "aiAnalysis");
+    return { enriched, indiceGlobal: avgJean };
+  } catch (e) {
+    await addEngineError("Erreur IA J.E.A.N. : " + e.message, "aiAnalysis");
+    return { error: e.message };
   }
 }
+
+export default { runAIAnalysis };
