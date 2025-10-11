@@ -60,148 +60,172 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 </nav>
 
 <div class="container">
-<h2>⚙️ Commandes moteur – Phase 1 : Extraction pure et réelle</h2>
+
+<!-- === Phase 1 === -->
+<h2>⚙️ Phase 1 – Extraction pure et réelle</h2>
 <button onclick="runEuropeUSA()">⚡ Extraction Europe–USA–Canada</button>
 <button onclick="runWorld()">🌍 Extraction Reste du Monde</button>
 <button onclick="runAll()">🌐 Extraction Planète complète</button>
-
 <p style="font-style:italic;color:#7dd3fc;margin-top:10px;">
-💻 En cas d’échec des boutons, exécuter manuellement dans Render :<br><br>
-⚡ <b>Europe–USA–Canada :</b><br><code>curl -X POST https://tinsflash.onrender.com/api/run-global</code><br><br>
-🌍 <b>Reste du Monde :</b><br><code>curl -X POST https://tinsflash.onrender.com/api/run-world</code><br><br>
-🌐 <b>Planète complète :</b><br><code>curl -X POST https://tinsflash.onrender.com/api/run-all</code>
+💻 Si les boutons échouent :<br>
+<code>curl -X POST https://tinsflash.onrender.com/api/run-global</code><br>
+<code>curl -X POST https://tinsflash.onrender.com/api/run-world</code><br>
+<code>curl -X POST https://tinsflash.onrender.com/api/run-all</code>
 </p>
 
+<!-- === Phase 2 === -->
+<h2>🧠 Phase 2 – Analyse IA J.E.A.N.</h2>
+<button onclick="runIA()">🧠 Lancer Analyse IA</button>
+<p style="font-style:italic;color:#7dd3fc;">
+💻 Commande Render manuelle :<br>
+<code>curl -X POST https://tinsflash.onrender.com/api/ai-analyse</code>
+</p>
+
+<!-- === État moteur === -->
 <h2>🧩 État moteur</h2>
 <div class="status-grid">
-  <div class="status-box"><span id="motorLight" class="status-light"></span>Moteur : <b id="motorStatus">–</b></div>
-  <div class="status-box"><span id="mongoLight" class="status-light"></span>MongoDB</div>
-  <div class="status-box"><span id="aiLight" class="status-light blue"></span>IA J.E.A.N : <b id="aiStatus">Vérification...</b></div>
+ <div class="status-box"><span id="motorLight" class="status-light"></span>Moteur : <b id="motorStatus">–</b></div>
+ <div class="status-box"><span id="mongoLight" class="status-light"></span>MongoDB</div>
+ <div class="status-box"><span id="aiLight" class="status-light blue"></span>IA J.E.A.N : <b id="aiStatus">Vérification...</b></div>
 </div>
 
+<!-- === Cartes === -->
 <h2>🌍 Cartes de suivi</h2>
 <div class="map-duo">
-  <div id="mapForecast" class="map"></div>
-  <div id="mapAlerts" class="map"></div>
+ <div id="mapForecast" class="map"></div>
+ <div id="mapAlerts" class="map"></div>
 </div>
 
+<!-- === Compteurs === -->
 <div class="alert-counters">
-  <div class="counter"><h3 id="count90">0</h3><div>🟢 &gt; 90 %</div></div>
-  <div class="counter"><h3 id="count7089">0</h3><div>🟠 70–89 %</div></div>
-  <div class="counter"><h3 id="count70">0</h3><div>🔴 &lt; 70 %</div></div>
-  <div class="counter"><h3 id="countPrimeurs">0</h3><div>🔵 Primeurs</div></div>
+ <div class="counter"><h3 id="count90">0</h3><div>🟢 &gt; 90 %</div></div>
+ <div class="counter"><h3 id="count7089">0</h3><div>🟠 70–89 %</div></div>
+ <div class="counter"><h3 id="count70">0</h3><div>🔴 &lt; 70 %</div></div>
+ <div class="counter"><h3 id="countPrimeurs">0</h3><div>🔵 Primeurs</div></div>
 </div>
 
+<!-- === Logs === -->
 <h2>📜 Logs moteur</h2>
 <div id="logs">Chargement...</div>
 </div>
 
+<!-- === Chat === -->
 <button class="btn-ai" id="btnAI">🤖</button>
 <div class="chat-box" id="chatJean">
-<div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
-<div class="chat-messages" id="chatMessages"></div>
-<div class="chat-input">
-<input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
-</div></div>
+ <div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
+ <div class="chat-messages" id="chatMessages"></div>
+ <div class="chat-input">
+  <input id="chatInput" placeholder="Question technique..."/>
+  <button onclick="sendChat()">Envoyer</button>
+ </div>
+</div>
 
 <script>
 const API="/api";
 
-// ===== Phase 1 : Extraction =====
+// === Phase 1 ===
 async function runEuropeUSA(){
-  addLog("🚀 Extraction Europe–USA–Canada en cours...");
-  try{const r=await fetch(`${API}/run-global`,{method:"POST"});
-    const j=await r.json();addLog(j.success?"✅ Extraction Europe–USA terminée":"❌ "+j.error);}
-  catch(e){addLog("⚠️ Erreur API run-global : "+e.message);}
+ addLog("🚀 Extraction Europe–USA–Canada...");
+ try{const r=await fetch(`${API}/run-global`,{method:"POST"});
+ const j=await r.json();addLog(j.success?"✅ Extraction terminée":"❌ "+j.error);}
+ catch(e){addLog("⚠️ Erreur run-global : "+e.message);}
 }
 async function runWorld(){
-  addLog("🌍 Extraction Reste du Monde en cours...");
-  try{const r=await fetch(`${API}/run-world`,{method:"POST"});
-    const j=await r.json();addLog(j.success?"✅ Extraction Monde terminée":"❌ "+j.error);}
-  catch(e){addLog("⚠️ Erreur API run-world : "+e.message);}
+ addLog("🌍 Extraction Reste du Monde...");
+ try{const r=await fetch(`${API}/run-world`,{method:"POST"});
+ const j=await r.json();addLog(j.success?"✅ Extraction Monde OK":"❌ "+j.error);}
+ catch(e){addLog("⚠️ Erreur run-world : "+e.message);}
 }
 async function runAll(){
-  addLog("🌐 Extraction planète complète en cours...");
-  try{const r=await fetch(`${API}/run-all`,{method:"POST"});
-    const j=await r.json();addLog(j.success?"✅ Extraction complète terminée":"❌ "+j.error);}
-  catch(e){addLog("⚠️ Erreur API run-all : "+e.message);}
+ addLog("🌐 Extraction planète complète...");
+ try{const r=await fetch(`${API}/run-all`,{method:"POST"});
+ const j=await r.json();addLog(j.success?"✅ Extraction complète OK":"❌ "+j.error);}
+ catch(e){addLog("⚠️ Erreur run-all : "+e.message);}
 }
 
-// ===== Statut moteur & Mongo =====
+// === Phase 2 ===
+async function runIA(){
+ addLog("🧠 Analyse IA J.E.A.N en cours...");
+ try{const r=await fetch(`${API}/ai-analyse`,{method:"POST"});
+ const j=await r.json();addLog(j.success?"✅ Analyse IA terminée":"❌ "+j.error);}
+ catch(e){addLog("⚠️ Erreur /ai-analyse : "+e.message);}
+}
+
+// === Statut moteur ===
 async function refreshStatus(){
-  try{
-    const r=await fetch("/api/status");
-    const s=await r.json();
-    document.getElementById("motorStatus").textContent=s.status||"–";
-    document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
-    document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");
-  }catch(e){addLog("⚠️ Status "+e.message);}
+ try{
+  const r=await fetch("/api/status");
+  const s=await r.json();
+  document.getElementById("motorStatus").textContent=s.status||"–";
+  document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
+  document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");
+ }catch(e){addLog("⚠️ Status "+e.message);}
 }
-setInterval(refreshStatus,10000);
-refreshStatus();
+setInterval(refreshStatus,10000);refreshStatus();
 
-// ===== Vérification IA J.E.A.N =====
+// === Vérification IA J.E.A.N ===
 async function checkAI(){
-  try{
-    const r=await fetch("/api/ai-health");
-    const d=await r.json();
-    const light=document.getElementById("aiLight");
-    const text=document.getElementById("aiStatus");
-    if(d.status==="ok"){light.className="status-light green";text.textContent="Opérationnelle";}
-    else if(d.status==="warning"){light.className="status-light orange";text.textContent="Instable / En attente";}
-    else{light.className="status-light red";text.textContent="Erreur / Coupure";}
-  }catch(e){
-    document.getElementById("aiLight").className="status-light red";
-    document.getElementById("aiStatus").textContent="Erreur réseau";
-  }
+ try{
+  const r=await fetch("/api/ai-health");
+  const d=await r.json();
+  const light=document.getElementById("aiLight");
+  const text=document.getElementById("aiStatus");
+  if(d.status==="ok"){light.className="status-light green";text.textContent="Opérationnelle";}
+  else if(d.status==="warning"){light.className="status-light orange";text.textContent="Instable / En attente";}
+  else{light.className="status-light red";text.textContent="Erreur / Coupure";}
+ }catch(e){
+  document.getElementById("aiLight").className="status-light red";
+  document.getElementById("aiStatus").textContent="Erreur réseau";
+ }
 }
-setInterval(checkAI,12000);
-checkAI();
+setInterval(checkAI,12000);checkAI();
 
-// ===== Logs =====
+// === Logs ===
 function addLog(t){
-  const l=document.getElementById("logs");
-  l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;
-  l.scrollTop=l.scrollHeight;
+ const l=document.getElementById("logs");
+ l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;
+ l.scrollTop=l.scrollHeight;
 }
 
-// ===== Cartes Leaflet =====
+// === Cartes ===
 const mapF=L.map("mapForecast").setView([20,0],2);
 const mapA=L.map("mapAlerts").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
 
-// ===== Chargement alertes =====
+// === Alertes ===
 async function loadAlerts(){
-  const r=await fetch(API+"/alerts");
-  const list=await r.json();
-  let c90=0,c7089=0,c70=0,cP=0;
-  list.forEach(a=>{
-    if(!a.lat)return;
-    let color="red";
-    if(a.reliability>=0.9){color="green";c90++;}
-    else if(a.reliability>=0.7){color="orange";c7089++;}
-    else{c70++;}
-    if(a.isPrimeur){cP++;color="blue";}
-    L.circleMarker([a.lat,a.lon],{radius:6,color}).addTo(mapA).bindPopup(`<b>${a.title}</b><br>${a.zone}`);
-  });
-  document.getElementById("count90").textContent=c90;
-  document.getElementById("count7089").textContent=c7089;
-  document.getElementById("count70").textContent=c70;
-  document.getElementById("countPrimeurs").textContent=cP;
+ const r=await fetch(API+"/alerts");
+ const list=await r.json();
+ let c90=0,c7089=0,c70=0,cP=0;
+ list.forEach(a=>{
+  if(!a.lat)return;
+  let color="red";
+  if(a.reliability>=0.9){color="green";c90++;}
+  else if(a.reliability>=0.7){color="orange";c7089++;}
+  else{c70++;}
+  if(a.isPrimeur){cP++;color="blue";}
+  L.circleMarker([a.lat,a.lon],{radius:6,color}).addTo(mapA)
+   .bindPopup(`<b>${a.title}</b><br>${a.zone}`);
+ });
+ document.getElementById("count90").textContent=c90;
+ document.getElementById("count7089").textContent=c7089;
+ document.getElementById("count70").textContent=c70;
+ document.getElementById("countPrimeurs").textContent=cP;
 }
 loadAlerts();
 
-// ===== Chat technique =====
+// === Chat ===
 const chatBox=document.getElementById("chatJean");
 document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
 async function sendChat(){
-  const msg=document.getElementById("chatInput").value;if(!msg)return;
-  const m=document.getElementById("chatMessages");
-  m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
-  const r=await fetch(API+"/chat-tech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-  const d=await r.json();
-  m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;m.scrollTop=m.scrollHeight;
+ const msg=document.getElementById("chatInput").value;if(!msg)return;
+ const m=document.getElementById("chatMessages");
+ m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
+ const r=await fetch(API+"/chat-tech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
+ const d=await r.json();
+ m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
+ m.scrollTop=m.scrollHeight;
 }
 </script>
 </body>
