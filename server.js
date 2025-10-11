@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.8 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.9 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -25,7 +25,7 @@ import {
   addEngineError,
   stopExtraction,
   resetStopFlag,
-  isExtractionStopped
+  isExtractionStopped,
 } from "./services/engineState.js";
 
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
@@ -67,11 +67,30 @@ app.use(
 );
 
 // ==========================================================
+// 🧠 Séparation des flux IA (GPT-5 moteur / GPT-4o-mini console)
+// ==========================================================
+app.use((req, res, next) => {
+  if (
+    req.path.startsWith("/api/ai-analyse") ||
+    req.path.startsWith("/api/run-global") ||
+    req.path.startsWith("/api/runGlobal")
+  ) {
+    req.headers["X-IA-Engine"] = "ChatGPT-5";
+  } else if (
+    req.path.startsWith("/api/ai-admin") ||
+    req.path.startsWith("/api/ai-user") ||
+    req.path.startsWith("/api/chat")
+  ) {
+    req.headers["X-IA-Engine"] = "GPT-4o-mini";
+  }
+  next();
+});
+
+// ==========================================================
 // 🔌 MongoDB – Connexion stabilisée Render + Atlas Paris + auto-ping
 // ==========================================================
 async function connectMongo() {
   try {
-    // Suppression de l’option erronée "suppressReservedKeysWarning"
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -89,13 +108,11 @@ async function connectMongo() {
   }
 }
 
-// 🔄 Auto-reconnexion
 mongoose.connection.on("disconnected", () => {
   console.warn("⚠️ Déconnexion MongoDB détectée – reconnexion automatique...");
   setTimeout(connectMongo, 5000);
 });
 
-// 🔍 Ping régulier Atlas
 setInterval(async () => {
   if (mongoose.connection.readyState === 1) {
     try {
@@ -145,6 +162,7 @@ app.post("/api/run-global", async (req, res) => {
     }
     await checkSourcesFreshness();
     const zone = req.body?.zone || "All";
+    await addEngineLog(`🚀 Lancement extraction ${zone}`, "info", "runGlobal");
     const r = await runGlobal(zone);
     await addEngineLog(`⚙️ Extraction complète effectuée pour ${zone}`, "success", "runGlobal");
     res.json({ success: true, result: r });
@@ -190,17 +208,41 @@ zoneRoutes.forEach(({ route, fn, label }) => {
 });
 
 // ==========================================================
-// 🧠 ANALYSE IA J.E.A.N.
+// 🧠 ANALYSE IA J.E.A.N. (GPT-5)
 // ==========================================================
 app.post("/api/ai-analyse", async (_, res) => {
   try {
-    await addEngineLog("🧠 Lancement IA J.E.A.N. – Analyse en cours...", "info", "IA.JEAN");
+    await addEngineLog("🧠 IA J.E.A.N. (GPT-5) – Analyse en cours...", "info", "IA.JEAN");
     const result = await runAIAnalysis();
     await addEngineLog("✅ IA J.E.A.N. – Analyse terminée avec succès", "success", "IA.JEAN");
     res.json({ success: true, result });
   } catch (e) {
     await addEngineError(`Erreur IA J.E.A.N. : ${e.message}`, "IA.JEAN");
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 💬 CHAT ADMIN / UTILISATEURS – GPT-4o-mini
+// ==========================================================
+app.post("/api/ai-admin", async (req, res) => {
+  try {
+    const { message, mode } = req.body;
+    const result = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Tu es l’assistant console TINSFLASH, connecté à J.E.A.N." },
+          { role: "user", content: message },
+        ],
+      },
+      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } }
+    );
+    res.json({ reply: result.data.choices[0].message.content });
+  } catch (e) {
+    await addEngineError(`Erreur /api/ai-admin : ${e.message}`, "IA.Chat");
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -213,13 +255,11 @@ app.get("/api/forecast", async (req, res) => {
     const lon = parseFloat(req.query.lon);
     const country = (req.query.country || "").toString();
     const region = (req.query.region || "").toString();
-
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return res.status(400).json({ error: "lat/lon invalides" });
     }
-
     const data = await generateForecast(lat, lon, country, region);
-    return res.json(data);
+    res.json(data);
   } catch (e) {
     await addEngineError("Erreur /api/forecast: " + e.message, "forecast");
     res.status(500).json({ error: e.message });
@@ -285,9 +325,7 @@ app.get("/api/logs-live", async (_, res) => {
   "admin-radar.html",
   "admin-users.html",
 ].forEach((p) =>
-  app.get(`/${p}`, (_, res) =>
-    res.sendFile(path.join(__dirname, "public", p))
-  )
+  app.get(`/${p}`, (_, res) => res.sendFile(path.join(__dirname, "public", p)))
 );
 
 app.use(express.static(path.join(__dirname, "public")));
