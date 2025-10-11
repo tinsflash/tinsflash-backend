@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.18 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.19 PRO+++)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
 // Compatible Render / MongoDB / GitHub Actions / Admin Console
@@ -33,8 +33,8 @@ import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
 import { generateForecast } from "./services/forecastService.js";
-import { getNews } from "./services/newsService.js"; // ✅ actualités météo mondiales
-import { checkAIHealth } from "./services/aiHealth.js"; // ✅ nouvel import IA Health Check
+import { getNews } from "./services/newsService.js";   // ✅ actualités météo mondiales
+import { checkAIHealth } from "./services/aiHealth.js"; // ✅ contrôle IA J.E.A.N
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -65,7 +65,7 @@ async function connectMongo() {
 if (process.env.MONGO_URI) connectMongo();
 
 // ==========================================================
-// 🚀 Extraction, IA, Fusion
+// 🚀 Phase 1 – Extraction réelle des modèles
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
@@ -83,9 +83,27 @@ app.post("/api/run-global", async (req, res) => {
   }
 });
 
+// ==========================================================
+// 🧠 Phase 2 – Analyse IA J.E.A.N.
+// ==========================================================
+app.post("/api/ai-analyse", async (_, res) => {
+  try {
+    const result = await runAIAnalysis();
+    await addEngineLog("🧠 Analyse IA J.E.A.N. terminée", "success", "aiAnalysis");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("Erreur /api/ai-analyse: " + e.message, "IA.JEAN");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌐 Phase 3 – Alertes mondiales
+// ==========================================================
 app.post("/api/runWorldAlerts", async (_, res) => {
   try {
     const result = await runWorldAlerts();
+    await addEngineLog("🌐 Génération alertes mondiales terminée", "success", "runWorldAlerts");
     res.json({ success: true, result });
   } catch (e) {
     await addEngineError("Erreur runWorldAlerts: " + e.message, "core");
@@ -118,7 +136,7 @@ app.get("/api/alerts", async (_, res) => {
 });
 
 // ==========================================================
-// 🛰️ Actualités météo mondiales (IA J.E.A.N)
+// 🛰️ Actualités météo mondiales (IA J.E.A.N.)
 // ==========================================================
 app.get("/api/news", async (_, res) => {
   try {
@@ -131,7 +149,7 @@ app.get("/api/news", async (_, res) => {
 });
 
 // ==========================================================
-// 🧠 Vérification état IA J.E.A.N
+// 🧠 Vérification santé IA J.E.A.N.
 // ==========================================================
 app.get("/api/ai-health", async (_, res) => {
   try {
@@ -144,7 +162,7 @@ app.get("/api/ai-health", async (_, res) => {
 });
 
 // ==========================================================
-// 🧠 STATUT MOTEUR IA – route /api/status
+// 🧠 Statut moteur IA – /api/status
 // ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
@@ -164,7 +182,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 Chats intégrés
+// 💬 Chat technique IA J.E.A.N.
 // ==========================================================
 app.post("/api/chat-tech", async (req, res) => {
   try {
@@ -182,7 +200,7 @@ app.post("/api/chat-tech", async (req, res) => {
 });
 
 // ==========================================================
-// 🧭 Pages admin + static
+// 🧭 Pages admin + fichiers statiques
 // ==========================================================
 [
   "admin-pp.html",
@@ -193,12 +211,14 @@ app.post("/api/chat-tech", async (req, res) => {
   "admin-local.html",
   "admin-news.html",
   "admin-users.html"
-].forEach(p => app.get(`/${p}`, (_, res) => res.sendFile(path.join(__dirname, "public", p))));
+].forEach(p =>
+  app.get(`/${p}`, (_, res) => res.sendFile(path.join(__dirname, "public", p)))
+);
 
 app.use(express.static(path.join(__dirname, "public")));
 
 // ==========================================================
-// 🚀 Lancement
+// 🚀 Lancement du moteur TINSFLASH
 // ==========================================================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
