@@ -1,17 +1,82 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"/><meta name="robots" content="noindex,nofollow"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>🌦 Radar – TINSFLASH</title>
-<style>body{margin:0;background:#0b1220;color:#e6f6ff;font-family:Inter,system-ui}
-header{padding:12px;text-align:center;background:#08121d;color:#6bf3ff;font-weight:700}
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="robots" content="noindex,nofollow"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🌦 Radar – TINSFLASH PRO+++</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+body{margin:0;background:#0b1220;color:#e6f6ff;font-family:"Segoe UI",system-ui}
+header{padding:12px;text-align:center;background:#08121d;color:#4fc3f7;font-weight:700;font-size:1.2em}
 nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
-a{color:#4fc3f7;text-decoration:none;font-weight:600}</style></head>
+nav a{color:#4fc3f7;text-decoration:none;font-weight:600}
+nav a:hover{color:#fff;text-shadow:0 0 8px #4fc3f7}
+iframe{width:100%;height:calc(100vh - 230px);border:none;display:block}
+.map-mini{height:200px;margin:8px;border-radius:8px}
+footer{text-align:center;color:#8fdcff;font-size:13px;padding:8px;background:#0d1624}
+.status{background:#111a2b;color:#7dd3fc;text-align:center;padding:8px;font-size:14px;}
+</style>
+</head>
 <body>
-<script>const PIN_ADMIN="202679";if(!sessionStorage.getItem("tinsflashPIN")){const p=prompt("Code d’accès admin ?");if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}sessionStorage.setItem("tinsflashPIN","ok");}</script>
-<header>🌦 Radar Global IA</header>
+
+<script>
+const PIN_ADMIN="202679";
+if(!sessionStorage.getItem("tinsflashPIN")){
+ const p=prompt("Code d’accès admin ?");
+ if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
+ else sessionStorage.setItem("tinsflashPIN","ok");
+}
+</script>
+
+<header>🌦 Radar Global IA – TINSFLASH PRO+++</header>
+
 <nav>
-<a href="/admin-pp.html">Console</a><a href="/admin-alerts.html">Alertes</a><a href="/admin-chat.html">Chat</a><a href="/admin-radar.html">Radar</a>
-<a href="/admin-local.html">Local</a><a href="/admin-index.html">Index</a><a href="/admin-news.html">News</a><a href="/admin-users.html">Utilisateurs</a>
+<a href="/admin-pp.html">Console</a>
+<a href="/admin-alerts.html">Alertes</a>
+<a href="/admin-chat.html">Chat</a>
+<a href="/admin-radar.html">Radar</a>
+<a href="/admin-local.html">Local</a>
+<a href="/admin-index.html">Index</a>
+<a href="/admin-news.html">News</a>
+<a href="/admin-users.html">Utilisateurs</a>
 </nav>
-<iframe src="https://embed.windy.com/embed2.html?lat=48&lon=3&zoom=4&level=surface&overlay=rain&menu=true"
-width="100%" height="850" frameborder="0"></iframe>
-</body></html>
+
+<div class="status">🧠 IA J.E.A.N connectée • Radar interactif global (Windy + zones TINSFLASH)</div>
+
+<!-- 🌎 Radar principal Windy -->
+<iframe 
+src="https://embed.windy.com/embed2.html?lat=48&lon=3&zoom=4&level=surface&overlay=rain&menu=true"
+allowfullscreen>
+</iframe>
+
+<!-- 🗺️ Mini-carte Leaflet zones couvertes -->
+<div id="mapMini" class="map-mini"></div>
+
+<footer>🛰️ TINSFLASH PRO+++ • Zones couvertes : Europe, USA, Canada, Afrique, Amérique du Sud, Asie, Océanie • Données : IA J.E.A.N & partenaires</footer>
+
+<script>
+let map=L.map("mapMini").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:5,minZoom:1}).addTo(map);
+
+const zones=[
+ {name:"Europe",coords:[50,10]},
+ {name:"USA",coords:[38,-95]},
+ {name:"Canada",coords:[60,-95]},
+ {name:"Afrique Nord",coords:[30,10]},
+ {name:"Afrique Sud",coords:[-25,25]},
+ {name:"Amérique Sud",coords:[-15,-60]},
+ {name:"Asie Sud",coords:[20,80]},
+ {name:"Asie Est",coords:[35,120]},
+ {name:"Océanie",coords:[-20,140]}
+];
+
+zones.forEach(z=>{
+ L.circle(z.coords,{radius:2500000,color:"#4fc3f7",weight:1,fillOpacity:0.15})
+  .addTo(map).bindPopup(`🌍 Zone couverte : <b>${z.name}</b>`);
+});
+</script>
+
+</body>
+</html>
