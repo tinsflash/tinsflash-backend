@@ -1,4 +1,6 @@
-// PATH: models/User.js
+// ==========================================================
+// 🧍‍♂️ models/User.js – TINSFLASH PRO+++
+// ==========================================================
 import mongoose from "mongoose";
 
 const ConsentSchema = new mongoose.Schema({
@@ -19,8 +21,15 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     name: { type: String, default: "" },
 
+    // ✅ Authentification
+    passwordHash: { type: String, default: "" },
+    sessionToken: { type: String, default: null },
+    lastLogin: { type: Date, default: null },
+
     // ✅ Abonnement (plan)
     plan: { type: String, enum: ["free", "premium", "pro", "pro+"], default: "free" },
+    credits: { type: Number, default: 0 }, // Crédits IA J.E.A.N.
+    dailyQuestions: { type: Object, default: {} }, // compteur Premium 2/jour
 
     // ✅ Zone météo (pour stats internes)
     zone: { type: String, enum: ["covered", "non-covered"], default: "non-covered" },
