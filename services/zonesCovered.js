@@ -1,12 +1,12 @@
 // ==========================================================
 // 🌍 CENTRALISATION MONDIALE DES ZONES COUVERTES – TINSFLASH PRO+++
-// Everest Protocol v4.4 – FULL CONNECT bilingue (FR/EN)
+// Everest Protocol v4.5 – FULL CONNECT TOTAL FR/EN
 // ==========================================================
 
 import { addEngineLog } from "./engineState.js";
 
 // ==========================================================
-// 📦 Imports réels (version FR de ton moteur)
+// 📦 Imports RÉELS (selon tes fichiers existants)
 // ==========================================================
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
@@ -24,9 +24,8 @@ import { BOUKE_ZONES } from "./runBouke.js";
 import { BELGIQUE_ZONES } from "./runBelgique.js";
 
 // ==========================================================
-// 🌐 EXPORTS DIRECTS – compatibilité FR et EN
+// 🌐 EXPORTS DIRECTS – compatibilité FR & EN
 // ==========================================================
-// Exports français (principaux)
 export {
   EUROPE_ZONES,
   USA_ZONES,
@@ -44,10 +43,11 @@ export {
   BELGIQUE_ZONES,
 };
 
-// Alias anglais pour compatibilité avec anciens appels Render ou modules
+// ✅ Alias anglais et variantes régionales
 export const AMERICA_SUD_ZONES = AMERIQUE_SUD_ZONES;
 export const OCEANIA_ZONES = OCEANIE_ZONES;
 export const ASIA_EST_ZONES = ASIA_ZONES;
+export const ASIA_SUD_ZONES = ASIA_ZONES;
 
 // ==========================================================
 // 🌍 FUSION COMPLÈTE EN TABLEAU GLOBAL
