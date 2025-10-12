@@ -1,6 +1,9 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.97 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.98 PRO+++ REAL FULL CONNECT)
 // ==========================================================
+// 100 % réel – IA J.E.A.N. – moteur complet + pages publiques Render-safe
+// ==========================================================
+
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -63,7 +66,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.use(express.json());
-app.use(cors({ origin: "*", methods: ["GET", "POST"], allowedHeaders: ["Content-Type", "Authorization"] }));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // ==========================================================
 // 🔐 STRIPE / JWT
@@ -76,7 +85,12 @@ const JWT_SECRET = process.env.SECRET_KEY || "tinsflash_secret_key";
 // ==========================================================
 async function connectMongo() {
   try {
-    await mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 20000,
+      socketTimeoutMS: 45000,
+    });
     console.log("✅ MongoDB connecté");
     await initEngineState();
   } catch (err) {
@@ -140,6 +154,31 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
   }
 };
 
+// ==========================================================
+// 🌐 PAGES PUBLIQUES ET ADMIN (Render-safe)
+// ==========================================================
+app.use(express.static(path.join(__dirname, "public")));
+
+[
+  "index.html", "jean.html", "admin-pp.html", "admin-alerts.html",
+  "admin-chat.html", "admin-index.html", "admin-radar.html",
+  "admin-local.html", "admin-news.html", "admin-users.html",
+  "premium.html", "pro.html", "protest.html",
+  "cockpit.html", "cockpit-pro.html", "cockpit-proplus.html",
+  "cockpit-premium.html", "provincenamur.html"
+].forEach((p) =>
+  app.get(`/${p}`, (_, res) =>
+    res.sendFile(path.join(__dirname, "public", p))
+  )
+);
+
+app.get("/", (_, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ==========================================================
+// 🛰️ ROUTES API
+// ==========================================================
 app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe", { files: ["./data/europe.json"] }));
 app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada", { files: ["./data/usa.json"] }));
 app.post("/api/run-afrique", safeRun(runAfrique, "Afrique", { files: ["./data/afrique.json"] }));
@@ -157,4 +196,5 @@ const PORT = process.env.PORT || ENGINE_PORT;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne`);
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
+  console.log(`🔌 Ports : logique ${ENGINE_PORT} | réseau ${PORT}`);
 });
