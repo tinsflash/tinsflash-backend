@@ -66,32 +66,11 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <button onclick="runWorld()">🌍 Extraction Reste du Monde</button>
 <button onclick="runAll()">🌐 Extraction Planète complète</button>
 
-<p style="color:#7dd3fc;font-size:0.9em;">
-💻 Commandes Render manuelles :<br>
-<code>curl -X POST https://tinsflash.onrender.com/api/run-global</code>
-<code>curl -X POST https://tinsflash.onrender.com/api/run-world</code>
-<code>curl -X POST https://tinsflash.onrender.com/api/run-all</code>
-</p>
-
 <h2>🧠 Phase 2 : Analyse IA J.E.A.N.</h2>
 <button onclick="runAIJean()">🤖 Lancer IA J.E.A.N. (Phase 2)</button>
-<p style="color:#7dd3fc;font-size:0.9em;">
-<code>curl -X POST https://tinsflash.onrender.com/api/ai-analyse</code>
-</p>
-
-<h3 style="color:#4fc3f7;">🧩 Modèles IA externes (Hugging Face)</h3>
-<div class="status-grid">
-  <div class="status-box"><span class="status-light blue" id="light-graphcast"></span>GraphCast – <b id="lat-graphcast">–</b>s</div>
-  <div class="status-box"><span class="status-light blue" id="light-pangu"></span>Pangu – <b id="lat-pangu">–</b>s</div>
-  <div class="status-box"><span class="status-light blue" id="light-corrdiff"></span>CorrDiff – <b id="lat-corrdiff">–</b>s</div>
-  <div class="status-box"><span class="status-light blue" id="light-nowcastnet"></span>NowcastNet – <b id="lat-nowcastnet">–</b>s</div>
-</div>
 
 <h2>📢 Phase 3 : Fusion des alertes mondiales</h2>
 <button onclick="runAlerts()">🚨 Fusion des alertes (Phase 3)</button>
-<p style="color:#7dd3fc;font-size:0.9em;">
-<code>curl -X POST https://tinsflash.onrender.com/api/runWorldAlerts</code>
-</p>
 
 <h2>🧩 État moteur</h2>
 <div class="status-grid">
@@ -100,63 +79,55 @@ if(!sessionStorage.getItem("tinsflashPIN")){
   <div class="status-box"><span id="aiLight" class="status-light blue"></span>IA J.E.A.N : <b id="aiStatus">Vérification...</b></div>
 </div>
 
+<!-- 📅 Nouvelle section : Fraîcheur globale -->
+<h2>📅 Fraîcheur globale</h2>
+<div class="status-grid">
+  <div class="status-box"><span id="freshLight" class="status-light"></span>
+    Moyenne de fraîcheur : <b id="freshScore">–</b>%
+  </div>
+  <div class="status-box">Ancien runs détectés : <b id="freshOld">–</b></div>
+  <div class="status-box">Dernière mise à jour : <b id="freshUpdate">–</b></div>
+</div>
+
 <h2>🌍 Cartes de suivi</h2>
 <div class="map-duo">
   <div id="mapForecast" class="map"></div>
   <div id="mapAlerts" class="map"></div>
 </div>
 
-<div class="alert-counters">
-  <div class="counter"><h3 id="count90">0</h3><div>🟢 &gt; 90 %</div></div>
-  <div class="counter"><h3 id="count7089">0</h3><div>🟠 70–89 %</div></div>
-  <div class="counter"><h3 id="count70">0</h3><div>🔴 &lt; 70 %</div></div>
-  <div class="counter"><h3 id="countPrimeurs">0</h3><div>🔵 Primeurs</div></div>
-</div>
-
 <h2>📜 Logs moteur</h2>
 <div id="logs">Chargement...</div>
 </div>
 
-<!-- Chat IA -->
 <button class="btn-ai" id="btnAI">🤖</button>
 <div class="chat-box" id="chatJean">
-  <div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
-  <div class="chat-messages" id="chatMessages"></div>
-  <div class="chat-input">
-    <input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
-  </div>
-</div>
+<div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
+<div class="chat-messages" id="chatMessages"></div>
+<div class="chat-input">
+<input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
+</div></div>
 
 <script>
 const API="/api";
-const mapF=L.map("mapForecast").setView([20,0],2);
-const mapA=L.map("mapAlerts").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-let forecastLayer=L.layerGroup().addTo(mapF);
 
-// === PHASE 1 ===
 async function runEuropeUSA(){execute("/api/run-global","Extraction Europe–USA–Canada");}
 async function runWorld(){execute("/api/run-world","Extraction Reste du Monde");}
 async function runAll(){execute("/api/run-all","Extraction Planète complète");}
-
-// === PHASE 2 ===
-async function runAIJean(){execute("/api/ai-analyse","Analyse IA J.E.A.N.");}
-
-// === PHASE 3 ===
+async function runAIJean(){execute("/api/runAI","Analyse IA J.E.A.N.");}
 async function runAlerts(){execute("/api/runWorldAlerts","Fusion des alertes mondiales");}
 
-// === EXEC GÉNÉRIQUE ===
 async function execute(endpoint,label){
   addLog(`🚀 ${label} en cours...`);
   try{
     const r=await fetch(endpoint,{method:"POST"});
     const j=await r.json();
     addLog(j.success?`✅ ${label} terminée`:`❌ ${label} : ${j.error}`);
+    if(j.result && j.result.freshnessScore!==undefined){
+      updateFreshness(j.result.freshnessScore);
+    }
   }catch(e){addLog(`⚠️ ${label} : ${e.message}`);}
 }
 
-// === STATUTS ===
 async function refreshStatus(){
   try{
     const r=await fetch("/api/status");
@@ -166,92 +137,29 @@ async function refreshStatus(){
     document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");
   }catch(e){addLog("⚠️ Status "+e.message);}
 }
-setInterval(refreshStatus,10000);
-refreshStatus();
+setInterval(refreshStatus,10000);refreshStatus();
 
-// === IA ===
-async function checkAI(){
-  try{
-    const r=await fetch("/api/ai-health");
-    const d=await r.json();
-    const light=document.getElementById("aiLight");
-    const text=document.getElementById("aiStatus");
-    if(d.status==="ok"){light.className="status-light green";text.textContent="Opérationnelle";}
-    else if(d.status==="warning"){light.className="status-light orange";text.textContent="Instable";}
-    else{light.className="status-light red";text.textContent="Erreur";}
-    // IA externes
-    ["graphcast","pangu","corrdiff","nowcastnet"].forEach(m=>{
-      const info=d[m]||{};const l=document.getElementById("light-"+m);const t=document.getElementById("lat-"+m);
-      t.textContent=info.latency?info.latency.toFixed(2):"–";
-      l.className="status-light "+(info.status==="online"?"green":info.status==="offline"?"red":"orange");
-    });
-  }catch(e){
-    document.getElementById("aiLight").className="status-light red";
-    document.getElementById("aiStatus").textContent="Erreur réseau";
-  }
-}
-setInterval(checkAI,15000);
-checkAI();
-
-// === CARTES ===
-async function loadForecast(){
-  try{
-    const r=await fetch(`${API}/forecast?lat=50&lon=4&country=BE`);
-    const data=await r.json();
-    forecastLayer.clearLayers();
-    if(data && data.sources){
-      const color=data.reliability>0.9?"green":data.reliability>0.7?"orange":"red";
-      L.circleMarker([50,4],{radius:8,color}).addTo(forecastLayer)
-      .bindPopup(`<b>Prévision Belgique</b><br>
-        🌡️ ${data.temperature?.toFixed(1)}°C<br>
-        💧 ${data.precipitation?.toFixed(1)} mm<br>
-        🌬️ ${data.wind?.toFixed(1)} km/h<br>
-        🔗 ${data.sources.join(", ")}<br>
-        🧠 Fiabilité: ${(data.reliability*100).toFixed(0)}%`);
-    }
-  }catch(e){addLog("⚠️ Forecast "+e.message);}
-}
-setInterval(loadForecast,60000);
-loadForecast();
-
-// === ALERTES ===
-async function loadAlerts(){
-  const r=await fetch(API+"/alerts");
-  const list=await r.json();
-  let c90=0,c7089=0,c70=0,cP=0;
-  list.forEach(a=>{
-    if(!a.lat)return;
-    let color="red";
-    if(a.reliability>=0.9){color="green";c90++;}
-    else if(a.reliability>=0.7){color="orange";c7089++;}
-    else{c70++;}
-    if(a.isPrimeur){cP++;color="blue";}
-    L.circleMarker([a.lat,a.lon],{radius:6,color}).addTo(mapA).bindPopup(`<b>${a.title}</b><br>${a.zone}`);
-  });
-  document.getElementById("count90").textContent=c90;
-  document.getElementById("count7089").textContent=c7089;
-  document.getElementById("count70").textContent=c70;
-  document.getElementById("countPrimeurs").textContent=cP;
-}
-loadAlerts();
-
-// === LOGS ===
 function addLog(t){
   const l=document.getElementById("logs");
   l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;
   l.scrollTop=l.scrollHeight;
 }
 
-// === CHAT ===
-const chatBox=document.getElementById("chatJean");
-document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
-async function sendChat(){
-  const msg=document.getElementById("chatInput").value;if(!msg)return;
-  const m=document.getElementById("chatMessages");
-  m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
-  const r=await fetch(API+"/chat-tech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-  const d=await r.json();
-  m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;m.scrollTop=m.scrollHeight;
+// === Carte ===
+const mapF=L.map("mapForecast").setView([20,0],2);
+const mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+
+// === Fraîcheur dynamique ===
+function updateFreshness(score){
+  const light=document.getElementById("freshLight");
+  document.getElementById("freshScore").textContent=score;
+  document.getElementById("freshUpdate").textContent=new Date().toLocaleTimeString();
+  document.getElementById("freshOld").textContent=100-score;
+  if(score>85)light.className="status-light green";
+  else if(score>60)light.className="status-light orange";
+  else light.className="status-light red";
 }
 </script>
 </body>
