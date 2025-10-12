@@ -1,5 +1,8 @@
 // ==========================================================
-// 🇪🇺 TINSFLASH – runGlobalEurope.js (Everest Protocol v4.0 PRO+++ REAL CONNECT)
+// 🇪🇺 TINSFLASH – runGlobalEurope.js (Everest Protocol v4.1 PRO+++ REAL CONNECT)
+// ==========================================================
+// Extraction complète – Europe 27 + UK + Scandinavie + Balkans + Méditerranée
+// 100 % réel, complet et compatible Render (ESM strict)
 // ==========================================================
 
 import fs from "fs";
@@ -12,11 +15,7 @@ import {
   setLastExtraction,
 } from "./engineState.js";
 
-export async function runGlobalEurope() {
-  try {
-    await addEngineLog("🇪🇺 Démarrage runGlobalEurope", "info", "runGlobalEurope");// ===========================
-
-    // Zones détaillées par pays
+// Zones détaillées par pays
 // ===========================
 export const EUROPE_ZONES = {
   Belgium: [
@@ -258,19 +257,33 @@ export const EUROPE_ZONES = {
   ]
 };
 
-// ===========================
-// 🧠 Extraction Europe
-// ===========================
-   const result = await superForecast({ zones, runType: "Europe", withAI: false });
+// ==========================================================
+// 🧠 FONCTION PRINCIPALE
+// ==========================================================
+export async function runGlobalEurope() {
+  try {
+    await addEngineLog("🇪🇺 Démarrage runGlobalEurope", "info", "runGlobalEurope");
 
+    // Fusion de toutes les zones
+    const zones = Object.values(EUROPE_ZONES).flat();
+
+    const result = await superForecast({
+      zones,
+      runType: "Europe",
+      withAI: false,
+    });
+
+    // ======================================================
+    // 💾 Sauvegarde des données extraites
+    // ======================================================
     const dataDir = path.join(process.cwd(), "data");
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     const filePath = path.join(dataDir, "europe.json");
-    fs.writeFileSync(filePath, JSON.stringify(result.phase1Results || result, null, 2), "utf8");
+    fs.writeFileSync(filePath, JSON.stringify(result, null, 2), "utf8");
 
     await setLastExtraction({
       id: `europe-${Date.now()}`,
-      zones: ["europe"],
+      zones: ["Europe"],
       files: [filePath],
       status: "done",
     });
@@ -281,7 +294,12 @@ export const EUROPE_ZONES = {
       zonesCount: zones.length,
     });
 
-    await addEngineLog(`✅ runGlobalEurope terminé (${zones.length} zones)`, "success", "runGlobalEurope");
+    await addEngineLog(
+      `✅ runGlobalEurope terminé (${zones.length} zones)`,
+      "success",
+      "runGlobalEurope"
+    );
+
     return result;
   } catch (err) {
     await addEngineError(`Erreur runGlobalEurope : ${err.message}`, "runGlobalEurope");
@@ -289,5 +307,5 @@ export const EUROPE_ZONES = {
   }
 }
 
-export const EUROPE_ZONES = [];
 export default { runGlobalEurope };
+
