@@ -222,6 +222,45 @@ app.post("/api/run-belgique", safeRun(runBelgique, "Belgique", { files: ["./data
 app.post("/api/run-bouke", safeRun(runBouke, "Bouké", { files: ["./data/bouke.json"] }));
 
 // ==========================================================
+// 🧠 ROUTES IA ET ALERTES
+// ==========================================================
+app.post("/api/runAI", async (req, res) => {
+  try {
+    await addEngineLog("🧠 Démarrage IA J.E.A.N.", "info", "IA");
+    const result = await runAIAnalysis();
+    await addEngineLog("✅ IA J.E.A.N. terminée", "success", "IA");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur IA: " + e.message, "IA");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post("/api/runWorldAlerts", async (req, res) => {
+  try {
+    await addEngineLog("🚨 Démarrage fusion alertes", "info", "alerts");
+    const result = await runWorldAlerts();
+    await addEngineLog("✅ Fusion alertes terminée", "success", "alerts");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur alertes: " + e.message, "alerts");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🛰️ STATUS DU MOTEUR (nouvelle route GET /api/status)
+// ==========================================================
+app.get("/api/status", async (req, res) => {
+  try {
+    const state = await getEngineState();
+    res.json(state);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ==========================================================
 // 🚀 LANCEMENT RENDER
 // ==========================================================
 const ENGINE_PORT = 10000;
