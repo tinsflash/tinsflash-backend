@@ -1,6 +1,6 @@
 // ==========================================================
 // 🌍 CENTRALISATION MONDIALE DES ZONES COUVERTES – TINSFLASH PRO+++
-// Everest Protocol v4.2 – 100 % réel, 100 % connecté (médias inclus)
+// Everest Protocol v4.3 – Full Array Fusion – 100 % réel et connecté
 // ==========================================================
 
 import { addEngineLog } from "./engineState.js";
@@ -16,13 +16,10 @@ import { AFRICA_CENTRALE_ZONES } from "./runGlobalAfricaCentrale.js";
 import { AFRICA_OUEST_ZONES } from "./runGlobalAfricaOuest.js";
 import { AFRICA_SUD_ZONES } from "./runGlobalAfricaSud.js";
 import { AFRICA_EST_ZONES } from "./runGlobalAfricaEst.js";
-import { AMERICA_SUD_ZONES } from "./runGlobalAmericaSud.js";
-import { ASIA_EST_ZONES } from "./runGlobalAsiaEst.js";
-import { ASIA_SUD_ZONES } from "./runGlobalAsiaSud.js";
-import { OCEANIA_ZONES } from "./runGlobalOceania.js";
+import { AMERICA_SUD_ZONES } from "./runGlobalAmeriqueSud.js";
+import { ASIA_EST_ZONES } from "./runGlobalAsie.js";
+import { OCEANIA_ZONES } from "./runGlobalOceanie.js";
 import { CARIBBEAN_ZONES } from "./runGlobalCaribbean.js";
-
-// 🛰️ Nouvelles zones presse / médias
 import { BOUKE_ZONES } from "./runBouke.js";
 import { BELGIQUE_ZONES } from "./runBelgique.js";
 
@@ -40,7 +37,6 @@ export {
   AFRICA_EST_ZONES,
   AMERICA_SUD_ZONES,
   ASIA_EST_ZONES,
-  ASIA_SUD_ZONES,
   OCEANIA_ZONES,
   CARIBBEAN_ZONES,
   BOUKE_ZONES,
@@ -48,53 +44,54 @@ export {
 };
 
 // ==========================================================
-// 🌍 FUSION COMPLÈTE
+// 🌍 FUSION COMPLÈTE EN TABLEAU GLOBAL
 // ==========================================================
-export const COVERED_ZONES = {
-  ...(EUROPE_ZONES || {}),
-  ...(USA_ZONES || {}),
-  ...(CANADA_ZONES || {}),
-  ...(AFRICA_NORD_ZONES || {}),
-  ...(AFRICA_CENTRALE_ZONES || {}),
-  ...(AFRICA_OUEST_ZONES || {}),
-  ...(AFRICA_SUD_ZONES || {}),
-  ...(AFRICA_EST_ZONES || {}),
-  ...(AMERICA_SUD_ZONES || {}),
-  ...(ASIA_EST_ZONES || {}),
-  ...(ASIA_SUD_ZONES || {}),
-  ...(OCEANIA_ZONES || {}),
-  ...(CARIBBEAN_ZONES || {}),
-  ...(BELGIQUE_ZONES || {}),
-  ...(BOUKE_ZONES || {}),
-};
+export const COVERED_ZONES = [
+  ...(EUROPE_ZONES || []),
+  ...(USA_ZONES || []),
+  ...(CANADA_ZONES || []),
+  ...(AFRICA_NORD_ZONES || []),
+  ...(AFRICA_CENTRALE_ZONES || []),
+  ...(AFRICA_OUEST_ZONES || []),
+  ...(AFRICA_SUD_ZONES || []),
+  ...(AFRICA_EST_ZONES || []),
+  ...(AMERICA_SUD_ZONES || []),
+  ...(ASIA_EST_ZONES || []),
+  ...(OCEANIA_ZONES || []),
+  ...(CARIBBEAN_ZONES || []),
+  ...(BELGIQUE_ZONES || []),
+  ...(BOUKE_ZONES || []),
+];
 
 // ==========================================================
-// 🔎 ENUMÉRATION + FILTRAGE PAR CONTINENT OU ZONE MEDIA
+// 🔎 ENUMÉRATION + FILTRAGE
 // ==========================================================
 export function enumerateCoveredPoints(filter = "All") {
   const out = [];
-  for (const [country, points] of Object.entries(COVERED_ZONES)) {
-    for (const p of points) {
-      const continent = p.continent || "Unknown";
-      const zone = continent.toLowerCase();
-      if (
-        filter === "All" ||
-        (filter === "Main" && ["Europe", "North America"].includes(continent)) ||
-        (filter === "World" && !["Europe", "North America"].includes(continent)) ||
-        zone.includes(filter.toLowerCase()) ||
-        (filter.toLowerCase() === "belgique" && country.toLowerCase().includes("belgique")) ||
-        (filter.toLowerCase() === "bouke" && country.toLowerCase().includes("bouke"))
-      ) {
-        out.push({
-          country,
-          region: p.region || p.name || "Inconnu",
-          lat: p.lat ?? p.latitude,
-          lon: p.lon ?? p.longitude,
-          continent: continent,
-        });
-      }
+
+  for (const p of COVERED_ZONES) {
+    const continent = p.continent || "Unknown";
+    const name = p.region || p.name || "Inconnu";
+    const lat = p.lat ?? p.latitude;
+    const lon = p.lon ?? p.longitude;
+
+    if (
+      filter === "All" ||
+      (filter === "Main" && ["Europe", "North America"].includes(continent)) ||
+      (filter === "World" && !["Europe", "North America"].includes(continent)) ||
+      (p.country && p.country.toLowerCase().includes(filter.toLowerCase())) ||
+      (name.toLowerCase().includes(filter.toLowerCase()))
+    ) {
+      out.push({
+        region: name,
+        lat,
+        lon,
+        continent,
+        country: p.country || "Inconnu",
+      });
     }
   }
+
   return out;
 }
 
