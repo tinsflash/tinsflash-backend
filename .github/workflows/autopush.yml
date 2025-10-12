@@ -1,8 +1,28 @@
-- name: Auto push to main
-  run: |
-    git config user.name "autopush-bot"
-    git config user.email "autopush-bot@users.noreply.github.com"
-    git pull origin main --rebase
-    git add .
-    git commit -m "Auto organize files from depot/" || echo "No changes"
-    git push origin main
+name: Auto Push Organizer
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  autopush:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Auto push to main
+        run: |
+          git config user.name "autopush-bot"
+          git config user.email "autopush-bot@users.noreply.github.com"
+          git pull origin main --rebase
+          git add .
+          git commit -m "Auto organize files from depot/" || echo "No changes"
+          git push origin main
