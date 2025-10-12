@@ -19,7 +19,13 @@ import Stripe from "stripe";
 import { EventEmitter } from "events";
 
 // ==========================================================
-// 🧩 Imports internes (corrigés pour correspondre aux fichiers réels)
+// 🚀 INITIALISATION DES ZONES COUVERTES (avant tout run)
+// ==========================================================
+import { initZones } from "./services/zonesCovered.js";
+await initZones(); // 🔥 prépare toutes les zones couvertes dès le boot
+
+// ==========================================================
+// 🧩 IMPORTS INTERNES (modules moteur)
 // ==========================================================
 import { runGlobal } from "./services/runGlobal.js";
 import { runBouke } from "./services/runBouke.js";
@@ -66,13 +72,13 @@ app.use(cors({
 }));
 
 // ==========================================================
-// 🔐 Clés Stripe / JWT adaptées Render
+// 🔐 CLÉS STRIPE / JWT ADAPTÉES RENDER
 // ==========================================================
 const stripe = new Stripe(process.env.STRIPE_KEY);
 const JWT_SECRET = process.env.SECRET_KEY || "tinsflash_secret_key";
 
 // ==========================================================
-// 🔌 MongoDB
+// 🔌 MONGODB
 // ==========================================================
 async function connectMongo() {
   try {
@@ -92,7 +98,7 @@ async function connectMongo() {
 if (process.env.MONGO_URI) connectMongo();
 
 // ==========================================================
-// 👑 Admin auto (Patrick)
+// 👑 ADMIN AUTO (PATRICK)
 // ==========================================================
 const ADMIN_EMAIL = "pynnaertpat@gmail.com";
 const ADMIN_PWD = "202679";
@@ -124,7 +130,7 @@ async function seedAdminUser() {
 seedAdminUser();
 
 // ==========================================================
-// 🔐 Middleware Auth
+// 🔐 MIDDLEWARE AUTH
 // ==========================================================
 async function verifySession(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
@@ -198,14 +204,14 @@ app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada"));
 app.post("/api/run-afrique", safeRun(runAfrique, "Afrique"));
 app.post("/api/run-asie", safeRun(runAsie, "Asie"));
 app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie"));
-app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "AmériqueSud"));
+app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "Amérique du Sud"));
 
 // 🎥 Médias
 app.post("/api/run-bouke", safeRun(runBouke, "Bouké (Province de Namur)"));
 app.post("/api/run-belgique", safeRun(runBelgique, "Belgique complète"));
 
 // ==========================================================
-// 🔔 Autres endpoints
+// 🔔 AUTRES ENDPOINTS
 // ==========================================================
 app.get("/api/alerts", async (_, res) => {
   try {
@@ -235,7 +241,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 🔒 Pages publiques / admin
+// 🔒 PAGES PUBLIQUES / ADMIN
 // ==========================================================
 [
   "admin-pp.html", "admin-alerts.html", "admin-chat.html",
@@ -249,7 +255,7 @@ app.get("/api/status", async (_, res) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 // ==========================================================
-// 🚀 Lancement Render
+// 🚀 LANCEMENT RENDER
 // ==========================================================
 const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
