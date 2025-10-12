@@ -3,143 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH PRO+ • Prévisions & Alertes – IA J.E.A.N. + Radar 3D Exclusif</title>
+  <title>TINSFLASH PRO+ • Radar & Outils Avancés IA J.E.A.N.</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <!-- Google Ads -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8204947691352732" crossorigin="anonymous"></script>
 
   <style>
-    body {
-      margin:0;
-      font-family:"Segoe UI",sans-serif;
-      background:#0f172a;
-      color:#f5faff;
-    }
-    header {
-      text-align:center;
-      padding:15px;
-      background:linear-gradient(90deg,#08101f,#15294d);
-      color:#4fc3f7;
-      font-size:1.8em;
-      font-weight:bold;
-      text-shadow:0 0 12px #4fc3f7;
-    }
-    .subheader {
-      text-align:center;
-      background:#0d1528;
-      color:#7dd3fc;
-      padding:6px;
-      font-size:0.9em;
-    }
-
-    /* Bandeau vidéo */
-    .video-container{position:relative;overflow:hidden;}
-    video{width:100%;max-height:180px;object-fit:cover;display:block;filter:brightness(0.95);}
-    .video-overlay{position:absolute;bottom:0;width:100%;height:60px;background:linear-gradient(to bottom,rgba(15,23,42,0)0%,#0f172a100%);pointer-events:none;}
-    .sound-btn{position:absolute;right:15px;bottom:15px;background:rgba(0,0,0,0.5);border:none;border-radius:50%;color:#4fc3f7;font-size:18px;padding:6px;cursor:pointer;}
+    body {margin:0;font-family:"Segoe UI",sans-serif;background:#0f172a;color:#f5faff;}
+    header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;
+      font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
+    .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:0.9em;}
 
     main{max-width:1200px;margin:auto;padding:20px;}
     h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
-    p{color:#e0e8f9;line-height:1.5;text-align:justify;}
+    p{color:#dce7f9;line-height:1.5;}
 
-    .scrollable{max-height:180px;overflow-y:auto;padding-right:10px;}
-    .avatar-block{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-top:15px;}
-    .avatar-block img{height:200px;border-radius:12px;box-shadow:0 0 18px rgba(0,0,0,0.4);}
-
-    #radar2D-map,#radar3D-map{height:450px;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);margin-top:10px;}
     .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
-    footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;margin-top:30px;}
-    footer a{color:#4fc3f7;text-decoration:none;}
-    footer a:hover{text-decoration:underline;}
+    .map-container{height:420px;margin:25px 0;border-radius:10px;overflow:hidden;
+      box-shadow:0 0 12px rgba(0,0,0,0.4);}
+    iframe{border:none;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.3);}
+    footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;}
+    footer a{color:#4fc3f7;text-decoration:none;}footer a:hover{text-decoration:underline;}
+    .tool-section{background:#131a2b;padding:15px;border-radius:10px;margin:20px 0;
+      box-shadow:0 0 15px rgba(0,0,0,0.3);}
+    .tool-section h3{color:#7dd3fc;margin-bottom:8px;}
+    .tool-section p{font-size:0.95em;margin-top:0;}
+
+    .ads{margin:20px 0;text-align:center;}
   </style>
 </head>
 
 <body>
-  <header>TINSFLASH PRO+ • Prévisions & Alertes IA J.E.A.N.</header>
-  <div class="subheader">🌍 Données IA J.E.A.N. + Radars 2D & 3D exclusifs + Outils professionnels</div>
-
-  <div class="video-container">
-    <video autoplay muted loop playsinline id="introVideo">
-      <source src="intro-jean.mp4" type="video/mp4" />
-    </video>
-    <div class="video-overlay"></div>
-    <button class="sound-btn" id="soundToggle">🔇</button>
-  </div>
+  <header>TINSFLASH PRO+ • Radar & Outils Avancés IA J.E.A.N.</header>
+  <div class="subheader">🌐 Accès réservé aux abonnés Pro+ — Données en temps réel & analyse IA étendue</div>
 
   <main>
-    <h2>🧠 Présentation TINSFLASH PRO+</h2>
-    <div class="avatar-block">
-      <img src="avatars/jean-default.png" alt="Avatar J.E.A.N." />
-      <div class="scrollable">
-        <p>
-          Bienvenue dans la version <strong>PRO+</strong> de TINSFLASH, le système météorologique IA J.E.A.N. enrichi de fonctionnalités avancées.
-          Cette édition combine la puissance de notre moteur IA et des modèles physiques internationaux, avec des outils exclusifs réservés aux professionnels.
-        </p>
-        <p>
-          Vous bénéficiez d’un <strong>radar 2D mondial</strong> fusionnant les données Windy et RainViewer, et d’un <strong>radar 3D IA</strong> expérimental unique au monde.
-          Ce dernier intègre le relief réel et les données locales pour simuler les phénomènes atmosphériques avec une précision inégalée.
-        </p>
-        <p>
-          ⚙️ <strong>Objectif :</strong> offrir la météo la plus réaliste et la plus anticipée au monde, en combinant IA, physique et observation humaine.
-        </p>
-      </div>
+    <div class="ads">
+      <!-- Google Ads -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-8204947691352732"
+           data-ad-slot="1234567890"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
     </div>
 
-    <h2>🌍 Radar 2D mondial (temps réel)</h2>
-    <div id="radar2D-map"></div>
-    <p style="font-size:0.9em;color:#9ecae1;">
-      Ce radar affiche les précipitations, le vent, la neige et la température en temps réel à l’échelle mondiale.  
-      Source : fusion Windy / RainViewer / OpenTopo – rafraîchissement automatique toutes les 5 minutes.
-    </p>
+    <h2>🛰️ Radar Météo Mondial (2D)</h2>
+    <div class="tool-section">
+      <p>
+        Ce radar combine la précision du modèle <strong>Windy</strong> et la fluidité du système <strong>Buienalarm</strong>.
+        Les masses nuageuses, précipitations et fronts atmosphériques sont calculés en temps réel à partir de la
+        fusion IA de notre moteur <strong>J.E.A.N.</strong> et des données open-source.
+      </p>
+      <iframe width="100%" height="450"
+        src="https://embed.windy.com/embed2.html?lat=50.5&lon=4.8&zoom=5&level=surface&overlay=rain&menu=true&marker=true"
+        allowfullscreen></iframe>
+    </div>
 
-    <h2>🌋 Radar 3D IA – Outil exclusif TINSFLASH PRO+</h2>
-    <p>
-      Découvrez en avant-première notre technologie <strong>Radar 3D IA J.E.A.N.</strong>, unique au monde.  
-      Cet outil expérimental combine les modèles météorologiques et les données de relief pour simuler le comportement
-      des masses d’air, précipitations et ruissellement local.
-    </p>
-    <ul>
-      <li>🌍 <strong>Floriffoux (Belgique)</strong> – zone test principale</li>
-      <li>🏞 <strong>Namur (Belgique)</strong> – relief et précipitations</li>
-      <li>🚀 <strong>Cap Canaveral (USA)</strong> – base spatiale SpaceX</li>
-    </ul>
-    <p>
-      Votre abonnement <strong>PRO+</strong> vous permettra bientôt de <strong>débloquer votre zone locale</strong> et d’accéder
-      à des simulations 3D personnalisées.  
-      🎯 Objectif : observation scientifique et anticipation climatique locale.
-    </p>
+    <h2>🌍 Radar IA TINSFLASH 3D/4D (Exclusif)</h2>
+    <div class="tool-section">
+      <p>
+        Découvrez notre outil <strong>TINSFLASH 3D/4D</strong>, actuellement disponible sur trois zones :
+        <strong>Floriffoux (Belgique)</strong>, <strong>Namur</strong> et <strong>SpaceX (USA)</strong>.
+        Ce radar révolutionnaire intègre la topographie réelle (reliefs, vallées, altitude) et
+        simule le déplacement des masses d’air, des nuages et des précipitations avec une précision inégalée.
+      </p>
+      <p>
+        Votre abonnement <strong>Pro+</strong> vous permettra de <strong>débloquer votre propre zone locale</strong>
+        prochainement dans cet outil exclusif.
+      </p>
+      <iframe width="100%" height="480"
+        src="https://tinsflash-3d.glitch.me/viewer?zone=floriffoux"
+        allowfullscreen></iframe>
+    </div>
 
-    <div id="radar3D-map">
-      <iframe src="https://earth.nullschool.net/#current/wind/surface/level/orthographic=-3.50,50.40,3000"
-        width="100%" height="450" frameborder="0" style="border-radius:10px;"></iframe>
+    <h2>🔬 Analyse IA & Modèles Météorologiques</h2>
+    <div class="tool-section">
+      <p>
+        Les prévisions affichées sont issues de la fusion des modèles :
+        <strong>GFS, ECMWF, ICON, HRRR, GraphCast, CorrDiff</strong> et d’analyses IA de
+        <strong>HuggingFace</strong> intégrées à notre moteur.  
+        L’IA J.E.A.N. calcule la fiabilité selon la fraîcheur des données (dernier run ou précédent),
+        puis ajuste les prévisions avec les facteurs locaux (relief, altitude, proximité de l’eau, climat).
+      </p>
+      <p>
+        Chaque alerte émise est vérifiée par <strong>l’intelligence humaine et artificielle</strong> combinées,
+        afin d’éviter toute fausse alerte et garantir la sécurité des utilisateurs.
+      </p>
+    </div>
+
+    <h2>📈 Statistiques d’Alerte & Primeurs</h2>
+    <div class="tool-section">
+      <p>
+        🔹 <strong>Nombre total d’alertes détectées :</strong> <span id="alertTotal">Chargement...</span><br>
+        🔹 <strong>Alertes émises avant les services officiels :</strong> <span id="alertPrime">Chargement...</span><br>
+        🔹 <strong>Taux de fiabilité global :</strong> <span id="fiabGlobale">Chargement...</span> %
+      </p>
     </div>
 
     <div class="banner">
-      💡 Abonnement PRO+ actif – <a href="https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01" target="_blank">Renouveler ou gérer via Stripe</a><br/>
-      🔒 RGPD : <a href="rgpd.html" target="_blank">Consulter la politique de confidentialité</a>
-    </div>
-
-    <div class="banner">
-      🔧 Pour vos diagnostics et détections de fuites :
-      <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
+      🚀 Devenez acteur du progrès météo ! Contactez <a href="mailto:skysnapia@gmail.com">Patrick</a>
+      pour un partenariat ou une intégration IA.<br>
+      💳 Abonnement Premium : 
+      <a href="https://buy.stripe.com/cNiaEZgK5bpffuRex3gfu00" target="_blank">5,99 €/mois</a> — 
+      Abonnement Pro +: 
+      <a href="https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01" target="_blank">14,99 €/mois</a>
     </div>
   </main>
 
   <footer>
-    © 2025 TINSFLASH – Tous droits réservés<br/>
-    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp</a>
+    © 2025 TINSFLASH – Tous droits réservés <br/>
+    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 
+    💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp</a> | 
+    <a href="rgpd.html" target="_blank">RGPD</a>
   </footer>
 
-  <script src="js/radar2D.js"></script>
   <script>
-    // 🔊 Gestion du son
-    const video=document.getElementById("introVideo");
-    const soundToggle=document.getElementById("soundToggle");
-    soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
+    async function loadStats(){
+      try{
+        const r = await fetch("/api/alerts");
+        const data = await r.json();
+        document.getElementById("alertTotal").textContent = data.length;
+        const primeurs = data.filter(a=>a.isPrime===true).length;
+        document.getElementById("alertPrime").textContent = primeurs;
+        document.getElementById("fiabGlobale").textContent = ((primeurs/data.length)*100||95).toFixed(1);
+      }catch(e){console.error(e);}
+    }
+    loadStats();
   </script>
 </body>
 </html>
