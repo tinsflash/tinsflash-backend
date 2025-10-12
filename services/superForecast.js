@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (v4.4 PHYSIC-ONLY SPLIT READY)
+// 🌍 TINSFLASH – superForecast.js (v4.5 PHYSIC-STABILIZED)
 // ==========================================================
 import axios from "axios";
 import fs from "fs";
@@ -23,6 +23,14 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     );
 
   try {
+    // ==========================================
+    // 📅 Construction des paramètres dynamiques
+    // ==========================================
+    const now = new Date();
+    const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, "");
+    const hourUTC = now.getUTCHours();
+    const run = hourUTC < 6 ? "00" : hourUTC < 12 ? "06" : hourUTC < 18 ? "12" : "18";
+
     // ======================================================
     // 🌍 Liste des modèles PHYSIQUES (aucune IA)
     // ======================================================
@@ -33,13 +41,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       },
       {
         name: "ECMWF ERA5 (NASA POWER mirror)",
-        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${new Date()
-          .toISOString()
-          .slice(0, 10)
-          .replace(/-/g, "")}&end=${new Date()
-          .toISOString()
-          .slice(0, 10)
-          .replace(/-/g, "")}&format=JSON`,
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,T2M_MAX,T2M_MIN,PRECTOTCORR,WS10M&community=AG&longitude=${lon}&latitude=${lat}&start=${yyyymmdd}&end=${yyyymmdd}&format=JSON`,
       },
       {
         name: "AROME MeteoFrance",
@@ -47,33 +49,15 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       },
       {
         name: "HRRR NOAA AWS",
-        url: `https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.${new Date()
-          .toISOString()
-          .slice(0, 10)
-          .replace(/-/g, "")}/conus/hrrr.t${String(
-          new Date().getUTCHours()
-        ).padStart(2, "0")}z.wrfsfcf01.grib2`,
+        url: `https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.t${run}z.wrfsfcf00.grib2`,
       },
       {
         name: "ICON DWD EU",
-        url: `https://opendata.dwd.de/weather/nwp/icon-eu/grib/${new Date()
-          .toISOString()
-          .slice(0, 10)
-          .replace(
-            /-/g,
-            ""
-          )}/icon-eu_europe_regular-lat-lon_single-level_${String(
-          Math.floor(new Date().getUTCHours() / 6) * 6
-        ).padStart(2, "0")}00_T_2M.grib2.bz2`,
+        url: `https://opendata.dwd.de/weather/nwp/icon-eu/grib/${run}/t_2m/icon-eu_europe_regular-lat-lon_single-level_${yyyymmdd}T${run}_000_T_2M.grib2.bz2`,
       },
       {
         name: "ICON DWD GLOBAL",
-        url: `https://opendata.dwd.de/weather/nwp/icon/grib/${new Date()
-          .toISOString()
-          .slice(0, 10)
-          .replace(/-/g, "")}/icon_global_${String(
-          Math.floor(new Date().getUTCHours() / 6) * 6
-        ).padStart(2, "0")}00_T_2M.grib2.bz2`,
+        url: `https://opendata.dwd.de/weather/nwp/icon/grib/${run}/t_2m/icon_global_icosahedral_single-level_${yyyymmdd}T${run}_000_T_2M.grib2.bz2`,
       },
     ];
 
@@ -82,24 +66,14 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     // ======================================================
     for (const m of openModels) {
       try {
-        // 🌩️ HRRR – NOAA + fallback NOMADS + mirror Utah
+        // 🌩️ HRRR – fallback chain complet
         if (m.name === "HRRR NOAA AWS") {
           const tempFile = `/tmp/hrrr_${lat}_${lon}.grib2`;
-          const altUrl = `https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${new Date()
-            .toISOString()
-            .slice(0, 10)
-            .replace(/-/g, "")}/conus/hrrr.t${String(
-            new Date().getUTCHours()
-          ).padStart(2, "0")}z.wrfsfcf01.grib2`;
-          const mirrorUtah = `https://hrrr.chpc.utah.edu/HRRR/subsets/hrrr.t${String(
-            new Date().getUTCHours()
-          ).padStart(2, "0")}z.wrfsfcf01.grib2`;
+          const altUrl = `https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${yyyymmdd}/conus/hrrr.t${run}z.wrfsfcf00.grib2`;
+          const mirrorUtah = `https://hrrr.chpc.utah.edu/HRRR/subsets/hrrr.t${run}z.wrfsfcf00.grib2`;
 
           try {
-            const res = await axios.get(m.url, {
-              responseType: "arraybuffer",
-              timeout: 15000,
-            });
+            const res = await axios.get(m.url, { responseType: "arraybuffer", timeout: 15000 });
             fs.writeFileSync(tempFile, res.data);
           } catch {
             await addEngineError(`HRRR AWS indisponible → fallback NOMADS`, "superForecast");
@@ -123,7 +97,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
           logModel("🌐", m.name, tempC, 0, null, !!tempC);
         }
 
-        // 🌍 ICON – fallback Global ↔ EU
+        // 🌍 ICON – EU et GLOBAL avec fallback mutuel
         else if (m.name.includes("ICON DWD")) {
           try {
             const res = await axios.get(m.url, { responseType: "arraybuffer", timeout: 15000 });
@@ -159,11 +133,11 @@ async function mergeMultiModels(lat, lon, country = "EU") {
             {};
           push({
             source: m.name,
-            temperature: d.temperature_2m ?? d.T2M ?? null,
+            temperature: d.temperature_2m ?? d.T2M ?? d.T2M_MAX ?? null,
             precipitation: d.precipitation ?? d.PRECTOTCORR ?? 0,
             wind: d.wind_speed_10m ?? d.WS10M ?? null,
           });
-          logModel("🌐", m.name, d.temperature_2m ?? d.T2M, d.precipitation ?? d.PRECTOTCORR, d.wind_speed_10m ?? d.WS10M, true);
+          logModel("🌐", m.name, d.temperature_2m ?? d.T2M ?? d.T2M_MAX, d.precipitation ?? d.PRECTOTCORR, d.wind_speed_10m ?? d.WS10M, true);
         }
       } catch (e) {
         logModel("🌐", m.name, null, null, null, false);
