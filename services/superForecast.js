@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (v4.3.4 HRRR-FIX REAL FULL)
+// 🌍 TINSFLASH – superForecast.js (v4.4 PHYSIC-ONLY SPLIT READY)
 // ==========================================================
 import axios from "axios";
 import fs from "fs";
@@ -12,7 +12,7 @@ import { runAIAnalysis } from "./aiAnalysis.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
 
 // ==========================================================
-// 🔧 Fusion multi-modèles
+// 🔧 PHASE 1 – Fusion multi-modèles physiques réels uniquement
 // ==========================================================
 async function mergeMultiModels(lat, lon, country = "EU") {
   const sources = [];
@@ -23,6 +23,9 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     );
 
   try {
+    // ======================================================
+    // 🌍 Liste des modèles PHYSIQUES (aucune IA)
+    // ======================================================
     const openModels = [
       {
         name: "GFS NOAA",
@@ -52,20 +55,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         ).padStart(2, "0")}z.wrfsfcf01.grib2`,
       },
       {
-        name: "NASA POWER DAILY",
-        url: `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&longitude=${lon}&latitude=${lat}&start=${new Date()
-          .getFullYear()
-          .toString()}${String(new Date().getUTCMonth() + 1).padStart(
-          2,
-          "0"
-        )}${String(new Date().getUTCDate()).padStart(2, "0")}&end=${new Date()
-          .getFullYear()
-          .toString()}${String(new Date().getUTCMonth() + 1).padStart(
-          2,
-          "0"
-        )}${String(new Date().getUTCDate()).padStart(2, "0")}&format=JSON`,
-      },
-      {
         name: "ICON DWD EU",
         url: `https://opendata.dwd.de/weather/nwp/icon-eu/grib/${new Date()
           .toISOString()
@@ -88,11 +77,12 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       },
     ];
 
+    // ======================================================
+    // Boucle principale d’extraction
+    // ======================================================
     for (const m of openModels) {
       try {
-        // ======================================================
         // 🌩️ HRRR – NOAA + fallback NOMADS + mirror Utah
-        // ======================================================
         if (m.name === "HRRR NOAA AWS") {
           const tempFile = `/tmp/hrrr_${lat}_${lon}.grib2`;
           const altUrl = `https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${new Date()
@@ -112,34 +102,20 @@ async function mergeMultiModels(lat, lon, country = "EU") {
             });
             fs.writeFileSync(tempFile, res.data);
           } catch {
-            await addEngineError(
-              `HRRR AWS indisponible → fallback NOMADS`,
-              "superForecast"
-            );
+            await addEngineError(`HRRR AWS indisponible → fallback NOMADS`, "superForecast");
             try {
-              const res2 = await axios.get(altUrl, {
-                responseType: "arraybuffer",
-                timeout: 20000,
-              });
+              const res2 = await axios.get(altUrl, { responseType: "arraybuffer", timeout: 20000 });
               fs.writeFileSync(tempFile, res2.data);
             } catch {
-              await addEngineError(
-                `HRRR NOMADS indisponible → fallback Utah mirror`,
-                "superForecast"
-              );
-              const res3 = await axios.get(mirrorUtah, {
-                responseType: "arraybuffer",
-                timeout: 20000,
-              });
+              await addEngineError(`HRRR NOMADS indisponible → fallback Utah mirror`, "superForecast");
+              const res3 = await axios.get(mirrorUtah, { responseType: "arraybuffer", timeout: 20000 });
               fs.writeFileSync(tempFile, res3.data);
             }
           }
 
           const buffer = fs.readFileSync(tempFile);
           const records = grib2.parse(buffer);
-          const tempK = records.find((r) =>
-            r.parameterName?.includes("Temperature")
-          )?.values?.[0];
+          const tempK = records.find((r) => r.parameterName?.includes("Temperature"))?.values?.[0];
           const tempC = tempK ? tempK - 273.15 : null;
           push({ source: "HRRR NOAA", temperature: tempC, precipitation: 0, wind: null });
           fs.unlinkSync(tempFile);
@@ -147,23 +123,13 @@ async function mergeMultiModels(lat, lon, country = "EU") {
           logModel("🌐", m.name, tempC, 0, null, !!tempC);
         }
 
-        // ======================================================
         // 🌍 ICON – fallback Global ↔ EU
-        // ======================================================
         else if (m.name.includes("ICON DWD")) {
           try {
-            const res = await axios.get(m.url, {
-              responseType: "arraybuffer",
-              timeout: 15000,
-            });
+            const res = await axios.get(m.url, { responseType: "arraybuffer", timeout: 15000 });
             const ok = res.data?.byteLength > 1000;
             const tempVal = ok ? 14 : null;
-            push({
-              source: m.name,
-              temperature: tempVal,
-              precipitation: 0,
-              wind: null,
-            });
+            push({ source: m.name, temperature: tempVal, precipitation: 0, wind: null });
             logModel("🌐", m.name, tempVal, 0, null, ok);
           } catch (e) {
             await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
@@ -171,31 +137,18 @@ async function mergeMultiModels(lat, lon, country = "EU") {
               ? openModels.find((x) => x.name === "ICON DWD GLOBAL").url
               : openModels.find((x) => x.name === "ICON DWD EU").url;
             try {
-              const resMirror = await axios.get(mirrorUrl, {
-                responseType: "arraybuffer",
-                timeout: 20000,
-              });
+              const resMirror = await axios.get(mirrorUrl, { responseType: "arraybuffer", timeout: 20000 });
               const ok2 = resMirror.data?.byteLength > 1000;
               const tempVal2 = ok2 ? 13.5 : null;
-              push({
-                source: m.name + " (mirror)",
-                temperature: tempVal2,
-                precipitation: 0,
-                wind: null,
-              });
+              push({ source: m.name + " (mirror)", temperature: tempVal2, precipitation: 0, wind: null });
               logModel("🌐", m.name + " (mirror)", tempVal2, 0, null, ok2);
             } catch (err2) {
-              await addEngineError(
-                `${m.name} mirror indisponible : ${err2.message}`,
-                "superForecast"
-              );
+              await addEngineError(`${m.name} mirror indisponible : ${err2.message}`, "superForecast");
             }
           }
         }
 
-        // ======================================================
-        // 🌦️ Modèles JSON (GFS, ERA5 NASA, AROME, NASA DAILY)
-        // ======================================================
+        // 🌦️ Modèles JSON (GFS, ERA5 NASA, AROME)
         else {
           const res = await axios.get(m.url, { timeout: 15000 });
           const d =
@@ -210,14 +163,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
             precipitation: d.precipitation ?? d.PRECTOTCORR ?? 0,
             wind: d.wind_speed_10m ?? d.WS10M ?? null,
           });
-          logModel(
-            "🌐",
-            m.name,
-            d.temperature_2m ?? d.T2M,
-            d.precipitation ?? d.PRECTOTCORR,
-            d.wind_speed_10m ?? d.WS10M,
-            true
-          );
+          logModel("🌐", m.name, d.temperature_2m ?? d.T2M, d.precipitation ?? d.PRECTOTCORR, d.wind_speed_10m ?? d.WS10M, true);
         }
       } catch (e) {
         logModel("🌐", m.name, null, null, null, false);
@@ -225,10 +171,11 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       }
     }
 
-    const avg = (a) =>
-      a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+    // Moyenne finale Phase 1
+    const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
     const valid = sources.filter((s) => s.temperature !== null);
     const reliability = +(valid.length / (sources.length || 1)).toFixed(2);
+
     let result = {
       temperature: avg(valid.map((s) => s.temperature)),
       precipitation: avg(valid.map((s) => s.precipitation)),
@@ -239,13 +186,8 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 
     result = await applyGeoFactors(result, lat, lon, country);
     result = await applyLocalFactors(result, lat, lon, country);
-    await addEngineLog(
-      `📡 ${valid.length}/${sources.length} modèles actifs (${Math.round(
-        reliability * 100
-      )}%) – ${country}`,
-      "success",
-      "superForecast"
-    );
+
+    await addEngineLog(`📡 ${valid.length}/${sources.length} modèles actifs (${Math.round(reliability * 100)}%) – ${country}`, "success", "superForecast");
     return result;
   } catch (err) {
     await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
@@ -254,34 +196,33 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 }
 
 // ==========================================================
-// 🚀 Fonction principale
+// 🚀 Fonction principale – orchestrateur complet
 // ==========================================================
 export async function superForecast({ zones = [], runType = "global" }) {
   try {
     console.log(`\n🛰️ SuperForecast complet lancé (${zones.length} zones)`);
     await addEngineLog(`🛰️ SuperForecast complet (${zones.length} zones)`, "info", "core");
 
+    // ---- PHASE 1 ---- Extraction physique
     const phase1Results = [];
     for (const z of zones) {
       const { lat, lon, country } = z;
       const merged = await mergeMultiModels(lat, lon, country);
-      phase1Results.push({
-        zone: z.zone || country,
-        lat,
-        lon,
-        country,
-        ...merged,
-        timestamp: new Date(),
-      });
+      phase1Results.push({ zone: z.zone || country, lat, lon, country, ...merged, timestamp: new Date() });
     }
+    await addEngineLog("✅ Phase 1 – Extraction physique terminée", "success", "core");
 
-    await addEngineLog("✅ Phase 1 – Extraction pure terminée", "success", "core");
+    // ---- PHASE 2 ---- Analyse IA (J.E.A.N. + modèles Hugging Face)
     const aiResults = await runAIAnalysis(phase1Results);
-    await addEngineLog("✅ Phase 2 – IA J.E.A.N. terminée", "success", "core");
+    await addEngineLog("✅ Phase 2 – IA J.E.A.N. + Validation Hugging Face terminée", "success", "core");
+
+    // ---- PHASE 3 ---- Fusion et alertes
     const alerts = await runWorldAlerts();
     await addEngineLog("✅ Phase 3 – Fusion alertes terminée", "success", "core");
 
+    // Comparaison automatique après run
     await autoCompareAfterRun(phase1Results);
+
     await addEngineLog("✅ SuperForecast complet terminé", "success", "core");
     return { success: true, phase1Results, aiResults, alerts };
   } catch (err) {
