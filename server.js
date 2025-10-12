@@ -1,8 +1,8 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.19 PRO+++)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.20 PRO+++ REAL FULL CONNECT)
 // ==========================================================
 // Moteur global IA J.E.A.N – 100 % réel, 100 % connecté
-// Compatible Render / MongoDB / GitHub Actions / Admin Console
+// Compatible Render / MongoDB / HuggingFace / Admin Console
 // ==========================================================
 
 import express from "express";
@@ -33,8 +33,8 @@ import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
 import { generateForecast } from "./services/forecastService.js";
-import { getNews } from "./services/newsService.js";   // ✅ actualités météo mondiales
-import { checkAIHealth } from "./services/aiHealth.js"; // ✅ contrôle IA J.E.A.N
+import { getNews } from "./services/newsService.js";
+import { checkAIHealth } from "./services/aiHealth.js"; // ✅ IA réelle HuggingFace
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -84,7 +84,7 @@ app.post("/api/run-global", async (req, res) => {
 });
 
 // ==========================================================
-// 🧠 Phase 2 – Analyse IA J.E.A.N.
+// 🧠 Phase 2 – Analyse IA J.E.A.N. (fusion interne + IA externes)
 // ==========================================================
 app.post("/api/ai-analyse", async (_, res) => {
   try {
@@ -98,7 +98,7 @@ app.post("/api/ai-analyse", async (_, res) => {
 });
 
 // ==========================================================
-// 🌐 Phase 3 – Alertes mondiales
+// 🌐 Phase 3 – Fusion & diffusion des alertes mondiales
 // ==========================================================
 app.post("/api/runWorldAlerts", async (_, res) => {
   try {
@@ -112,7 +112,7 @@ app.post("/api/runWorldAlerts", async (_, res) => {
 });
 
 // ==========================================================
-// 🌤️ Forecast & Alerts publiques
+// 🌤️ Forecast & Alerts publiques (API grand public)
 // ==========================================================
 app.get("/api/forecast", async (req, res) => {
   try {
@@ -140,7 +140,7 @@ app.get("/api/alerts", async (_, res) => {
 // ==========================================================
 app.get("/api/news", async (_, res) => {
   try {
-    const data = await getNews(10, "fr"); // 🌍 10 dernières actus météo
+    const data = await getNews(10, "fr");
     res.json(data);
   } catch (e) {
     await addEngineError("Erreur /api/news: " + e.message, "news");
@@ -149,20 +149,20 @@ app.get("/api/news", async (_, res) => {
 });
 
 // ==========================================================
-// 🧠 Vérification santé IA J.E.A.N.
+// 🧠 Vérification santé IA J.E.A.N. (Phase 2 réelle HuggingFace)
 // ==========================================================
 app.get("/api/ai-health", async (_, res) => {
   try {
     const result = await checkAIHealth();
     res.json(result);
   } catch (e) {
-    await addEngineError("Erreur /api/ai-health: " + e.message, "aiHealth");
+    await addEngineError("Erreur /api/ai-health: " + e.message, "IA.HEALTH");
     res.status(500).json({ status: "error", message: e.message });
   }
 });
 
 // ==========================================================
-// 🧠 Statut moteur IA – /api/status
+// 🧭 Statut moteur IA – /api/status
 // ==========================================================
 app.get("/api/status", async (_, res) => {
   try {
@@ -173,7 +173,7 @@ app.get("/api/status", async (_, res) => {
       errors: s?.errors || [],
       coveredZones: enumerateCoveredPoints(),
       db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      uptime: process.uptime()
+      uptime: process.uptime(),
     });
   } catch (e) {
     await addEngineError("Erreur /api/status: " + e.message, "core");
@@ -182,7 +182,7 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 💬 Chat technique IA J.E.A.N.
+// 💬 Chat technique IA J.E.A.N. (GPT-4o-mini)
 // ==========================================================
 app.post("/api/chat-tech", async (req, res) => {
   try {
@@ -192,7 +192,7 @@ app.post("/api/chat-tech", async (req, res) => {
     if (/status|moteur/i.test(message))
       reply = `🧠 Moteur : ${s?.status || "inconnu"} | Dernier run : ${s?.lastRun || "aucun"}`;
     else if (/sources|modèles/i.test(message))
-      reply = "📡 Sources actives : GFS, ECMWF, ICON, HRRR, AROME, GraphCast, CorrDiff, AIFS.";
+      reply = "📡 Sources actives : GFS, ECMWF, ICON, HRRR, AROME, GraphCast, CorrDiff, NowcastNet, Pangu.";
     res.json({ reply });
   } catch (e) {
     res.json({ reply: "Erreur chat-tech : " + e.message });
