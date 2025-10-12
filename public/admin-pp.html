@@ -8,23 +8,28 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body{margin:0;background:#0a1222;color:#e6f6ff;font-family:"Segoe UI",sans-serif;}
-header{background:#061020;text-align:center;padding:12px;color:#4fc3f7;font-size:1.4em;
-text-shadow:0 0 8px #4fc3f7;}
-.container{max-width:1400px;margin:auto;padding:15px;}
-h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;}
-button{background:#13233d;color:#4fc3f7;border:1px solid #4fc3f7;
-padding:10px;margin:4px;border-radius:8px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;}
+body{margin:0;background:#020b17;color:#e8f6ff;font-family:"Segoe UI",sans-serif;}
+header{background:#001027;text-align:center;padding:14px;color:#4fc3f7;
+font-size:1.5em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;}
+.container{max-width:1500px;margin:auto;padding:16px;}
+h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;}
+button{background:#071d34;color:#4fc3f7;border:1px solid #4fc3f7;
+padding:10px;margin:6px;border-radius:10px;font-weight:bold;cursor:pointer;
+display:flex;align-items:center;gap:6px;justify-content:center;transition:.2s;}
 button:hover{background:#4fc3f7;color:#000;}
 .btn-active{background:#22c55e;color:#000!important;animation:blink 1s infinite alternate;}
 @keyframes blink{from{opacity:1;}to{opacity:.5;}}
-.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
 .light{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;}
-.ok{background:#00ff88;} .warn{background:#ffaa00;} .err{background:#ff4444;} .idle{background:#666;}
+.ok{background:#00ff88;box-shadow:0 0 8px #00ff88;}
+.warn{background:#ffaa00;box-shadow:0 0 8px #ffaa00;}
+.err{background:#ff4444;box-shadow:0 0 8px #ff4444;}
+.idle{background:#555;}
 .map{height:280px;margin-top:10px;border-radius:10px;overflow:hidden;}
-.logs{background:#0e1729;border-radius:10px;padding:10px;height:320px;overflow-y:auto;
-font-family:monospace;font-size:13px;white-space:pre-wrap;}
-.logo-btn img{height:20px;vertical-align:middle;}
+.logs{background:#081527;border-radius:10px;padding:10px;height:340px;overflow-y:auto;
+font-family:monospace;font-size:13px;white-space:pre-wrap;border:1px solid #093c60;}
+.shell{color:#4fc3f7;font-size:12px;margin-top:2px;font-family:monospace;opacity:0.7;}
+footer{margin-top:30px;text-align:center;font-size:13px;color:#555;}
 </style>
 </head>
 <body>
@@ -37,43 +42,74 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 }
 </script>
 
-<header>🛰️ CONSOLE IA J.E.A.N – SUPERVISION TINSFLASH PRO+++</header>
+<header>🛰️ CONSOLE IA J.E.A.N – COCKPIT TINSFLASH PRO+++</header>
 
 <div class="container">
 
 <h2>⚙️ Extraction – Zones couvertes</h2>
 <div class="status-grid">
-  <button onclick="run('europe')">🇪🇺 Europe</button>
-  <button onclick="run('usa')">🇺🇸 USA / 🇨🇦 Canada</button>
-  <button onclick="run('afrique')">🌍 Afrique</button>
-  <button onclick="run('asie')">🌏 Asie</button>
-  <button onclick="run('oceanie')">🌊 Océanie</button>
-  <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
-  <button class="logo-btn" onclick="run('belgique')"><img src="belgique.png" alt="Belgique"/> 🇧🇪 Belgique</button>
-  <button class="logo-btn" onclick="run('bouke')"><img src="bouke.png" alt="Bouké"/> 📺 Bouké (Namur)</button>
+  <div>
+    <button onclick="run('global-europe')">🇪🇺 Europe</button>
+    <div class="shell">curl -X POST /api/run-global-europe</div>
+  </div>
+  <div>
+    <button onclick="run('global-usa')">🇺🇸 USA / 🇨🇦 Canada</button>
+    <div class="shell">curl -X POST /api/run-global-usa</div>
+  </div>
+  <div>
+    <button onclick="run('afrique')">🌍 Afrique</button>
+    <div class="shell">curl -X POST /api/run-afrique</div>
+  </div>
+  <div>
+    <button onclick="run('asie')">🌏 Asie</button>
+    <div class="shell">curl -X POST /api/run-asie</div>
+  </div>
+  <div>
+    <button onclick="run('oceanie')">🌊 Océanie</button>
+    <div class="shell">curl -X POST /api/run-oceanie</div>
+  </div>
+  <div>
+    <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
+    <div class="shell">curl -X POST /api/run-ameriquesud</div>
+  </div>
+  <div>
+    <button onclick="run('belgique')">🇧🇪 Belgique</button>
+    <div class="shell">curl -X POST /api/run-belgique</div>
+  </div>
+  <div>
+    <button onclick="run('bouke')">📺 Bouké (Namur)</button>
+    <div class="shell">curl -X POST /api/run-bouke</div>
+  </div>
 </div>
 
 <h2>🧠 IA & Alertes</h2>
 <div class="status-grid">
-  <button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button>
-  <button onclick="runAlerts()">🚨 Fusion alertes</button>
+  <div>
+    <button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button>
+    <div class="shell">curl -X POST /api/runAI</div>
+  </div>
+  <div>
+    <button onclick="runAlerts()">🚨 Fusion alertes</button>
+    <div class="shell">curl -X POST /api/runWorldAlerts</div>
+  </div>
 </div>
 
 <h2>📊 État du moteur</h2>
-<div id="status">
-  <div><span class="light idle" id="lightEngine"></span>Moteur</div>
+<div id="status" class="status-grid">
+  <div><span class="light idle" id="lightEngine"></span>Moteur principal</div>
   <div><span class="light idle" id="lightIA"></span>IA J.E.A.N.</div>
   <div><span class="light idle" id="lightAlerts"></span>Alertes</div>
   <div><span class="light idle" id="lightDB"></span>MongoDB</div>
 </div>
 
-<h2>🌍 Cartes</h2>
+<h2>🌍 Cartes – Prévisions & Alertes</h2>
 <div id="mapForecast" class="map"></div>
 <div id="mapAlerts" class="map"></div>
 
 <h2>📜 Logs en direct</h2>
 <div id="logs" class="logs">Connexion en cours...</div>
 
+<footer>© 2025 – Centrale Météo IA TINSFLASH PRO+++ • Moteur J.E.A.N.</footer>
 </div>
 
 <script>
@@ -82,7 +118,6 @@ function addLog(msg){
  const line=`${new Date().toLocaleTimeString()} ${msg}`;
  logs.textContent+="\n"+line;
  logs.scrollTop=logs.scrollHeight;
- console.log(line);
 }
 
 // ======================================================
@@ -96,9 +131,17 @@ async function run(zone){
  try{
    const res=await fetch(`/api/run-${zone}`,{method:"POST"});
    const j=await res.json();
-   if(j.success)addLog(`✅ Run ${zone} terminé`);
-   else addLog(`⚠️ Erreur ${zone}: ${j.error}`);
- }catch(e){addLog(`❌ Crash ${zone}: ${e.message}`);}
+   if(j.success){
+     addLog(`✅ Run ${zone} terminé`);
+     setLight("lightEngine","ok");
+   } else {
+     addLog(`⚠️ Erreur ${zone}: ${j.error}`);
+     setLight("lightEngine","warn");
+   }
+ }catch(e){
+   addLog(`❌ Crash ${zone}: ${e.message}`);
+   setLight("lightEngine","err");
+ }
  event.target.classList.remove("btn-active");
  updateStatus();
 }
@@ -126,12 +169,14 @@ async function runAlerts(){
 // ======================================================
 const evt=new EventSource("/api/logs");
 evt.onmessage=e=>{
- const log=JSON.parse(e.data);
- addLog(log.message);
+ try{
+   const log=JSON.parse(e.data);
+   addLog(log.message||e.data);
+ }catch{addLog(e.data);}
 };
 
 // ======================================================
-// ⚙️ STATUS
+// ⚙️ STATUS (voyants)
 // ======================================================
 async function updateStatus(){
  try{
@@ -150,21 +195,20 @@ function setLight(id,state){
 setInterval(updateStatus,15000);updateStatus();
 
 // ======================================================
-// 🌍 CARTES LEAFLET
+// 🌍 CARTES LEAFLET (prévisions & alertes)
 // ======================================================
 const mapF=L.map("mapForecast").setView([50,4],4);
 const mapA=L.map("mapAlerts").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
 
-// Points prévisions
 async function loadForecasts(){
  try{
    const r=await fetch("/api/forecast?lat=50&lon=4");
    const d=await r.json();
    L.marker([d.lat||50,d.lon||4])
      .addTo(mapF)
-     .bindPopup(`Temp: ${d.temp||'--'}°C<br>${d.condition||''}`);
+     .bindPopup(`Température : ${d.temp||'--'}°C<br>${d.condition||''}`);
  }catch(e){addLog("⚠️ Erreur loadForecasts: "+e.message);}
 }
 async function loadAlerts(){
