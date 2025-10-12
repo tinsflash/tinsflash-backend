@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TINSFLASH • Inscription</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #f5faff;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    .box {
+      background: #1b2339;
+      padding: 25px 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(79,195,247,0.3);
+      width: 320px;
+      text-align: center;
+    }
+    h1 {
+      color: #4fc3f7;
+      margin-bottom: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      margin: 8px 0;
+      background: #15294d;
+      color: #fff;
+    }
+    button {
+      background: #4fc3f7;
+      color: #000;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+    }
+    button:hover { background: #7dd3fc; }
+    a {
+      color: #4fc3f7;
+      text-decoration: none;
+      font-size: 0.9em;
+    }
+    a:hover { text-decoration: underline; }
+    .msg { margin-top: 10px; color: #7dd3fc; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Créer un compte</h1>
+    <input type="text" id="name" placeholder="Nom / Prénom" />
+    <input type="email" id="email" placeholder="Adresse e-mail" />
+    <input type="password" id="password" placeholder="Mot de passe" />
+    <input type="text" id="country" placeholder="Pays" />
+    <button onclick="register()">S'inscrire</button>
+    <div class="msg" id="msg"></div>
+    <p><a href="login.html">Déjà inscrit ? Se connecter</a></p>
+  </div>
+
+  <script>
+    async function register() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const country = document.getElementById("country").value.trim();
+      const msg = document.getElementById("msg");
+
+      msg.textContent = "Création du compte...";
+      try {
+        const r = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, name, country }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "Erreur inconnue");
+
+        msg.textContent = "✅ Compte créé avec succès !";
+        setTimeout(() => (window.location = "login.html"), 1000);
+      } catch (e) {
+        msg.textContent = "❌ " + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
