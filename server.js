@@ -193,8 +193,8 @@ const safeRun = (fn, label) => async (req, res) => {
 
 // 🌍 Zones principales
 app.post("/api/run-global", safeRun(() => runGlobal("All"), "Global"));
-app.post("/api/run-europe", safeRun(runEurope, "Europe"));
-app.post("/api/run-usa", safeRun(runUSA, "USA/Canada"));
+app.post("/api/run-europe", safeRun(runGlobalEurope, "Europe"));
+app.post("/api/run-usa", safeRun(runGlobalUSA, "USA/Canada"));
 app.post("/api/run-afrique", safeRun(runAfrique, "Afrique"));
 app.post("/api/run-asie", safeRun(runAsie, "Asie"));
 app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie"));
