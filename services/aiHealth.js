@@ -1,67 +1,63 @@
 // ==========================================================
-// 🧠 IA HEALTH CHECK – Extension mémoire (Everest Protocol v3.19)
-// Vérifie IA, Mongo, latence et cohérence de la mémoire J.E.A.N.
+// 🧠 TINSFLASH – services/aiHealth.js (v4.4 REAL FULL CONNECT)
 // ==========================================================
-
-import mongoose from "mongoose";
+// Vérifie en temps réel la santé et la latence des modèles IA
+// Hugging Face utilisés pour la phase 2 (GraphCast, Pangu, CorrDiff, NowcastNet)
+// ==========================================================
 import axios from "axios";
-import { performance } from "perf_hooks";
-import { getEngineState } from "./engineState.js";
-import fs from "fs";
+import { addEngineLog, addEngineError } from "./engineState.js";
 
-const MEMORY_FILE = "./engine_memory_fingerprint.txt";
-
-export async function checkAIHealth() {
-  const start = performance.now();
-  let latencyMs = 0;
-  let db = "disconnected";
-  let status = "error";
-  let message = "";
-  let memoryOk = false;
-
+// Fonction générique pour ping un modèle HuggingFace
+async function pingModel(modelId) {
+  const start = Date.now();
+  const apiKey = process.env.HF_TOKEN || "";
+  const url = `https://api-inference.huggingface.co/models/${modelId}`;
   try {
-    // === Vérif Mongo ===
-    db = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
-
-    // === Vérif réseau (ping Open-Meteo) ===
-    await axios.get("https://api.open-meteo.com/v1/gfs?latitude=0&longitude=0&current=temperature_2m", { timeout: 3000 });
-    latencyMs = Math.round(performance.now() - start);
-
-    // === Vérif moteur ===
-    const s = await getEngineState();
-    const lastRun = s?.lastRun || null;
-    const engineStatus = s?.status || "idle";
-
-    // === Vérif cohérence mémoire IA ===
-    try {
-      const currentFingerprint = "JEAN_CORE_V519";
-      const saved = fs.existsSync(MEMORY_FILE) ? fs.readFileSync(MEMORY_FILE, "utf8") : "";
-      if (saved === currentFingerprint) memoryOk = true;
-      else {
-        fs.writeFileSync(MEMORY_FILE, currentFingerprint);
-        memoryOk = false; // nouvel enregistrement = perte de continuité
+    const res = await axios.post(
+      url,
+      { inputs: "ping" },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "User-Agent": "TINSFLASH-PRO+++",
+        },
+        timeout: 8000,
       }
-    } catch (err) {
-      memoryOk = false;
-    }
+    );
+    const latency = (Date.now() - start) / 1000;
+    const ok = res.status === 200;
+    return { status: ok ? "online" : "offline", latency };
+  } catch (e) {
+    const latency = (Date.now() - start) / 1000;
+    return { status: "offline", latency };
+  }
+}
 
-    // === Analyse ===
-    if (db === "connected" && latencyMs < 800 && engineStatus !== "error" && memoryOk) {
-      status = "ok";
-      message = "IA J.E.A.N. opérationnelle et mémoire stable";
-    } else if (!memoryOk) {
-      status = "warning";
-      message = "IA J.E.A.N. a subi une coupure mémoire (redémarrage récent)";
-    } else if (db === "connected" && latencyMs < 2000) {
-      status = "warning";
-      message = "IA J.E.A.N. en attente de stabilisation réseau";
-    } else {
-      status = "error";
-      message = "Instabilité IA ou moteur inactif";
-    }
+// ==========================================================
+// ✅ Vérification complète des IA externes
+// ==========================================================
+export async function checkAIHealth() {
+  try {
+    const [graphcast, pangu, corrdiff, nowcastnet] = await Promise.all([
+      pingModel("openclimatefix/graphcast"),
+      pingModel("HuggingFaceMeteo/pangu-weather"),
+      pingModel("openclimatefix/corrdiff"),
+      pingModel("deepmind/nowcastnet"),
+    ]);
 
-    return { status, message, latencyMs, db, memoryOk, lastRun };
+    const models = { graphcast, pangu, corrdiff, nowcastnet };
+    const online = Object.values(models).filter((m) => m.status === "online").length;
+    const status = online >= 3 ? "ok" : online >= 1 ? "warning" : "error";
+
+    await addEngineLog(
+      `🧠 IA Health – ${online}/4 modèles actifs (${status})`,
+      "info",
+      "IA.HEALTH"
+    );
+
+    return { status, ...models };
   } catch (err) {
-    return { status: "error", message: err.message || "Erreur interne IA Health Check", latencyMs, db, memoryOk: false };
+    await addEngineError("Erreur checkAIHealth: " + err.message, "IA.HEALTH");
+    return { status: "error", error: err.message };
   }
 }
