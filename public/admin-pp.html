@@ -10,7 +10,7 @@
 <style>
 body{margin:0;background:#0b1220;color:#e6f6ff;font-family:"Segoe UI",sans-serif;}
 header{background:#08121d;color:#4fc3f7;text-align:center;padding:10px;font-size:1.4em;text-shadow:0 0 10px #4fc3f7;}
-nav{display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624;}
+nav{display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624;flex-wrap:wrap;}
 nav a{color:#7dd3fc;text-decoration:none;font-weight:bold;}
 nav a:hover{color:#fff;text-shadow:0 0 10px #4fc3f7;}
 .container{max-width:1250px;margin:auto;padding:15px;}
@@ -58,6 +58,7 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <a href="/admin-chat.html">Chat</a>
 <a href="/admin-radar.html">Radar</a>
 <a href="/admin-index.html">Index</a>
+<a href="/protest.html">🧪 Zone Test PRO+</a> <!-- ✅ Ajout du lien -->
 </nav>
 
 <div class="container">
@@ -79,7 +80,6 @@ if(!sessionStorage.getItem("tinsflashPIN")){
   <div class="status-box"><span id="aiLight" class="status-light blue"></span>IA J.E.A.N : <b id="aiStatus">Vérification...</b></div>
 </div>
 
-<!-- 📅 Nouvelle section : Fraîcheur globale -->
 <h2>📅 Fraîcheur globale</h2>
 <div class="status-grid">
   <div class="status-box"><span id="freshLight" class="status-light"></span>
