@@ -1,83 +1,57 @@
 // ==========================================================
-// 🤖 TINSFLASH – aiModelsChecker.js (v1.0 REAL CONNECTED)
+// 🌐 TINSFLASH – aiModelsChecker.js (v4.1 REAL CONNECT HF API)
 // ==========================================================
-// ✅ Rôle : interroger les IA météo externes (Hugging Face / APIs internes)
-// ✅ Fournit : statut, latence, et données météo estimées (T, P, V)
+// Utilise l'API Inference de Hugging Face avec ta clé (HF_API_KEY ou HF_TOKEN)
+// pour contacter directement les 4 modèles IA TINSFLASH hébergés sur Hugging Face.
 // ==========================================================
 
 import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
 
-// ==========================================================
-// 🔗 Points d'accès IA (ajuster si tes API privées changent)
-// ==========================================================
-const IA_ENDPOINTS = {
-  graphcast: process.env.GRAPHCAST_API || "https://api-inference.huggingface.co/models/deepmind/graphcast",
-  pangu: process.env.PANGU_API || "https://api-inference.huggingface.co/models/huawei-noah/pangu-weather",
-  corrdiff: process.env.CORRDIFF_API || "https://api-inference.huggingface.co/models/nvidia/corrdiff",
-  nowcastnet: process.env.NOWCASTNET_API || "https://api-inference.huggingface.co/models/microsoft/NowcastNet"
+// On récupère la clé Hugging Face depuis Render (.env)
+const HF_KEY = process.env.HF_API_KEY || process.env.HF_TOKEN || "";
+const headers = HF_KEY ? { Authorization: `Bearer ${HF_KEY}` } : {};
+
+// Modèles IA hébergés sur ton compte Hugging Face
+const MODELS = {
+  graphcast: "pynnaertpat/GraphCast-TINSFLASH",
+  pangu: "pynnaertpat/Pangu-TINSFLASH",
+  corrdiff: "pynnaertpat/CorrDiff-TINSFLASH",
+  nowcastnet: "pynnaertpat/NowcastNet-TINSFLASH",
 };
 
-// ==========================================================
-// 🚀 Fonction principale – Ping + Extraction IA
-// ==========================================================
+// Fonction interne qui appelle un modèle via l’API Hugging Face
+async function callModel(model, payload) {
+  const url = `https://api-inference.huggingface.co/models/${model}`;
+  const res = await axios.post(url, payload, { headers, timeout: 20000 });
+  return res.data;
+}
+
+// Fonction principale : vérifie les IA et renvoie leurs résultats
 export async function checkAIModels(lat, lon) {
   const results = {};
-  for (const [name, url] of Object.entries(IA_ENDPOINTS)) {
-    const start = Date.now();
+  let aiFusion = { reliability: 0 };
+
+  for (const [name, model] of Object.entries(MODELS)) {
     try {
-      const res = await axios.post(
-        url,
-        { latitude: lat, longitude: lon },
-        {
-          headers: {
-            Authorization: process.env.HF_TOKEN ? `Bearer ${process.env.HF_TOKEN}` : undefined,
-            "Content-Type": "application/json"
-          },
-          timeout: 15000
-        }
-      );
-
-      const elapsed = ((Date.now() - start) / 1000).toFixed(2);
-      const d = res.data || {};
-
-      results[name] = {
-        status: "online",
-        latency: parseFloat(elapsed),
-        temperature: d.temperature ?? d.temperature_2m ?? null,
-        precipitation: d.precipitation ?? d.total_precipitation ?? 0,
-        wind: d.wind ?? d.wind_10m ?? null
-      };
-
-      await addEngineLog(`🤖 ${name.toUpperCase()} online (${elapsed}s) – T:${results[name].temperature ?? "?"}`, "info", "aiModels");
-    } catch (e) {
-      const elapsed = ((Date.now() - start) / 1000).toFixed(2);
-      results[name] = {
-        status: "offline",
-        latency: parseFloat(elapsed),
-        temperature: null,
-        precipitation: null,
-        wind: null
-      };
-      await addEngineError(`IA ${name.toUpperCase()} injoignable : ${e.message}`, "aiModels");
+      const data = await callModel(model, { lat, lon });
+      results[name] = data;
+      await addEngineLog(`🤖 ${name} OK via HF API`, "info", "aiModelsChecker");
+    } catch (err) {
+      const code = err?.response?.status ?? "no-response";
+      results[name] = { error: `HTTP ${code}`, detail: err.message };
+      await addEngineError(`IA ${name} injoignable (HTTP ${code})`, "aiModelsChecker");
     }
   }
 
-  // Fusion IA → moyenne simple pour pondération J.E.A.N.
-  const valid = Object.values(results).filter((m) => m.status === "online" && m.temperature !== null);
-  const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
-  const aiFusion = {
-    temperature: avg(valid.map((m) => m.temperature)),
-    precipitation: avg(valid.map((m) => m.precipitation)),
-    wind: avg(valid.map((m) => m.wind)),
-    reliability: +(valid.length / Object.keys(results).length).toFixed(2)
-  };
-
-  await addEngineLog(
-    `🧠 Fusion IA externe → T:${aiFusion.temperature ?? "?"}°C | P:${aiFusion.precipitation ?? "?"}mm | V:${aiFusion.wind ?? "?"} km/h | R:${Math.round(aiFusion.reliability * 100)}%`,
-    "success",
-    "aiModels"
+  // Fusion simple : moyenne des températures si disponibles
+  const valid = Object.values(results).filter(
+    (r) => !r.error && typeof r?.temperature === "number"
   );
+  if (valid.length) {
+    const avgT = valid.reduce((s, r) => s + r.temperature, 0) / valid.length;
+    aiFusion = { reliability: valid.length / 4, temperature: avgT };
+  }
 
   return { results, aiFusion };
 }
