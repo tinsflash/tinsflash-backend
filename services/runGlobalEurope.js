@@ -1,11 +1,22 @@
-/// PATH: services/runGlobalEurope.js
-// 🇪🇺 Europe – Extraction météo TINSFLASH PRO+++
-// Version : Everest Protocol v3.6 – 100 % réel & connecté
+// ==========================================================
+// 🇪🇺 TINSFLASH – runGlobalEurope.js (Everest Protocol v4.0 PRO+++ REAL CONNECT)
+// ==========================================================
 
-import { addEngineLog, addEngineError, saveEngineState } from "./engineState.js";
+import fs from "fs";
+import path from "path";
+import { superForecast } from "./superForecast.js";
+import {
+  addEngineLog,
+  addEngineError,
+  updateEngineState,
+  setLastExtraction,
+} from "./engineState.js";
 
-// ===========================
-// Zones détaillées par pays
+export async function runGlobalEurope() {
+  try {
+    await addEngineLog("🇪🇺 Démarrage runGlobalEurope", "info", "runGlobalEurope");// ===========================
+
+    // Zones détaillées par pays
 // ===========================
 export const EUROPE_ZONES = {
   Belgium: [
@@ -250,29 +261,33 @@ export const EUROPE_ZONES = {
 // ===========================
 // 🧠 Extraction Europe
 // ===========================
-export async function runGlobalEurope() {
-  try {
-    await addEngineLog("🇪🇺 Démarrage extraction Europe", "info", "Europe");
+   const result = await superForecast({ zones, runType: "Europe", withAI: false });
 
-    const allPoints = [];
-    for (const [country, zones] of Object.entries(EUROPE_ZONES)) {
-      for (const z of zones) {
-        allPoints.push({
-          country,
-          region: z.region,
-          lat: z.lat,
-          lon: z.lon,
-          forecast: "Pending",
-          timestamp: new Date(),
-        });
-      }
-    }
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const filePath = path.join(dataDir, "europe.json");
+    fs.writeFileSync(filePath, JSON.stringify(result.phase1Results || result, null, 2), "utf8");
 
-    await saveEngineState({ lastRunEurope: new Date(), checkup: { Europe: "ok" } });
-    await addEngineLog(`✅ Extraction Europe terminée (${allPoints.length} zones)`, "success", "Europe");
-    return { success: true, zones: allPoints };
+    await setLastExtraction({
+      id: `europe-${Date.now()}`,
+      zones: ["europe"],
+      files: [filePath],
+      status: "done",
+    });
+
+    await updateEngineState("ok", {
+      engineStatus: "RUN_OK",
+      lastFilter: "Europe",
+      zonesCount: zones.length,
+    });
+
+    await addEngineLog(`✅ runGlobalEurope terminé (${zones.length} zones)`, "success", "runGlobalEurope");
+    return result;
   } catch (err) {
-    await addEngineError("💥 Erreur extraction Europe : " + err.message, "Europe");
-    return { success: false, error: err.message };
+    await addEngineError(`Erreur runGlobalEurope : ${err.message}`, "runGlobalEurope");
+    return { error: err.message };
   }
 }
+
+export const EUROPE_ZONES = [];
+export default { runGlobalEurope };
