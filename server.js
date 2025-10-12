@@ -1,8 +1,7 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.35 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.40 PRO+++ REAL FULL CONNECT)
 // ==========================================================
-// ✅ Compatible Render + Port logique 10000 (moteur IA J.E.A.N.)
-// ✅ Sécurité Stripe / JWT / Auth utilisateur / Chat / MongoDB
+// Moteur IA J.E.A.N. + Authentification + Accès PRO sécurisé
 // ==========================================================
 
 import express from "express";
@@ -80,56 +79,39 @@ async function connectMongo() {
 if (process.env.MONGO_URI) connectMongo();
 
 // ==========================================================
-// 🧱 REGISTER / LOGIN
+// 👑 Seed Admin User (Patrick) – accès pro direct
 // ==========================================================
-app.post("/api/register", async (req, res) => {
-  try {
-    const { email, password, name, country } = req.body;
-    if (!email || !password) return res.status(400).json({ error: "Champs requis manquants." });
-    const exist = await User.findOne({ email });
-    if (exist) return res.status(400).json({ error: "Ce compte existe déjà." });
+const ADMIN_EMAIL = "pynnaertpat@gmail.com";
+const ADMIN_PWD = "202679";
 
-    const hash = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      email,
-      name,
+async function seedAdminUser() {
+  try {
+    const exist = await User.findOne({ email: ADMIN_EMAIL });
+    if (exist) {
+      console.log("✅ Admin déjà présent :", ADMIN_EMAIL);
+      return;
+    }
+    const hash = await bcrypt.hash(ADMIN_PWD, 10);
+    const admin = new User({
+      email: ADMIN_EMAIL,
+      name: "Patrick Pynnaert",
       passwordHash: hash,
-      location: { country },
-      plan: "free",
-      credits: 0,
+      plan: "pro",
+      credits: 1000,
+      fanClub: true,
+      zone: "covered",
+      createdAt: new Date(),
     });
-    await newUser.save();
-    res.json({ success: true });
-  } catch (e) {
-    await addEngineError("Erreur register: " + e.message, "auth");
-    res.status(500).json({ error: e.message });
+    await admin.save();
+    console.log("✅ Admin créé :", ADMIN_EMAIL);
+  } catch (err) {
+    console.error("❌ Erreur seed admin :", err.message);
   }
-});
-
-app.post("/api/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: "Utilisateur non trouvé." });
-    const match = await bcrypt.compare(password, user.passwordHash);
-    if (!match) return res.status(403).json({ error: "Mot de passe incorrect." });
-
-    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "12h" });
-    user.sessionToken = token;
-    user.lastLogin = new Date();
-    await user.save();
-    res.json({
-      token,
-      user: { email: user.email, plan: user.plan, credits: user.credits, name: user.name },
-    });
-  } catch (e) {
-    await addEngineError("Erreur login: " + e.message, "auth");
-    res.status(500).json({ error: e.message });
-  }
-});
+}
+seedAdminUser();
 
 // ==========================================================
-// 🧩 Middleware anti-partage de session
+// 🔐 Middleware Auth
 // ==========================================================
 async function verifySession(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
@@ -161,22 +143,18 @@ app.post("/api/chat-public", verifySession, async (req, res) => {
     } else if (user.plan === "premium") {
       if (todayCount >= 2)
         return res.status(403).json({
-          error:
-            "Limite Premium atteinte (2 questions/jour). Passez Pro : https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01",
+          error: "Limite Premium atteinte (2 questions/jour). Passez Pro : https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01",
         });
     } else {
       if (user.credits <= 0)
         return res.status(403).json({
-          error:
-            "Aucun crédit IA disponible. Achetez 100 crédits : https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02",
+          error: "Aucun crédit IA disponible. Achetez 100 crédits : https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02",
         });
     }
 
     const reply = await chatService.askJean(question);
-
     if (user.plan === "premium") user.dailyQuestions[today] = todayCount + 1;
     else if (user.plan === "free") user.credits -= 1;
-
     await user.save();
     res.json({ reply });
   } catch (e) {
@@ -186,36 +164,24 @@ app.post("/api/chat-public", verifySession, async (req, res) => {
 });
 
 // ==========================================================
-// 💳 STRIPE WEBHOOK – automatisation complète
+// 💳 STRIPE WEBHOOK
 // ==========================================================
 app.post("/api/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
   try {
     const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const email = session.customer_email;
       if (!email) return res.json({ received: true });
       const user = await User.findOne({ email });
       if (!user) return res.json({ received: true });
-
       const url = session.success_url || "";
-
-      if (url.includes("00w28t3Xj9h70zX0Gdgfu02")) {
-        user.credits += 100;
-        await addEngineLog(`💰 +100 crédits IA pour ${email}`, "success", "stripe");
-      } else if (url.includes("cNiaEZgK5bpffuRex3gfu00")) {
-        user.plan = "premium";
-        await addEngineLog(`🌟 Premium activé pour ${email}`, "success", "stripe");
-      } else if (url.includes("dRm4gBeBX9h782p74Bgfu01")) {
-        user.plan = "pro";
-        await addEngineLog(`🚀 Pro activé pour ${email}`, "success", "stripe");
-      }
-
+      if (url.includes("00w28t3Xj9h70zX0Gdgfu02")) user.credits += 100;
+      else if (url.includes("cNiaEZgK5bpffuRex3gfu00")) user.plan = "premium";
+      else if (url.includes("dRm4gBeBX9h782p74Bgfu01")) user.plan = "pro";
       await user.save();
     }
-
     res.json({ received: true });
   } catch (err) {
     console.error("❌ Webhook Stripe:", err.message);
@@ -224,7 +190,7 @@ app.post("/api/stripe-webhook", express.raw({ type: "application/json" }), async
 });
 
 // ==========================================================
-// 🌍 Extraction / Forecast / Alertes / News / Health
+// 🌍 API Forecast / Alerts / News / Health / Status
 // ==========================================================
 app.post("/api/run-global", async (req, res) => {
   try {
@@ -300,6 +266,22 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
+// 🔒 Route protégée – accès page Pro uniquement après login
+// ==========================================================
+app.get("/pro.html", verifySession, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!["pro", "pro+"].includes(user.plan)) {
+      return res.status(403).send("⛔ Accès réservé aux abonnés Pro / Pro+.");
+    }
+    res.sendFile(path.join(__dirname, "public", "pro.html"));
+  } catch (e) {
+    await addEngineError("Erreur /pro.html : " + e.message, "auth");
+    res.status(500).send("Erreur serveur.");
+  }
+});
+
+// ==========================================================
 // 🧭 Fichiers publics / admin
 // ==========================================================
 [
@@ -309,13 +291,12 @@ app.get("/api/status", async (_, res) => {
 app.use(express.static(path.join(__dirname,"public")));
 
 // ==========================================================
-// 🚀 Lancement du moteur TINSFLASH (Render-compatible)
+// 🚀 Lancement du moteur TINSFLASH
 // ==========================================================
-const ENGINE_PORT = 10000; // Port logique moteur IA
+const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
-
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
-  console.log("🌍 Zones couvertes :", enumerateCoveredPoints().length);
-  console.log(`🔌 Port logique moteur : ${ENGINE_PORT} | Port réseau : ${PORT}`);
+  console.log(`⚡ TINSFLASH PRO+++ en ligne`);
+  console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
+  console.log(`🔌 Ports : logique ${ENGINE_PORT} | réseau ${PORT}`);
 });
