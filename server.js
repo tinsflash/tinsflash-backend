@@ -1,9 +1,6 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.96 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.97 PRO+++ REAL FULL CONNECT)
 // ==========================================================
-// Moteur IA J.E.A.N. + Authentification + Accès PRO sécurisé + Runs régionaux & médias
-// ==========================================================
-
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -19,13 +16,13 @@ import Stripe from "stripe";
 import { EventEmitter } from "events";
 
 // ==========================================================
-// 🚀 INITIALISATION DES ZONES COUVERTES (avant tout run)
+// 🚀 INITIALISATION DES ZONES COUVERTES
 // ==========================================================
 import { initZones } from "./services/zonesCovered.js";
-await initZones(); // 🔥 prépare toutes les zones couvertes dès le boot
+await initZones();
 
 // ==========================================================
-// 🧩 IMPORTS INTERNES (modules moteur)
+// 🧩 IMPORTS INTERNES
 // ==========================================================
 import { runGlobal } from "./services/runGlobal.js";
 import { runBouke } from "./services/runBouke.js";
@@ -44,7 +41,8 @@ import {
   addEngineError,
   stopExtraction,
   resetStopFlag,
-  isExtractionStopped
+  isExtractionStopped,
+  setLastExtraction,
 } from "./services/engineState.js";
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
@@ -65,14 +63,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.use(express.json());
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(cors({ origin: "*", methods: ["GET", "POST"], allowedHeaders: ["Content-Type", "Authorization"] }));
 
 // ==========================================================
-// 🔐 CLÉS STRIPE / JWT ADAPTÉES RENDER
+// 🔐 STRIPE / JWT
 // ==========================================================
 const stripe = new Stripe(process.env.STRIPE_KEY);
 const JWT_SECRET = process.env.SECRET_KEY || "tinsflash_secret_key";
@@ -82,12 +76,7 @@ const JWT_SECRET = process.env.SECRET_KEY || "tinsflash_secret_key";
 // ==========================================================
 async function connectMongo() {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 20000,
-      socketTimeoutMS: 45000,
-    });
+    await mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
     console.log("✅ MongoDB connecté");
     await initEngineState();
   } catch (err) {
@@ -98,161 +87,67 @@ async function connectMongo() {
 if (process.env.MONGO_URI) connectMongo();
 
 // ==========================================================
-// 👑 ADMIN AUTO (PATRICK)
+// 👑 ADMIN AUTO
 // ==========================================================
 const ADMIN_EMAIL = "pynnaertpat@gmail.com";
 const ADMIN_PWD = "202679";
 
 async function seedAdminUser() {
-  try {
-    const exist = await User.findOne({ email: ADMIN_EMAIL });
-    if (exist) {
-      console.log("✅ Admin déjà présent :", ADMIN_EMAIL);
-      return;
-    }
-    const hash = await bcrypt.hash(ADMIN_PWD, 10);
-    const admin = new User({
-      email: ADMIN_EMAIL,
-      name: "Patrick Pynnaert",
-      passwordHash: hash,
-      plan: "pro",
-      credits: 1000,
-      fanClub: true,
-      zone: "covered",
-      createdAt: new Date(),
-    });
-    await admin.save();
-    console.log("✅ Admin créé :", ADMIN_EMAIL);
-  } catch (err) {
-    console.error("❌ Erreur seed admin :", err.message);
-  }
+  const exist = await User.findOne({ email: ADMIN_EMAIL });
+  if (exist) return;
+  const hash = await bcrypt.hash(ADMIN_PWD, 10);
+  const admin = new User({
+    email: ADMIN_EMAIL,
+    name: "Patrick Pynnaert",
+    passwordHash: hash,
+    plan: "pro",
+    credits: 1000,
+    fanClub: true,
+    zone: "covered",
+    createdAt: new Date(),
+  });
+  await admin.save();
+  console.log("✅ Admin créé :", ADMIN_EMAIL);
 }
 seedAdminUser();
 
 // ==========================================================
-// 🔐 MIDDLEWARE AUTH
+// 🌍 RUNS PRINCIPAUX (avec enregistrement extraction)
 // ==========================================================
-async function verifySession(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Non authentifié." });
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findOne({ email: decoded.email });
-    if (!user || user.sessionToken !== token) throw new Error("Session invalide ou expirée.");
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: err.message });
-  }
-}
-
-// ==========================================================
-// 🛰️ LOGS TEMPS RÉEL (SSE)
-// ==========================================================
-const logStream = new EventEmitter();
-export async function addEngineLogStream(message) {
-  logStream.emit("update", { time: new Date(), message });
-}
-app.get("/api/logs", async (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  const send = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
-  logStream.on("update", send);
-  req.on("close", () => logStream.off("update", send));
-});
-
-// ==========================================================
-// 💬 CHAT IA J.E.A.N.
-// ==========================================================
-app.post("/api/chat-public", verifySession, async (req, res) => {
-  try {
-    const { question } = req.body;
-    const reply = await chatService.askJean(question);
-    res.json({ reply });
-  } catch (e) {
-    await addEngineError("Erreur chat-public: " + e.message, "chat");
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ==========================================================
-// 🌍 RUNS PRINCIPAUX + MÉDIAS
-// ==========================================================
-const safeRun = (fn, label) => async (req, res) => {
+const safeRun = (fn, label, meta = {}) => async (req, res) => {
   try {
     if (isExtractionStopped && isExtractionStopped())
       return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
+
     await checkSourcesFreshness();
     const result = await fn();
+
+    // 🧩 Enregistrer la dernière extraction
+    await setLastExtraction({
+      id: `${label}-${Date.now()}`,
+      zones: [label],
+      files: meta.files || [],
+      status: "done",
+    });
+
     const msg = `✅ Run ${label} terminé`;
     await addEngineLog(msg, "success", label);
-    await addEngineLogStream(msg);
     res.json({ success: true, result });
   } catch (e) {
     const msg = `❌ Erreur ${label}: ${e.message}`;
     await addEngineError(msg, label);
-    await addEngineLogStream(msg);
     res.status(500).json({ success: false, error: e.message });
   }
 };
 
-// 🌍 Zones principales
-app.post("/api/run-global", safeRun(() => runGlobal("All"), "Global"));
-app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe"));
-app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada"));
-app.post("/api/run-afrique", safeRun(runAfrique, "Afrique"));
-app.post("/api/run-asie", safeRun(runAsie, "Asie"));
-app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie"));
-app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "Amérique du Sud"));
-
-// 🎥 Médias
-app.post("/api/run-bouke", safeRun(runBouke, "Bouké (Province de Namur)"));
-app.post("/api/run-belgique", safeRun(runBelgique, "Belgique complète"));
-
-// ==========================================================
-// 🔔 AUTRES ENDPOINTS
-// ==========================================================
-app.get("/api/alerts", async (_, res) => {
-  try {
-    const alerts = await Alert.find().sort({ start: -1 }).limit(200);
-    res.json(alerts);
-  } catch (e) {
-    await addEngineError("Erreur /api/alerts: " + e.message, "alerts");
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/status", async (_, res) => {
-  try {
-    const s = await getEngineState();
-    res.json({
-      status: s?.checkup?.engineStatus || s?.status || "IDLE",
-      lastRun: s?.lastRun || null,
-      errors: s?.errors || [],
-      db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      coveredZones: enumerateCoveredPoints(),
-      uptime: process.uptime(),
-    });
-  } catch (e) {
-    await addEngineError("Erreur /api/status: " + e.message, "core");
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ==========================================================
-// 🔒 PAGES PUBLIQUES / ADMIN
-// ==========================================================
-[
-  "admin-pp.html", "admin-alerts.html", "admin-chat.html",
-  "admin-index.html", "admin-radar.html", "admin-local.html",
-  "admin-news.html", "admin-users.html",
-  "premium.html", "pro.html", "protest.html"
-].forEach(p =>
-  app.get(`/${p}`, (_, res) => res.sendFile(path.join(__dirname, "public", p)))
-);
-
-app.use(express.static(path.join(__dirname, "public")));
+app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe", { files: ["./data/europe.json"] }));
+app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada", { files: ["./data/usa.json"] }));
+app.post("/api/run-afrique", safeRun(runAfrique, "Afrique", { files: ["./data/afrique.json"] }));
+app.post("/api/run-asie", safeRun(runAsie, "Asie", { files: ["./data/asie.json"] }));
+app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie", { files: ["./data/oceanie.json"] }));
+app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "Amérique du Sud", { files: ["./data/ameriquesud.json"] }));
+app.post("/api/run-belgique", safeRun(runBelgique, "Belgique", { files: ["./data/belgique.json"] }));
+app.post("/api/run-bouke", safeRun(runBouke, "Bouké", { files: ["./data/bouke.json"] }));
 
 // ==========================================================
 // 🚀 LANCEMENT RENDER
@@ -262,5 +157,4 @@ const PORT = process.env.PORT || ENGINE_PORT;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne`);
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
-  console.log(`🔌 Ports : logique ${ENGINE_PORT} | réseau ${PORT}`);
 });
