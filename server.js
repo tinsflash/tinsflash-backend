@@ -16,6 +16,7 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
+import { EventEmitter } from "events";
 
 // ==========================================================
 // 🧩 Imports internes
@@ -140,6 +141,22 @@ async function verifySession(req, res, next) {
 }
 
 // ==========================================================
+// 🛰️ LOGS TEMPS RÉEL (SSE pour admin)
+// ==========================================================
+const logStream = new EventEmitter();
+export async function addEngineLogStream(message) {
+  logStream.emit("update", { time: new Date(), message });
+}
+app.get("/api/logs", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  const send = (log) => res.write(`data: ${JSON.stringify(log)}\n\n`);
+  logStream.on("update", send);
+  req.on("close", () => logStream.off("update", send));
+});
+
+// ==========================================================
 // 💬 CHAT IA J.E.A.N.
 // ==========================================================
 app.post("/api/chat-public", verifySession, async (req, res) => {
@@ -154,7 +171,7 @@ app.post("/api/chat-public", verifySession, async (req, res) => {
 });
 
 // ==========================================================
-// 🌍 RUNS PRINCIPAUX
+// 🌍 RUNS PRINCIPAUX + MÉDIAS
 // ==========================================================
 const safeRun = (fn, label) => async (req, res) => {
   try {
@@ -162,10 +179,14 @@ const safeRun = (fn, label) => async (req, res) => {
       return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
     await checkSourcesFreshness();
     const result = await fn();
-    await addEngineLog(`✅ Run ${label} terminé`, "success", label);
+    const msg = `✅ Run ${label} terminé`;
+    await addEngineLog(msg, "success", label);
+    await addEngineLogStream(msg);
     res.json({ success: true, result });
   } catch (e) {
-    await addEngineError(`Erreur ${label}: ` + e.message, label);
+    const msg = `❌ Erreur ${label}: ${e.message}`;
+    await addEngineError(msg, label);
+    await addEngineLogStream(msg);
     res.status(500).json({ success: false, error: e.message });
   }
 };
