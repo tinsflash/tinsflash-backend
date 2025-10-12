@@ -1,17 +1,16 @@
 // ==========================================================
-// 🧠 TINSFLASH – engineState.js (Everest Protocol v4.3.1-REAL)
+// 🧠 TINSFLASH – engineState.js (Everest Protocol v4.3.1-REAL+)
 // ==========================================================
-// ✅ Gestion complète de l’état du moteur IA
+// ✅ Gestion complète de l’état du moteur IA J.E.A.N.
 // ✅ Logs, erreurs, statut et mémoire centrale
-// ✅ Strictement compatible avec les imports existants
+// ✅ Structure 100 % rétrocompatible (saveEngineState / getEngineState)
 // ==========================================================
 
 import mongoose from "mongoose";
 
 // ==========================================================
-// 🧱 Définition des schémas
+// 🧱 Schémas
 // ==========================================================
-
 const ErrorSchema = new mongoose.Schema({
   level: { type: String, default: "error" },
   module: { type: String, default: "core" },
@@ -46,10 +45,8 @@ export const EngineState =
   mongoose.models.EngineState || mongoose.model("EngineState", EngineStateSchema);
 
 // ==========================================================
-// 🧩 Fonctions principales (conformes à tes imports)
-// ==========================================================
-
 // 🟢 Ajout de log standard
+// ==========================================================
 export async function addEngineLog(message, level = "info", module = "core") {
   try {
     const log = { message, level, module, timestamp: new Date() };
@@ -64,7 +61,9 @@ export async function addEngineLog(message, level = "info", module = "core") {
   }
 }
 
+// ==========================================================
 // 🔴 Ajout d’erreur critique
+// ==========================================================
 export async function addEngineError(message, module = "core") {
   try {
     const error = { message, level: "error", module, timestamp: new Date() };
@@ -79,7 +78,9 @@ export async function addEngineError(message, module = "core") {
   }
 }
 
-// 🧠 Sauvegarde / mise à jour de l’état complet (nom historique)
+// ==========================================================
+// 💾 Sauvegarde / mise à jour complète (nom historique conservé)
+// ==========================================================
 export async function saveEngineState(newState = {}) {
   try {
     const memoryMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
@@ -101,10 +102,24 @@ export async function saveEngineState(newState = {}) {
 }
 
 // ==========================================================
-// 🚦 Exports (inchangés, 100 % rétro-compatibles)
+// 🔍 Lecture complète de l’état (fonction historique demandée)
+// ==========================================================
+export async function getEngineState() {
+  try {
+    const state = await EngineState.findOne({});
+    return state || {};
+  } catch (err) {
+    console.error("❌ Erreur getEngineState:", err.message);
+    return {};
+  }
+}
+
+// ==========================================================
+// 🚦 Exports inchangés – 100 % rétrocompatibles
 // ==========================================================
 export default {
   addEngineLog,
   addEngineError,
   saveEngineState,
+  getEngineState,
 };
