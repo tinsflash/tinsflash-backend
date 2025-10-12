@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TINSFLASH PRO+ TEST – Zone réservée</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: radial-gradient(circle at center, #0b0f1a, #000);
+      color: #eaf6ff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      background: linear-gradient(90deg, #001c33, #003b66);
+      color: #4fc3f7;
+      text-align: center;
+      width: 100%;
+      padding: 20px;
+      font-size: 1.5em;
+      font-weight: bold;
+      text-shadow: 0 0 12px #4fc3f7;
+    }
+    main {
+      max-width: 900px;
+      width: 95%;
+      background: rgba(15, 25, 45, 0.85);
+      border-radius: 12px;
+      padding: 25px;
+      margin-top: 25px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    section {
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #00b7ff;
+      border-left: 4px solid #00b7ff;
+      padding-left: 8px;
+      margin-bottom: 10px;
+    }
+    .radar, iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+      border-radius: 10px;
+      margin-top: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    footer {
+      margin-top: 40px;
+      color: #888;
+      font-size: 0.9em;
+      text-align: center;
+      padding: 20px;
+    }
+    .hidden { display: none; }
+    #authBox {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; background: #000d1a;
+    }
+    #authBox input {
+      background: #0a1a2f; color: #fff; border: 1px solid #004d80; border-radius: 6px;
+      padding: 8px 10px; font-size: 1em; margin-top: 8px; width: 220px;
+    }
+    #authBox button {
+      background: #00b7ff; color: #000; border: none; border-radius: 6px;
+      margin-top: 10px; font-weight: bold; padding: 8px 16px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="authBox">
+    <h2 style="color:#4fc3f7;">🔐 Accès zone Pro Test</h2>
+    <input type="password" id="pwd" placeholder="Mot de passe" />
+    <button onclick="checkPwd()">Entrer</button>
+  </div>
+
+  <div id="content" class="hidden">
+    <header>🚀 TINSFLASH PRO+ TEST – Zone expérimentale</header>
+    <main>
+      <section>
+        <h2>🧠 Projets d’outils IA</h2>
+        <ul>
+          <li><strong>Radar 2D mixte (Windy + Buienalarm)</strong> — couverture mondiale, précipitations, vent, neige, relief simplifié.</li>
+          <li><strong>Radar 3D/4D local</strong> — zones pilotes : Floriffoux (BE), Namur, SpaceX Cape Canaveral.</li>
+          <li><strong>Module HydroRisk</strong> — simulation pluie × pente × perméabilité × saturation du sol.</li>
+          <li><strong>Prévisions IA J.E.A.N.</strong> — analyses explicatives et anticipation des phénomènes extrêmes.</li>
+          <li><strong>Outils export PDF / vidéo</strong> — pour les utilisateurs Pro+ et institutionnels.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>🌍 Radar 2D global</h2>
+        <iframe src="https://embed.windy.com/embed2.html?lat=48.0&lon=4.0&zoom=3&level=surface&overlay=rain&menu=true"></iframe>
+      </section>
+
+      <section>
+        <h2>🧩 Radar 3D/4D expérimental (zones pilotes)</h2>
+        <p>Visualisation en cours de déploiement — version test disponible sur 3 zones pilotes.</p>
+        <iframe src="https://earth.nullschool.net/" title="Radar 3D expérimental"></iframe>
+      </section>
+
+      <section>
+        <h2>📊 État moteur & IA</h2>
+        <pre id="statusBox" style="background:#0b1529;padding:10px;border-radius:8px;color:#8cf;">Chargement...</pre>
+      </section>
+    </main>
+    <footer>© 2025 TINSFLASH PRO+++ – Zone Test Interne</footer>
+  </div>
+
+  <script>
+    function checkPwd(){
+      const pwd = document.getElementById("pwd").value;
+      if(pwd === "202679"){
+        document.getElementById("authBox").classList.add("hidden");
+        document.getElementById("content").classList.remove("hidden");
+        loadStatus();
+      } else alert("Mot de passe incorrect");
+    }
+
+    async function loadStatus(){
+      try{
+        const r = await fetch("/api/status");
+        const d = await r.json();
+        document.getElementById("statusBox").textContent =
+          "🟢 Moteur : " + d.status + "\n📡 Zones couvertes : " + d.coveredZones.length + "\n⏱ Uptime : " + (d.uptime/60).toFixed(1) + " min";
+      }catch(e){
+        document.getElementById("statusBox").textContent = "❌ Erreur de chargement : " + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
