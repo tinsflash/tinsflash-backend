@@ -400,7 +400,8 @@ export const USA_ZONES = {
 // ===========================
 // 🧠 Extraction USA
 // ===========================
-   const result = await superForecast({ zones, runType: "USA", withAI: false });
+   const allZones = Object.values(USA_ZONES).flat(); // fusionne tous les États
+const result = await superForecast({ zones: allZones, runType: "USA", withAI: false });
 
     const dataDir = path.join(process.cwd(), "data");
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
