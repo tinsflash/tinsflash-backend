@@ -1,24 +1,16 @@
 // ==========================================================
+// ==========================================================
 // 🇺🇸 TINSFLASH – runGlobalUSA.js (Everest Protocol v4.0 PRO+++ REAL CONNECT)
 // ==========================================================
-// Extraction complète – États-Unis d’Amérique
+// Extraction complète – États-Unis d’Amérique (toutes zones principales)
 // ==========================================================
 
 import fs from "fs";
 import path from "path";
 import { superForecast } from "./superForecast.js";
-import {
-  addEngineLog,
-  addEngineError,
-  updateEngineState,
-  setLastExtraction,
-} from "./engineState.js";
+import { addEngineLog, addEngineError, updateEngineState, setLastExtraction } from "./engineState.js";
 
-export async function runGlobalUSA() {
-  try {
-    await addEngineLog("🇺🇸 Démarrage runGlobalUSA", "info", "runGlobalUSA");
-
-    // ========= ZONE GÉOGRAPHIQUE =========
+// ========= ZONE GÉOGRAPHIQUE =========
 // ===========================
 // Zones détaillées par État
 // ===========================
@@ -397,12 +389,25 @@ export const USA_ZONES = {
     { lat: 38.20, lon: -83.43, region: "Morehead - Appalachians" }
   ]
     };
-// ===========================
-// 🧠 Extraction USA
-// ===========================
-   const allZones = Object.values(USA_ZONES).flat(); // fusionne tous les États
-const result = await superForecast({ zones: allZones, runType: "USA", withAI: false });
+// ==========================================================
+// 🚀 FONCTION PRINCIPALE
+// ==========================================================
+export async function runGlobalUSA() {
+  try {
+    await addEngineLog("🇺🇸 Démarrage runGlobalUSA", "info", "runGlobalUSA");
 
+    // Fusion des zones de tous les États
+    const zones = Object.values(USA_ZONES).flat();
+
+    const result = await superForecast({
+      zones,
+      runType: "USA",
+      withAI: false,
+    });
+
+    // ==========================================================
+    // 💾 Sauvegarde
+    // ==========================================================
     const dataDir = path.join(process.cwd(), "data");
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     const filePath = path.join(dataDir, "usa.json");
@@ -410,7 +415,7 @@ const result = await superForecast({ zones: allZones, runType: "USA", withAI: fa
 
     await setLastExtraction({
       id: `usa-${Date.now()}`,
-      zones: ["usa"],
+      zones: ["USA"],
       files: [filePath],
       status: "done",
     });
@@ -429,5 +434,4 @@ const result = await superForecast({ zones: allZones, runType: "USA", withAI: fa
   }
 }
 
-export const USA_ZONES = [];
 export default { runGlobalUSA };
