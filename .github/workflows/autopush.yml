@@ -1,57 +1,8 @@
-name: Auto Organize Files from depot/
-
-on:
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: write
-
-jobs:
-  organize:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Organize files from depot/
-        run: |
-          mkdir -p public services routes utils
-
-          if [ -d "depot" ]; then
-            for f in depot/*; do
-              [ -f "$f" ] || continue
-              file=$(basename "$f")
-              ext="${file##*.}"
-              lower=$(echo "$file" | tr '[:upper:]' '[:lower:]')
-
-              if [ "$ext" = "html" ] || [ "$ext" = "css" ]; then
-                echo "➡️ Déplacement $file → public/"
-                mv -f "$f" public/   # -f = écrase s'il existe déjà
-              elif [ "$ext" = "js" ]; then
-                if [[ "$lower" == *service* || "$lower" == *engine* ]]; then
-                  echo "➡️ Déplacement $file → services/"
-                  mv -f "$f" services/
-                elif [[ "$lower" == *route* ]]; then
-                  echo "➡️ Déplacement $file → routes/"
-                  mv -f "$f" routes/
-                else
-                  echo "➡️ Déplacement $file → utils/"
-                  mv -f "$f" utils/
-                fi
-              fi
-            done
-          else
-            echo "⚠️ Aucun dossier depot/ trouvé, rien à organiser."
-          fi
-
-      - name: Commit & Push changes
-        run: |
-          git config user.name "autopush-bot"
-          git config user.email "autopush-bot@users.noreply.github.com"
-          git add .
-          git commit -m "Auto organize files from depot/" || echo "No changes"
-          git push origin main
+- name: Auto push to main
+  run: |
+    git config user.name "autopush-bot"
+    git config user.email "autopush-bot@users.noreply.github.com"
+    git pull origin main --rebase
+    git add .
+    git commit -m "Auto organize files from depot/" || echo "No changes"
+    git push origin main
