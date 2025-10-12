@@ -1,12 +1,14 @@
 // ==========================================================
-// 🎥 TINSFLASH – runBouke.js (Everest Protocol v3.97 PRO+++ REAL CONNECT)
+// 🎥 TINSFLASH – runBouke.js (Everest Protocol v4.00 PRO+++ REAL CONNECT)
 // ==========================================================
 // Extraction locale complète – Province de Namur (Bouké TV)
-// But : couverture ultra-détaillée (communes + villages)
+// 1000 % réel – aucune simulation, aucune réduction de zones
+// Sauvegarde : locale + MongoDB persistante pour IA J.E.A.N.
 // ==========================================================
 
 import fs from "fs";
 import path from "path";
+import Extraction from "../models/Extraction.js";
 import { superForecast } from "./superForecast.js";
 import {
   addEngineLog,
@@ -103,28 +105,33 @@ export async function runBouke() {
       { name: "Gerpinnes", lat: 50.33, lon: 4.53 },
     ];
 
+    // ==========================================================
+    // 🌍 EXTRACTION COMPLÈTE VIA SUPERFORECAST
+    // ==========================================================
     const result = await superForecast({ zones, runType: "Bouke-Namur" });
 
     // ==========================================================
-    // 💾 SAUVEGARDE LOCALE POUR IA J.E.A.N.
+    // 💾 SAUVEGARDE LOCALE + MONGODB (PERSISTANT)
     // ==========================================================
     try {
+      // --- Sauvegarde locale ---
       const dataDir = path.join(process.cwd(), "data");
-      if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-      }
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
       const filePath = path.join(dataDir, "bouke.json");
       fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
-      await addEngineLog(
-        `💾 Données sauvegardées localement dans ${filePath}`,
-        "info",
-        "runBouke"
-      );
+      await addEngineLog(`💾 Données sauvegardées localement dans ${filePath}`, "info", "runBouke");
+
+      // --- Sauvegarde MongoDB persistante ---
+      await Extraction.create({
+        label: "Bouké",
+        zones: ["Bouké"],
+        ts: new Date(),
+        data: result?.phase1Results || result || [],
+      });
+      await addEngineLog("💾 Extraction Bouké sauvegardée en base MongoDB", "info", "runBouke");
+
     } catch (err) {
-      await addEngineError(
-        `❌ Erreur lors de l'écriture du fichier bouke.json : ${err.message}`,
-        "runBouke"
-      );
+      await addEngineError(`❌ Erreur sauvegarde locale/DB : ${err.message}`, "runBouke");
     }
 
     // ==========================================================
@@ -136,12 +143,9 @@ export async function runBouke() {
       zonesCount: zones.length,
     });
 
-    await addEngineLog(
-      `✅ runBouké terminé (${zones.length} zones locales)`,
-      "success",
-      "runBouke"
-    );
+    await addEngineLog(`✅ runBouké terminé (${zones.length} zones locales)`, "success", "runBouke");
     return result;
+
   } catch (err) {
     await addEngineError(`Erreur runBouké : ${err.message}`, "runBouke");
     console.error("❌ Erreur runBouké :", err.message);
