@@ -1,5 +1,8 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.30 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.35 PRO+++ REAL FULL CONNECT)
+// ==========================================================
+// ✅ Compatible Render + Port logique 10000 (moteur IA J.E.A.N.)
+// ✅ Sécurité Stripe / JWT / Auth utilisateur / Chat / MongoDB
 // ==========================================================
 
 import express from "express";
@@ -306,10 +309,13 @@ app.get("/api/status", async (_, res) => {
 app.use(express.static(path.join(__dirname,"public")));
 
 // ==========================================================
-// 🚀 Lancement du moteur TINSFLASH
+// 🚀 Lancement du moteur TINSFLASH (Render-compatible)
 // ==========================================================
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`⚡ TINSFLASH PRO+++ en ligne sur port ${PORT}`);
+const ENGINE_PORT = 10000; // Port logique moteur IA
+const PORT = process.env.PORT || ENGINE_PORT;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
   console.log("🌍 Zones couvertes :", enumerateCoveredPoints().length);
+  console.log(`🔌 Port logique moteur : ${ENGINE_PORT} | Port réseau : ${PORT}`);
 });
