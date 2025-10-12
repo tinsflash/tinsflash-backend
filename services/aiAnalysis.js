@@ -1,14 +1,52 @@
 // ==========================================================
-// 🤖 TINSFLASH – aiAnalysis.js (v4.5 REAL FRESHNESS-AWARE)
+// 🤖 TINSFLASH – aiAnalysis.js (v4.6 REAL HYBRID SELECTIVE)
 // ==========================================================
-import { addEngineLog, addEngineError } from "./engineState.js";
+// Analyse IA J.E.A.N. – Réelle, sélective, et totalement Render-compatible.
+// Lecture uniquement des fichiers issus de la dernière extraction.
+// ==========================================================
+
+import fs from "fs";
+import path from "path";
+import { addEngineLog, addEngineError, getLastExtraction } from "./engineState.js";
 import { checkAIModels } from "./aiModelsChecker.js";
 
-export async function runAIAnalysis(results = []) {
+// ==========================================================
+// 🧠 Fonction principale – IA J.E.A.N.
+// ==========================================================
+export async function runAIAnalysis() {
   try {
-    if (!results.length) return { indiceGlobal: 0, synthese: "Aucune donnée" };
+    const last = await getLastExtraction();
+    if (!last || !last.files?.length) {
+      await addEngineError("Aucune extraction trouvée pour analyse IA", "IA.JEAN");
+      return { indiceGlobal: 0, synthese: "Aucune extraction récente" };
+    }
 
-    const valid = results.filter((r) => r.temperature !== null);
+    const results = [];
+
+    // ------------------------------------------------------
+    // 📦 Lecture des fichiers extraits (dernière extraction)
+    // ------------------------------------------------------
+    for (const filePath of last.files) {
+      try {
+        const fullPath = path.resolve(filePath);
+        if (fs.existsSync(fullPath)) {
+          const content = JSON.parse(fs.readFileSync(fullPath, "utf8"));
+          if (Array.isArray(content)) results.push(...content);
+        }
+      } catch (err) {
+        await addEngineError(`Erreur lecture fichier IA : ${filePath} – ${err.message}`, "IA.JEAN");
+      }
+    }
+
+    if (!results.length) {
+      await addEngineError("Aucune donnée valide trouvée dans les fichiers récents", "IA.JEAN");
+      return { indiceGlobal: 0, synthese: "Pas de données exploitables" };
+    }
+
+    // ------------------------------------------------------
+    // 🧮 Analyse IA interne (indice de cohérence physique)
+    // ------------------------------------------------------
+    const valid = results.filter(r => r.temperature !== null);
     const indice = Math.min(100, Math.round((valid.length / results.length) * 100));
     const poidsRelief = Math.min(1.2, 1 + Math.abs(results[0].lat) / 90);
     let indiceGlobal = Math.round(indice * poidsRelief);
@@ -17,19 +55,14 @@ export async function runAIAnalysis(results = []) {
     // 📅 Étape fraîcheur – pénalité selon les runs anciens
     // ------------------------------------------------------
     const total = valid.length || 1;
-    const fresh = valid.filter((r) => r.freshnessScore >= 80).length;
+    const fresh = valid.filter(r => r.freshnessScore >= 80).length;
     const freshnessGlobal = Math.round((fresh / total) * 100);
-    const penalty = Math.round((100 - freshnessGlobal) * 0.25); // pénalité douce
+    const penalty = Math.round((100 - freshnessGlobal) * 0.25);
     indiceGlobal = Math.max(0, indiceGlobal - penalty);
 
     await addEngineLog(
       `📅 Fraîcheur moyenne ${freshnessGlobal}% – pénalité ${penalty}% appliquée`,
       "info",
-      "IA.JEAN"
-    );
-    await addEngineLog(
-      `🧠 IA J.E.A.N. – Indice ajusté (physique + fraîcheur) ${indiceGlobal}%`,
-      "ok",
       "IA.JEAN"
     );
 
@@ -60,13 +93,31 @@ export async function runAIAnalysis(results = []) {
       ? `Fusion IA réussie (${Math.round(aiFusion.reliability * 100)}% cohérence)`
       : "Analyse IA interne uniquement";
 
-    await addEngineLog(`🧩 IA J.E.A.N. – Indice final ${pondGlobal}% (${synthese})`, "success", "IA.JEAN");
+    // ------------------------------------------------------
+    // 💾 Enregistrement du résultat IA
+    // ------------------------------------------------------
+    await addEngineLog(
+      `🧩 IA J.E.A.N. – Indice final ${pondGlobal}% (${synthese}) – Zones : ${last.zones.join(", ")}`,
+      "success",
+      "IA.JEAN"
+    );
 
-    return { indiceGlobal: pondGlobal, synthese, freshnessGlobal, iaExterne, aiFusion };
+    return {
+      indiceGlobal: pondGlobal,
+      synthese,
+      freshnessGlobal,
+      iaExterne,
+      aiFusion,
+      lastExtraction: last,
+    };
+
   } catch (e) {
     await addEngineError("Erreur IA J.E.A.N. : " + e.message, "IA.JEAN");
     return { error: e.message };
   }
 }
 
+// ==========================================================
+// 📤 Export
+// ==========================================================
 export default { runAIAnalysis };
