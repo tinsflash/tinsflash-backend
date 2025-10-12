@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.95 PRO+++ REAL FULL CONNECT)
 // ==========================================================
 // Moteur IA J.E.A.N. + Authentification + Accès PRO sécurisé + Runs régionaux & médias
 // ==========================================================
@@ -19,17 +19,17 @@ import Stripe from "stripe";
 import { EventEmitter } from "events";
 
 // ==========================================================
-// 🧩 Imports internes
+// 🧩 Imports internes (inchangés)
 // ==========================================================
 import { runGlobal } from "./services/runGlobal.js";
 import { runBouke } from "./services/runBouke.js";
 import { runBelgique } from "./services/runBelgique.js";
 import { runEurope } from "./services/runGlobalEurope.js";
 import { runUSA } from "./services/runGlobalUSA.js";
-import { runGlobalAfrique } from "./services/runGlobalAfrique.js";
-import { runGlobalAsie } from "./services/runGlobalAsie.js";
-import { runGlobalOceanie } from "./services/runGlobalOceanie.js";
-import { runGlobalAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
+import { runAfrique } from "./services/runAfrique.js";
+import { runAsie } from "./services/runAsie.js";
+import { runOceanie } from "./services/runOceanie.js";
+import { runAmeriqueSud } from "./services/runAmeriqueSud.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
 import {
   initEngineState,
@@ -38,7 +38,7 @@ import {
   addEngineError,
   stopExtraction,
   resetStopFlag,
-  isExtractionStopped,
+  isExtractionStopped
 } from "./services/engineState.js";
 import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
@@ -59,13 +59,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.use(express.json());
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // ==========================================================
 // 🔐 Clés Stripe / JWT adaptées Render
@@ -134,8 +132,7 @@ async function verifySession(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findOne({ email: decoded.email });
-    if (!user || user.sessionToken !== token)
-      throw new Error("Session invalide ou expirée.");
+    if (!user || user.sessionToken !== token) throw new Error("Session invalide ou expirée.");
     req.user = user;
     next();
   } catch (err) {
@@ -179,9 +176,7 @@ app.post("/api/chat-public", verifySession, async (req, res) => {
 const safeRun = (fn, label) => async (req, res) => {
   try {
     if (isExtractionStopped && isExtractionStopped())
-      return res
-        .status(400)
-        .json({ success: false, error: "Extraction stoppée manuellement" });
+      return res.status(400).json({ success: false, error: "Extraction stoppée manuellement" });
     await checkSourcesFreshness();
     const result = await fn();
     const msg = `✅ Run ${label} terminé`;
@@ -196,16 +191,16 @@ const safeRun = (fn, label) => async (req, res) => {
   }
 };
 
-// 🌍 Zones principales
+// 🌍 Zones principales (inchangées)
 app.post("/api/run-global", safeRun(() => runGlobal("All"), "Global"));
 app.post("/api/run-europe", safeRun(runEurope, "Europe"));
 app.post("/api/run-usa", safeRun(runUSA, "USA/Canada"));
-app.post("/api/run-afrique", safeRun(runGlobalAfrique, "Afrique"));
-app.post("/api/run-asie", safeRun(runGlobalAsie, "Asie"));
-app.post("/api/run-oceanie", safeRun(runGlobalOceanie, "Océanie"));
-app.post("/api/run-ameriquesud", safeRun(runGlobalAmeriqueSud, "AmériqueSud"));
+app.post("/api/run-afrique", safeRun(runAfrique, "Afrique"));
+app.post("/api/run-asie", safeRun(runAsie, "Asie"));
+app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie"));
+app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "AmériqueSud"));
 
-// 🎥 Médias
+// 🎥 Médias (inchangés)
 app.post("/api/run-bouke", safeRun(runBouke, "Bouké (Province de Namur)"));
 app.post("/api/run-belgique", safeRun(runBelgique, "Belgique complète"));
 
@@ -243,18 +238,11 @@ app.get("/api/status", async (_, res) => {
 // 🔒 Pages publiques / admin
 // ==========================================================
 [
-  "admin-pp.html",
-  "admin-alerts.html",
-  "admin-chat.html",
-  "admin-index.html",
-  "admin-radar.html",
-  "admin-local.html",
-  "admin-news.html",
-  "admin-users.html",
-  "premium.html",
-  "pro.html",
-  "protest.html",
-].forEach((p) =>
+  "admin-pp.html", "admin-alerts.html", "admin-chat.html",
+  "admin-index.html", "admin-radar.html", "admin-local.html",
+  "admin-news.html", "admin-users.html",
+  "premium.html", "pro.html", "protest.html"
+].forEach(p =>
   app.get(`/${p}`, (_, res) => res.sendFile(path.join(__dirname, "public", p)))
 );
 
