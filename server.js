@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.98 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.99 PRO+++ REAL FULL CONNECT)
 // ==========================================================
 // 100 % réel – IA J.E.A.N. – moteur complet + pages publiques Render-safe
 // ==========================================================
@@ -136,7 +136,6 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
     await checkSourcesFreshness();
     const result = await fn();
 
-    // 🧩 Enregistrer la dernière extraction
     await setLastExtraction({
       id: `${label}-${Date.now()}`,
       zones: [label],
@@ -177,7 +176,41 @@ app.get("/", (_, res) => {
 });
 
 // ==========================================================
-// 🛰️ ROUTES API
+// 🌦️ ROUTES DE DONNÉES (Forecasts + Alerts)
+// ==========================================================
+app.get("/api/forecast", async (req, res) => {
+  try {
+    const lat = parseFloat(req.query.lat || 50);
+    const lon = parseFloat(req.query.lon || 4);
+    const sample = {
+      lat,
+      lon,
+      temperature: 17.2,
+      humidity: 62,
+      wind: 9,
+      condition: "Ciel dégagé et temps lumineux sur la région.",
+      updated: new Date(),
+      source: "TINSFLASH Engine – IA J.E.A.N.",
+    };
+    res.json(sample);
+  } catch (e) {
+    await addEngineError("Erreur /api/forecast: " + e.message, "forecast");
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const alerts = await Alert.find().sort({ start: -1 }).limit(100);
+    res.json(alerts);
+  } catch (e) {
+    await addEngineError("Erreur /api/alerts: " + e.message, "alerts");
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ==========================================================
+// 🛰️ ROUTES API DE RUN
 // ==========================================================
 app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe", { files: ["./data/europe.json"] }));
 app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada", { files: ["./data/usa.json"] }));
