@@ -1,54 +1,65 @@
 // ==========================================================
 // 🌍 CENTRALISATION MONDIALE DES ZONES COUVERTES – TINSFLASH PRO+++
-// Everest Protocol v4.6 – FULL AUTO-SAFE MODE
+// Everest Protocol v4.7 – FULL SAFE RENDER EDITION
 // ==========================================================
-
 import { addEngineLog } from "./engineState.js";
 
-// ==========================================================
-// 📦 Imports RÉELS (tolérants aux modules vides)
-// ==========================================================
-let EUROPE_ZONES, USA_ZONES, CANADA_ZONES,
-  AFRICA_NORD_ZONES, AFRICA_CENTRALE_ZONES, AFRICA_OUEST_ZONES,
-  AFRICA_SUD_ZONES, AFRICA_EST_ZONES,
-  AMERIQUE_SUD_ZONES, ASIA_ZONES, OCEANIE_ZONES, CARIBBEAN_ZONES,
-  BOUKE_ZONES, BELGIQUE_ZONES;
+// ----------------------------------------------------------
+// ⚙️ Import dynamique encapsulé pour éviter top-level await
+// ----------------------------------------------------------
+const modules = await (async () => {
+  const result = {
+    EUROPE_ZONES: [],
+    USA_ZONES: [],
+    CANADA_ZONES: [],
+    AFRICA_NORD_ZONES: [],
+    AFRICA_CENTRALE_ZONES: [],
+    AFRICA_OUEST_ZONES: [],
+    AFRICA_SUD_ZONES: [],
+    AFRICA_EST_ZONES: [],
+    AMERIQUE_SUD_ZONES: [],
+    ASIA_ZONES: [],
+    OCEANIE_ZONES: [],
+    CARIBBEAN_ZONES: [],
+    BOUKE_ZONES: [],
+    BELGIQUE_ZONES: [],
+  };
 
-try { ({ EUROPE_ZONES } = await import("./runGlobalEurope.js")); } catch {}
-try { ({ USA_ZONES } = await import("./runGlobalUSA.js")); } catch {}
-try { ({ CANADA_ZONES } = await import("./runGlobalCanada.js")); } catch {}
-try { ({ AFRICA_NORD_ZONES } = await import("./runGlobalAfricaNord.js")); } catch {}
-try { ({ AFRICA_CENTRALE_ZONES } = await import("./runGlobalAfricaCentrale.js")); } catch {}
-try { ({ AFRICA_OUEST_ZONES } = await import("./runGlobalAfricaOuest.js")); } catch {}
-try { ({ AFRICA_SUD_ZONES } = await import("./runGlobalAfricaSud.js")); } catch {}
-try { ({ AFRICA_EST_ZONES } = await import("./runGlobalAfricaEst.js")); } catch {}
-try { ({ AMERIQUE_SUD_ZONES } = await import("./runGlobalAmeriqueSud.js")); } catch {}
-try { ({ ASIA_ZONES } = await import("./runGlobalAsie.js")); } catch {}
-try { ({ OCEANIE_ZONES } = await import("./runGlobalOceanie.js")); } catch {}
-try { ({ CARIBBEAN_ZONES } = await import("./runGlobalCaribbean.js")); } catch {}
-try { ({ BOUKE_ZONES } = await import("./runBouke.js")); } catch {}
-try { ({ BELGIQUE_ZONES } = await import("./runBelgique.js")); } catch {}
+  const imports = [
+    ["EUROPE_ZONES", "./runGlobalEurope.js"],
+    ["USA_ZONES", "./runGlobalUSA.js"],
+    ["CANADA_ZONES", "./runGlobalCanada.js"],
+    ["AFRICA_NORD_ZONES", "./runGlobalAfricaNord.js"],
+    ["AFRICA_CENTRALE_ZONES", "./runGlobalAfricaCentrale.js"],
+    ["AFRICA_OUEST_ZONES", "./runGlobalAfricaOuest.js"],
+    ["AFRICA_SUD_ZONES", "./runGlobalAfricaSud.js"],
+    ["AFRICA_EST_ZONES", "./runGlobalAfricaEst.js"],
+    ["AMERIQUE_SUD_ZONES", "./runGlobalAmeriqueSud.js"],
+    ["ASIA_ZONES", "./runGlobalAsie.js"],
+    ["OCEANIE_ZONES", "./runGlobalOceanie.js"],
+    ["CARIBBEAN_ZONES", "./runGlobalCaribbean.js"],
+    ["BOUKE_ZONES", "./runBouke.js"],
+    ["BELGIQUE_ZONES", "./runBelgique.js"],
+  ];
 
-// Sécurisation : si un module ne renvoie rien → tableau vide
-EUROPE_ZONES ||= [];
-USA_ZONES ||= [];
-CANADA_ZONES ||= [];
-AFRICA_NORD_ZONES ||= [];
-AFRICA_CENTRALE_ZONES ||= [];
-AFRICA_OUEST_ZONES ||= [];
-AFRICA_SUD_ZONES ||= [];
-AFRICA_EST_ZONES ||= [];
-AMERIQUE_SUD_ZONES ||= [];
-ASIA_ZONES ||= [];
-OCEANIE_ZONES ||= [];
-CARIBBEAN_ZONES ||= [];
-BOUKE_ZONES ||= [];
-BELGIQUE_ZONES ||= [];
+  await Promise.all(
+    imports.map(async ([key, path]) => {
+      try {
+        const mod = await import(path);
+        if (mod[key]) result[key] = mod[key];
+      } catch {
+        // si erreur import : laisse vide
+      }
+    })
+  );
 
-// ==========================================================
-// 🌐 EXPORTS – Compatibilité FR / EN
-// ==========================================================
-export {
+  return result;
+})();
+
+// ----------------------------------------------------------
+// 🌐 EXPORTS FR / EN
+// ----------------------------------------------------------
+export const {
   EUROPE_ZONES,
   USA_ZONES,
   CANADA_ZONES,
@@ -63,17 +74,17 @@ export {
   CARIBBEAN_ZONES,
   BOUKE_ZONES,
   BELGIQUE_ZONES,
-};
+} = modules;
 
-// Alias anglais pour les vieux imports
+// Alias anglais pour compat Render
 export const AMERICA_SUD_ZONES = AMERIQUE_SUD_ZONES;
 export const ASIA_EST_ZONES = ASIA_ZONES;
 export const ASIA_SUD_ZONES = ASIA_ZONES;
 export const OCEANIA_ZONES = OCEANIE_ZONES;
 
-// ==========================================================
-// 🌍 Fusion complète (tableau unique)
-// ==========================================================
+// ----------------------------------------------------------
+// 🌍 FUSION COMPLÈTE
+// ----------------------------------------------------------
 export const COVERED_ZONES = [
   ...EUROPE_ZONES,
   ...USA_ZONES,
@@ -91,9 +102,9 @@ export const COVERED_ZONES = [
   ...BOUKE_ZONES,
 ];
 
-// ==========================================================
-// 🔎 Enumération & Stats
-// ==========================================================
+// ----------------------------------------------------------
+// 🔎 ENUMÉRATION + LOGS
+// ----------------------------------------------------------
 export function enumerateCoveredPoints(filter = "All") {
   const out = [];
 
