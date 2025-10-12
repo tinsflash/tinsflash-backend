@@ -1,6 +1,6 @@
 // ==========================================================
 // ⚙️ Gestion de l’état global du moteur TINSFLASH PRO+++
-// Version : Everest Protocol v3.96 — 100 % réel, connecté et Render-compatible
+// Version : Everest Protocol v3.97 — 100 % réel, connecté et Render-compatible
 // ==========================================================
 
 import mongoose from "mongoose";
@@ -20,7 +20,7 @@ const EngineStateSchema = new mongoose.Schema({
   status: { type: String, default: "idle" }, // idle | running | ok | fail
   lastRun: { type: Date, default: null },
   checkup: { type: Object, default: {} },
-  errors: { type: Array, default: [] },
+  errorList: { type: Array, default: [] }, // ✅ renommé (évite conflit Mongoose)
   alertsWorld: { type: Object, default: {} },
   lastExtraction: { type: Object, default: {} }, // 🧩 Ajout pour IA J.E.A.N.
 });
@@ -96,10 +96,10 @@ export async function updateEngineState(status, checkup = {}) {
 export async function getEngineState() {
   try {
     const state = await EngineState.findOne({});
-    return state || { status: "idle", lastRun: null, checkup: {} };
+    return state || { status: "idle", lastRun: null, checkup: {}, errorList: [] };
   } catch (err) {
     await addEngineError(`Erreur getEngineState: ${err.message}`, "core");
-    return { status: "fail", lastRun: null };
+    return { status: "fail", lastRun: null, errorList: [] };
   }
 }
 
@@ -138,6 +138,7 @@ export async function initEngineState() {
       status: "idle",
       lastRun: null,
       checkup: { engineStatus: "init" },
+      errorList: [],
     });
     await addEngineLog("💡 État moteur initialisé", "info", "core");
   }
