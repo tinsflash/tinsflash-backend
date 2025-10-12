@@ -1,12 +1,12 @@
 // ==========================================================
 // 🌍 CENTRALISATION MONDIALE DES ZONES COUVERTES – TINSFLASH PRO+++
-// Everest Protocol v4.3 – FULL CONNECT avec noms FR ORIGINELS
+// Everest Protocol v4.4 – FULL CONNECT bilingue (FR/EN)
 // ==========================================================
 
 import { addEngineLog } from "./engineState.js";
 
 // ==========================================================
-// 📦 Imports avec noms RÉELS existants (FR)
+// 📦 Imports réels (version FR de ton moteur)
 // ==========================================================
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
@@ -16,7 +16,7 @@ import { AFRICA_CENTRALE_ZONES } from "./runGlobalAfricaCentrale.js";
 import { AFRICA_OUEST_ZONES } from "./runGlobalAfricaOuest.js";
 import { AFRICA_SUD_ZONES } from "./runGlobalAfricaSud.js";
 import { AFRICA_EST_ZONES } from "./runGlobalAfricaEst.js";
-import { AMERIQUE_SUD_ZONES } from "./runGlobalAmeriqueSud.js"; // ✅ version FR correcte
+import { AMERIQUE_SUD_ZONES } from "./runGlobalAmeriqueSud.js";
 import { ASIA_ZONES } from "./runGlobalAsie.js";
 import { OCEANIE_ZONES } from "./runGlobalOceanie.js";
 import { CARIBBEAN_ZONES } from "./runGlobalCaribbean.js";
@@ -24,8 +24,9 @@ import { BOUKE_ZONES } from "./runBouke.js";
 import { BELGIQUE_ZONES } from "./runBelgique.js";
 
 // ==========================================================
-// 🌐 EXPORTS DIRECTS – alignés avec ton moteur actuel
+// 🌐 EXPORTS DIRECTS – compatibilité FR et EN
 // ==========================================================
+// Exports français (principaux)
 export {
   EUROPE_ZONES,
   USA_ZONES,
@@ -42,6 +43,11 @@ export {
   BOUKE_ZONES,
   BELGIQUE_ZONES,
 };
+
+// Alias anglais pour compatibilité avec anciens appels Render ou modules
+export const AMERICA_SUD_ZONES = AMERIQUE_SUD_ZONES;
+export const OCEANIA_ZONES = OCEANIE_ZONES;
+export const ASIA_EST_ZONES = ASIA_ZONES;
 
 // ==========================================================
 // 🌍 FUSION COMPLÈTE EN TABLEAU GLOBAL
