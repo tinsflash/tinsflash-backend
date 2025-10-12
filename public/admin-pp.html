@@ -14,7 +14,7 @@ text-shadow:0 0 8px #4fc3f7;}
 .container{max-width:1400px;margin:auto;padding:15px;}
 h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;}
 button{background:#13233d;color:#4fc3f7;border:1px solid #4fc3f7;
-padding:10px;margin:4px;border-radius:8px;font-weight:bold;cursor:pointer;}
+padding:10px;margin:4px;border-radius:8px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;}
 button:hover{background:#4fc3f7;color:#000;}
 .btn-active{background:#22c55e;color:#000!important;animation:blink 1s infinite alternate;}
 @keyframes blink{from{opacity:1;}to{opacity:.5;}}
@@ -22,8 +22,9 @@ button:hover{background:#4fc3f7;color:#000;}
 .light{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;}
 .ok{background:#00ff88;} .warn{background:#ffaa00;} .err{background:#ff4444;} .idle{background:#666;}
 .map{height:280px;margin-top:10px;border-radius:10px;overflow:hidden;}
-.logs{background:#0e1729;border-radius:10px;padding:10px;height:300px;overflow-y:auto;
-font-family:monospace;font-size:13px;}
+.logs{background:#0e1729;border-radius:10px;padding:10px;height:320px;overflow-y:auto;
+font-family:monospace;font-size:13px;white-space:pre-wrap;}
+.logo-btn img{height:20px;vertical-align:middle;}
 </style>
 </head>
 <body>
@@ -48,8 +49,8 @@ if(!sessionStorage.getItem("tinsflashPIN")){
   <button onclick="run('asie')">🌏 Asie</button>
   <button onclick="run('oceanie')">🌊 Océanie</button>
   <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
-  <button onclick="run('belgique')"><img src="belgique.png" height="18"/> Belgique</button>
-  <button onclick="run('bouke')"><img src="bouke.png" height="18"/> Bouké (Namur)</button>
+  <button class="logo-btn" onclick="run('belgique')"><img src="belgique.png" alt="Belgique"/> 🇧🇪 Belgique</button>
+  <button class="logo-btn" onclick="run('bouke')"><img src="bouke.png" alt="Bouké"/> 📺 Bouké (Namur)</button>
 </div>
 
 <h2>🧠 IA & Alertes</h2>
@@ -77,40 +78,69 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 
 <script>
 const logs=document.getElementById("logs");
-function addLog(msg){logs.textContent+="\n"+msg;logs.scrollTop=logs.scrollHeight;}
+function addLog(msg){
+ const line=`${new Date().toLocaleTimeString()} ${msg}`;
+ logs.textContent+="\n"+line;
+ logs.scrollTop=logs.scrollHeight;
+ console.log(line);
+}
 
+// ======================================================
+// 🔘 RUN Zones
+// ======================================================
 async function run(zone){
  const btns=document.querySelectorAll("button");
  btns.forEach(b=>b.classList.remove("btn-active"));
  event.target.classList.add("btn-active");
  addLog(`▶️ Lancement run-${zone}...`);
  try{
-  const res=await fetch(`/api/run-${zone}`,{method:"POST"});
-  const j=await res.json();
-  if(j.success)addLog(`✅ Run ${zone} terminé (${new Date().toLocaleTimeString()})`);
-  else addLog(`⚠️ Erreur ${zone}: ${j.error}`);
+   const res=await fetch(`/api/run-${zone}`,{method:"POST"});
+   const j=await res.json();
+   if(j.success)addLog(`✅ Run ${zone} terminé`);
+   else addLog(`⚠️ Erreur ${zone}: ${j.error}`);
  }catch(e){addLog(`❌ Crash ${zone}: ${e.message}`);}
  event.target.classList.remove("btn-active");
+ updateStatus();
 }
 
-async function runAI(){await fetch("/api/runAI",{method:"POST"});addLog("🧠 IA J.E.A.N. activée.");}
-async function runAlerts(){await fetch("/api/runWorldAlerts",{method:"POST"});addLog("🚨 Fusion alertes déclenchée.");}
+// ======================================================
+// 🧠 RUN IA + Alertes
+// ======================================================
+async function runAI(){
+ try{
+   const r=await fetch("/api/runAI",{method:"POST"});
+   if(r.ok){addLog("🧠 IA J.E.A.N. activée.");setLight("lightIA","ok");}
+   else addLog("⚠️ Erreur activation IA.");
+ }catch(e){addLog("❌ Crash IA: "+e.message);}
+}
+async function runAlerts(){
+ try{
+   const r=await fetch("/api/runWorldAlerts",{method:"POST"});
+   if(r.ok){addLog("🚨 Fusion alertes terminée.");setLight("lightAlerts","ok");}
+   else addLog("⚠️ Erreur fusion alertes.");
+ }catch(e){addLog("❌ Crash Alertes: "+e.message);}
+}
 
-// 🛰️ Logs temps réel (SSE)
+// ======================================================
+// 🛰️ LOGS LIVE (SSE)
+// ======================================================
 const evt=new EventSource("/api/logs");
 evt.onmessage=e=>{
  const log=JSON.parse(e.data);
- addLog(`${new Date(log.time).toLocaleTimeString()} — ${log.message}`);
+ addLog(log.message);
 };
 
-// 🧩 Mise à jour état moteur
+// ======================================================
+// ⚙️ STATUS
+// ======================================================
 async function updateStatus(){
  try{
-   const r=await fetch("/api/status");const s=await r.json();
+   const r=await fetch("/api/status");
+   const s=await r.json();
    setLight("lightEngine",s.status==="RUN_OK"?"ok":"warn");
-   setLight("lightIA",s.checkup?.iaActive?"ok":"idle");
-   setLight("lightAlerts",s.checkup?.alerts?"ok":"warn");
    setLight("lightDB",s.db==="connected"?"ok":"err");
+   if(s.checkup?.iaActive)setLight("lightIA","ok");
+   if(s.checkup?.alerts)setLight("lightAlerts","ok");
  }catch{setLight("lightEngine","err");}
 }
 function setLight(id,state){
@@ -119,23 +149,33 @@ function setLight(id,state){
 }
 setInterval(updateStatus,15000);updateStatus();
 
-// 🌍 Cartes Leaflet
-const map1=L.map("mapForecast").setView([50,4],3);
-const map2=L.map("mapAlerts").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map1);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map2);
+// ======================================================
+// 🌍 CARTES LEAFLET
+// ======================================================
+const mapF=L.map("mapForecast").setView([50,4],4);
+const mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
 
-// Charger points de prévision et alertes
+// Points prévisions
 async function loadForecasts(){
- const r=await fetch("/api/forecast?lat=50&lon=4"); 
- const d=await r.json();
- L.marker([d.lat||50,d.lon||4]).addTo(map1).bindPopup(`Temp: ${d.temp||"?"}°C`);
+ try{
+   const r=await fetch("/api/forecast?lat=50&lon=4");
+   const d=await r.json();
+   L.marker([d.lat||50,d.lon||4])
+     .addTo(mapF)
+     .bindPopup(`Temp: ${d.temp||'--'}°C<br>${d.condition||''}`);
+ }catch(e){addLog("⚠️ Erreur loadForecasts: "+e.message);}
 }
 async function loadAlerts(){
- const r=await fetch("/api/alerts");
- const a=await r.json();
- a.forEach(x=>{if(x.lat&&x.lon)L.circle([x.lat,x.lon],{radius:80000,color:"red"}).addTo(map2)
-   .bindPopup(x.title||"Alerte");});
+ try{
+   const r=await fetch("/api/alerts");
+   const a=await r.json();
+   a.forEach(x=>{
+     if(x.lat&&x.lon)L.circle([x.lat,x.lon],{radius:60000,color:"red"})
+       .addTo(mapA).bindPopup(`<b>${x.title||"Alerte"}</b><br>${x.zone||''}`);
+   });
+ }catch(e){addLog("⚠️ Erreur loadAlerts: "+e.message);}
 }
 loadForecasts();loadAlerts();
 </script>
