@@ -50,7 +50,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.use(express.json());
-app.use(cors({ origin: "*", methods: ["GET", "POST"], allowedHeaders: ["Content-Type", "Authorization"] }));
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // ==========================================================
 // 🔐 Clés Stripe / JWT adaptées Render
@@ -143,12 +147,14 @@ app.post("/api/chat-public", verifySession, async (req, res) => {
     } else if (user.plan === "premium") {
       if (todayCount >= 2)
         return res.status(403).json({
-          error: "Limite Premium atteinte (2 questions/jour). Passez Pro : https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01",
+          error:
+            "Limite Premium atteinte (2 questions/jour). Passez Pro : https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01",
         });
     } else {
       if (user.credits <= 0)
         return res.status(403).json({
-          error: "Aucun crédit IA disponible. Achetez 100 crédits : https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02",
+          error:
+            "Aucun crédit IA disponible. Achetez 100 crédits : https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02",
         });
     }
 
@@ -266,14 +272,13 @@ app.get("/api/status", async (_, res) => {
 });
 
 // ==========================================================
-// 🔒 Route protégée – accès page Pro uniquement après login
+// 🔒 Accès pages Pro / Premium
 // ==========================================================
 app.get("/pro.html", verifySession, async (req, res) => {
   try {
     const user = req.user;
-    if (!["pro", "pro+"].includes(user.plan)) {
+    if (!["pro", "pro+"].includes(user.plan))
       return res.status(403).send("⛔ Accès réservé aux abonnés Pro / Pro+.");
-    }
     res.sendFile(path.join(__dirname, "public", "pro.html"));
   } catch (e) {
     await addEngineError("Erreur /pro.html : " + e.message, "auth");
@@ -285,10 +290,14 @@ app.get("/pro.html", verifySession, async (req, res) => {
 // 🧭 Fichiers publics / admin
 // ==========================================================
 [
-  "admin-pp.html","admin-alerts.html","admin-chat.html","admin-index.html",
-  "admin-radar.html","admin-local.html","admin-news.html","admin-users.html"
-].forEach(p=>app.get(`/${p}`,(_,res)=>res.sendFile(path.join(__dirname,"public",p))));
-app.use(express.static(path.join(__dirname,"public")));
+  "admin-pp.html", "admin-alerts.html", "admin-chat.html",
+  "admin-index.html", "admin-radar.html", "admin-local.html",
+  "admin-news.html", "admin-users.html",
+  "premium.html", "pro.html", "protest.html"
+].forEach(p => app.get(`/${p}`, (_, res) =>
+  res.sendFile(path.join(__dirname, "public", p))
+));
+app.use(express.static(path.join(__dirname, "public")));
 
 // ==========================================================
 // 🚀 Lancement du moteur TINSFLASH
