@@ -5,100 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TINSFLASH • Prévisions & Alertes IA J.E.A.N.</title>
 
+  <!-- 🌍 Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+  <!-- 💰 Google Adsense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8204947691352732" crossorigin="anonymous"></script>
+
   <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #0f172a;
-      color: #f5faff;
-    }
-    header {
-      text-align: center;
-      padding: 15px;
-      background: linear-gradient(90deg, #08101f, #15294d);
-      color: #4fc3f7;
-      font-size: 1.6em;
-      font-weight: bold;
-      text-shadow: 0 0 12px #4fc3f7;
-    }
-    .subheader {
-      text-align: center;
-      background: #0d1528;
-      color: #7dd3fc;
-      padding: 6px;
-      font-size: 0.9em;
-    }
+    body {margin:0;font-family:"Segoe UI",sans-serif;background:#0f172a;color:#f5faff;}
+    header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
+    .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:.9em;}
 
-    /* 🎥 Vidéo bandeau */
-    .video-container {
-      position: relative;
-      overflow: hidden;
-    }
-    video {
-      width: 100%;
-      max-height: 180px;
-      object-fit: cover;
-      display: block;
-      filter: brightness(0.95);
-    }
-    .video-overlay {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      height: 60px;
-      background: linear-gradient(to bottom, rgba(15, 23, 42, 0) 0%, #0f172a 100%);
-      pointer-events: none;
-    }
-    .sound-btn {
-      position: absolute;
-      right: 15px;
-      bottom: 15px;
-      background: rgba(0, 0, 0, 0.5);
-      border: none;
-      border-radius: 50%;
-      color: #4fc3f7;
-      font-size: 18px;
-      padding: 6px;
-      cursor: pointer;
-    }
+    /* 🎥 Vidéo intro */
+    .video-container{position:relative;overflow:hidden;}
+    video{width:100%;max-height:200px;object-fit:cover;display:block;filter:brightness(0.95);}
+    .sound-btn{position:absolute;right:15px;bottom:15px;background:rgba(0,0,0,0.6);border:none;border-radius:50%;color:#4fc3f7;font-size:18px;padding:6px;cursor:pointer;}
+    .video-overlay{position:absolute;bottom:0;width:100%;height:60px;background:linear-gradient(to bottom,rgba(15,23,42,0) 0%,#0f172a 100%);pointer-events:none;}
 
-    main {max-width: 1200px;margin:auto;padding:20px;}
-    h2 {color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
-    .intro-title {text-align:center;color:#4fc3f7;font-size:1.6em;margin-top:25px;text-shadow:0 0 10px #4fc3f7;}
-    p.intro {color:#e0e8f9;line-height:1.5;font-size:1em;text-align:justify;}
-    .intro-block {display:flex;align-items:flex-start;gap:14px;margin-top:20px;flex-wrap:wrap;}
-    .intro-block img {border-radius:12px;width:160px;height:auto;box-shadow:0 0 18px rgba(0,0,0,0.4);}
+    /* 🌐 Langues */
+    #google_translate_element{text-align:center;margin:10px 0;}
+
+    main{max-width:1200px;margin:auto;padding:20px;}
+    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
+    .intro-title{text-align:center;color:#4fc3f7;font-size:1.6em;margin-top:25px;text-shadow:0 0 10px #4fc3f7;}
+    .intro-block{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+    .intro-block img{border-radius:10px;width:240px;max-height:340px;object-fit:contain;box-shadow:0 0 18px rgba(0,0,0,0.4);}
+    .intro-text{flex:1;max-height:200px;overflow-y:auto;background:#131a2b;padding:12px;border-radius:10px;color:#e0e8f9;line-height:1.5;}
 
     .forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
-    .forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;
-      box-shadow:0 0 10px rgba(0,0,0,0.3);}
+    .forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,0.3);}
     .forecast-card img{width:50px;height:50px;}
+    .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
+    .meteo-jour{background:#15294d;padding:12px;border-radius:10px;margin-top:20px;color:#dce7f9;box-shadow:0 0 10px rgba(0,0,0,0.4);}
+    .alert-section .alert-box{background:#1b2439;border-left:4px solid #4fc3f7;padding:8px;margin-bottom:8px;border-radius:8px;}
 
-    .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;
-      box-shadow:0 0 12px rgba(0,0,0,0.4);}
-    footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:0.9em;}
+    .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
+    .premium-box{background:#11203a;border:1px solid #4fc3f7;border-radius:10px;padding:14px;margin-top:25px;text-align:center;}
+    .premium-box a{color:#4fc3f7;text-decoration:none;font-weight:bold;}
+    .premium-box a:hover{text-decoration:underline;}
+    footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:.9em;}
     footer a{color:#4fc3f7;text-decoration:none;}
     footer a:hover{text-decoration:underline;}
-    .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
-    .notif-btn{background:#4fc3f7;color:#000;padding:6px 10px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:8px;}
-    input[type=text]{width:100%;padding:8px;margin-top:8px;border-radius:6px;border:none;background:#1b2339;color:#eee;}
-    .alert-section .alert-box{background:#1b2439;border-left:4px solid #4fc3f7;padding:8px;margin-bottom:8px;border-radius:8px;}
-    .alert-section .alert-box strong{color:#4fc3f7;}
-    .meteo-jour{background:#15294d;padding:12px;border-radius:10px;margin-top:20px;color:#dce7f9;box-shadow:0 0 10px rgba(0,0,0,0.4);}
-    .ask-jean{text-align:center;margin:20px 0;}
-    .ask-jean a{color:#4fc3f7;font-weight:bold;cursor:pointer;text-decoration:none;}
-    .ask-jean a:hover{text-decoration:underline;}
 
-    /* 💬 Chat J.E.A.N */
-    .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
-      border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;
-      box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
+    /* 💬 Chat */
+    .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
     .btn-ai:hover{transform:scale(1.1);}
-    .chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;
-      width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
+    .chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:320px;height:420px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
     .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
     .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
     .chat-input{display:flex;border-top:1px solid #333;}
@@ -109,8 +62,9 @@
 
 <body>
   <header>TINSFLASH • Prévisions & Alertes IA J.E.A.N.</header>
-  <div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Spécificités locales (relief, altitude, océans)</div>
+  <div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Analyse humaine combinée</div>
 
+  <!-- 🎥 Bandeau vidéo -->
   <div class="video-container">
     <video autoplay muted loop playsinline id="introVideo">
       <source src="intro-jean.mp4" type="video/mp4" />
@@ -119,97 +73,108 @@
     <button class="sound-btn" id="soundToggle">🔇</button>
   </div>
 
+  <!-- 🌐 Google Translate -->
+  <div id="google_translate_element"></div>
+  <script type="text/javascript">
+    function googleTranslateElementInit(){
+      new google.translate.TranslateElement({pageLanguage:'fr',includedLanguages:'fr,en,nl,de,es,it'},'google_translate_element');
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
   <main>
-    <h2 class="intro-title">Présentation du système J.E.A.N.</h2>
+    <h2 class="intro-title">Présentation du système TINSFLASH IA J.E.A.N.</h2>
     <div class="intro-block">
-      <img src="avatars/jean-default.png" alt="J.E.A.N avatar" />
-      <div>
-        <p class="intro">
-          Le <strong>Système IA J.E.A.N.</strong> croise en temps réel les modèles météorologiques mondiaux
-          (<strong>GFS, ECMWF, ICON, HRRR, AIFS, GraphCast</strong>), les satellites <strong>NASA POWER</strong>,
-          <strong>Copernicus ERA5</strong> et les observations locales pour générer des prévisions
-          <strong>fiables, locales, nationales et mondiales</strong>.  
-          Son IA détecte les anomalies atmosphériques avant les services officiels et anticipe les phénomènes extrêmes.  
-          Objectif : <strong>protéger les vies humaines, les animaux et les biens</strong>.
-        </p>
+      <img src="avatars/jean-default.png" alt="Avatar J.E.A.N" />
+      <div class="intro-text">
+        <p>Le moteur <strong>TINSFLASH IA J.E.A.N.</strong> combine les modèles météorologiques mondiaux, les données satellites et l’analyse humaine pour produire des prévisions locales et globales d’une fiabilité croissante.</p>
+        <p>Notre objectif est de <strong>déceler les phénomènes extrêmes avant les services officiels</strong>, tout en continuant à améliorer notre précision et notre rapidité grâce à l’alliance entre intelligence artificielle et expertise humaine.</p>
+        <p>Chaque alerte importante est vérifiée à la fois par J.E.A.N. et par un opérateur humain afin d’éviter les fausses alertes et d’assurer une fiabilité maximale.</p>
       </div>
     </div>
 
     <h2>📍 Votre position</h2>
-    <div id="position-status">Détection de votre position...</div>
+    <div id="position-status">Détection de votre position…</div>
     <input type="text" id="manualAddress" placeholder="Ou entrez votre adresse (rue, ville, pays)" />
-    <button class="notif-btn" onclick="askNotifications()">🔔 Activer les notifications météo</button>
+    <button class="banner" onclick="askNotifications()">🔔 Activer les notifications météo</button>
 
-    <h2>Prévision locale du jour</h2>
-    <div id="forecast-today" class="forecast-grid">Chargement...</div>
+    <h2>Prévisions locales du jour</h2>
+    <div id="forecast-today" class="forecast-grid">Chargement…</div>
 
     <h2>Prévisions locales (7 jours)</h2>
-    <div id="forecast-local" class="forecast-grid">Chargement...</div>
+    <div id="forecast-local" class="forecast-grid">Chargement…</div>
 
     <h2>Prévisions nationales (7 jours)</h2>
-    <div id="forecast-national" class="forecast-grid">Chargement...</div>
+    <div id="forecast-national" class="forecast-grid">Chargement…</div>
 
-    <div id="meteoJour" class="meteo-jour">Analyse du jour en cours...</div>
+    <div id="meteoJour" class="meteo-jour">Analyse du jour en cours…</div>
 
-    <div class="ask-jean">
-      <a id="askJeanLink">💬 Poser une question météo à J.E.A.N.</a>
+    <div class="premium-box">
+      🌟 Accédez aux analyses IA avancées :<br/>
+      <a href="https://buy.stripe.com/cNiaEZgK5bpffuRex3gfu00">Passer Premium (5,99 €/mois)</a> | 
+      <a href="https://buy.stripe.com/dRm4gBeBX9h782p74Bgfu01">Passer Pro (14,99 €/mois)</a><br/>
+      ou <a href="https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02">acheter 100 crédits IA (5,90 €)</a>
     </div>
 
     <h2>Carte mondiale des alertes</h2>
     <div id="map-alerts" class="map-container"></div>
 
     <h2>Alertes locales</h2>
-    <div id="alerts-local" class="alert-section">Chargement...</div>
+    <div id="alerts-local" class="alert-section">Chargement…</div>
 
     <h2>Alertes nationales</h2>
-    <div id="alerts-national" class="alert-section">Chargement...</div>
+    <div id="alerts-national" class="alert-section">Chargement…</div>
 
     <h2>Alertes mondiales – Primeurs TINSFLASH</h2>
-    <div id="alerts-world" class="alert-section">Chargement...</div>
+    <div id="alerts-world" class="alert-section">Chargement…</div>
 
     <h2>Radar mondial Windy</h2>
-    <iframe width="100%" height="450"
-      src="https://embed.windy.com/embed2.html?lat=48.0&lon=3.0&zoom=3&level=surface&overlay=rain&menu=true"
-      frameborder="0"></iframe>
+    <iframe width="100%" height="450" src="https://embed.windy.com/embed2.html?lat=48.0&lon=3.0&zoom=3&level=surface&overlay=rain&menu=true" frameborder="0"></iframe>
 
     <div class="banner">
-      🔧 Pour vos diagnostics et détections de fuites :
+      🔧 Pour vos diagnostics et détections de fuites :<br/>
       <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
     </div>
   </main>
 
   <footer>
-    © 2025 TINSFLASH – Tous droits réservés <br/>
+    © 2025 TINSFLASH – Tous droits réservés | 
+    <a href="rgpd.html">Politique RGPD</a><br/>
     📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 
-    💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp +32 473 26 44 77</a>
+    💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp (contact Patrick)</a>
   </footer>
 
-  <!-- 💬 Chat météo -->
+  <!-- 💬 Chat IA J.E.A.N -->
   <button class="btn-ai" id="btnAI">🤖</button>
   <div class="chat-box" id="chatJean">
     <div class="chat-header">Assistant météo J.E.A.N.</div>
-    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-messages" id="chatMessages">
+      <div style="color:#4fc3f7;padding:5px;">
+        Pour discuter avec J.E.A.N., achetez vos crédits IA (5,90 €/100 questions).<br/>
+        <a href="https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02" target="_blank" style="color:#7dd3fc;">👉 Acheter des crédits</a>
+      </div>
+    </div>
     <div class="chat-input">
-      <input type="text" id="chatInput" placeholder="Posez votre question météo..." />
-      <button onclick="sendChat()">Envoyer</button>
+      <input type="text" id="chatInput" placeholder="Posez votre question météo..." disabled />
+      <button disabled>Envoyer</button>
     </div>
   </div>
 
   <script>
-    const API_BASE = "/api";
+    const API_BASE="/api";
 
-    // 🔊 Gestion audio vidéo
+    // 🔊 Vidéo
     const video=document.getElementById("introVideo");
     const soundToggle=document.getElementById("soundToggle");
     soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
 
-    // 🛰️ Notifications
+    // 🔔 Notifications
     function askNotifications(){
       if(Notification.permission==="granted"){alert("Notifications déjà activées.");return;}
       Notification.requestPermission().then(p=>{if(p==="granted")new Notification("TINSFLASH : notifications météo activées !");});
     }
 
-    // 🌍 Géolocalisation + saisie manuelle
+    // 📍 Géoloc
     function initPosition(){
       const ps=document.getElementById("position-status");
       if(navigator.geolocation){
@@ -250,13 +215,13 @@
 
     function renderMeteoJour(f){
       const el=document.getElementById("meteoJour");
-      if(!f){el.textContent="Prévisions en cours...";return;}
+      if(!f){el.textContent="Prévisions en cours…";return;}
       let msg=`Aujourd’hui, ${f.condition?.toLowerCase()||"conditions variables"} avec ${f.temp_min}°C à ${f.temp_max}°C. `;
       msg+=`Vent : ${f.wind?.toFixed(0)||0} km/h – Fiabilité : ${(f.reliability*100||80).toFixed(0)} %.`;
       el.textContent=msg;
     }
 
-    // 🗺️ Carte alertes
+    // 🌍 Carte alertes
     function initMapAlerts(){
       const map=L.map("map-alerts").setView([20,0],2);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
@@ -267,28 +232,9 @@
       });
     }
 
-    // 💬 Chat météo limité à 2 demandes / 24 h
+    // 💬 Chat (verrouillé)
     const chatBox=document.getElementById("chatJean");
     document.getElementById("btnAI").onclick=()=>chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
-    document.getElementById("askJeanLink").onclick=()=>{chatBox.style.display="flex";};
-
-    async function sendChat(){
-      const msg=document.getElementById("chatInput").value.trim();
-      if(!msg)return;
-      const m=document.getElementById("chatMessages");
-      m.innerHTML+=`<div style='color:#4fc3f7;'>Vous : ${msg}</div>`;
-      document.getElementById("chatInput").value="";
-      try{
-        const r=await fetch(`${API_BASE}/chat-public`,{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({question:`[METEO ONLY] ${msg}`})
-        });
-        const d=await r.json();
-        m.innerHTML+=`<div>J.E.A.N : ${d.reply}</div>`;
-      }catch(e){m.innerHTML+=`<div>❌ ${e.message}</div>`;}
-      m.scrollTop=m.scrollHeight;
-    }
-
     document.addEventListener("DOMContentLoaded",()=>{initPosition();initMapAlerts();});
   </script>
 </body>
