@@ -12,9 +12,6 @@ export async function runBouke() {
   try {
     await addEngineLog("🎥 Démarrage runBouké (Province de Namur complète)", "info", "runBouke");
 
-    // ==========================================================
-    // 📍 COMMUNES ET VILLAGES DE LA PROVINCE DE NAMUR
-    // ==========================================================
     const zones = [
       // --- Namur (commune et sections)
       { name: "Namur", lat: 50.4669, lon: 4.8675 },
@@ -44,7 +41,7 @@ export async function runBouke() {
       { name: "Vitrival", lat: 50.38, lon: 4.67 },
       { name: "Aisemont", lat: 50.40, lon: 4.65 },
 
-      // --- Sambreville (Arsimont, Tamines, Auvelais)
+      // --- Sambreville
       { name: "Arsimont", lat: 50.47, lon: 4.61 },
       { name: "Tamines", lat: 50.44, lon: 4.63 },
       { name: "Auvelais", lat: 50.44, lon: 4.63 },
@@ -127,3 +124,8 @@ export async function runBouke() {
     return { error: err.message };
   }
 }
+
+// ==========================================================
+// 🔁 Export des zones (pour zonesCovered.js)
+// ==========================================================
+export const BOUKE_ZONES = zones;
