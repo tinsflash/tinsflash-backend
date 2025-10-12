@@ -1,9 +1,24 @@
-// PATH: services/runGlobalUSA.js
-// 🇺🇸 États-Unis – Extraction météo TINSFLASH PRO+++
-// Version : Everest Protocol v3.6 – 100 % réel & connecté
+// ==========================================================
+// 🇺🇸 TINSFLASH – runGlobalUSA.js (Everest Protocol v4.0 PRO+++ REAL CONNECT)
+// ==========================================================
+// Extraction complète – États-Unis d’Amérique
+// ==========================================================
 
-import { addEngineLog, addEngineError, saveEngineState } from "./engineState.js";
+import fs from "fs";
+import path from "path";
+import { superForecast } from "./superForecast.js";
+import {
+  addEngineLog,
+  addEngineError,
+  updateEngineState,
+  setLastExtraction,
+} from "./engineState.js";
 
+export async function runGlobalUSA() {
+  try {
+    await addEngineLog("🇺🇸 Démarrage runGlobalUSA", "info", "runGlobalUSA");
+
+    // ========= ZONE GÉOGRAPHIQUE =========
 // ===========================
 // Zones détaillées par État
 // ===========================
@@ -385,30 +400,33 @@ export const USA_ZONES = {
 // ===========================
 // 🧠 Extraction USA
 // ===========================
-export async function runGlobalUSA() {
-  try {
-    await addEngineLog("🇺🇸 Démarrage extraction USA", "info", "USA");
+   const result = await superForecast({ zones, runType: "USA", withAI: false });
 
-    const allPoints = [];
-    for (const [state, zones] of Object.entries(USA_ZONES)) {
-      for (const z of zones) {
-        allPoints.push({
-          country: "USA",
-          state,
-          region: z.region,
-          lat: z.lat,
-          lon: z.lon,
-          forecast: "Pending",
-          timestamp: new Date(),
-        });
-      }
-    }
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const filePath = path.join(dataDir, "usa.json");
+    fs.writeFileSync(filePath, JSON.stringify(result.phase1Results || result, null, 2), "utf8");
 
-    await saveEngineState({ lastRunUSA: new Date(), checkup: { USA: "ok" } });
-    await addEngineLog(`✅ Extraction USA terminée (${allPoints.length} zones)`, "success", "USA");
-    return { success: true, zones: allPoints };
+    await setLastExtraction({
+      id: `usa-${Date.now()}`,
+      zones: ["usa"],
+      files: [filePath],
+      status: "done",
+    });
+
+    await updateEngineState("ok", {
+      engineStatus: "RUN_OK",
+      lastFilter: "USA",
+      zonesCount: zones.length,
+    });
+
+    await addEngineLog(`✅ runGlobalUSA terminé (${zones.length} zones)`, "success", "runGlobalUSA");
+    return result;
   } catch (err) {
-    await addEngineError("💥 Erreur extraction USA : " + err.message, "USA");
-    return { success: false, error: err.message };
+    await addEngineError(`Erreur runGlobalUSA : ${err.message}`, "runGlobalUSA");
+    return { error: err.message };
   }
 }
+
+export const USA_ZONES = [];
+export default { runGlobalUSA };
