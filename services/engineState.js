@@ -1,6 +1,7 @@
-// PATH: services/engineState.js
+// ==========================================================
 // ⚙️ Gestion de l’état global du moteur TINSFLASH PRO+++
-// Version : Everest Protocol v3.6 — 100 % réel & connecté
+// Version : Everest Protocol v3.95 — 100 % réel, connecté et Render-compatible
+// ==========================================================
 
 import mongoose from "mongoose";
 import EventEmitter from "events";
@@ -31,6 +32,12 @@ export const EngineLog = mongoose.model("EngineLog", LogSchema);
 // ==========================================================
 export const engineEvents = new EventEmitter();
 
+// Cette fonction externe permet de synchroniser les logs avec le flux SSE (/api/logs)
+let externalLogStream = null;
+export function bindExternalLogStream(fn) {
+  externalLogStream = fn;
+}
+
 // ==========================================================
 // 🔧 Fonctions utilitaires — Logs, erreurs & statut moteur
 // ==========================================================
@@ -38,8 +45,10 @@ export async function addEngineLog(message, level = "info", module = "core") {
   try {
     const log = new EngineLog({ message, level, module });
     await log.save();
+    const payload = { message, level, module, timestamp: new Date() };
     console.log(`🛰️ [${level.toUpperCase()}][${module}] ${message}`);
-    engineEvents.emit("log", { message, level, module, timestamp: new Date() });
+    engineEvents.emit("log", payload);
+    if (externalLogStream) externalLogStream(`[${module}] ${message}`);
   } catch (err) {
     console.error("❌ Erreur lors de l'enregistrement du log:", err.message);
   }
@@ -49,13 +58,10 @@ export async function addEngineError(message, module = "core") {
   try {
     const log = new EngineLog({ message, level: "error", module });
     await log.save();
+    const payload = { message, level: "error", module, timestamp: new Date() };
     console.error(`💥 [ERREUR][${module}] ${message}`);
-    engineEvents.emit("log", {
-      message,
-      level: "error",
-      module,
-      timestamp: new Date(),
-    });
+    engineEvents.emit("log", payload);
+    if (externalLogStream) externalLogStream(`❌ [${module}] ${message}`);
   } catch (err) {
     console.error("❌ Erreur lors de l'enregistrement de l'erreur:", err.message);
   }
@@ -66,10 +72,7 @@ export async function addEngineError(message, module = "core") {
 // ==========================================================
 export async function saveEngineState(data) {
   try {
-    const state = await EngineState.findOneAndUpdate({}, data, {
-      new: true,
-      upsert: true,
-    });
+    const state = await EngineState.findOneAndUpdate({}, data, { new: true, upsert: true });
     return state;
   } catch (err) {
     await addEngineError(`Erreur saveEngineState: ${err.message}`, "core");
@@ -107,24 +110,18 @@ let extractionStopped = false;
 
 export function stopExtraction() {
   extractionStopped = true;
-  console.warn("🛑 Extraction stoppée manuellement");
-  engineEvents.emit("log", {
-    message: "🛑 Extraction stoppée manuellement",
-    level: "warn",
-    module: "core",
-    timestamp: new Date(),
-  });
+  const msg = "🛑 Extraction stoppée manuellement";
+  console.warn(msg);
+  engineEvents.emit("log", { message: msg, level: "warn", module: "core", timestamp: new Date() });
+  if (externalLogStream) externalLogStream(msg);
 }
 
 export function resetStopFlag() {
   extractionStopped = false;
-  console.log("✅ Flag stop extraction réinitialisé");
-  engineEvents.emit("log", {
-    message: "✅ Flag stop extraction réinitialisé",
-    level: "info",
-    module: "core",
-    timestamp: new Date(),
-  });
+  const msg = "✅ Flag stop extraction réinitialisé";
+  console.log(msg);
+  engineEvents.emit("log", { message: msg, level: "info", module: "core", timestamp: new Date() });
+  if (externalLogStream) externalLogStream(msg);
 }
 
 export function isExtractionStopped() {
@@ -163,4 +160,5 @@ export default {
   EngineState,
   EngineLog,
   engineEvents,
+  bindExternalLogStream,
 };
