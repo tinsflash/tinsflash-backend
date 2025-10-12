@@ -29,3 +29,6 @@ export async function runGlobalAfrique() {
     return { error: err.message };
   }
 }
+
+// ✅ Alias export pour compatibilité server.js
+export { runGlobalAfrique as runAfrique };
