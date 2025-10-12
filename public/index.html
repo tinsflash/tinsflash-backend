@@ -42,7 +42,7 @@ header {
 .video-container {
   position: relative;
   overflow: hidden;
-  max-height: 220px;
+  max-height: 200px;
 }
 
 video {
@@ -50,8 +50,8 @@ video {
   height: auto;
   display: block;
   object-fit: cover;
-  object-position: bottom center; /* ✅ ancre en bas */
-  filter: brightness(0.95);
+  object-position: center bottom; /* ✅ Vue sol (pas le ciel) */
+  filter: brightness(0.93);
 }
 
 .sound-btn {
@@ -75,8 +75,17 @@ video {
   background: linear-gradient(to bottom, rgba(15, 23, 42, 0) 0%, #0f172a 100%);
   pointer-events: none;
 }
-  
-/* ==== BLOCS ==== */
+
+/* ==== AVATAR ==== */
+.intro-block img {
+  border-radius: 10px;
+  width: 140px; /* ✅ réduit */
+  height: auto;
+  max-height: 220px;
+  object-fit: contain;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.4);
+}
+  /* ==== BLOCS ==== */
 main {
   max-width: 1200px;
   margin: auto;
