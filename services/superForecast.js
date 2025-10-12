@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (v4.3.2 REAL FULL-FALLBACK)
+// 🌍 TINSFLASH – superForecast.js (v4.3.3 AROME-FIX)
 // ==========================================================
 import axios from "axios";
 import fs from "fs";
@@ -26,7 +26,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     const openModels = [
       { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
       { name: "ECMWF ERA5 AWS", url: `https://era5-pds.s3.amazonaws.com/${new Date().getUTCFullYear()}/${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/data/air_temperature_at_2_metres.nc` },
-      { name: "AROME MeteoFetch", url: `https://api.meteo-concept.fr/api/forecast/latlon/${lat}/${lon}?token=${process.env.METEO_CONCEPT_TOKEN || ""}` },
+      { name: "AROME MeteoFrance", url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
       { name: "HRRR NOAA AWS", url: `https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.${new Date().toISOString().slice(0, 10).replace(/-/g, "")}/conus/hrrr.t${String(new Date().getUTCHours()).padStart(2, "0")}z.wrfsfcf01.grib2` },
       { name: "NASA POWER", url: `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&longitude=${lon}&latitude=${lat}&start=${new Date().getUTCFullYear()}${String(new Date().getUTCMonth() + 1).padStart(2, "0")}${String(new Date().getUTCDate()).padStart(2, "0")}&end=${new Date().getUTCFullYear()}${String(new Date().getUTCMonth() + 1).padStart(2, "0")}${String(new Date().getUTCDate()).padStart(2, "0")}&format=JSON` },
       { name: "ICON DWD EU", url: `https://opendata.dwd.de/weather/nwp/icon-eu/grib/${new Date().toISOString().slice(0, 10).replace(/-/g, "")}/icon-eu_europe_regular-lat-lon_single-level_${String(Math.floor(new Date().getUTCHours() / 6) * 6).padStart(2, "0")}00_T_2M.grib2.bz2` },
@@ -48,7 +48,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
           try {
             const res = await axios.get(awsUrl, {
               responseType: "arraybuffer",
-              headers: { "User-Agent": "Mozilla/5.0 (compatible; TINSFLASH/4.3.2)", Accept: "*/*" },
+              headers: { "User-Agent": "Mozilla/5.0 (compatible; TINSFLASH/4.3.3)", Accept: "*/*" },
               timeout: 15000,
             });
             ok = res.data?.byteLength > 1000;
