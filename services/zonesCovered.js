@@ -1,12 +1,12 @@
 // ==========================================================
 // 🌍 CENTRALISATION MONDIALE DES ZONES COUVERTES – TINSFLASH PRO+++
-// Everest Protocol v4.3 – Full Array Fusion – 100 % réel et connecté
+// Everest Protocol v4.3 – FULL CONNECT avec noms FR ORIGINELS
 // ==========================================================
 
 import { addEngineLog } from "./engineState.js";
 
 // ==========================================================
-// 📦 Import de toutes les zones régionales et médias
+// 📦 Imports avec noms RÉELS existants (FR)
 // ==========================================================
 import { EUROPE_ZONES } from "./runGlobalEurope.js";
 import { USA_ZONES } from "./runGlobalUSA.js";
@@ -16,15 +16,15 @@ import { AFRICA_CENTRALE_ZONES } from "./runGlobalAfricaCentrale.js";
 import { AFRICA_OUEST_ZONES } from "./runGlobalAfricaOuest.js";
 import { AFRICA_SUD_ZONES } from "./runGlobalAfricaSud.js";
 import { AFRICA_EST_ZONES } from "./runGlobalAfricaEst.js";
-import { AMERICA_SUD_ZONES } from "./runGlobalAmeriqueSud.js";
-import { ASIA_EST_ZONES } from "./runGlobalAsie.js";
-import { OCEANIA_ZONES } from "./runGlobalOceanie.js";
+import { AMERIQUE_SUD_ZONES } from "./runGlobalAmeriqueSud.js"; // ✅ version FR correcte
+import { ASIA_ZONES } from "./runGlobalAsie.js";
+import { OCEANIE_ZONES } from "./runGlobalOceanie.js";
 import { CARIBBEAN_ZONES } from "./runGlobalCaribbean.js";
 import { BOUKE_ZONES } from "./runBouke.js";
 import { BELGIQUE_ZONES } from "./runBelgique.js";
 
 // ==========================================================
-// 🌐 EXPORTS DIRECTS pour compatibilité Render
+// 🌐 EXPORTS DIRECTS – alignés avec ton moteur actuel
 // ==========================================================
 export {
   EUROPE_ZONES,
@@ -35,9 +35,9 @@ export {
   AFRICA_OUEST_ZONES,
   AFRICA_SUD_ZONES,
   AFRICA_EST_ZONES,
-  AMERICA_SUD_ZONES,
-  ASIA_EST_ZONES,
-  OCEANIA_ZONES,
+  AMERIQUE_SUD_ZONES,
+  ASIA_ZONES,
+  OCEANIE_ZONES,
   CARIBBEAN_ZONES,
   BOUKE_ZONES,
   BELGIQUE_ZONES,
@@ -55,9 +55,9 @@ export const COVERED_ZONES = [
   ...(AFRICA_OUEST_ZONES || []),
   ...(AFRICA_SUD_ZONES || []),
   ...(AFRICA_EST_ZONES || []),
-  ...(AMERICA_SUD_ZONES || []),
-  ...(ASIA_EST_ZONES || []),
-  ...(OCEANIA_ZONES || []),
+  ...(AMERIQUE_SUD_ZONES || []),
+  ...(ASIA_ZONES || []),
+  ...(OCEANIE_ZONES || []),
   ...(CARIBBEAN_ZONES || []),
   ...(BELGIQUE_ZONES || []),
   ...(BOUKE_ZONES || []),
