@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.95 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v3.96 PRO+++ REAL FULL CONNECT)
 // ==========================================================
 // Moteur IA J.E.A.N. + Authentification + Accès PRO sécurisé + Runs régionaux & médias
 // ==========================================================
@@ -19,17 +19,17 @@ import Stripe from "stripe";
 import { EventEmitter } from "events";
 
 // ==========================================================
-// 🧩 Imports internes (inchangés)
+// 🧩 Imports internes (corrigés pour correspondre aux fichiers réels)
 // ==========================================================
 import { runGlobal } from "./services/runGlobal.js";
 import { runBouke } from "./services/runBouke.js";
 import { runBelgique } from "./services/runBelgique.js";
 import { runEurope } from "./services/runGlobalEurope.js";
 import { runUSA } from "./services/runGlobalUSA.js";
-import { runAfrique } from "./services/runAfrique.js";
-import { runAsie } from "./services/runAsie.js";
-import { runOceanie } from "./services/runOceanie.js";
-import { runAmeriqueSud } from "./services/runAmeriqueSud.js";
+import { runAfrique } from "./services/runGlobalAfrique.js";
+import { runAsie } from "./services/runGlobalAsie.js";
+import { runOceanie } from "./services/runGlobalOceanie.js";
+import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
 import {
   initEngineState,
@@ -191,7 +191,7 @@ const safeRun = (fn, label) => async (req, res) => {
   }
 };
 
-// 🌍 Zones principales (inchangées)
+// 🌍 Zones principales
 app.post("/api/run-global", safeRun(() => runGlobal("All"), "Global"));
 app.post("/api/run-europe", safeRun(runEurope, "Europe"));
 app.post("/api/run-usa", safeRun(runUSA, "USA/Canada"));
@@ -200,7 +200,7 @@ app.post("/api/run-asie", safeRun(runAsie, "Asie"));
 app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie"));
 app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "AmériqueSud"));
 
-// 🎥 Médias (inchangés)
+// 🎥 Médias
 app.post("/api/run-bouke", safeRun(runBouke, "Bouké (Province de Namur)"));
 app.post("/api/run-belgique", safeRun(runBelgique, "Belgique complète"));
 
