@@ -50,35 +50,35 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <div class="status-grid">
   <div>
     <button onclick="run('global-europe')">🇪🇺 Europe</button>
-    <div class="shell">curl -X POST /api/run-global-europe</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-global-europe</div>
   </div>
   <div>
     <button onclick="run('global-usa')">🇺🇸 USA / 🇨🇦 Canada</button>
-    <div class="shell">curl -X POST /api/run-global-usa</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-global-usa</div>
   </div>
   <div>
     <button onclick="run('afrique')">🌍 Afrique</button>
-    <div class="shell">curl -X POST /api/run-afrique</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-afrique</div>
   </div>
   <div>
     <button onclick="run('asie')">🌏 Asie</button>
-    <div class="shell">curl -X POST /api/run-asie</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-asie</div>
   </div>
   <div>
     <button onclick="run('oceanie')">🌊 Océanie</button>
-    <div class="shell">curl -X POST /api/run-oceanie</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-oceanie</div>
   </div>
   <div>
     <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
-    <div class="shell">curl -X POST /api/run-ameriquesud</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-ameriquesud</div>
   </div>
   <div>
     <button onclick="run('belgique')">🇧🇪 Belgique</button>
-    <div class="shell">curl -X POST /api/run-belgique</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-belgique</div>
   </div>
   <div>
     <button onclick="run('bouke')">📺 Bouké (Namur)</button>
-    <div class="shell">curl -X POST /api/run-bouke</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-bouke</div>
   </div>
 </div>
 
@@ -86,11 +86,11 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <div class="status-grid">
   <div>
     <button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button>
-    <div class="shell">curl -X POST /api/runAI</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-ai-analysis</div>
   </div>
   <div>
     <button onclick="runAlerts()">🚨 Fusion alertes</button>
-    <div class="shell">curl -X POST /api/runWorldAlerts</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/runWorldAlerts</div>
   </div>
 </div>
 
@@ -151,7 +151,7 @@ async function run(zone){
 // ======================================================
 async function runAI(){
  try{
-   const r=await fetch("/api/runAI",{method:"POST"});
+   const r=await fetch("/api/run-ai-analysis",{method:"POST"});
    if(r.ok){addLog("🧠 IA J.E.A.N. activée.");setLight("lightIA","ok");}
    else addLog("⚠️ Erreur activation IA.");
  }catch(e){addLog("❌ Crash IA: "+e.message);}
@@ -197,7 +197,7 @@ setInterval(updateStatus,15000);updateStatus();
 // ======================================================
 // 🌍 CARTES LEAFLET (prévisions & alertes)
 // ======================================================
-const mapF=L.map("mapForecast").setView([50,4],4);
+const mapF=L.map("mapForecast").setView([50,4],6);
 const mapA=L.map("mapAlerts").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
