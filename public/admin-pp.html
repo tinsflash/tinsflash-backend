@@ -2,43 +2,28 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
-<meta name="robots" content="noindex,nofollow"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>🛰️ Console IA J.E.A.N. – TINSFLASH PRO+++</title>
+<meta name="robots" content="noindex,nofollow"/>
+<title>🚀 TINSFLASH PRO+++ • Cockpit Administrateur</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body{margin:0;background:#0b1220;color:#e6f6ff;font-family:"Segoe UI",sans-serif;}
-header{background:#08121d;color:#4fc3f7;text-align:center;padding:10px;font-size:1.4em;text-shadow:0 0 10px #4fc3f7;}
-nav{display:flex;justify-content:center;gap:12px;padding:10px;background:#0d1624;flex-wrap:wrap;}
-nav a{color:#7dd3fc;text-decoration:none;font-weight:bold;}
-nav a:hover{color:#fff;text-shadow:0 0 10px #4fc3f7;}
-.container{max-width:1250px;margin:auto;padding:15px;}
-h2{color:#4fc3f7;margin-top:25px;border-left:4px solid #4fc3f7;padding-left:8px;}
-button{background:#4fc3f7;color:#001;border:none;padding:10px 16px;margin:4px;border-radius:8px;font-weight:bold;cursor:pointer;}
-button:hover{background:#7dd3fc;}
-.status-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
-.status-box{flex:1 1 180px;background:#101c2b;padding:10px;border-radius:8px;text-align:center;}
-.status-light{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;}
-.green{background:#00ff88;} .red{background:#ff4444;} .orange{background:#ffaa00;} .blue{background:#4fc3f7;}
-.map-duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px;}
-.map{height:340px;border-radius:10px;overflow:hidden;}
-.alert-counters{display:flex;justify-content:space-around;margin-top:15px;flex-wrap:wrap;}
-.counter{background:#13233d;padding:10px 16px;border-radius:10px;text-align:center;min-width:150px;
-box-shadow:0 0 10px rgba(0,0,0,0.3);} .counter h3{margin:0;color:#4fc3f7;}
-#logs{background:#0e1721;padding:10px;border-radius:10px;height:200px;overflow-y:auto;
-font-family:monospace;font-size:13px;margin-top:10px;}
-.btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;
-border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;
-box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
-.chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;
-width:320px;height:400px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
-.chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
-.chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
-.chat-input{display:flex;border-top:1px solid #333;}
-.chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
-.chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
-code{background:#0e1721;padding:3px 6px;border-radius:6px;color:#7dd3fc;display:block;margin:4px 0;}
+body{margin:0;background:#0a1222;color:#e6f6ff;font-family:"Segoe UI",sans-serif;}
+header{background:#061020;text-align:center;padding:12px;color:#4fc3f7;font-size:1.4em;
+text-shadow:0 0 8px #4fc3f7;}
+.container{max-width:1400px;margin:auto;padding:15px;}
+h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;}
+button{background:#13233d;color:#4fc3f7;border:1px solid #4fc3f7;
+padding:10px;margin:4px;border-radius:8px;font-weight:bold;cursor:pointer;}
+button:hover{background:#4fc3f7;color:#000;}
+.btn-active{background:#22c55e;color:#000!important;animation:blink 1s infinite alternate;}
+@keyframes blink{from{opacity:1;}to{opacity:.5;}}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;}
+.light{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;}
+.ok{background:#00ff88;} .warn{background:#ffaa00;} .err{background:#ff4444;} .idle{background:#666;}
+.map{height:280px;margin-top:10px;border-radius:10px;overflow:hidden;}
+.logs{background:#0e1729;border-radius:10px;padding:10px;height:300px;overflow-y:auto;
+font-family:monospace;font-size:13px;}
 </style>
 </head>
 <body>
@@ -46,121 +31,114 @@ code{background:#0e1721;padding:3px 6px;border-radius:6px;color:#7dd3fc;display:
 <script>
 if(!sessionStorage.getItem("tinsflashPIN")){
  const p=prompt("Code d’accès admin ?");
- if(p!=="202679"){alert("Accès refusé");location.href="/";}
+ if(p!=="202679"){alert("Accès refusé");location.href="/";} 
  else sessionStorage.setItem("tinsflashPIN","ok");
 }
 </script>
 
-<header>🛰️ Console IA J.E.A.N – TINSFLASH PRO+++</header>
-<nav>
-<a href="/admin-pp.html">Dashboard</a>
-<a href="/admin-alerts.html">Alertes</a>
-<a href="/admin-chat.html">Chat</a>
-<a href="/admin-radar.html">Radar</a>
-<a href="/admin-index.html">Index</a>
-<a href="/protest.html">🧪 Zone Test PRO+</a> <!-- ✅ Ajout du lien -->
-</nav>
+<header>🛰️ CONSOLE IA J.E.A.N – SUPERVISION TINSFLASH PRO+++</header>
 
 <div class="container">
-<h2>⚙️ Phase 1 : Extraction pure et réelle</h2>
-<button onclick="runEuropeUSA()">⚡ Extraction Europe–USA–Canada</button>
-<button onclick="runWorld()">🌍 Extraction Reste du Monde</button>
-<button onclick="runAll()">🌐 Extraction Planète complète</button>
 
-<h2>🧠 Phase 2 : Analyse IA J.E.A.N.</h2>
-<button onclick="runAIJean()">🤖 Lancer IA J.E.A.N. (Phase 2)</button>
-
-<h2>📢 Phase 3 : Fusion des alertes mondiales</h2>
-<button onclick="runAlerts()">🚨 Fusion des alertes (Phase 3)</button>
-
-<h2>🧩 État moteur</h2>
+<h2>⚙️ Extraction – Zones couvertes</h2>
 <div class="status-grid">
-  <div class="status-box"><span id="motorLight" class="status-light"></span>Moteur : <b id="motorStatus">–</b></div>
-  <div class="status-box"><span id="mongoLight" class="status-light"></span>MongoDB</div>
-  <div class="status-box"><span id="aiLight" class="status-light blue"></span>IA J.E.A.N : <b id="aiStatus">Vérification...</b></div>
+  <button onclick="run('europe')">🇪🇺 Europe</button>
+  <button onclick="run('usa')">🇺🇸 USA / 🇨🇦 Canada</button>
+  <button onclick="run('afrique')">🌍 Afrique</button>
+  <button onclick="run('asie')">🌏 Asie</button>
+  <button onclick="run('oceanie')">🌊 Océanie</button>
+  <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
+  <button onclick="run('belgique')"><img src="belgique.png" height="18"/> Belgique</button>
+  <button onclick="run('bouke')"><img src="bouke.png" height="18"/> Bouké (Namur)</button>
 </div>
 
-<h2>📅 Fraîcheur globale</h2>
+<h2>🧠 IA & Alertes</h2>
 <div class="status-grid">
-  <div class="status-box"><span id="freshLight" class="status-light"></span>
-    Moyenne de fraîcheur : <b id="freshScore">–</b>%
-  </div>
-  <div class="status-box">Ancien runs détectés : <b id="freshOld">–</b></div>
-  <div class="status-box">Dernière mise à jour : <b id="freshUpdate">–</b></div>
+  <button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button>
+  <button onclick="runAlerts()">🚨 Fusion alertes</button>
 </div>
 
-<h2>🌍 Cartes de suivi</h2>
-<div class="map-duo">
-  <div id="mapForecast" class="map"></div>
-  <div id="mapAlerts" class="map"></div>
+<h2>📊 État du moteur</h2>
+<div id="status">
+  <div><span class="light idle" id="lightEngine"></span>Moteur</div>
+  <div><span class="light idle" id="lightIA"></span>IA J.E.A.N.</div>
+  <div><span class="light idle" id="lightAlerts"></span>Alertes</div>
+  <div><span class="light idle" id="lightDB"></span>MongoDB</div>
 </div>
 
-<h2>📜 Logs moteur</h2>
-<div id="logs">Chargement...</div>
-</div>
+<h2>🌍 Cartes</h2>
+<div id="mapForecast" class="map"></div>
+<div id="mapAlerts" class="map"></div>
 
-<button class="btn-ai" id="btnAI">🤖</button>
-<div class="chat-box" id="chatJean">
-<div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
-<div class="chat-messages" id="chatMessages"></div>
-<div class="chat-input">
-<input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
-</div></div>
+<h2>📜 Logs en direct</h2>
+<div id="logs" class="logs">Connexion en cours...</div>
+
+</div>
 
 <script>
-const API="/api";
+const logs=document.getElementById("logs");
+function addLog(msg){logs.textContent+="\n"+msg;logs.scrollTop=logs.scrollHeight;}
 
-async function runEuropeUSA(){execute("/api/run-global","Extraction Europe–USA–Canada");}
-async function runWorld(){execute("/api/run-world","Extraction Reste du Monde");}
-async function runAll(){execute("/api/run-all","Extraction Planète complète");}
-async function runAIJean(){execute("/api/runAI","Analyse IA J.E.A.N.");}
-async function runAlerts(){execute("/api/runWorldAlerts","Fusion des alertes mondiales");}
-
-async function execute(endpoint,label){
-  addLog(`🚀 ${label} en cours...`);
-  try{
-    const r=await fetch(endpoint,{method:"POST"});
-    const j=await r.json();
-    addLog(j.success?`✅ ${label} terminée`:`❌ ${label} : ${j.error}`);
-    if(j.result && j.result.freshnessScore!==undefined){
-      updateFreshness(j.result.freshnessScore);
-    }
-  }catch(e){addLog(`⚠️ ${label} : ${e.message}`);}
+async function run(zone){
+ const btns=document.querySelectorAll("button");
+ btns.forEach(b=>b.classList.remove("btn-active"));
+ event.target.classList.add("btn-active");
+ addLog(`▶️ Lancement run-${zone}...`);
+ try{
+  const res=await fetch(`/api/run-${zone}`,{method:"POST"});
+  const j=await res.json();
+  if(j.success)addLog(`✅ Run ${zone} terminé (${new Date().toLocaleTimeString()})`);
+  else addLog(`⚠️ Erreur ${zone}: ${j.error}`);
+ }catch(e){addLog(`❌ Crash ${zone}: ${e.message}`);}
+ event.target.classList.remove("btn-active");
 }
 
-async function refreshStatus(){
-  try{
-    const r=await fetch("/api/status");
-    const s=await r.json();
-    document.getElementById("motorStatus").textContent=s.status||"–";
-    document.getElementById("motorLight").className="status-light "+(s.status==="running"?"green":"red");
-    document.getElementById("mongoLight").className="status-light "+(s.db==="connected"?"green":"red");
-  }catch(e){addLog("⚠️ Status "+e.message);}
-}
-setInterval(refreshStatus,10000);refreshStatus();
+async function runAI(){await fetch("/api/runAI",{method:"POST"});addLog("🧠 IA J.E.A.N. activée.");}
+async function runAlerts(){await fetch("/api/runWorldAlerts",{method:"POST"});addLog("🚨 Fusion alertes déclenchée.");}
 
-function addLog(t){
-  const l=document.getElementById("logs");
-  l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;
-  l.scrollTop=l.scrollHeight;
-}
+// 🛰️ Logs temps réel (SSE)
+const evt=new EventSource("/api/logs");
+evt.onmessage=e=>{
+ const log=JSON.parse(e.data);
+ addLog(`${new Date(log.time).toLocaleTimeString()} — ${log.message}`);
+};
 
-// === Carte ===
-const mapF=L.map("mapForecast").setView([20,0],2);
-const mapA=L.map("mapAlerts").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-
-// === Fraîcheur dynamique ===
-function updateFreshness(score){
-  const light=document.getElementById("freshLight");
-  document.getElementById("freshScore").textContent=score;
-  document.getElementById("freshUpdate").textContent=new Date().toLocaleTimeString();
-  document.getElementById("freshOld").textContent=100-score;
-  if(score>85)light.className="status-light green";
-  else if(score>60)light.className="status-light orange";
-  else light.className="status-light red";
+// 🧩 Mise à jour état moteur
+async function updateStatus(){
+ try{
+   const r=await fetch("/api/status");const s=await r.json();
+   setLight("lightEngine",s.status==="RUN_OK"?"ok":"warn");
+   setLight("lightIA",s.checkup?.iaActive?"ok":"idle");
+   setLight("lightAlerts",s.checkup?.alerts?"ok":"warn");
+   setLight("lightDB",s.db==="connected"?"ok":"err");
+ }catch{setLight("lightEngine","err");}
 }
+function setLight(id,state){
+ const el=document.getElementById(id);
+ el.className=`light ${state}`;
+}
+setInterval(updateStatus,15000);updateStatus();
+
+// 🌍 Cartes Leaflet
+const map1=L.map("mapForecast").setView([50,4],3);
+const map2=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map1);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map2);
+
+// Charger points de prévision et alertes
+async function loadForecasts(){
+ const r=await fetch("/api/forecast?lat=50&lon=4"); 
+ const d=await r.json();
+ L.marker([d.lat||50,d.lon||4]).addTo(map1).bindPopup(`Temp: ${d.temp||"?"}°C`);
+}
+async function loadAlerts(){
+ const r=await fetch("/api/alerts");
+ const a=await r.json();
+ a.forEach(x=>{if(x.lat&&x.lon)L.circle([x.lat,x.lon],{radius:80000,color:"red"}).addTo(map2)
+   .bindPopup(x.title||"Alerte");});
+}
+loadForecasts();loadAlerts();
 </script>
+
 </body>
 </html>
