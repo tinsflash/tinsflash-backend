@@ -1,113 +1,49 @@
 // ==========================================================
-// 🌍 TINSFLASH – compareExternalIA.js (Everest Protocol v3.10 PRO+++)
+// 🌍 TINSFLASH – compareExternalIA.js (v4.3.1 REAL)
 // ==========================================================
-// ✅ Audit externe 100 % réel – NOAA / ECMWF / Trullemans / Wetterzentrale
-// ==========================================================
-
 import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
 
-// ==========================================================
-// 🧩 Comparaison externe après chaque RUN
-// ==========================================================
-export async function autoCompareAfterRun(alerts = []) {
+// ✅ zones couvertes NOAA
+const NOAA_ZONES = ["USA", "Alaska", "Hawaii", "PuertoRico", "Guam", "AmericanSamoa"];
+
+async function getNOAAData(lat, lon, country) {
   try {
-    await addEngineLog("🔎 Audit externe IA – démarrage comparaisons réelles", "info", "IA.JEAN");
-
-    // ======================================================
-    // 1️⃣ NOAA – Contrôle global Amérique
-    // ======================================================
-    for (const a of alerts) {
-      try {
-        const urlNoaa = `https://api.weather.gov/points/${a.lat},${a.lon}`;
-        const resNoaa = await axios.get(urlNoaa);
-        const props = resNoaa.data?.properties || {};
-        const forecastUrl = props.forecast;
-        if (forecastUrl) {
-          const fc = await axios.get(forecastUrl);
-          const noaa = fc.data?.properties?.periods?.[0];
-          if (noaa) {
-            await addEngineLog(
-              `🌎 NOAA (${a.zone}) → Temp ${noaa.temperature}°${noaa.temperatureUnit}, Vent ${noaa.windSpeed}`,
-              "info",
-              "IA.JEAN"
-            );
-          }
-        }
-      } catch (e) {
-        await addEngineError(`NOAA ${a.zone} injoignable : ${e.message}`, "IA.JEAN");
-      }
+    if (!NOAA_ZONES.includes(country)) {
+      await addEngineLog(`🌎 NOAA non disponible pour ${country} – redirection vers GFS`, "info", "IA.JEAN");
+      return await getGFSData(lat, lon);
     }
-
-    // ======================================================
-    // 2️⃣ ECMWF – Contrôle Europe / Global
-    // ======================================================
-    try {
-      const resEC = await axios.get("https://public.ecmwf.int/data/datasets/interim-full-daily/");
-      if (resEC.status === 200) {
-        await addEngineLog("🌍 ECMWF réponse OK – cohérence globale confirmée", "info", "IA.JEAN");
-      }
-    } catch (e) {
-      await addEngineError("ECMWF indisponible : " + e.message, "IA.JEAN");
-    }
-
-    // ======================================================
-    // 3️⃣ TRULLEMANS – Vérification textuelle humaine 🇧🇪
-    // ======================================================
-    try {
-      const resTrul = await axios.get("https://www.bmcb.be/forecast-europ-maps/");
-      const html = resTrul.data || "";
-      const keyTerms = ["anticyclone", "averses", "orage", "dépression", "pluie", "soleil"];
-      const found = keyTerms.filter((k) => html.includes(k));
-      if (found.length > 0) {
-        await addEngineLog(
-          `🧠 Trullemans – termes météo détectés : ${found.join(", ")}`,
-          "info",
-          "IA.JEAN"
-        );
-        await addEngineLog("✅ Cohérence IA ↔ prévision humaine confirmée", "success", "IA.JEAN");
-      } else {
-        await addEngineLog("⚠️ Trullemans – aucun mot-clé météo détecté", "warn", "IA.JEAN");
-      }
-    } catch (e) {
-      await addEngineError("Trullemans inaccessible : " + e.message, "IA.JEAN");
-    }
-
-    // ======================================================
-    // 4️⃣ WETTERZENTRALE – Fallback visuel de sécurité
-    // ======================================================
-    try {
-      const resWz = await axios.get("https://www.wetterzentrale.de/en");
-      const htmlWz = resWz.data || "";
-      if (htmlWz.includes("temperature") || htmlWz.includes("precipitation")) {
-        await addEngineLog(
-          "🧩 Fallback Wetterzentrale – carte météo accessible (utilisable si absence totale de données)",
-          "info",
-          "IA.JEAN"
-        );
-      } else {
-        await addEngineLog("⚠️ Fallback Wetterzentrale – aucune donnée exploitable", "warn", "IA.JEAN");
-      }
-    } catch (e) {
-      await addEngineError("Wetterzentrale inaccessible : " + e.message, "IA.JEAN");
-    }
-
-    // ======================================================
-    // 5️⃣ Résumé final
-    // ======================================================
-    await addEngineLog("✅ Audit externe complet – NOAA / ECMWF / Trullemans / Wetterzentrale OK", "success", "IA.JEAN");
-    return { success: true };
-  } catch (err) {
-    await addEngineError(`💥 Erreur audit externe : ${err.message}`, "IA.JEAN");
-    return { error: err.message };
+    const url = `https://api.weather.gov/points/${lat},${lon}`;
+    const res = await axios.get(url, { timeout: 10000 });
+    const forecastUrl = res.data?.properties?.forecastHourly;
+    const fRes = await axios.get(forecastUrl, { timeout: 10000 });
+    const d = fRes.data?.properties?.periods?.[0] || {};
+    return { source: "NOAA", temperature: d.temperature, wind: d.windSpeed, precipitation: d.probabilityOfPrecipitation?.value || 0 };
+  } catch (e) {
+    await addEngineError(`NOAA ${country} injoignable : ${e.message}`, "IA.JEAN");
+    return { error: e.message };
   }
 }
 
-// ==========================================================
-// ✅ Alias de compatibilité pour aiAnalysis.js
-// ==========================================================
-// Certains modules importent runAIComparison ; cet alias évite tout conflit Render.
-export const runAIComparison = autoCompareAfterRun;
+async function getGFSData(lat, lon) {
+  try {
+    const url = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`;
+    const res = await axios.get(url, { timeout: 10000 });
+    const d = res.data?.current || {};
+    return { source: "GFS", temperature: d.temperature_2m, wind: d.wind_speed_10m, precipitation: d.precipitation };
+  } catch (e) {
+    await addEngineError(`GFS injoignable : ${e.message}`, "IA.JEAN");
+    return { error: e.message };
+  }
+}
 
-// Export par défaut
-export default { autoCompareAfterRun, runAIComparison };
+// ⚙️ Fonction principale
+export async function autoCompareAfterRun(results = []) {
+  for (const r of results) {
+    const { lat, lon, country } = r;
+    await getNOAAData(lat, lon, country);
+  }
+  await addEngineLog("🔍 Comparaison IA externe terminée", "ok", "IA.JEAN");
+}
+
+export default { autoCompareAfterRun };
