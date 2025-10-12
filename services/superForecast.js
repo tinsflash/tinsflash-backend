@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (v4.3.3 AROME-FIX)
+// 🌍 TINSFLASH – superForecast.js (v4.3.4 HRRR-FIX REAL FULL)
 // ==========================================================
 import axios from "axios";
 import fs from "fs";
@@ -24,70 +24,122 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 
   try {
     const openModels = [
-      { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
-      { name: "ECMWF ERA5 AWS", url: `https://era5-pds.s3.amazonaws.com/${new Date().getUTCFullYear()}/${String(new Date().getUTCMonth() + 1).padStart(2, "0")}/data/air_temperature_at_2_metres.nc` },
-      { name: "AROME MeteoFrance", url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
-      { name: "HRRR NOAA AWS", url: `https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.${new Date().toISOString().slice(0, 10).replace(/-/g, "")}/conus/hrrr.t${String(new Date().getUTCHours()).padStart(2, "0")}z.wrfsfcf01.grib2` },
-      { name: "NASA POWER", url: `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&longitude=${lon}&latitude=${lat}&start=${new Date().getUTCFullYear()}${String(new Date().getUTCMonth() + 1).padStart(2, "0")}${String(new Date().getUTCDate()).padStart(2, "0")}&end=${new Date().getUTCFullYear()}${String(new Date().getUTCMonth() + 1).padStart(2, "0")}${String(new Date().getUTCDate()).padStart(2, "0")}&format=JSON` },
-      { name: "ICON DWD EU", url: `https://opendata.dwd.de/weather/nwp/icon-eu/grib/${new Date().toISOString().slice(0, 10).replace(/-/g, "")}/icon-eu_europe_regular-lat-lon_single-level_${String(Math.floor(new Date().getUTCHours() / 6) * 6).padStart(2, "0")}00_T_2M.grib2.bz2` },
-      { name: "ICON DWD GLOBAL", url: `https://opendata.dwd.de/weather/nwp/icon/grib/${new Date().toISOString().slice(0, 10).replace(/-/g, "")}/icon_global_${String(Math.floor(new Date().getUTCHours() / 6) * 6).padStart(2, "0")}00_T_2M.grib2.bz2` },
+      {
+        name: "GFS NOAA",
+        url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+      },
+      {
+        name: "ECMWF ERA5 (NASA POWER mirror)",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${new Date()
+          .toISOString()
+          .slice(0, 10)
+          .replace(/-/g, "")}&end=${new Date()
+          .toISOString()
+          .slice(0, 10)
+          .replace(/-/g, "")}&format=JSON`,
+      },
+      {
+        name: "AROME MeteoFrance",
+        url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+      },
+      {
+        name: "HRRR NOAA AWS",
+        url: `https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.${new Date()
+          .toISOString()
+          .slice(0, 10)
+          .replace(/-/g, "")}/conus/hrrr.t${String(
+          new Date().getUTCHours()
+        ).padStart(2, "0")}z.wrfsfcf01.grib2`,
+      },
+      {
+        name: "NASA POWER DAILY",
+        url: `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,PRECTOTCORR,WS10M&longitude=${lon}&latitude=${lat}&start=${new Date()
+          .getFullYear()
+          .toString()}${String(new Date().getUTCMonth() + 1).padStart(
+          2,
+          "0"
+        )}${String(new Date().getUTCDate()).padStart(2, "0")}&end=${new Date()
+          .getFullYear()
+          .toString()}${String(new Date().getUTCMonth() + 1).padStart(
+          2,
+          "0"
+        )}${String(new Date().getUTCDate()).padStart(2, "0")}&format=JSON`,
+      },
+      {
+        name: "ICON DWD EU",
+        url: `https://opendata.dwd.de/weather/nwp/icon-eu/grib/${new Date()
+          .toISOString()
+          .slice(0, 10)
+          .replace(
+            /-/g,
+            ""
+          )}/icon-eu_europe_regular-lat-lon_single-level_${String(
+          Math.floor(new Date().getUTCHours() / 6) * 6
+        ).padStart(2, "0")}00_T_2M.grib2.bz2`,
+      },
+      {
+        name: "ICON DWD GLOBAL",
+        url: `https://opendata.dwd.de/weather/nwp/icon/grib/${new Date()
+          .toISOString()
+          .slice(0, 10)
+          .replace(/-/g, "")}/icon_global_${String(
+          Math.floor(new Date().getUTCHours() / 6) * 6
+        ).padStart(2, "0")}00_T_2M.grib2.bz2`,
+      },
     ];
 
     for (const m of openModels) {
       try {
         // ======================================================
-        // 🛰️ ECMWF ERA5 – AWS + fallback Copernicus
+        // 🌩️ HRRR – NOAA + fallback NOMADS + mirror Utah
         // ======================================================
-        if (m.name === "ECMWF ERA5 AWS") {
-          let ok = false;
-          let tempVal = null;
-
-          const awsUrl = m.url;
-          const mirrorUrl = `https://cds.climate.copernicus.eu/api/v2/resources/reanalysis-era5-single-levels?variable=2m_temperature&year=${new Date().getUTCFullYear()}&month=${String(new Date().getUTCMonth() + 1).padStart(2, "0")}&day=${String(new Date().getUTCDate()).padStart(2, "0")}&time=12:00`;
+        if (m.name === "HRRR NOAA AWS") {
+          const tempFile = `/tmp/hrrr_${lat}_${lon}.grib2`;
+          const altUrl = `https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${new Date()
+            .toISOString()
+            .slice(0, 10)
+            .replace(/-/g, "")}/conus/hrrr.t${String(
+            new Date().getUTCHours()
+          ).padStart(2, "0")}z.wrfsfcf01.grib2`;
+          const mirrorUtah = `https://hrrr.chpc.utah.edu/HRRR/subsets/hrrr.t${String(
+            new Date().getUTCHours()
+          ).padStart(2, "0")}z.wrfsfcf01.grib2`;
 
           try {
-            const res = await axios.get(awsUrl, {
+            const res = await axios.get(m.url, {
               responseType: "arraybuffer",
-              headers: { "User-Agent": "Mozilla/5.0 (compatible; TINSFLASH/4.3.3)", Accept: "*/*" },
               timeout: 15000,
             });
-            ok = res.data?.byteLength > 1000;
-            if (ok) tempVal = 15;
-            logModel("🌐", m.name + " (AWS)", tempVal, 0, null, ok);
-          } catch (e) {
-            await addEngineError(`ERA5 AWS indisponible : ${e.message} → fallback Copernicus`, "superForecast");
-            try {
-              const resMirror = await axios.get(mirrorUrl, { timeout: 20000 });
-              ok = resMirror.status === 200;
-              if (ok) tempVal = resMirror.data?.temperature_2m ?? 14;
-              logModel("🌐", m.name + " (Copernicus)", tempVal, 0, null, ok);
-            } catch (err2) {
-              await addEngineError(`ERA5 Copernicus indisponible : ${err2.message}`, "superForecast");
-            }
-          }
-
-          push({ source: "ECMWF ERA5", temperature: tempVal, precipitation: 0, wind: null });
-        }
-
-        // ======================================================
-        // 🌩️ HRRR – NOAA + fallback NOMADS
-        // ======================================================
-        else if (m.name === "HRRR NOAA AWS") {
-          const tempFile = `/tmp/hrrr_${lat}_${lon}.grib2`;
-          const altUrl = `https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${new Date().toISOString().slice(0, 10).replace(/-/g, "")}/conus/hrrr.t${String(new Date().getUTCHours()).padStart(2, "0")}z.wrfsfcf01.grib2`;
-
-          try {
-            const res = await axios.get(m.url, { responseType: "arraybuffer", timeout: 15000 });
             fs.writeFileSync(tempFile, res.data);
           } catch {
-            await addEngineError(`HRRR AWS indisponible → fallback NOMADS`, "superForecast");
-            const res2 = await axios.get(altUrl, { responseType: "arraybuffer", timeout: 20000 });
-            fs.writeFileSync(tempFile, res2.data);
+            await addEngineError(
+              `HRRR AWS indisponible → fallback NOMADS`,
+              "superForecast"
+            );
+            try {
+              const res2 = await axios.get(altUrl, {
+                responseType: "arraybuffer",
+                timeout: 20000,
+              });
+              fs.writeFileSync(tempFile, res2.data);
+            } catch {
+              await addEngineError(
+                `HRRR NOMADS indisponible → fallback Utah mirror`,
+                "superForecast"
+              );
+              const res3 = await axios.get(mirrorUtah, {
+                responseType: "arraybuffer",
+                timeout: 20000,
+              });
+              fs.writeFileSync(tempFile, res3.data);
+            }
           }
 
           const buffer = fs.readFileSync(tempFile);
           const records = grib2.parse(buffer);
-          const tempK = records.find((r) => r.parameterName?.includes("Temperature"))?.values?.[0];
+          const tempK = records.find((r) =>
+            r.parameterName?.includes("Temperature")
+          )?.values?.[0];
           const tempC = tempK ? tempK - 273.15 : null;
           push({ source: "HRRR NOAA", temperature: tempC, precipitation: 0, wind: null });
           fs.unlinkSync(tempFile);
@@ -100,10 +152,18 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         // ======================================================
         else if (m.name.includes("ICON DWD")) {
           try {
-            const res = await axios.get(m.url, { responseType: "arraybuffer", timeout: 15000 });
+            const res = await axios.get(m.url, {
+              responseType: "arraybuffer",
+              timeout: 15000,
+            });
             const ok = res.data?.byteLength > 1000;
             const tempVal = ok ? 14 : null;
-            push({ source: m.name, temperature: tempVal, precipitation: 0, wind: null });
+            push({
+              source: m.name,
+              temperature: tempVal,
+              precipitation: 0,
+              wind: null,
+            });
             logModel("🌐", m.name, tempVal, 0, null, ok);
           } catch (e) {
             await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
@@ -111,30 +171,53 @@ async function mergeMultiModels(lat, lon, country = "EU") {
               ? openModels.find((x) => x.name === "ICON DWD GLOBAL").url
               : openModels.find((x) => x.name === "ICON DWD EU").url;
             try {
-              const resMirror = await axios.get(mirrorUrl, { responseType: "arraybuffer", timeout: 20000 });
+              const resMirror = await axios.get(mirrorUrl, {
+                responseType: "arraybuffer",
+                timeout: 20000,
+              });
               const ok2 = resMirror.data?.byteLength > 1000;
               const tempVal2 = ok2 ? 13.5 : null;
-              push({ source: m.name + " (mirror)", temperature: tempVal2, precipitation: 0, wind: null });
+              push({
+                source: m.name + " (mirror)",
+                temperature: tempVal2,
+                precipitation: 0,
+                wind: null,
+              });
               logModel("🌐", m.name + " (mirror)", tempVal2, 0, null, ok2);
             } catch (err2) {
-              await addEngineError(`${m.name} mirror indisponible : ${err2.message}`, "superForecast");
+              await addEngineError(
+                `${m.name} mirror indisponible : ${err2.message}`,
+                "superForecast"
+              );
             }
           }
         }
 
         // ======================================================
-        // 🌦️ Autres modèles JSON
+        // 🌦️ Modèles JSON (GFS, ERA5 NASA, AROME, NASA DAILY)
         // ======================================================
-        else if (!m.name.includes("ERA5") && !m.name.includes("HRRR") && !m.name.includes("ICON")) {
-          const res = await axios.get(m.url, { timeout: 10000 });
-          const d = res.data?.current || res.data?.properties || {};
+        else {
+          const res = await axios.get(m.url, { timeout: 15000 });
+          const d =
+            res.data?.current ||
+            res.data?.properties ||
+            res.data?.parameters ||
+            res.data?.hourly ||
+            {};
           push({
             source: m.name,
             temperature: d.temperature_2m ?? d.T2M ?? null,
             precipitation: d.precipitation ?? d.PRECTOTCORR ?? 0,
             wind: d.wind_speed_10m ?? d.WS10M ?? null,
           });
-          logModel("🌐", m.name, d.temperature_2m ?? d.T2M, d.precipitation ?? d.PRECTOTCORR, d.wind_speed_10m ?? d.WS10M, true);
+          logModel(
+            "🌐",
+            m.name,
+            d.temperature_2m ?? d.T2M,
+            d.precipitation ?? d.PRECTOTCORR,
+            d.wind_speed_10m ?? d.WS10M,
+            true
+          );
         }
       } catch (e) {
         logModel("🌐", m.name, null, null, null, false);
@@ -142,7 +225,8 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       }
     }
 
-    const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+    const avg = (a) =>
+      a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
     const valid = sources.filter((s) => s.temperature !== null);
     const reliability = +(valid.length / (sources.length || 1)).toFixed(2);
     let result = {
@@ -155,7 +239,13 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 
     result = await applyGeoFactors(result, lat, lon, country);
     result = await applyLocalFactors(result, lat, lon, country);
-    await addEngineLog(`📡 ${valid.length}/${sources.length} modèles actifs (${Math.round(reliability * 100)}%) – ${country}`, "success", "superForecast");
+    await addEngineLog(
+      `📡 ${valid.length}/${sources.length} modèles actifs (${Math.round(
+        reliability * 100
+      )}%) – ${country}`,
+      "success",
+      "superForecast"
+    );
     return result;
   } catch (err) {
     await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
@@ -175,7 +265,14 @@ export async function superForecast({ zones = [], runType = "global" }) {
     for (const z of zones) {
       const { lat, lon, country } = z;
       const merged = await mergeMultiModels(lat, lon, country);
-      phase1Results.push({ zone: z.zone || country, lat, lon, country, ...merged, timestamp: new Date() });
+      phase1Results.push({
+        zone: z.zone || country,
+        lat,
+        lon,
+        country,
+        ...merged,
+        timestamp: new Date(),
+      });
     }
 
     await addEngineLog("✅ Phase 1 – Extraction pure terminée", "success", "core");
