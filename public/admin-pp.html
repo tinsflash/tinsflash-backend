@@ -86,11 +86,15 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <div class="status-grid">
   <div>
     <button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-ai-analysis</div>
+    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/runAI</div>
   </div>
   <div>
     <button onclick="runAlerts()">🚨 Fusion alertes</button>
     <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/runWorldAlerts</div>
+  </div>
+  <div>
+    <button onclick="checkStatus()">🔍 Vérifier moteur</button>
+    <div class="shell">curl https://tinsflash-backend.onrender.com/api/status</div>
   </div>
 </div>
 
@@ -151,7 +155,7 @@ async function run(zone){
 // ======================================================
 async function runAI(){
  try{
-   const r=await fetch("/api/run-ai-analysis",{method:"POST"});
+   const r=await fetch("/api/runAI",{method:"POST"});
    if(r.ok){addLog("🧠 IA J.E.A.N. activée.");setLight("lightIA","ok");}
    else addLog("⚠️ Erreur activation IA.");
  }catch(e){addLog("❌ Crash IA: "+e.message);}
@@ -162,6 +166,22 @@ async function runAlerts(){
    if(r.ok){addLog("🚨 Fusion alertes terminée.");setLight("lightAlerts","ok");}
    else addLog("⚠️ Erreur fusion alertes.");
  }catch(e){addLog("❌ Crash Alertes: "+e.message);}
+}
+
+// ======================================================
+// 🛰️ STATUS CHECK
+// ======================================================
+async function checkStatus(){
+ try{
+   const r=await fetch("/api/status");
+   if(!r.ok) throw new Error("Status HTTP "+r.status);
+   const s=await r.json();
+   addLog("ℹ️ Etat moteur : "+JSON.stringify(s));
+   setLight("lightEngine",s.status==="RUN_OK"?"ok":"warn");
+   setLight("lightDB",s.db==="connected"?"ok":"err");
+   if(s.checkup?.iaActive)setLight("lightIA","ok");
+   if(s.checkup?.alerts)setLight("lightAlerts","ok");
+ }catch(e){addLog("❌ Erreur /api/status : "+e.message);}
 }
 
 // ======================================================
@@ -176,26 +196,7 @@ evt.onmessage=e=>{
 };
 
 // ======================================================
-// ⚙️ STATUS (voyants)
-// ======================================================
-async function updateStatus(){
- try{
-   const r=await fetch("/api/status");
-   const s=await r.json();
-   setLight("lightEngine",s.status==="RUN_OK"?"ok":"warn");
-   setLight("lightDB",s.db==="connected"?"ok":"err");
-   if(s.checkup?.iaActive)setLight("lightIA","ok");
-   if(s.checkup?.alerts)setLight("lightAlerts","ok");
- }catch{setLight("lightEngine","err");}
-}
-function setLight(id,state){
- const el=document.getElementById(id);
- el.className=`light ${state}`;
-}
-setInterval(updateStatus,15000);updateStatus();
-
-// ======================================================
-// 🌍 CARTES LEAFLET (prévisions & alertes)
+// 🌍 CARTES
 // ======================================================
 const mapF=L.map("mapForecast").setView([50,4],6);
 const mapA=L.map("mapAlerts").setView([20,0],2);
@@ -208,7 +209,7 @@ async function loadForecasts(){
    const d=await r.json();
    L.marker([d.lat||50,d.lon||4])
      .addTo(mapF)
-     .bindPopup(`Température : ${d.temp||'--'}°C<br>${d.condition||''}`);
+     .bindPopup(`Température : ${d.temperature||'--'}°C<br>${d.condition||''}`);
  }catch(e){addLog("⚠️ Erreur loadForecasts: "+e.message);}
 }
 async function loadAlerts(){
