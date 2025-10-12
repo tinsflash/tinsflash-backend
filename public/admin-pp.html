@@ -76,33 +76,21 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <h2>🧠 Phase 2 : Analyse IA J.E.A.N.</h2>
 <button onclick="runAIJean()">🤖 Lancer IA J.E.A.N. (Phase 2)</button>
 <p style="color:#7dd3fc;font-size:0.9em;">
-<code>curl -X POST https://tinsflash.onrender.com/api/runAI</code>
+<code>curl -X POST https://tinsflash.onrender.com/api/ai-analyse</code>
 </p>
 
-<!-- 💡 Nouvelle section : État IA externes -->
-<div id="aiModelsStatus" style="margin-top:10px;">
-  <h3 style="color:#4fc3f7;">🧩 Modèles IA externes (Hugging Face)</h3>
-  <div class="status-grid" id="aiModelsGrid">
-    <div class="status-box"><span class="status-light blue" id="light-graphcast"></span>GraphCast – <b id="lat-graphcast">–</b>s</div>
-    <div class="status-box"><span class="status-light blue" id="light-pangu"></span>Pangu – <b id="lat-pangu">–</b>s</div>
-    <div class="status-box"><span class="status-light blue" id="light-corrdiff"></span>CorrDiff – <b id="lat-corrdiff">–</b>s</div>
-    <div class="status-box"><span class="status-light blue" id="light-nowcastnet"></span>NowcastNet – <b id="lat-nowcastnet">–</b>s</div>
-  </div>
-  <p style="color:#7dd3fc;font-size:0.85em;">Mise à jour automatique toutes les 20 s (via /api/ai-health)</p>
+<h3 style="color:#4fc3f7;">🧩 Modèles IA externes (Hugging Face)</h3>
+<div class="status-grid">
+  <div class="status-box"><span class="status-light blue" id="light-graphcast"></span>GraphCast – <b id="lat-graphcast">–</b>s</div>
+  <div class="status-box"><span class="status-light blue" id="light-pangu"></span>Pangu – <b id="lat-pangu">–</b>s</div>
+  <div class="status-box"><span class="status-light blue" id="light-corrdiff"></span>CorrDiff – <b id="lat-corrdiff">–</b>s</div>
+  <div class="status-box"><span class="status-light blue" id="light-nowcastnet"></span>NowcastNet – <b id="lat-nowcastnet">–</b>s</div>
 </div>
 
 <h2>📢 Phase 3 : Fusion des alertes mondiales</h2>
 <button onclick="runAlerts()">🚨 Fusion des alertes (Phase 3)</button>
 <p style="color:#7dd3fc;font-size:0.9em;">
 <code>curl -X POST https://tinsflash.onrender.com/api/runWorldAlerts</code>
-</p>
-
-<h2>🛑 Commandes de sécurité</h2>
-<button onclick="stopMotor()">🟥 Arrêt d’urgence</button>
-<button onclick="refreshSections()">🔄 Rafraîchir toutes les sections</button>
-<p style="color:#7dd3fc;font-size:0.9em;">
-<code>curl -X POST https://tinsflash.onrender.com/api/stop</code>
-<code>curl -X GET  https://tinsflash.onrender.com/api/status</code>
 </p>
 
 <h2>🧩 État moteur</h2>
@@ -129,16 +117,23 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <div id="logs">Chargement...</div>
 </div>
 
+<!-- Chat IA -->
 <button class="btn-ai" id="btnAI">🤖</button>
 <div class="chat-box" id="chatJean">
-<div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
-<div class="chat-messages" id="chatMessages"></div>
-<div class="chat-input">
-<input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
-</div></div>
+  <div class="chat-header">Assistant Technique (GPT-4o-mini)</div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input">
+    <input id="chatInput" placeholder="Question technique..."/><button onclick="sendChat()">Envoyer</button>
+  </div>
+</div>
 
 <script>
 const API="/api";
+const mapF=L.map("mapForecast").setView([20,0],2);
+const mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+let forecastLayer=L.layerGroup().addTo(mapF);
 
 // === PHASE 1 ===
 async function runEuropeUSA(){execute("/api/run-global","Extraction Europe–USA–Canada");}
@@ -146,24 +141,10 @@ async function runWorld(){execute("/api/run-world","Extraction Reste du Monde");
 async function runAll(){execute("/api/run-all","Extraction Planète complète");}
 
 // === PHASE 2 ===
-async function runAIJean(){execute("/api/runAI","Analyse IA J.E.A.N.");}
+async function runAIJean(){execute("/api/ai-analyse","Analyse IA J.E.A.N.");}
 
 // === PHASE 3 ===
 async function runAlerts(){execute("/api/runWorldAlerts","Fusion des alertes mondiales");}
-
-// === ARRÊT URGENCE ===
-async function stopMotor(){
-  addLog("🛑 Arrêt d’urgence demandé !");
-  try{await fetch("/api/stop",{method:"POST"});addLog("🟥 Extraction stoppée !");}
-  catch(e){addLog("⚠️ Erreur arrêt : "+e.message);}
-}
-
-// === RAFRAÎCHIR SECTIONS ===
-async function refreshSections(){
-  addLog("🔄 Rafraîchissement complet des sections…");
-  await Promise.all([refreshStatus(),checkAI(),checkAIModels(),loadAlerts()]);
-  addLog("✅ Sections rafraîchies sans rechargement total.");
-}
 
 // === EXEC GÉNÉRIQUE ===
 async function execute(endpoint,label){
@@ -198,51 +179,40 @@ async function checkAI(){
     if(d.status==="ok"){light.className="status-light green";text.textContent="Opérationnelle";}
     else if(d.status==="warning"){light.className="status-light orange";text.textContent="Instable";}
     else{light.className="status-light red";text.textContent="Erreur";}
+    // IA externes
+    ["graphcast","pangu","corrdiff","nowcastnet"].forEach(m=>{
+      const info=d[m]||{};const l=document.getElementById("light-"+m);const t=document.getElementById("lat-"+m);
+      t.textContent=info.latency?info.latency.toFixed(2):"–";
+      l.className="status-light "+(info.status==="online"?"green":info.status==="offline"?"red":"orange");
+    });
   }catch(e){
     document.getElementById("aiLight").className="status-light red";
     document.getElementById("aiStatus").textContent="Erreur réseau";
   }
 }
-setInterval(checkAI,12000);
+setInterval(checkAI,15000);
 checkAI();
 
-// === IA EXTERNES (Hugging Face) ===
-async function checkAIModels(){
-  try{
-    const r = await fetch("/api/ai-health");
-    const data = await r.json();
-    const models = ["graphcast","pangu","corrdiff","nowcastnet"];
-    models.forEach(m=>{
-      const light = document.getElementById("light-"+m);
-      const lat = document.getElementById("lat-"+m);
-      const info = data[m] || {};
-      lat.textContent = info.latency ? info.latency.toFixed(2) : "–";
-      if(info.status==="online") light.className="status-light green";
-      else if(info.status==="offline") light.className="status-light red";
-      else light.className="status-light orange";
-    });
-  }catch(e){
-    ["graphcast","pangu","corrdiff","nowcastnet"].forEach(m=>{
-      document.getElementById("light-"+m).className="status-light red";
-      document.getElementById("lat-"+m).textContent="err";
-    });
-  }
-}
-setInterval(checkAIModels,20000);
-checkAIModels();
-
-// === LOGS ===
-function addLog(t){
-  const l=document.getElementById("logs");
-  l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;
-  l.scrollTop=l.scrollHeight;
-}
-
 // === CARTES ===
-const mapF=L.map("mapForecast").setView([20,0],2);
-const mapA=L.map("mapAlerts").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+async function loadForecast(){
+  try{
+    const r=await fetch(`${API}/forecast?lat=50&lon=4&country=BE`);
+    const data=await r.json();
+    forecastLayer.clearLayers();
+    if(data && data.sources){
+      const color=data.reliability>0.9?"green":data.reliability>0.7?"orange":"red";
+      L.circleMarker([50,4],{radius:8,color}).addTo(forecastLayer)
+      .bindPopup(`<b>Prévision Belgique</b><br>
+        🌡️ ${data.temperature?.toFixed(1)}°C<br>
+        💧 ${data.precipitation?.toFixed(1)} mm<br>
+        🌬️ ${data.wind?.toFixed(1)} km/h<br>
+        🔗 ${data.sources.join(", ")}<br>
+        🧠 Fiabilité: ${(data.reliability*100).toFixed(0)}%`);
+    }
+  }catch(e){addLog("⚠️ Forecast "+e.message);}
+}
+setInterval(loadForecast,60000);
+loadForecast();
 
 // === ALERTES ===
 async function loadAlerts(){
@@ -264,6 +234,13 @@ async function loadAlerts(){
   document.getElementById("countPrimeurs").textContent=cP;
 }
 loadAlerts();
+
+// === LOGS ===
+function addLog(t){
+  const l=document.getElementById("logs");
+  l.innerHTML+=`<div>${new Date().toLocaleTimeString()} ${t}</div>`;
+  l.scrollTop=l.scrollHeight;
+}
 
 // === CHAT ===
 const chatBox=document.getElementById("chatJean");
