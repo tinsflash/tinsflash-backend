@@ -24,8 +24,8 @@ import { EventEmitter } from "events";
 import { runGlobal } from "./services/runGlobal.js";
 import { runBouke } from "./services/runBouke.js";
 import { runBelgique } from "./services/runBelgique.js";
-import { runEurope } from "./services/runGlobalEurope.js";
-import { runUSA } from "./services/runGlobalUSA.js";
+import { runGlobalEurope } from "./services/runGlobalEurope.js";
+import { runGlobalUSA } from "./services/runGlobalUSA.js";
 import { runAfrique } from "./services/runGlobalAfrique.js";
 import { runAsie } from "./services/runGlobalAsie.js";
 import { runOceanie } from "./services/runGlobalOceanie.js";
@@ -193,8 +193,8 @@ const safeRun = (fn, label) => async (req, res) => {
 
 // 🌍 Zones principales
 app.post("/api/run-global", safeRun(() => runGlobal("All"), "Global"));
-app.post("/api/run-europe", safeRun(runGlobalEurope, "Europe"));
-app.post("/api/run-usa", safeRun(runGlobalUSA, "USA/Canada"));
+app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe"));
+app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada"));
 app.post("/api/run-afrique", safeRun(runAfrique, "Afrique"));
 app.post("/api/run-asie", safeRun(runAsie, "Asie"));
 app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie"));
