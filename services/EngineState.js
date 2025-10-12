@@ -1,6 +1,6 @@
 // ==========================================================
 // ⚙️ Gestion de l’état global du moteur TINSFLASH PRO+++
-// Version : Everest Protocol v3.95 — 100 % réel, connecté et Render-compatible
+// Version : Everest Protocol v3.96 — 100 % réel, connecté et Render-compatible
 // ==========================================================
 
 import mongoose from "mongoose";
@@ -22,6 +22,7 @@ const EngineStateSchema = new mongoose.Schema({
   checkup: { type: Object, default: {} },
   errors: { type: Array, default: [] },
   alertsWorld: { type: Object, default: {} },
+  lastExtraction: { type: Object, default: {} }, // 🧩 Ajout pour IA J.E.A.N.
 });
 
 export const EngineState = mongoose.model("EngineState", EngineStateSchema);
@@ -31,9 +32,8 @@ export const EngineLog = mongoose.model("EngineLog", LogSchema);
 // 🔊 Event Emitter global (pour logs SSE temps réel)
 // ==========================================================
 export const engineEvents = new EventEmitter();
-
-// Cette fonction externe permet de synchroniser les logs avec le flux SSE (/api/logs)
 let externalLogStream = null;
+
 export function bindExternalLogStream(fn) {
   externalLogStream = fn;
 }
@@ -145,6 +145,33 @@ export async function initEngineState() {
 }
 
 // ==========================================================
+// 🧩 Gestion de la dernière extraction (IA J.E.A.N.)
+// ==========================================================
+export async function setLastExtraction({ id, zones = [], files = [], ts = new Date(), status = "done" }) {
+  try {
+    const state = await EngineState.findOneAndUpdate(
+      {},
+      { $set: { lastExtraction: { id, zones, files, ts, status } } },
+      { new: true, upsert: true }
+    );
+    await addEngineLog(`🧾 Extraction enregistrée : ${zones.join(", ")} (${status})`, "info", "extraction");
+    return state;
+  } catch (err) {
+    await addEngineError(`Erreur setLastExtraction : ${err.message}`, "extraction");
+  }
+}
+
+export async function getLastExtraction() {
+  try {
+    const s = await EngineState.findOne({});
+    return s?.lastExtraction || null;
+  } catch (err) {
+    await addEngineError(`Erreur getLastExtraction : ${err.message}`, "extraction");
+    return null;
+  }
+}
+
+// ==========================================================
 // 📤 Exports
 // ==========================================================
 export default {
@@ -157,6 +184,8 @@ export default {
   resetStopFlag,
   isExtractionStopped,
   initEngineState,
+  setLastExtraction,
+  getLastExtraction,
   EngineState,
   EngineLog,
   engineEvents,
