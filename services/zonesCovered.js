@@ -1,14 +1,20 @@
 // ==========================================================
 // 🌍 CENTRALISATION MONDIALE DES ZONES COUVERTES – TINSFLASH PRO+++
-// Everest Protocol v4.7 – FULL SAFE RENDER EDITION
+// Everest Protocol v4.8 – RENDER SAFE NO-AWAIT EDITION
 // ==========================================================
 import { addEngineLog } from "./engineState.js";
 
-// ----------------------------------------------------------
-// ⚙️ Import dynamique encapsulé pour éviter top-level await
-// ----------------------------------------------------------
-const modules = await (async () => {
-  const result = {
+// Variables globales (remplies après init)
+let modules = {};
+let COVERED_ZONES = [];
+let initialized = false;
+
+// ==========================================================
+// 🧠 INITIALISATION ASYNCHRONE
+// ==========================================================
+export async function initZones() {
+  if (initialized) return; // évite double chargement
+  modules = {
     EUROPE_ZONES: [],
     USA_ZONES: [],
     CANADA_ZONES: [],
@@ -42,72 +48,25 @@ const modules = await (async () => {
     ["BELGIQUE_ZONES", "./runBelgique.js"],
   ];
 
-  await Promise.all(
-    imports.map(async ([key, path]) => {
-      try {
-        const mod = await import(path);
-        if (mod[key]) result[key] = mod[key];
-      } catch {
-        // si erreur import : laisse vide
-      }
-    })
-  );
+  for (const [key, path] of imports) {
+    try {
+      const mod = await import(path);
+      if (mod[key]) modules[key] = mod[key];
+    } catch {
+      modules[key] = [];
+    }
+  }
 
-  return result;
-})();
+  COVERED_ZONES = Object.values(modules).flat();
+  initialized = true;
+  await addEngineLog(`✅ Zones initialisées (${COVERED_ZONES.length})`, "info", "zonesCovered");
+}
 
-// ----------------------------------------------------------
-// 🌐 EXPORTS FR / EN
-// ----------------------------------------------------------
-export const {
-  EUROPE_ZONES,
-  USA_ZONES,
-  CANADA_ZONES,
-  AFRICA_NORD_ZONES,
-  AFRICA_CENTRALE_ZONES,
-  AFRICA_OUEST_ZONES,
-  AFRICA_SUD_ZONES,
-  AFRICA_EST_ZONES,
-  AMERIQUE_SUD_ZONES,
-  ASIA_ZONES,
-  OCEANIE_ZONES,
-  CARIBBEAN_ZONES,
-  BOUKE_ZONES,
-  BELGIQUE_ZONES,
-} = modules;
-
-// Alias anglais pour compat Render
-export const AMERICA_SUD_ZONES = AMERIQUE_SUD_ZONES;
-export const ASIA_EST_ZONES = ASIA_ZONES;
-export const ASIA_SUD_ZONES = ASIA_ZONES;
-export const OCEANIA_ZONES = OCEANIE_ZONES;
-
-// ----------------------------------------------------------
-// 🌍 FUSION COMPLÈTE
-// ----------------------------------------------------------
-export const COVERED_ZONES = [
-  ...EUROPE_ZONES,
-  ...USA_ZONES,
-  ...CANADA_ZONES,
-  ...AFRICA_NORD_ZONES,
-  ...AFRICA_CENTRALE_ZONES,
-  ...AFRICA_OUEST_ZONES,
-  ...AFRICA_SUD_ZONES,
-  ...AFRICA_EST_ZONES,
-  ...AMERIQUE_SUD_ZONES,
-  ...ASIA_ZONES,
-  ...OCEANIE_ZONES,
-  ...CARIBBEAN_ZONES,
-  ...BELGIQUE_ZONES,
-  ...BOUKE_ZONES,
-];
-
-// ----------------------------------------------------------
+// ==========================================================
 // 🔎 ENUMÉRATION + LOGS
-// ----------------------------------------------------------
+// ==========================================================
 export function enumerateCoveredPoints(filter = "All") {
   const out = [];
-
   for (const p of COVERED_ZONES) {
     const continent = p.continent || "Unknown";
     const name = p.region || p.name || "Inconnu";
@@ -124,11 +83,11 @@ export function enumerateCoveredPoints(filter = "All") {
       out.push({ region: name, lat, lon, continent, country: p.country || "Inconnu" });
     }
   }
-
   return out;
 }
 
 export async function logZoneStats() {
+  if (!initialized) await initZones();
   const all = enumerateCoveredPoints("All");
   const summary = `🌍 Total global : ${all.length} zones (${new Date().toISOString()})`;
   console.log(summary);
@@ -136,4 +95,10 @@ export async function logZoneStats() {
   return summary;
 }
 
-export default { COVERED_ZONES, enumerateCoveredPoints, logZoneStats };
+// ==========================================================
+// 🌐 EXPORTS
+// ==========================================================
+export const getZones = () => modules;
+export const getCoveredZones = () => COVERED_ZONES;
+
+export default { initZones, enumerateCoveredPoints, logZoneStats, getZones, getCoveredZones };
