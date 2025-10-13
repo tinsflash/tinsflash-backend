@@ -42,7 +42,7 @@ import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
 // === Nouveaux découpages de zones ===
 import { runGlobalAfriqueNord } from "./services/runGlobalAfricaNord.js";
 import { runGlobalAfriqueOuest } from "./services/runGlobalAfricaOuest.js";
-import { runGlobalAfriqueCentre } from "./services/runGlobalAfricaCentre.js";
+import { runGlobalAfricaCentrale } from "./services/runGlobalAfricaCentrale.js";
 import { runGlobalAfriqueEst } from "./services/runGlobalAfricaEst.js";
 import { runGlobalAfriqueSud } from "./services/runGlobalAfricaSud.js";
 import { runGlobalAsiaEst } from "./services/runGlobalAsiaEst.js";
