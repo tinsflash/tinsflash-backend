@@ -9,26 +9,25 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
 body{margin:0;background:#020b17;color:#e8f6ff;font-family:"Segoe UI",sans-serif;}
-header{background:#001027;text-align:center;padding:14px 10px;color:#4fc3f7;
-font-size:1.6em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;}
-nav{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;background:#0b1b2f;padding:8px;}
+header{background:#001027;text-align:center;padding:14px 10px;color:#4fc3f7;font-size:1.6em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;}
+nav{display:flex;justify-content:center;background:#0b1b2f;padding:8px;}
 nav a{color:#aeeaff;text-decoration:none;font-weight:600;padding:8px 14px;border-radius:6px;transition:.2s;}
 nav a:hover{background:#032347;color:#fff;}
 section.video-forecast{position:relative;text-align:center;margin:10px auto;max-width:960px;}
 section.video-forecast video{width:100%;border-radius:10px;box-shadow:0 0 15px rgba(0,255,255,0.2);}
-section.video-forecast .caption{position:absolute;bottom:12px;left:0;right:0;text-align:center;
-background:rgba(0,0,0,0.35);padding:6px 0;font-size:1em;color:#e8f6ff;}
+section.video-forecast .caption{position:absolute;bottom:12px;left:0;right:0;text-align:center;background:rgba(0,0,0,0.35);padding:6px 0;font-size:1em;color:#e8f6ff;}
 .map{height:420px;margin:18px auto;max-width:960px;border-radius:10px;overflow:hidden;}
-.forecast-box{max-width:960px;margin:10px auto;background:#081527;border:1px solid #093c60;
-border-radius:10px;padding:14px;box-shadow:0 0 20px rgba(0,255,255,0.1);}
+.forecast-box{max-width:960px;margin:10px auto;background:#081527;border:1px solid #093c60;border-radius:10px;padding:14px;box-shadow:0 0 20px rgba(0,255,255,0.1);}
 .forecast-item{padding:6px 0;border-bottom:1px solid #093c60;}
 .forecast-item:last-child{border-bottom:none;}
 h2{color:#4fc3f7;text-align:center;margin-top:20px;}
 footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
-button.regen{display:block;margin:20px auto;background:#071d34;color:#4fc3f7;
-border:1px solid #4fc3f7;padding:10px 18px;border-radius:10px;font-weight:bold;cursor:pointer;
-transition:.2s;}
-button.regen:hover{background:#4fc3f7;color:#000;}
+input.city{display:block;margin:10px auto;padding:8px;border-radius:6px;border:none;max-width:260px;text-align:center;font-weight:bold;}
+iframe{border:none;width:100%;height:480px;border-radius:10px;}
+.alerts-box{max-width:960px;margin:20px auto;padding:14px;background:#081527;border:1px solid #093c60;border-radius:10px;}
+.days-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center;}
+.day{background:#071d34;border-radius:10px;padding:10px;}
+.day img{width:48px;height:48px;}
 </style>
 </head>
 <body>
@@ -36,12 +35,7 @@ button.regen:hover{background:#4fc3f7;color:#000;}
 <header>🌤️ Bulletin Météo IA – Province de Namur</header>
 
 <nav>
-<a href="/">🏠 Accueil</a>
-<a href="/admin-pp.html">⚙️ Console Admin</a>
-<a href="/admin-alerts.html">🚨 Alertes</a>
-<a href="/admin-radar.html">🌦️ Radar</a>
-<a href="/admin-news.html">📰 News</a>
-<a href="/admin-chat.html">💬 Chat IA</a>
+  <a href="/">🏠 Retour à l'accueil</a>
 </nav>
 
 <!-- 🎬 Spot vidéo IA J.E.A.N. -->
@@ -49,84 +43,87 @@ button.regen:hover{background:#4fc3f7;color:#000;}
   <video id="videoJean" autoplay loop muted playsinline poster="/videos/forecast-namur.jpg">
     <source src="/videos/forecast-namur.mp4" type="video/mp4"/>
   </video>
-  <div class="caption">
-    Bulletin IA J.E.A.N. • TINSFLASH PRO+++ • Province de Namur
-  </div>
+  <div class="caption">Bulletin IA J.E.A.N. • Province de Namur</div>
 </section>
 
-<!-- 🔄 Bouton régénération manuelle -->
-<button class="regen" onclick="generateVideo()">🎬 Régénérer la vidéo IA Namur</button>
+<!-- 📍 Sélecteur ville -->
+<input type="text" id="city" class="city" placeholder="Entrez votre ville ou village…"/>
 
-<!-- 🗺️ Carte météo -->
-<h2>🗺️ Carte interactive – Prévisions locales</h2>
-<div id="map" class="map"></div>
-
-<!-- 📊 Prévisions 5 jours -->
-<h2>📊 Prévisions IA – 5 jours Namur</h2>
+<!-- 🌡️ Prévisions -->
+<h2>📊 Prévision du jour</h2>
 <div id="forecast" class="forecast-box">Chargement des prévisions…</div>
 
-<footer>© 2025 TINSFLASH PRO+++ | Moteur IA J.E.A.N. – Made in Belgium</footer>
+<h2>📅 Prévisions à 5 jours</h2>
+<div id="nextDays" class="days-grid"></div>
+
+<!-- 🌍 Carte mondiale des alertes -->
+<h2>🌍 Carte mondiale des alertes</h2>
+<div id="mapAlerts" class="map"></div>
+
+<!-- 🚨 Alertes locales / nationales -->
+<div class="alerts-box" id="localAlerts">Chargement des alertes…</div>
+
+<!-- 🌧️ Radar -->
+<h2>🌧️ Radar en direct (Windy)</h2>
+<iframe src="https://embed.windy.com/embed2.html?lat=50.47&lon=4.87&zoom=7&level=surface&overlay=rain&menu=&message=true&marker=true&calendar=24&pressure=true&type=map&location=coordinates&detail=true&detailLat=50.47&detailLon=4.87&metricWind=km/h&metricTemp=°C"></iframe>
+
+<footer>© 2025 TINSFLASH PRO+++ | IA J.E.A.N. – Made in Belgium</footer>
 
 <script>
-// ======================================================
-// 🗺️ MAP INIT
-// ======================================================
-const map=L.map("map").setView([50.47,4.87],8);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:10,minZoom:5}).addTo(map);
-
-// ======================================================
-// 🔮 FORECAST FETCHER
-// ======================================================
-async function loadForecast(){
- try{
-   const res=await fetch("/api/forecast?lat=50.47&lon=4.87");
-   const d=await res.json();
-   const box=document.getElementById("forecast");
-   if(!d||!d.temperature){box.innerHTML="Aucune donnée disponible pour l’instant.";return;}
-   box.innerHTML=`
-     <div class="forecast-item"><b>Température actuelle :</b> ${d.temperature} °C</div>
-     <div class="forecast-item"><b>Humidité :</b> ${d.humidity} %</div>
-     <div class="forecast-item"><b>Vent :</b> ${d.wind} km/h</div>
-     <div class="forecast-item"><b>Conditions :</b> ${d.condition}</div>
-     <div class="forecast-item"><b>Source :</b> ${d.source}</div>
-     <div class="forecast-item"><b>Mise à jour :</b> ${new Date(d.updated).toLocaleString()}</div>`;
-   L.marker([d.lat,d.lon]).addTo(map)
-     .bindPopup(`<b>${d.condition}</b><br>${d.temperature}°C, vent ${d.wind} km/h`).openPopup();
- }catch(e){
-   console.error("Erreur loadForecast",e);
-   document.getElementById("forecast").innerHTML="Erreur de chargement des prévisions.";
- }
+// ============================
+// Chargement des prévisions
+// ============================
+async function loadForecast(city=null){
+  let url="/api/forecast?lat=50.47&lon=4.87";
+  if(city) url+="&city="+encodeURIComponent(city);
+  const box=document.getElementById("forecast");
+  const next=document.getElementById("nextDays");
+  try{
+    const res=await fetch(url);
+    const d=await res.json();
+    if(!d||!d.temperature){box.innerHTML="Aucune donnée disponible.";return;}
+    box.innerHTML=`
+      <div class="forecast-item"><b>Température :</b> ${d.temperature||"--"} °C</div>
+      <div class="forecast-item"><b>Humidité :</b> ${d.humidity||"--"} %</div>
+      <div class="forecast-item"><b>Vent :</b> ${d.wind||"--"} km/h</div>
+      <div class="forecast-item"><b>Conditions :</b> ${d.condition||"--"}</div>
+      <div class="forecast-item"><b>Mise à jour :</b> ${new Date(d.updated||Date.now()).toLocaleString()}</div>`;
+    // prévisions 5 jours (mock temporaire)
+    next.innerHTML="";
+    const icons=["☀️","🌤️","🌦️","🌧️","⛅"];
+    for(let i=1;i<=5;i++){
+      const temp=(d.temperature||15)+Math.round(Math.random()*4-2);
+      next.innerHTML+=`<div class="day"><div>${icons[i%icons.length]}</div><div>Jour +${i}</div><div>${temp} °C</div></div>`;
+    }
+  }catch(e){
+    box.innerHTML="Erreur de chargement des prévisions.";
+  }
 }
+document.getElementById("city").addEventListener("change",e=>loadForecast(e.target.value));
 loadForecast();
-setInterval(loadForecast,600000); // rafraîchit toutes les 10 min
 
-// ======================================================
-// 🎬 Génération manuelle vidéo IA Namur
-// ======================================================
-async function generateVideo(){
- try{
-   const btn=document.querySelector(".regen");
-   btn.textContent="⏳ Génération en cours…";
-   btn.disabled=true;
-   const res=await fetch("/api/generateNamurVideo",{method:"POST"});
-   const data=await res.json();
-   if(data.success){
-     btn.textContent="✅ Vidéo mise à jour avec succès";
-     document.getElementById("videoJean").src="/videos/forecast-namur.mp4?ts="+Date.now();
-   }else{
-     btn.textContent="⚠️ Erreur génération vidéo";
-   }
- }catch(e){
-   console.error(e);
-   document.querySelector(".regen").textContent="❌ Erreur vidéo";
- }finally{
-   setTimeout(()=>{
-     const btn=document.querySelector(".regen");
-     btn.disabled=false;
-     btn.textContent="🎬 Régénérer la vidéo IA Namur";
-   },6000);
- }
+// ============================
+// Carte et alertes
+// ============================
+const mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+
+async function loadAlerts(){
+  try{
+    const res=await fetch("/api/alerts");
+    const data=await res.json();
+    const local=document.getElementById("localAlerts");
+    if(!data.length){local.innerHTML="Aucune alerte en cours.";}
+    else{
+      local.innerHTML=data.map(a=>`<div>🚨 <b>${a.title||"Alerte"}</b> – ${a.zone||""}</div>`).join("");
+      data.forEach(a=>{
+        if(a.lat&&a.lon)L.circle([a.lat,a.lon],{radius:60000,color:"red"})
+          .addTo(mapA).bindPopup(`<b>${a.title||"Alerte"}</b><br>${a.zone||""}`);
+      });
+    }
+  }catch(e){document.getElementById("localAlerts").innerHTML="Erreur de chargement des alertes.";}
 }
+loadAlerts();
 </script>
 
 </body>
