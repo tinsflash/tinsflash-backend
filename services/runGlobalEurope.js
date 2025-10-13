@@ -16,9 +16,9 @@ export async function runGlobalEurope() {
   try {
     await addEngineLog("🌍 Démarrage extraction Europe", "info", "runGlobalEurope");
 
+    // --- Localités européennes conservées intégralement ---
     const zones = [
-      // --- Localités européennes conservées intégralement ---
-  Belgium: [
+Belgique: [
     { lat: 50.85, lon: 4.35, region: "Brussels-Central" },
     { lat: 51.22, lon: 4.40, region: "North-Sea-Coast" },
     { lat: 50.47, lon: 4.87, region: "Condroz" },
