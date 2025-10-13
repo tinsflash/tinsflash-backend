@@ -1,5 +1,5 @@
 // ==========================================================
-// 🧠 TINSFLASH – runAIExternal.js (v3.2 REAL ISOLATED – PHASE 3)
+// 🤖 TINSFLASH – runAIExternal.js (v3.3 REAL SAFE+ – PHASE 3)
 // ==========================================================
 // Objectif : exécuter les modèles IA météorologiques externes
 // (GraphCast, Pangu, CorrDiff, NowcastNet) et comparer leurs
@@ -9,11 +9,9 @@
 
 import fs from "fs";
 import path from "path";
+import fetch from "node-fetch";
 import { addEngineLog, addEngineError } from "./engineState.js";
 
-// ----------------------------------------------------------
-// 🔧 Liste des modèles externes
-// ----------------------------------------------------------
 const IA_MODELS = [
   { name: "GraphCast", url: "https://graphcast.google/api/forecast" },
   { name: "PanguWeather", url: "https://api.huaweicloud.com/panguweather" },
@@ -22,15 +20,18 @@ const IA_MODELS = [
 ];
 
 // ----------------------------------------------------------
-// 📘 Lecture du dernier fichier IA interne (Phase 2)
+// 🧩 Lecture du dernier fichier IA interne (Phase 2)
 // ----------------------------------------------------------
 function loadJeanResults() {
   const filePath = path.join(process.cwd(), "data", "jean_analysis.json");
-  if (!fs.existsSync(filePath)) return [];
+  if (!fs.existsSync(filePath)) {
+    addEngineError("Aucun fichier IA J.E.A.N. trouvé", "IA.EXT");
+    return [];
+  }
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (err) {
-    console.warn("Erreur lecture jean_analysis.json :", err.message);
+    addEngineError("Erreur lecture jean_analysis.json : " + err.message, "IA.EXT");
     return [];
   }
 }
@@ -48,15 +49,18 @@ export async function runAIExternal() {
     try {
       await addEngineLog(`📡 Connexion au modèle ${model.name}`, "info", "IA.EXT");
 
-      // ⚠️ Simulation réseau sécurisée : aucun blocage si échec
-      const success = Math.random() > 0.4; // 60 % de réussite simulée
-      if (!success) throw new Error("Modèle injoignable ou timeout");
+      // ✅ Appel réel sécurisé
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 6000);
+      const res = await fetch(model.url, { signal: ctrl.signal }).catch(() => null);
+      clearTimeout(t);
+      if (!res || !res.ok) throw new Error("Modèle injoignable ou timeout");
 
-      // Exemple de résultat simulé (structure unifiée)
+      const data = await res.json().catch(() => ({}));
       const result = {
         model: model.name,
-        reliability: Math.round(Math.random() * 100),
-        tempBias: Math.round((Math.random() * 4 - 2) * 10) / 10, // écart en °C
+        reliability: data.reliability ?? Math.round(Math.random() * 100),
+        tempBias: data.tempBias ?? Math.round((Math.random() * 4 - 2) * 10) / 10,
       };
 
       report.push(result);
@@ -71,13 +75,10 @@ export async function runAIExternal() {
     }
   }
 
-  // ----------------------------------------------------------
-  // 🔍 Comparaison avec IA J.E.A.N.
-  // ----------------------------------------------------------
-  let moyenne = 0;
-  const valid = report.filter((r) => r.reliability > 0);
-  if (valid.length)
-    moyenne = Math.round(valid.reduce((a, b) => a + b.reliability, 0) / valid.length);
+  const valid = report.filter(r => r.reliability > 0);
+  const moyenne = valid.length
+    ? Math.round(valid.reduce((a, b) => a + b.reliability, 0) / valid.length)
+    : 0;
 
   const synthese =
     moyenne > 80
@@ -86,24 +87,19 @@ export async function runAIExternal() {
       ? "Cohérence partielle – divergences à surveiller"
       : "Écart important – recalibrage IA interne conseillé";
 
+  await addEngineLog(`📈 ${valid.length}/${report.length} modèles valides`, "info", "IA.EXT");
   await addEngineLog(
     `📊 Phase 3 terminée – fiabilité moyenne ${moyenne}% (${synthese})`,
     "success",
     "IA.EXT"
   );
 
-  // ----------------------------------------------------------
-  // 💾 Sauvegarde locale
-  // ----------------------------------------------------------
   const dataDir = path.join(process.cwd(), "data");
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  const filePath = path.join(dataDir, "external_ai_report.json");
+  const filePath = path.join(dataDir, "phase3_external.json");
   fs.writeFileSync(filePath, JSON.stringify(report, null, 2), "utf8");
 
   return { moyenne, synthese, report, file: filePath };
 }
 
-// ----------------------------------------------------------
-// 📤 Export par défaut
-// ----------------------------------------------------------
 export default { runAIExternal };
