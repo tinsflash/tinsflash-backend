@@ -26,37 +26,34 @@ export const Extraction = mongoose.model("Extraction", ExtractionSchema);
 // ==========================================================
 export async function saveExtractionToMongo({ zone, filePath, data }) {
   try {
-    if (!zone || !Array.isArray(data)) {
-      throw new Error("Zone ou données invalides");
+    if (!zone || !Array.isArray(data)) throw new Error("Zone ou données invalides");
+
+    // 🧠 Auto-génération d’un chemin si absent
+    if (!filePath) {
+      const dataDir = path.join(process.cwd(), "data");
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      filePath = path.join(dataDir, `${zone.toLowerCase()}_${Date.now()}.json`);
     }
 
-    // 🔄 Enregistre aussi en local pour sécurité (double sauvegarde)
-    const dataDir = path.dirname(filePath);
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    // 🔄 Enregistrement local
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
 
-    // 💾 Enregistrement ou mise à jour Mongo
+    // 💾 Mongo : création ou mise à jour
     const existing = await Extraction.findOne({ zone });
-    let doc;
-    if (existing) {
-      existing.timestamp = new Date();
-      existing.filePath = filePath;
-      existing.dataCount = data.length;
-      existing.data = data;
-      doc = await existing.save();
-    } else {
-      doc = await Extraction.create({
-        zone,
-        timestamp: new Date(),
-        filePath,
-        dataCount: data.length,
-        data,
-      });
-    }
+    const doc = existing
+      ? Object.assign(existing, {
+          timestamp: new Date(),
+          filePath,
+          dataCount: data.length,
+          data,
+        })
+      : new Extraction({ zone, timestamp: new Date(), filePath, dataCount: data.length, data });
+
+    await doc.save();
 
     await addEngineLog(`💾 Extraction Mongo enregistrée : ${zone} (${data.length} points)`, "info", "extraction");
 
-    // 🔗 Met à jour le moteur
+    // 🔗 Moteur
     await setLastExtraction({
       id: doc._id,
       zones: [zone],
@@ -65,7 +62,7 @@ export async function saveExtractionToMongo({ zone, filePath, data }) {
       status: "done",
     });
 
-    return { success: true, zone, count: data.length, mongoId: doc._id };
+    return { success: true, zone, count: data.length, mongoId: doc._id, filePath };
   } catch (err) {
     await addEngineError(`Erreur saveExtractionToMongo : ${err.message}`, "extraction");
     return { success: false, error: err.message };
@@ -73,7 +70,7 @@ export async function saveExtractionToMongo({ zone, filePath, data }) {
 }
 
 // ==========================================================
-// 📡 Lecture des extractions récentes (par zone ou globales)
+// 📡 Lecture des extractions récentes
 // ==========================================================
 export async function getRecentExtractions(hours = 2) {
   try {
@@ -88,7 +85,7 @@ export async function getRecentExtractions(hours = 2) {
 }
 
 // ==========================================================
-// 🧩 Nettoyage ancien (optionnel pour maintenance future)
+// 🧩 Nettoyage ancien
 // ==========================================================
 export async function cleanupOldExtractions(days = 7) {
   try {
