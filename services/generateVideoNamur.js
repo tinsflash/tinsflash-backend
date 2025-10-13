@@ -6,11 +6,11 @@
 
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { generateNamurScript } from "./scriptNamur.js";
 import { generateForecast } from "./forecastService.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
-import { execSync } from "child_process";
 
 export async function generateVideoNamur() {
   try {
@@ -21,13 +21,17 @@ export async function generateVideoNamur() {
 
     const script = generateNamurScript(forecast, alerts?.alerts?.Europe || []);
 
-    const tmpText = path.join(process.cwd(), "data", "namur_script.txt");
-    const outVideo = path.join(process.cwd(), "public", "videos", "forecast-namur.mp4");
-    const outImage = path.join(process.cwd(), "public", "videos", "forecast-namur.jpg");
+    const dataDir = path.join(process.cwd(), "data");
+    const publicDir = path.join(process.cwd(), "public", "videos");
+    if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
-    fs.writeFileSync(tmpText, script, "utf8");
+    const textFile = path.join(dataDir, "namur_script.txt");
+    const outVideo = path.join(publicDir, "forecast-namur.mp4");
+    const outImage = path.join(publicDir, "forecast-namur.jpg");
 
-    // Commande simplifiée (tts + ffmpeg)
+    fs.writeFileSync(textFile, script, "utf8");
+
+    // Utilise Google TTS + FFmpeg (nécessite gtts et ffmpeg installés)
     execSync(`
       gtts-cli -l fr "${script.replace(/\n/g, " ")}" -o temp_audio.mp3 &&
       ffmpeg -loop 1 -i public/avatars/jean-default.png -i temp_audio.mp3 -c:v libx264 -tune stillimage -pix_fmt yuv420p -t 45 -vf "scale=1280:720,format=yuv420p" "${outVideo}" -y
