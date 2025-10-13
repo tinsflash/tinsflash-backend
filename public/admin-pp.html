@@ -18,6 +18,7 @@ main{flex:1;padding:16px;overflow-y:auto;}
 header{background:#001027;text-align:center;padding:14px;color:#4fc3f7;
 font-size:1.5em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;margin-bottom:10px;border-radius:8px;}
 h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;}
+.phaseTitle{font-weight:bold;font-size:1.2em;color:#00ffcc;text-shadow:0 0 8px #00ffcc;margin:20px 0 8px 0;}
 button{background:#071d34;color:#4fc3f7;border:1px solid #4fc3f7;
 padding:10px;margin:6px;border-radius:10px;font-weight:bold;cursor:pointer;
 display:flex;align-items:center;gap:6px;justify-content:center;transition:.2s;}
@@ -66,7 +67,7 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <main>
 <header>COCKPIT ADMINISTRATEUR – IA J.E.A.N. – Moteur Central</header>
 
-<h2>⚙️ Extraction – Zones couvertes</h2>
+<div class="phaseTitle">PHASE 1 – Extraction des modèles traditionnels</div>
 <div class="status-grid">
   <div><button onclick="run('global-europe')">🇪🇺 Europe</button></div>
   <div><button onclick="run('global-usa')">🇺🇸 USA / 🇨🇦 Canada</button></div>
@@ -78,11 +79,19 @@ if(!sessionStorage.getItem("tinsflashPIN")){
   <div><button onclick="run('bouke')">📺 Bouké (Namur)</button></div>
 </div>
 
-<h2>🧠 IA & Alertes</h2>
+<div class="phaseTitle">PHASE 2 – Analyse IA J.E.A.N.</div>
 <div class="status-grid">
-  <div><button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button></div>
-  <div><button onclick="runAIExternal()">🧩 IA Externes (GraphCast / Pangu / CorrDiff / NowcastNet)</button></div>
-  <div><button onclick="runAlerts()">🚨 Fusion alertes</button></div>
+  <div><button onclick="runAI()">🧠 Lancer IA J.E.A.N.</button></div>
+</div>
+
+<div class="phaseTitle">PHASE 3 – IA Externes (GraphCast / Pangu / CorrDiff / NowcastNet)</div>
+<div class="status-grid">
+  <div><button onclick="runAIExternal()">🧩 Exécuter IA Externes</button></div>
+</div>
+
+<div class="phaseTitle">PHASE 5 – Fusion et Alertes</div>
+<div class="status-grid">
+  <div><button onclick="runAlerts()">🚨 Fusionner les alertes</button></div>
   <div><button onclick="checkStatus()">🔍 Vérifier moteur</button></div>
 </div>
 
@@ -108,10 +117,10 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <script>
 const logs=document.getElementById("logs");
 function addLog(msg){const line=`${new Date().toLocaleTimeString()} ${msg}`;logs.textContent+="\n"+line;logs.scrollTop=logs.scrollHeight;}
-function setLight(id,state){const e=document.getElementById(id);e.className="light "+state;}
+function setLight(id,state){const e=document.getElementById(id);if(e)e.className="light "+state;}
 
 // ======================================================
-// 🔘 RUN Zones
+// 🔘 RUN Zones – Phase 1
 // ======================================================
 async function run(zone){
  event.target.classList.add("btn-active");
@@ -127,16 +136,19 @@ async function run(zone){
 }
 
 // ======================================================
-// 🧠 IA / IA Externes / Alertes
+// 🧠 IA J.E.A.N. – Phase 2
 // ======================================================
 async function runAI(){
  try{
    const r=await fetch("/api/runAI",{method:"POST"});
    if(r.ok){addLog("🧠 IA J.E.A.N. activée.");setLight("lightIA","ok");}
-   else addLog("⚠️ Erreur activation IA.");
- }catch(e){addLog("❌ Crash IA: "+e.message);}
+   else addLog("⚠️ Erreur activation IA J.E.A.N.");
+ }catch(e){addLog("❌ Crash IA J.E.A.N.: "+e.message);}
 }
 
+// ======================================================
+// 🧩 IA Externes – Phase 3
+// ======================================================
 async function runAIExternal(){
  try{
    addLog("🧩 Démarrage IA externes (phase 3)...");
@@ -155,6 +167,9 @@ async function runAIExternal(){
  }
 }
 
+// ======================================================
+// 🚨 Fusion Alertes – Phase 5
+// ======================================================
 async function runAlerts(){
  try{
    const r=await fetch("/api/runWorldAlerts",{method:"POST"});
