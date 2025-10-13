@@ -27,7 +27,7 @@ await initZones();
 // ==========================================================
 // 🧩 IMPORTS INTERNES
 // ==========================================================
-import { runGlobal } from "./services/runGlobal.js";
+
 import { runBouke } from "./services/runBouke.js";
 import { runBelgique } from "./services/runBelgique.js";
 import { runGlobalEurope } from "./services/runGlobalEurope.js";
