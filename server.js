@@ -28,15 +28,6 @@ await initZones();
 // 🧩 IMPORTS INTERNES
 // ==========================================================
 
-import { runBouke } from "./services/runBouke.js";
-import { runBelgique } from "./services/runBelgique.js";
-import { runGlobalEurope } from "./services/runGlobalEurope.js";
-import { runGlobalUSA } from "./services/runGlobalUSA.js";
-import { runAfrique } from "./services/runGlobalAfrique.js";
-import { runAsie } from "./services/runGlobalAsie.js";
-import { runOceanie } from "./services/runGlobalOceanie.js";
-import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
-
 // === Nouveaux découpages de zones ===
 import { runGlobal } from "./services/runGlobal.js";
 import { runBouke } from "./services/runBouke.js";
