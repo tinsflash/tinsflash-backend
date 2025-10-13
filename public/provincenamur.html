@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>🌤️ Province de Namur – Bulletin IA J.E.A.N. | TINSFLASH PRO+++</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+body{margin:0;background:#020b17;color:#e8f6ff;font-family:"Segoe UI",sans-serif;}
+header{background:#001027;text-align:center;padding:14px 10px;color:#4fc3f7;
+font-size:1.6em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;}
+nav{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;background:#0b1b2f;padding:8px;}
+nav a{color:#aeeaff;text-decoration:none;font-weight:600;padding:8px 14px;border-radius:6px;transition:.2s;}
+nav a:hover{background:#032347;color:#fff;}
+section.video-forecast{position:relative;text-align:center;margin:10px auto;max-width:960px;}
+section.video-forecast video{width:100%;border-radius:10px;box-shadow:0 0 15px rgba(0,255,255,0.2);}
+section.video-forecast .caption{position:absolute;bottom:12px;left:0;right:0;text-align:center;
+background:rgba(0,0,0,0.35);padding:6px 0;font-size:1em;color:#e8f6ff;}
+.map{height:420px;margin:18px auto;max-width:960px;border-radius:10px;overflow:hidden;}
+.forecast-box{max-width:960px;margin:10px auto;background:#081527;border:1px solid #093c60;
+border-radius:10px;padding:14px;box-shadow:0 0 20px rgba(0,255,255,0.1);}
+.forecast-item{padding:6px 0;border-bottom:1px solid #093c60;}
+.forecast-item:last-child{border-bottom:none;}
+h2{color:#4fc3f7;text-align:center;margin-top:20px;}
+footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
+</style>
+</head>
+<body>
+
+<header>🌤️ Bulletin Météo IA – Province de Namur</header>
+
+<nav>
+<a href="/">🏠 Accueil</a>
+<a href="/admin-pp.html">⚙️ Console Admin</a>
+<a href="/admin-alerts.html">🚨 Alertes</a>
+<a href="/admin-radar.html">🌦️ Radar</a>
+<a href="/admin-news.html">📰 News</a>
+<a href="/admin-chat.html">💬 Chat IA</a>
+</nav>
+
+<!-- 🎬 Spot vidéo IA J.E.A.N. -->
+<section class="video-forecast">
+  <video autoplay loop muted playsinline poster="/assets/namur-preview.jpg">
+    <source src="/assets/namur-forecast.mp4" type="video/mp4"/>
+  </video>
+  <div class="caption">
+    Bulletin IA J.E.A.N. • TINSFLASH PRO+++ • Province de Namur
+  </div>
+</section>
+
+<!-- 🗺️ Carte météo -->
+<h2>🗺️ Carte interactive – Prévisions locales</h2>
+<div id="map" class="map"></div>
+
+<!-- 📊 Prévisions 5 jours -->
+<h2>📊 Prévisions IA – 5 jours Namur</h2>
+<div id="forecast" class="forecast-box">Chargement des prévisions…</div>
+
+<footer>© 2025 TINSFLASH PRO+++ | Moteur IA J.E.A.N. – Made in Belgium</footer>
+
+<script>
+// ======================================================
+// 🗺️ MAP INIT
+// ======================================================
+const map=L.map("map").setView([50.47,4.87],8);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:10,minZoom:5}).addTo(map);
+
+// ======================================================
+// 🔮 FORECAST FETCHER
+// ======================================================
+async function loadForecast(){
+ try{
+   const res=await fetch("/api/forecast?lat=50.47&lon=4.87");
+   const d=await res.json();
+   const box=document.getElementById("forecast");
+   if(!d||!d.temperature){box.innerHTML="Aucune donnée disponible pour l’instant.";return;}
+   box.innerHTML=`
+     <div class="forecast-item"><b>Température actuelle :</b> ${d.temperature} °C</div>
+     <div class="forecast-item"><b>Humidité :</b> ${d.humidity} %</div>
+     <div class="forecast-item"><b>Vent :</b> ${d.wind} km/h</div>
+     <div class="forecast-item"><b>Conditions :</b> ${d.condition}</div>
+     <div class="forecast-item"><b>Source :</b> ${d.source}</div>
+     <div class="forecast-item"><b>Mise à jour :</b> ${new Date(d.updated).toLocaleString()}</div>`;
+   L.marker([d.lat,d.lon]).addTo(map)
+     .bindPopup(`<b>${d.condition}</b><br>${d.temperature}°C, vent ${d.wind} km/h`).openPopup();
+ }catch(e){
+   console.error("Erreur loadForecast",e);
+   document.getElementById("forecast").innerHTML="Erreur de chargement des prévisions.";
+ }
+}
+loadForecast();
+setInterval(loadForecast,600000); // rafraîchit toutes les 10 min
+</script>
+
+</body>
+</html>
