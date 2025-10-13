@@ -38,6 +38,17 @@ import { runOceanie } from "./services/runGlobalOceanie.js";
 import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
 
 // === Nouveaux découpages de zones ===
+import { runGlobal } from "./services/runGlobal.js";
+import { runBouke } from "./services/runBouke.js";
+import { runBelgique } from "./services/runBelgique.js";
+import { runGlobalEurope } from "./services/runGlobalEurope.js";
+import { runGlobalUSA } from "./services/runGlobalUSA.js";
+import { runAfrique } from "./services/runGlobalAfrique.js";
+import { runAsie } from "./services/runGlobalAsie.js";
+import { runOceanie } from "./services/runGlobalOceanie.js";
+import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
+
+// === Nouveaux découpages de zones ===
 import { runGlobalAfriqueNord } from "./services/runGlobalAfriqueNord.js";
 import { runGlobalAfriqueOuest } from "./services/runGlobalAfriqueOuest.js";
 import { runGlobalAfriqueCentre } from "./services/runGlobalAfriqueCentre.js";
@@ -47,7 +58,6 @@ import { runGlobalAsiaEst } from "./services/runGlobalAsiaEst.js";
 import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
 import { runGlobalCanada } from "./services/runGlobalCanada.js";
 import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
-
 import { runAIAnalysis } from "./services/aiAnalysis.js";        // 🧠 Phase 2
 import { runAIExternal } from "./services/runAIExternal.js";    // 🧠 Phase 3
 import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
