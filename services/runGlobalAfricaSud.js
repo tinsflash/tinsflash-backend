@@ -4,7 +4,10 @@
 // Objectif : suivi vents australs, anticyclones, houles de l’océan Indien
 // ==========================================================
 
-import { addEngineLog } from "./engineState.js";
+import { addEngineLog, addEngineError, updateEngineState, setLastExtraction } from "./engineState.js";
+import { saveExtractionToMongo } from "./extractionStore.js"; // ✅ ajout Mongo
+import fs from "fs";
+import path from "path";
 
 export const AFRICA_SUD_ZONES = {
   "South Africa": [
@@ -49,12 +52,62 @@ export function getAllAfricaSudZones() {
   return all;
 }
 
+// ==========================================================
+// 🚀 RUN OFFICIEL – Afrique Australe
+// ==========================================================
 export async function runGlobalAfricaSud() {
   await addEngineLog("🌍 Démarrage runGlobalAfricaSud (Afrique Australe)", "info", "runGlobal");
   const zones = getAllAfricaSudZones();
-  const summary = { region: "Africa Sud", totalZones: zones.length, generatedAt: new Date().toISOString(), status: "ok" };
-  await addEngineLog(`✅ Afrique Australe : ${zones.length} zones traitées`, "success", "runGlobal");
-  return { summary, zones };
+
+  try {
+    // 🔄 Résumé
+    const summary = {
+      region: "Africa Sud",
+      totalZones: zones.length,
+      generatedAt: new Date().toISOString(),
+      status: "ok",
+    };
+
+    // 💾 Sauvegarde locale
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const filePath = path.join(dataDir, "africa_sud.json");
+    fs.writeFileSync(filePath, JSON.stringify({ summary, zones }, null, 2), "utf8");
+
+    // ☁️ Sauvegarde Mongo réelle
+    await saveExtractionToMongo({
+      id: `AF-SUD-${Date.now()}`,
+      region: "Africa Sud",
+      zones: Object.keys(AFRICA_SUD_ZONES),
+      file: filePath,
+      dataCount: zones.length,
+      status: "done",
+      timestamp: new Date(),
+    });
+
+    // ⚙️ Mise à jour moteur
+    await setLastExtraction({
+      id: `africasud-${Date.now()}`,
+      zones: ["Africa Sud"],
+      files: [filePath],
+      status: "done",
+    });
+
+    await updateEngineState("ok", {
+      engineStatus: "RUN_OK",
+      lastFilter: "Africa Sud",
+      zonesCount: zones.length,
+    });
+
+    await addEngineLog(`✅ Afrique Australe : ${zones.length} zones traitées`, "success", "runGlobal");
+    return { summary, zones };
+  } catch (err) {
+    await addEngineError(`Erreur runGlobalAfricaSud : ${err.message}`, "runGlobalAfricaSud");
+    return { error: err.message };
+  }
 }
 
+// ==========================================================
+// 🧩 EXPORT FINAL
+// ==========================================================
 export default { AFRICA_SUD_ZONES, getAllAfricaSudZones, runGlobalAfricaSud };
