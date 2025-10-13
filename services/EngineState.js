@@ -1,6 +1,7 @@
 // ==========================================================
 // ⚙️ Gestion de l’état global du moteur TINSFLASH PRO+++
-// Version : Everest Protocol v3.98 — 100 % réel, connecté et Render-compatible
+// Version : Everest Protocol v4.2 — REAL GLOBAL CONNECT (Horodatage Multi-Zones)
+// 100 % réel, connecté et Render-compatible
 // ==========================================================
 
 import mongoose from "mongoose";
@@ -13,7 +14,7 @@ const LogSchema = new mongoose.Schema({
   module: { type: String, required: true },
   level: {
     type: String,
-    enum: ["info", "warn", "warning", "error", "success"], // ✅ ajout warning
+    enum: ["info", "warn", "warning", "error", "success"],
     default: "info",
   },
   message: { type: String, required: true },
@@ -24,9 +25,10 @@ const EngineStateSchema = new mongoose.Schema({
   status: { type: String, default: "idle" }, // idle | running | ok | fail
   lastRun: { type: Date, default: null },
   checkup: { type: Object, default: {} },
-  errorList: { type: Array, default: [] }, // ✅ renommé pour éviter conflits
+  errorList: { type: Array, default: [] },
   alertsWorld: { type: Object, default: {} },
-  lastExtraction: { type: Object, default: {} }, // 🧩 pour IA J.E.A.N.
+  lastExtraction: { type: Object, default: {} },
+  extractionHistory: { type: Array, default: [] }, // 🧩 toutes les zones horodatées
 });
 
 export const EngineState = mongoose.model("EngineState", EngineStateSchema);
@@ -37,7 +39,6 @@ export const EngineLog = mongoose.model("EngineLog", LogSchema);
 // ==========================================================
 export const engineEvents = new EventEmitter();
 let externalLogStream = null;
-
 export function bindExternalLogStream(fn) {
   externalLogStream = fn;
 }
@@ -54,7 +55,7 @@ export async function addEngineLog(message, level = "info", module = "core") {
     engineEvents.emit("log", payload);
     if (externalLogStream) externalLogStream(`[${module}] ${message}`);
   } catch (err) {
-    console.error("❌ Erreur lors de l'enregistrement du log:", err.message);
+    console.error("❌ Erreur log:", err.message);
   }
 }
 
@@ -67,7 +68,7 @@ export async function addEngineError(message, module = "core") {
     engineEvents.emit("log", payload);
     if (externalLogStream) externalLogStream(`❌ [${module}] ${message}`);
   } catch (err) {
-    console.error("❌ Erreur lors de l'enregistrement de l'erreur:", err.message);
+    console.error("❌ Erreur enregistrement erreur:", err.message);
   }
 }
 
@@ -108,10 +109,9 @@ export async function getEngineState() {
 }
 
 // ==========================================================
-// 🛑 Gestion du drapeau d’arrêt manuel de l’extraction
+// 🛑 Gestion du drapeau d’arrêt manuel
 // ==========================================================
 let extractionStopped = false;
-
 export function stopExtraction() {
   extractionStopped = true;
   const msg = "🛑 Extraction stoppée manuellement";
@@ -119,7 +119,6 @@ export function stopExtraction() {
   engineEvents.emit("log", { message: msg, level: "warning", module: "core", timestamp: new Date() });
   if (externalLogStream) externalLogStream(msg);
 }
-
 export function resetStopFlag() {
   extractionStopped = false;
   const msg = "✅ Flag stop extraction réinitialisé";
@@ -127,7 +126,6 @@ export function resetStopFlag() {
   engineEvents.emit("log", { message: msg, level: "info", module: "core", timestamp: new Date() });
   if (externalLogStream) externalLogStream(msg);
 }
-
 export function isExtractionStopped() {
   return extractionStopped;
 }
@@ -143,6 +141,7 @@ export async function initEngineState() {
       lastRun: null,
       checkup: { engineStatus: "init" },
       errorList: [],
+      extractionHistory: [],
     });
     await addEngineLog("💡 État moteur initialisé", "info", "core");
   }
@@ -150,29 +149,66 @@ export async function initEngineState() {
 }
 
 // ==========================================================
-// 🧩 Gestion de la dernière extraction (IA J.E.A.N.)
+// 🧩 Gestion intelligente des extractions (horodatées)
 // ==========================================================
 export async function setLastExtraction({ id, zones = [], files = [], ts = new Date(), status = "done" }) {
   try {
-    const state = await EngineState.findOneAndUpdate(
-      {},
-      { $set: { lastExtraction: { id, zones, files, ts, status } } },
-      { new: true, upsert: true }
+    const state = (await EngineState.findOne({})) || new EngineState();
+    const zoneName = zones.join(", ") || "Zone inconnue";
+
+    // 🧮 Enregistre la nouvelle extraction
+    const record = {
+      id,
+      zones,
+      files,
+      ts: new Date(ts),
+      status,
+      timestamp: Date.now(),
+    };
+
+    // ❌ Supprime les anciennes pour ces zones
+    state.extractionHistory = (state.extractionHistory || []).filter(
+      (r) => !zones.some((z) => r.zones?.includes(z))
     );
-    await addEngineLog(`🧾 Extraction enregistrée : ${zones.join(", ")} (${status})`, "info", "extraction");
+
+    // ✅ Ajoute la nouvelle
+    state.extractionHistory.push(record);
+    state.lastExtraction = record;
+
+    await state.save();
+
+    await addEngineLog(
+      `🧾 Extraction ${zoneName} enregistrée (${status}) à ${new Date(ts).toLocaleTimeString()}`,
+      "info",
+      "extraction"
+    );
     return state;
   } catch (err) {
     await addEngineError(`Erreur setLastExtraction : ${err.message}`, "extraction");
   }
 }
 
-export async function getLastExtraction() {
+// ==========================================================
+// 🔍 Récupération des extractions récentes (<2h par défaut)
+// ==========================================================
+export async function getRecentExtractions(hours = 2) {
   try {
-    const s = await EngineState.findOne({});
-    return s?.lastExtraction || null;
+    const state = await EngineState.findOne({});
+    if (!state || !Array.isArray(state.extractionHistory)) return [];
+
+    const cutoff = Date.now() - hours * 60 * 60 * 1000;
+    const recent = state.extractionHistory.filter((r) => r.timestamp >= cutoff);
+
+    if (!recent.length) {
+      await addEngineLog(`⏳ Aucune extraction récente (<${hours}h) trouvée`, "warning", "extraction");
+    } else {
+      await addEngineLog(`📡 ${recent.length} extraction(s) récente(s) détectée(s)`, "info", "extraction");
+    }
+
+    return recent;
   } catch (err) {
-    await addEngineError(`Erreur getLastExtraction : ${err.message}`, "extraction");
-    return null;
+    await addEngineError(`Erreur getRecentExtractions : ${err.message}`, "extraction");
+    return [];
   }
 }
 
@@ -190,7 +226,7 @@ export default {
   isExtractionStopped,
   initEngineState,
   setLastExtraction,
-  getLastExtraction,
+  getRecentExtractions,
   EngineState,
   EngineLog,
   engineEvents,
