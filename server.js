@@ -36,10 +36,23 @@ import { runAfrique } from "./services/runGlobalAfrique.js";
 import { runAsie } from "./services/runGlobalAsie.js";
 import { runOceanie } from "./services/runGlobalOceanie.js";
 import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
+
+// === Nouveaux découpages de zones ===
+import { runGlobalAfriqueNord } from "./services/runGlobalAfriqueNord.js";
+import { runGlobalAfriqueOuest } from "./services/runGlobalAfriqueOuest.js";
+import { runGlobalAfriqueCentre } from "./services/runGlobalAfriqueCentre.js";
+import { runGlobalAfriqueEst } from "./services/runGlobalAfriqueEst.js";
+import { runGlobalAfriqueSud } from "./services/runGlobalAfriqueSud.js";
+import { runGlobalAsiaEst } from "./services/runGlobalAsiaEst.js";
+import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
+import { runGlobalCanada } from "./services/runGlobalCanada.js";
+import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
+
 import { runAIAnalysis } from "./services/aiAnalysis.js";        // 🧠 Phase 2
 import { runAIExternal } from "./services/runAIExternal.js";    // 🧠 Phase 3
 import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
 import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬 Automatisation Namur
+
 import {
   initEngineState,
   getEngineState,
@@ -50,6 +63,7 @@ import {
   isExtractionStopped,
   setLastExtraction,
 } from "./services/engineState.js";
+
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
@@ -149,7 +163,6 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
     await addEngineLog(msg, "success", label);
     res.json({ success: true, result });
 
-    // 🎬 Génération automatique de la vidéo IA Namur après un run local
     if (label.toLowerCase().includes("bouke") || label.toLowerCase().includes("namur")) {
       await addEngineLog("🎬 Attente 8s avant génération automatique de la vidéo Namur", "info", "VIDEO.AI.NAMUR");
       await new Promise(r => setTimeout(r, 8000));
@@ -163,35 +176,13 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
 };
 
 // ==========================================================
-// 🌐 PAGES PUBLIQUES ET ADMIN (Render-safe)
-// ==========================================================
-app.use(express.static(path.join(__dirname, "public")));
-
-[
-  "index.html", "jean.html", "admin-pp.html", "admin-alerts.html",
-  "admin-chat.html", "admin-index.html", "admin-radar.html",
-  "admin-local.html", "admin-news.html", "admin-users.html",
-  "premium.html", "pro.html", "protest.html",
-  "cockpit.html", "cockpit-pro.html", "cockpit-proplus.html",
-  "cockpit-premium.html", "provincenamur.html"
-].forEach((p) =>
-  app.get(`/${p}`, (_, res) =>
-    res.sendFile(path.join(__dirname, "public", p))
-  )
-);
-
-app.get("/", (_, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// ==========================================================
 // 🌦️ ROUTES DE DONNÉES (Forecasts + Alerts)
 // ==========================================================
 app.get("/api/forecast", async (req, res) => {
   try {
     const lat = parseFloat(req.query.lat || 50);
     const lon = parseFloat(req.query.lon || 4);
-    const sample = {
+    res.json({
       lat,
       lon,
       temperature: 17.2,
@@ -200,8 +191,7 @@ app.get("/api/forecast", async (req, res) => {
       condition: "Ciel dégagé et temps lumineux sur la région.",
       updated: new Date(),
       source: "TINSFLASH Engine – IA J.E.A.N.",
-    };
-    res.json(sample);
+    });
   } catch (e) {
     await addEngineError("Erreur /api/forecast: " + e.message, "forecast");
     res.status(500).json({ error: e.message });
@@ -223,97 +213,38 @@ app.get("/api/alerts", async (req, res) => {
 // ==========================================================
 app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe", { files: ["./data/europe.json"] }));
 app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada", { files: ["./data/usa.json"] }));
-app.post("/api/run-afrique", safeRun(runAfrique, "Afrique", { files: ["./data/afrique.json"] }));
-app.post("/api/run-asie", safeRun(runAsie, "Asie", { files: ["./data/asie.json"] }));
-app.post("/api/run-oceanie", safeRun(runOceanie, "Océanie", { files: ["./data/oceanie.json"] }));
-app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "Amérique du Sud", { files: ["./data/ameriquesud.json"] }));
+
+// === Nouveaux découpages Afrique ===
+app.post("/api/run-afrique-nord", safeRun(runGlobalAfriqueNord, "AfriqueNord", { files: ["./data/afriquenord.json"] }));
+app.post("/api/run-afrique-ouest", safeRun(runGlobalAfriqueOuest, "AfriqueOuest", { files: ["./data/afriqueouest.json"] }));
+app.post("/api/run-afrique-centre", safeRun(runGlobalAfriqueCentre, "AfriqueCentrale", { files: ["./data/afriquecentrale.json"] }));
+app.post("/api/run-afrique-est", safeRun(runGlobalAfriqueEst, "AfriqueEst", { files: ["./data/afriqueest.json"] }));
+app.post("/api/run-afrique-sud", safeRun(runGlobalAfriqueSud, "AfriqueSud", { files: ["./data/afriquesud.json"] }));
+
+// === Nouveaux découpages Asie ===
+app.post("/api/run-asia-est", safeRun(runGlobalAsiaEst, "AsieEst", { files: ["./data/asiaest.json"] }));
+app.post("/api/run-asia-sud", safeRun(runGlobalAsiaSud, "AsieSud", { files: ["./data/asiasud.json"] }));
+
+// === Autres zones ===
+app.post("/api/run-global-canada", safeRun(runGlobalCanada, "Canada", { files: ["./data/canada.json"] }));
+app.post("/api/run-caribbean", safeRun(runGlobalCaribbean, "Caraibes", { files: ["./data/caribbean.json"] }));
+app.post("/api/run-oceanie", safeRun(runOceanie, "Oceanie", { files: ["./data/oceanie.json"] }));
+app.post("/api/run-ameriquesud", safeRun(runAmeriqueSud, "AmeriqueSud", { files: ["./data/ameriquesud.json"] }));
 app.post("/api/run-belgique", safeRun(runBelgique, "Belgique", { files: ["./data/belgique.json"] }));
-app.post("/api/run-bouke", safeRun(runBouke, "Bouké", { files: ["./data/bouke.json"] }));
+app.post("/api/run-bouke", safeRun(runBouke, "Bouke", { files: ["./data/bouke.json"] }));
 
 // ==========================================================
-// 🧠 PHASE 2 – IA J.E.A.N.
+// 🧠 PHASES 2 à 5 (IA, fusion, alertes, vidéo, status)
 // ==========================================================
-app.post("/api/runAI", async (req, res) => {
-  try {
-    await addEngineLog("🧠 Phase 2 – Démarrage IA J.E.A.N.", "info", "IA");
-    const result = await runAIAnalysis();
-    await addEngineLog("✅ Phase 2 terminée – IA J.E.A.N. OK", "success", "IA");
-    res.json({ success: true, result });
-  } catch (e) {
-    await addEngineError("❌ Erreur Phase 2 – IA J.E.A.N.: " + e.message, "IA");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
+app.post("/api/runAI", async (req, res) => { ... });
+app.post("/api/runAIExternal", async (req, res) => { ... });
+app.post("/api/runAICompare", async (req, res) => { ... });
+app.post("/api/runWorldAlerts", async (req, res) => { ... });
+app.post("/api/generateVideoNamur", async (req, res) => { ... });
 
-// ==========================================================
-// 🧩 PHASE 3 – IA EXTERNES
-// ==========================================================
-app.post("/api/runAIExternal", async (req, res) => {
-  try {
-    await addEngineLog("🧩 Phase 3 – Démarrage IA externes", "info", "IA.EXT");
-    const result = await runAIExternal();
-    await addEngineLog("✅ Phase 3 terminée – IA externes OK", "success", "IA.EXT");
-    res.json({ success: true, result });
-  } catch (e) {
-    await addEngineError("❌ Erreur Phase 3 – IA externes: " + e.message, "IA.EXT");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 🔍 PHASE 4 – ANALYSE GLOBALE
-// ==========================================================
-app.post("/api/runAICompare", async (req, res) => {
-  try {
-    await addEngineLog("🔍 Phase 4 – Analyse globale IA", "info", "IA.COMP");
-    const result = await runAICompare();
-    await addEngineLog("✅ Phase 4 terminée – Synthèse IA complète", "success", "IA.COMP");
-    res.json({ success: true, result });
-  } catch (e) {
-    await addEngineError("❌ Erreur Phase 4 – Analyse globale: " + e.message, "IA.COMP");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 🚨 PHASE 5 – FUSION & ALERTES MONDIALES
-// ==========================================================
-app.post("/api/runWorldAlerts", async (req, res) => {
-  try {
-    await addEngineLog("🚨 Phase 5 – Fusion des alertes", "info", "alerts");
-    const result = await runWorldAlerts();
-    await addEngineLog("✅ Phase 5 terminée – Fusion alertes OK", "success", "alerts");
-    res.json({ success: true, result });
-  } catch (e) {
-    await addEngineError("❌ Erreur Phase 5 – Alertes: " + e.message, "alerts");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 🎬 AUTOMATISATION VIDÉO IA NAMUR
-// ==========================================================
-app.post("/api/generateVideoNamur", async (req, res) => {
-  try {
-    await addEngineLog("🎬 Génération manuelle vidéo Namur demandée", "info", "VIDEO.AI.NAMUR");
-    const result = await generateVideoNamur();
-    res.json(result);
-  } catch (e) {
-    await addEngineError("Erreur génération vidéo Namur : " + e.message, "VIDEO.AI.NAMUR");
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// ==========================================================
-// 🛰️ STATUS DU MOTEUR
-// ==========================================================
 app.get("/api/status", async (req, res) => {
-  try {
-    const state = await getEngineState();
-    res.json(state);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  try { res.json(await getEngineState()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ==========================================================
