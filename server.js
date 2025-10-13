@@ -40,11 +40,11 @@ import { runOceanie } from "./services/runGlobalOceanie.js";
 import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
 
 // === Nouveaux découpages de zones ===
-import { runGlobalAfriqueNord } from "./services/runGlobalAfricaNord.js";
-import { runGlobalAfriqueOuest } from "./services/runGlobalAfricaOuest.js";
+import { runGlobalAfricaNord } from "./services/runGlobalAfricaNord.js";
+import { runGlobalAfricaOuest } from "./services/runGlobalAfricaOuest.js";
 import { runGlobalAfricaCentrale } from "./services/runGlobalAfricaCentrale.js";
-import { runGlobalAfriqueEst } from "./services/runGlobalAfricaEst.js";
-import { runGlobalAfriqueSud } from "./services/runGlobalAfricaSud.js";
+import { runGlobalAfricaEst } from "./services/runGlobalAfricaEst.js";
+import { runGlobalAfricaSud } from "./services/runGlobalAfricaSud.js";
 import { runGlobalAsiaEst } from "./services/runGlobalAsiaEst.js";
 import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
 import { runGlobalCanada } from "./services/runGlobalCanada.js";
