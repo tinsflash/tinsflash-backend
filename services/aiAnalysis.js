@@ -12,8 +12,8 @@ import { addEngineLog, addEngineError, getLastExtraction } from "./engineState.j
 import { fetchStationData } from "./stationsService.js";
 import { evaluatePhenomena } from "./phenomena/evaluate.js";
 import { analyzeRain } from "./rainService.js";
-import { analyseSnow } from "./snowService.js";
-import { analyseWind } from "./windService.js";
+import { analyzeSnow } from "./snowService.js";
+import { analyzeWind } from "./windService.js";
 
 // ==========================================================
 // 🧮 Facteurs physiques et environnementaux
@@ -144,8 +144,8 @@ export async function runAIAnalysis() {
       let rain = null, snow = null, wind = null;
       try {
         rain = await analyzeRain(lat, lon);
-        snow = await analyseSnow(lat, lon);
-        wind = await analyseWind(lat, lon);
+        snow = await analyzeSnow(lat, lon);
+        wind = await analyzeWind(lat, lon);
       } catch (err) {
         await addEngineLog(`⚠️ Données météo additionnelles KO : ${err.message}`, "warning", "IA.JEAN");
       }
