@@ -39,7 +39,7 @@ import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";        // 🧠 Phase 2
 import { runAIExternal } from "./services/runAIExternal.js";    // 🧠 Phase 3
 import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
-import { generateNamurVideo } from "./services/generateNamurVideo.js"; // 🎬 Automatisation Namur
+import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬 Automatisation Namur
 import {
   initEngineState,
   getEngineState,
@@ -149,10 +149,11 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
     await addEngineLog(msg, "success", label);
     res.json({ success: true, result });
 
-    // 🎬 Si la zone est Bouké (Province de Namur), on régénère la vidéo automatiquement
+    // 🎬 Génération automatique de la vidéo IA Namur après un run local
     if (label.toLowerCase().includes("bouke") || label.toLowerCase().includes("namur")) {
-      await addEngineLog("🎬 Lancement auto de generateNamurVideo()", "info", "VIDEO.AI.NAMUR");
-      await generateNamurVideo();
+      await addEngineLog("🎬 Attente 8s avant génération automatique de la vidéo Namur", "info", "VIDEO.AI.NAMUR");
+      await new Promise(r => setTimeout(r, 8000));
+      await generateVideoNamur();
     }
   } catch (e) {
     const msg = `❌ Erreur ${label}: ${e.message}`;
@@ -292,10 +293,10 @@ app.post("/api/runWorldAlerts", async (req, res) => {
 // ==========================================================
 // 🎬 AUTOMATISATION VIDÉO IA NAMUR
 // ==========================================================
-app.post("/api/generateNamurVideo", async (req, res) => {
+app.post("/api/generateVideoNamur", async (req, res) => {
   try {
     await addEngineLog("🎬 Génération manuelle vidéo Namur demandée", "info", "VIDEO.AI.NAMUR");
-    const result = await generateNamurVideo();
+    const result = await generateVideoNamur();
     res.json(result);
   } catch (e) {
     await addEngineError("Erreur génération vidéo Namur : " + e.message, "VIDEO.AI.NAMUR");
