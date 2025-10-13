@@ -1,7 +1,7 @@
 // ==========================================================
 // 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT)
 // ==========================================================
-// 100 % réel – IA J.E.A.N. – moteur complet + IA externes optionnelles
+// 100 % réel – IA J.E.A.N. – moteur complet + IA externes + analyse globale
 // ==========================================================
 
 import express from "express";
@@ -21,7 +21,7 @@ import { EventEmitter } from "events";
 // ==========================================================
 // 🚀 INITIALISATION DES ZONES COUVERTES
 // ==========================================================
-import { initZones } from "./services/zonesCovered.js";
+import { initZones, enumerateCoveredPoints } from "./services/zonesCovered.js";
 await initZones();
 
 // ==========================================================
@@ -36,8 +36,9 @@ import { runAfrique } from "./services/runGlobalAfrique.js";
 import { runAsie } from "./services/runGlobalAsie.js";
 import { runOceanie } from "./services/runGlobalOceanie.js";
 import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
-import { runAIAnalysis } from "./services/aiAnalysis.js";
-import { runAIExternal } from "./services/runAIExternal.js"; // 🧠 Phase 3 ajoutée ici
+import { runAIAnalysis } from "./services/aiAnalysis.js";        // 🧠 Phase 2
+import { runAIExternal } from "./services/runAIExternal.js";    // 🧠 Phase 3
+import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
 import {
   initEngineState,
   getEngineState,
@@ -48,7 +49,6 @@ import {
   isExtractionStopped,
   setLastExtraction,
 } from "./services/engineState.js";
-import { enumerateCoveredPoints } from "./services/zonesCovered.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
@@ -211,7 +211,7 @@ app.get("/api/alerts", async (req, res) => {
 });
 
 // ==========================================================
-// 🛰️ ROUTES API DE RUN
+// 🛰️ ROUTES API DE RUN – PHASE 1
 // ==========================================================
 app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe", { files: ["./data/europe.json"] }));
 app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada", { files: ["./data/usa.json"] }));
@@ -223,22 +223,22 @@ app.post("/api/run-belgique", safeRun(runBelgique, "Belgique", { files: ["./data
 app.post("/api/run-bouke", safeRun(runBouke, "Bouké", { files: ["./data/bouke.json"] }));
 
 // ==========================================================
-// 🧠 ROUTES IA ET ALERTES
+// 🧠 PHASE 2 – IA J.E.A.N.
 // ==========================================================
 app.post("/api/runAI", async (req, res) => {
   try {
-    await addEngineLog("🧠 Démarrage IA J.E.A.N.", "info", "IA");
+    await addEngineLog("🧠 Phase 2 – Démarrage IA J.E.A.N.", "info", "IA");
     const result = await runAIAnalysis();
-    await addEngineLog("✅ IA J.E.A.N. terminée", "success", "IA");
+    await addEngineLog("✅ Phase 2 terminée – IA J.E.A.N. OK", "success", "IA");
     res.json({ success: true, result });
   } catch (e) {
-    await addEngineError("❌ Erreur IA: " + e.message, "IA");
+    await addEngineError("❌ Erreur Phase 2 – IA J.E.A.N.: " + e.message, "IA");
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // ==========================================================
-// 🧠 ROUTE PHASE 3 – IA EXTERNES OPTIONNELLES
+// 🧩 PHASE 3 – IA EXTERNES (GraphCast, Pangu, CorrDiff, NowcastNet)
 // ==========================================================
 app.post("/api/runAIExternal", async (req, res) => {
   try {
@@ -247,22 +247,37 @@ app.post("/api/runAIExternal", async (req, res) => {
     await addEngineLog("✅ Phase 3 terminée – IA externes OK", "success", "IA.EXT");
     res.json({ success: true, result });
   } catch (e) {
-    await addEngineError("❌ Erreur IA externes: " + e.message, "IA.EXT");
+    await addEngineError("❌ Erreur Phase 3 – IA externes: " + e.message, "IA.EXT");
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // ==========================================================
-// 🌍 ALERTES MONDIALES
+// 🔍 PHASE 4 – ANALYSE GLOBALE (Synthèse des Phases 1 à 3)
+// ==========================================================
+app.post("/api/runAICompare", async (req, res) => {
+  try {
+    await addEngineLog("🔍 Phase 4 – Analyse globale IA", "info", "IA.COMP");
+    const result = await runAICompare();
+    await addEngineLog("✅ Phase 4 terminée – Synthèse IA complète", "success", "IA.COMP");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur Phase 4 – Analyse globale: " + e.message, "IA.COMP");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🚨 PHASE 5 – FUSION & ALERTES MONDIALES
 // ==========================================================
 app.post("/api/runWorldAlerts", async (req, res) => {
   try {
-    await addEngineLog("🚨 Démarrage fusion alertes", "info", "alerts");
+    await addEngineLog("🚨 Phase 5 – Fusion des alertes", "info", "alerts");
     const result = await runWorldAlerts();
-    await addEngineLog("✅ Fusion alertes terminée", "success", "alerts");
+    await addEngineLog("✅ Phase 5 terminée – Fusion alertes OK", "success", "alerts");
     res.json({ success: true, result });
   } catch (e) {
-    await addEngineError("❌ Erreur alertes: " + e.message, "alerts");
+    await addEngineError("❌ Erreur Phase 5 – Alertes: " + e.message, "alerts");
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -285,7 +300,7 @@ app.get("/api/status", async (req, res) => {
 const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne`);
+  console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
   console.log(`🔌 Ports : logique ${ENGINE_PORT} | réseau ${PORT}`);
 });
