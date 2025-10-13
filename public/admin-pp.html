@@ -8,20 +8,72 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body{margin:0;background:#020b17;color:#e8f6ff;font-family:"Segoe UI",sans-serif;display:flex;min-height:100vh;}
-nav{width:230px;background:#001027;flex-shrink:0;display:flex;flex-direction:column;padding:16px 0;border-right:1px solid #093c60;}
-nav h1{color:#4fc3f7;text-align:center;margin:0 0 16px 0;font-size:1.1em;}
-nav a{color:#aeeaff;text-decoration:none;padding:10px 20px;display:block;transition:.2s;}
+body{
+  margin:0;
+  background:#020b17;
+  color:#e8f6ff;
+  font-family:"Segoe UI",sans-serif;
+  display:flex;
+  min-height:100vh;
+}
+nav{
+  width:230px;
+  background:#001027;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  padding:16px 0;
+  border-right:1px solid #093c60;
+}
+nav h1{
+  color:#4fc3f7;
+  text-align:center;
+  margin:0 0 16px 0;
+  font-size:1.1em;
+}
+nav a{
+  color:#aeeaff;
+  text-decoration:none;
+  padding:10px 20px;
+  display:block;
+  transition:.2s;
+}
 nav a:hover{background:#032347;color:#fff;}
 nav .active{background:#4fc3f7;color:#000;}
 main{flex:1;padding:16px;overflow-y:auto;}
-header{background:#001027;text-align:center;padding:14px;color:#4fc3f7;
-font-size:1.5em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;margin-bottom:10px;border-radius:8px;}
+header{
+  background:#001027;
+  text-align:center;
+  padding:14px;
+  color:#4fc3f7;
+  font-size:1.5em;
+  text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;
+  margin-bottom:10px;
+  border-radius:8px;
+}
 h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;}
-.phaseTitle{font-weight:bold;font-size:1.2em;color:#00ffcc;text-shadow:0 0 8px #00ffcc;margin:20px 0 8px 0;}
-button{background:#071d34;color:#4fc3f7;border:1px solid #4fc3f7;
-padding:10px;margin:6px;border-radius:10px;font-weight:bold;cursor:pointer;
-display:flex;align-items:center;gap:6px;justify-content:center;transition:.2s;}
+.phaseTitle{
+  font-weight:bold;
+  font-size:1.2em;
+  color:#00ffcc;
+  text-shadow:0 0 8px #00ffcc;
+  margin:20px 0 8px 0;
+}
+button{
+  background:#071d34;
+  color:#4fc3f7;
+  border:1px solid #4fc3f7;
+  padding:10px;
+  margin:6px;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  justify-content:center;
+  transition:.2s;
+}
 button:hover{background:#4fc3f7;color:#000;}
 .btn-active{background:#22c55e;color:#000!important;animation:blink 1s infinite alternate;}
 @keyframes blink{from{opacity:1;}to{opacity:.5;}}
@@ -32,10 +84,48 @@ button:hover{background:#4fc3f7;color:#000;}
 .err{background:#ff4444;box-shadow:0 0 8px #ff4444;}
 .idle{background:#555;}
 .map{height:280px;margin-top:10px;border-radius:10px;overflow:hidden;}
-.logs{background:#081527;border-radius:10px;padding:10px;height:340px;overflow-y:auto;
-font-family:monospace;font-size:13px;white-space:pre-wrap;border:1px solid #093c60;}
+.logs{
+  background:#081527;
+  border-radius:10px;
+  padding:10px;
+  height:340px;
+  overflow-y:auto;
+  font-family:monospace;
+  font-size:13px;
+  white-space:pre-wrap;
+  border:1px solid #093c60;
+}
+.shell{color:#4fc3f7;font-size:12px;margin-top:2px;font-family:monospace;opacity:0.7;}
 footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
-#fusionTime{font-size:12px;opacity:0.7;margin-top:5px;}
+
+/* ✅ Responsive menu pour smartphone */
+@media (max-width:900px){
+  body{flex-direction:column;}
+  nav{
+    width:100%;
+    flex-direction:row;
+    flex-wrap:wrap;
+    justify-content:center;
+    border-right:none;
+    border-bottom:1px solid #093c60;
+    background:#001027;
+    padding:8px 0;
+  }
+  nav h1{
+    width:100%;
+    text-align:center;
+    font-size:1em;
+    margin-bottom:6px;
+  }
+  nav a{
+    padding:6px 10px;
+    font-size:0.9em;
+    margin:2px;
+    border-radius:6px;
+    background:#02132d;
+  }
+  main{padding:10px;}
+}
 </style>
 </head>
 <body>
@@ -89,24 +179,17 @@ if(!sessionStorage.getItem("tinsflashPIN")){
   <div><button onclick="runAIExternal()">🧩 Exécuter IA Externes</button></div>
 </div>
 
-<div class="phaseTitle">PHASE 4 – Analyse croisée IA internes / externes</div>
-<div class="status-grid">
-  <div><button onclick="runFusionIA()">🔬 Fusion et comparaison des IA</button></div>
-</div>
-
 <div class="phaseTitle">PHASE 5 – Fusion et Alertes</div>
 <div class="status-grid">
   <div><button onclick="runAlerts()">🚨 Fusionner les alertes</button></div>
   <div><button onclick="checkStatus()">🔍 Vérifier moteur</button></div>
 </div>
-<div id="fusionTime"></div>
 
 <h2>📊 État du moteur</h2>
 <div id="status" class="status-grid">
   <div><span class="light idle" id="lightEngine"></span>Moteur principal</div>
   <div><span class="light idle" id="lightIA"></span>IA J.E.A.N.</div>
   <div><span class="light idle" id="lightIAext"></span>IA Externes</div>
-  <div><span class="light idle" id="lightCross"></span>Analyse croisée</div>
   <div><span class="light idle" id="lightAlerts"></span>Alertes</div>
   <div><span class="light idle" id="lightDB"></span>MongoDB</div>
 </div>
@@ -175,18 +258,6 @@ async function runAIExternal(){
 }
 
 // ======================================================
-// 🔬 Analyse croisée IA internes / externes – Phase 4
-// ======================================================
-async function runFusionIA(){
- try{
-   addLog("🔬 Phase 4 – Fusion IA internes/externes en cours...");
-   const r=await fetch("/api/compareIA",{method:"POST"}); // endpoint futur
-   if(r.ok){addLog("✅ Phase 4 terminée.");setLight("lightCross","ok");}
-   else addLog("⚠️ Erreur analyse croisée IA.");
- }catch(e){addLog("❌ Crash analyse croisée IA: "+e.message);setLight("lightCross","err");}
-}
-
-// ======================================================
 // 🚨 Fusion Alertes – Phase 5
 // ======================================================
 async function runAlerts(){
@@ -198,7 +269,7 @@ async function runAlerts(){
 }
 
 // ======================================================
-// 🛰️ STATUS CHECK + fusionTime
+// 🛰️ STATUS CHECK
 // ======================================================
 async function checkStatus(){
  try{
@@ -210,13 +281,8 @@ async function checkStatus(){
    setLight("lightDB",s.db==="connected"?"ok":"err");
    if(s.checkup?.iaActive)setLight("lightIA","ok");
    if(s.checkup?.alerts)setLight("lightAlerts","ok");
-   if(s.lastWorldFusion){
-     document.getElementById("fusionTime").innerText =
-       "🕓 Dernière fusion mondiale : "+new Date(s.lastWorldFusion).toLocaleString();
-   }
  }catch(e){addLog("❌ Erreur /api/status : "+e.message);}
 }
-setInterval(checkStatus,10000);
 
 // ======================================================
 // 🛰️ LOGS LIVE (SSE)
@@ -248,18 +314,13 @@ async function loadAlerts(){
  try{
    const r=await fetch("/api/alerts");
    const a=await r.json();
-   const colorMap={red:"#ff3333",orange:"#ffaa00",yellow:"#ffff00",green:"#33ff33"};
    a.forEach(x=>{
-     if(x.lat&&x.lon){
-       const col=colorMap[x.level?.toLowerCase()]||"red";
-       L.circle([x.lat,x.lon],{radius:60000,color:col})
-         .addTo(mapA)
-         .bindPopup(`<b>${x.title||"Alerte"}</b><br>${x.zone||''}<br>Gravité: ${x.level||'n/a'}`);
-     }
+     if(x.lat&&x.lon)L.circle([x.lat,x.lon],{radius:60000,color:"red"})
+       .addTo(mapA).bindPopup(`<b>${x.title||"Alerte"}</b><br>${x.zone||''}`);
    });
  }catch(e){addLog("⚠️ Erreur loadAlerts: "+e.message);}
 }
-loadForecasts();loadAlerts();checkStatus();
+loadForecasts();loadAlerts();
 </script>
 </body>
 </html>
