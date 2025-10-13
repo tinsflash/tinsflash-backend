@@ -216,11 +216,11 @@ app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe", { files: [
 app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada", { files: ["./data/usa.json"] }));
 
 // === Nouveaux découpages Afrique ===
-app.post("/api/run-afrique-nord", safeRun(runGlobalAfriqueNord, "AfriqueNord", { files: ["./data/afriquenord.json"] }));
-app.post("/api/run-afrique-ouest", safeRun(runGlobalAfriqueOuest, "AfriqueOuest", { files: ["./data/afriqueouest.json"] }));
-app.post("/api/run-afrique-centre", safeRun(runGlobalAfriqueCentre, "AfriqueCentrale", { files: ["./data/afriquecentrale.json"] }));
-app.post("/api/run-afrique-est", safeRun(runGlobalAfriqueEst, "AfriqueEst", { files: ["./data/afriqueest.json"] }));
-app.post("/api/run-afrique-sud", safeRun(runGlobalAfriqueSud, "AfriqueSud", { files: ["./data/afriquesud.json"] }));
+app.post("/api/run-africa-nord", safeRun(runGlobalAfricaNord, "AfriqueNord", { files: ["./data/afriquenord.json"] }));
+app.post("/api/run-africa-ouest", safeRun(runGlobalAfricaOuest, "AfriqueOuest", { files: ["./data/afriqueouest.json"] }));
+app.post("/api/run-africa-centre", safeRun(runGlobalAfricaCentre, "AfriqueCentrale", { files: ["./data/afriquecentrale.json"] }));
+app.post("/api/run-africa-est", safeRun(runGlobalAfricaEst, "AfriqueEst", { files: ["./data/afriqueest.json"] }));
+app.post("/api/run-africa-sud", safeRun(runGlobalAfricaSud, "AfriqueSud", { files: ["./data/afriquesud.json"] }));
 
 // === Nouveaux découpages Asie ===
 app.post("/api/run-asia-est", safeRun(runGlobalAsiaEst, "AsieEst", { files: ["./data/asiaest.json"] }));
