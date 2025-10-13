@@ -66,16 +66,31 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <!-- PHASE 1 -->
 <div class="phaseTitle">PHASE 1 – Extraction des modèles traditionnels</div>
 <div class="status-grid">
- <div><button onclick="run('global-europe')">🇪🇺 Europe</button></div>
- <div><button onclick="run('global-usa')">🇺🇸 USA / 🇨🇦 Canada</button></div>
- <div><button onclick="run('afrique')">🌍 Afrique</button></div>
- <div><button onclick="run('asie')">🌏 Asie</button></div>
- <div><button onclick="run('oceanie')">🌊 Océanie</button></div>
- <div><button onclick="run('ameriquesud')">🌎 Amérique Sud</button></div>
- <div><button onclick="run('belgique')">🇧🇪 Belgique</button></div>
- <div><button onclick="run('bouke')">📺 Bouké (Namur)</button></div>
-</div>
+  <!-- Europe / Amérique du Nord -->
+  <div><button onclick="run('global-europe')">🇪🇺 Europe</button></div>
+  <div><button onclick="run('global-usa')">🇺🇸 USA</button></div>
+  <div><button onclick="run('global-canada')">🇨🇦 Canada</button></div>
+  <div><button onclick="run('caribbean')">🏝️ Caraïbes</button></div>
 
+  <!-- Afrique -->
+  <div><button onclick="run('afrique-nord')">🌍 Afrique Nord</button></div>
+  <div><button onclick="run('afrique-ouest')">🌍 Afrique Ouest</button></div>
+  <div><button onclick="run('afrique-centre')">🌍 Afrique Centrale</button></div>
+  <div><button onclick="run('afrique-est')">🌍 Afrique Est</button></div>
+  <div><button onclick="run('afrique-sud')">🌍 Afrique Sud</button></div>
+
+  <!-- Asie -->
+  <div><button onclick="run('asia-est')">🌏 Asie Est</button></div>
+  <div><button onclick="run('asia-sud')">🌏 Asie Sud</button></div>
+
+  <!-- Autres zones -->
+  <div><button onclick="run('oceanie')">🌊 Océanie</button></div>
+  <div><button onclick="run('ameriquesud')">🌎 Amérique Sud</button></div>
+
+  <!-- Local -->
+  <div><button onclick="run('belgique')">🇧🇪 Belgique</button></div>
+  <div><button onclick="run('bouke')">📺 Bouké (Namur)</button></div>
+</div>
 <!-- PHASE 2 -->
 <div class="phaseTitle">PHASE 2 – Analyse IA J.E.A.N.</div>
 <div class="status-grid">
