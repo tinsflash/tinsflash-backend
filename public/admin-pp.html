@@ -34,8 +34,8 @@ button:hover{background:#4fc3f7;color:#000;}
 .map{height:280px;margin-top:10px;border-radius:10px;overflow:hidden;}
 .logs{background:#081527;border-radius:10px;padding:10px;height:340px;overflow-y:auto;
 font-family:monospace;font-size:13px;white-space:pre-wrap;border:1px solid #093c60;}
-.shell{color:#4fc3f7;font-size:12px;margin-top:2px;font-family:monospace;opacity:0.7;}
 footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
+#fusionTime{font-size:12px;opacity:0.7;margin-top:5px;}
 </style>
 </head>
 <body>
@@ -89,17 +89,24 @@ if(!sessionStorage.getItem("tinsflashPIN")){
   <div><button onclick="runAIExternal()">🧩 Exécuter IA Externes</button></div>
 </div>
 
+<div class="phaseTitle">PHASE 4 – Analyse croisée IA internes / externes</div>
+<div class="status-grid">
+  <div><button onclick="runFusionIA()">🔬 Fusion et comparaison des IA</button></div>
+</div>
+
 <div class="phaseTitle">PHASE 5 – Fusion et Alertes</div>
 <div class="status-grid">
   <div><button onclick="runAlerts()">🚨 Fusionner les alertes</button></div>
   <div><button onclick="checkStatus()">🔍 Vérifier moteur</button></div>
 </div>
+<div id="fusionTime"></div>
 
 <h2>📊 État du moteur</h2>
 <div id="status" class="status-grid">
   <div><span class="light idle" id="lightEngine"></span>Moteur principal</div>
   <div><span class="light idle" id="lightIA"></span>IA J.E.A.N.</div>
   <div><span class="light idle" id="lightIAext"></span>IA Externes</div>
+  <div><span class="light idle" id="lightCross"></span>Analyse croisée</div>
   <div><span class="light idle" id="lightAlerts"></span>Alertes</div>
   <div><span class="light idle" id="lightDB"></span>MongoDB</div>
 </div>
@@ -168,6 +175,18 @@ async function runAIExternal(){
 }
 
 // ======================================================
+// 🔬 Analyse croisée IA internes / externes – Phase 4
+// ======================================================
+async function runFusionIA(){
+ try{
+   addLog("🔬 Phase 4 – Fusion IA internes/externes en cours...");
+   const r=await fetch("/api/compareIA",{method:"POST"}); // endpoint futur
+   if(r.ok){addLog("✅ Phase 4 terminée.");setLight("lightCross","ok");}
+   else addLog("⚠️ Erreur analyse croisée IA.");
+ }catch(e){addLog("❌ Crash analyse croisée IA: "+e.message);setLight("lightCross","err");}
+}
+
+// ======================================================
 // 🚨 Fusion Alertes – Phase 5
 // ======================================================
 async function runAlerts(){
@@ -179,7 +198,7 @@ async function runAlerts(){
 }
 
 // ======================================================
-// 🛰️ STATUS CHECK
+// 🛰️ STATUS CHECK + fusionTime
 // ======================================================
 async function checkStatus(){
  try{
@@ -191,8 +210,13 @@ async function checkStatus(){
    setLight("lightDB",s.db==="connected"?"ok":"err");
    if(s.checkup?.iaActive)setLight("lightIA","ok");
    if(s.checkup?.alerts)setLight("lightAlerts","ok");
+   if(s.lastWorldFusion){
+     document.getElementById("fusionTime").innerText =
+       "🕓 Dernière fusion mondiale : "+new Date(s.lastWorldFusion).toLocaleString();
+   }
  }catch(e){addLog("❌ Erreur /api/status : "+e.message);}
 }
+setInterval(checkStatus,10000);
 
 // ======================================================
 // 🛰️ LOGS LIVE (SSE)
@@ -224,13 +248,18 @@ async function loadAlerts(){
  try{
    const r=await fetch("/api/alerts");
    const a=await r.json();
+   const colorMap={red:"#ff3333",orange:"#ffaa00",yellow:"#ffff00",green:"#33ff33"};
    a.forEach(x=>{
-     if(x.lat&&x.lon)L.circle([x.lat,x.lon],{radius:60000,color:"red"})
-       .addTo(mapA).bindPopup(`<b>${x.title||"Alerte"}</b><br>${x.zone||''}`);
+     if(x.lat&&x.lon){
+       const col=colorMap[x.level?.toLowerCase()]||"red";
+       L.circle([x.lat,x.lon],{radius:60000,color:col})
+         .addTo(mapA)
+         .bindPopup(`<b>${x.title||"Alerte"}</b><br>${x.zone||''}<br>Gravité: ${x.level||'n/a'}`);
+     }
    });
  }catch(e){addLog("⚠️ Erreur loadAlerts: "+e.message);}
 }
-loadForecasts();loadAlerts();
+loadForecasts();loadAlerts();checkStatus();
 </script>
 </body>
 </html>
