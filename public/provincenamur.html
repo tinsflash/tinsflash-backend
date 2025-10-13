@@ -25,6 +25,10 @@ border-radius:10px;padding:14px;box-shadow:0 0 20px rgba(0,255,255,0.1);}
 .forecast-item:last-child{border-bottom:none;}
 h2{color:#4fc3f7;text-align:center;margin-top:20px;}
 footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
+button.regen{display:block;margin:20px auto;background:#071d34;color:#4fc3f7;
+border:1px solid #4fc3f7;padding:10px 18px;border-radius:10px;font-weight:bold;cursor:pointer;
+transition:.2s;}
+button.regen:hover{background:#4fc3f7;color:#000;}
 </style>
 </head>
 <body>
@@ -42,13 +46,16 @@ footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
 
 <!-- 🎬 Spot vidéo IA J.E.A.N. -->
 <section class="video-forecast">
-  <video autoplay loop muted playsinline poster="/assets/namur-preview.jpg">
-    <source src="/assets/namur-forecast.mp4" type="video/mp4"/>
+  <video id="videoJean" autoplay loop muted playsinline poster="/videos/forecast-namur.jpg">
+    <source src="/videos/forecast-namur.mp4" type="video/mp4"/>
   </video>
   <div class="caption">
     Bulletin IA J.E.A.N. • TINSFLASH PRO+++ • Province de Namur
   </div>
 </section>
+
+<!-- 🔄 Bouton régénération manuelle -->
+<button class="regen" onclick="generateVideo()">🎬 Régénérer la vidéo IA Namur</button>
 
 <!-- 🗺️ Carte météo -->
 <h2>🗺️ Carte interactive – Prévisions locales</h2>
@@ -92,6 +99,34 @@ async function loadForecast(){
 }
 loadForecast();
 setInterval(loadForecast,600000); // rafraîchit toutes les 10 min
+
+// ======================================================
+// 🎬 Génération manuelle vidéo IA Namur
+// ======================================================
+async function generateVideo(){
+ try{
+   const btn=document.querySelector(".regen");
+   btn.textContent="⏳ Génération en cours…";
+   btn.disabled=true;
+   const res=await fetch("/api/generateNamurVideo",{method:"POST"});
+   const data=await res.json();
+   if(data.success){
+     btn.textContent="✅ Vidéo mise à jour avec succès";
+     document.getElementById("videoJean").src="/videos/forecast-namur.mp4?ts="+Date.now();
+   }else{
+     btn.textContent="⚠️ Erreur génération vidéo";
+   }
+ }catch(e){
+   console.error(e);
+   document.querySelector(".regen").textContent="❌ Erreur vidéo";
+ }finally{
+   setTimeout(()=>{
+     const btn=document.querySelector(".regen");
+     btn.disabled=false;
+     btn.textContent="🎬 Régénérer la vidéo IA Namur";
+   },6000);
+ }
+}
 </script>
 
 </body>
