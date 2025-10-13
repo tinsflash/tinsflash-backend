@@ -1,7 +1,7 @@
 // ==========================================================
 // 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT)
 // ==========================================================
-// 100 % réel – IA J.E.A.N. – moteur complet + IA externes + analyse globale
+// 100 % réel – IA J.E.A.N. – moteur complet + IA externes + analyse globale + vidéo IA Namur
 // ==========================================================
 
 import express from "express";
@@ -39,6 +39,7 @@ import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";        // 🧠 Phase 2
 import { runAIExternal } from "./services/runAIExternal.js";    // 🧠 Phase 3
 import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
+import { generateNamurVideo } from "./services/generateNamurVideo.js"; // 🎬 Automatisation Namur
 import {
   initEngineState,
   getEngineState,
@@ -147,6 +148,12 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
     const msg = `✅ Run ${label} terminé`;
     await addEngineLog(msg, "success", label);
     res.json({ success: true, result });
+
+    // 🎬 Si la zone est Bouké (Province de Namur), on régénère la vidéo automatiquement
+    if (label.toLowerCase().includes("bouke") || label.toLowerCase().includes("namur")) {
+      await addEngineLog("🎬 Lancement auto de generateNamurVideo()", "info", "VIDEO.AI.NAMUR");
+      await generateNamurVideo();
+    }
   } catch (e) {
     const msg = `❌ Erreur ${label}: ${e.message}`;
     await addEngineError(msg, label);
@@ -238,7 +245,7 @@ app.post("/api/runAI", async (req, res) => {
 });
 
 // ==========================================================
-// 🧩 PHASE 3 – IA EXTERNES (GraphCast, Pangu, CorrDiff, NowcastNet)
+// 🧩 PHASE 3 – IA EXTERNES
 // ==========================================================
 app.post("/api/runAIExternal", async (req, res) => {
   try {
@@ -253,7 +260,7 @@ app.post("/api/runAIExternal", async (req, res) => {
 });
 
 // ==========================================================
-// 🔍 PHASE 4 – ANALYSE GLOBALE (Synthèse des Phases 1 à 3)
+// 🔍 PHASE 4 – ANALYSE GLOBALE
 // ==========================================================
 app.post("/api/runAICompare", async (req, res) => {
   try {
@@ -278,6 +285,20 @@ app.post("/api/runWorldAlerts", async (req, res) => {
     res.json({ success: true, result });
   } catch (e) {
     await addEngineError("❌ Erreur Phase 5 – Alertes: " + e.message, "alerts");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🎬 AUTOMATISATION VIDÉO IA NAMUR
+// ==========================================================
+app.post("/api/generateNamurVideo", async (req, res) => {
+  try {
+    await addEngineLog("🎬 Génération manuelle vidéo Namur demandée", "info", "VIDEO.AI.NAMUR");
+    const result = await generateNamurVideo();
+    res.json(result);
+  } catch (e) {
+    await addEngineError("Erreur génération vidéo Namur : " + e.message, "VIDEO.AI.NAMUR");
     res.status(500).json({ success: false, error: e.message });
   }
 });
