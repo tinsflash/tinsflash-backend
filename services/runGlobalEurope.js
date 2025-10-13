@@ -1,23 +1,27 @@
 // ==========================================================
-// 🌍 TINSFLASH – runGlobalEurope.js
-// Extraction réelle pour l’Europe – Everest Protocol v4.0 PRO+++
+// 🇪🇺 TINSFLASH – runGlobalEurope.js (Everest Protocol v4.1 PRO+++ REAL CONNECT)
+// ==========================================================
+// Extraction complète – Europe 27 + UK + Scandinavie + Balkans + Méditerranée
+// 100 % réel, complet et compatible Render (ESM strict)
 // ==========================================================
 
 import fs from "fs";
 import path from "path";
-import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
-import { superForcast } from "./superForecast.js";
-import { saveExtractionToMongo } from "./extractionStore.js"; // ✅ import ajouté
-
+import { superForecast } from "./superForecast.js";
+import {
+  addEngineLog,
+  addEngineError,
+  updateEngineState,
+  setLastExtraction,
+} from "./engineState.js";
+import { saveExtractionToMongo } from "./extractionStore.js"; // ✅ ajouté pour la sauvegarde Mongo réelle
 // ==========================================================
 // 🧠 Fonction principale – Extraction réelle
 // ==========================================================
-export async function runGlobalEurope() {
-  try {
-    await addEngineLog("🌍 Démarrage extraction Europe", "info", "runGlobalEurope");
-
-    // --- Localités européennes conservées intégralement ---
-    const zones = {
+// Zones détaillées par pays
+// ===========================
+export const EUROPE_ZONES = {   
+  // --- Localités européennes conservées intégralement ---
       Belgique: [
         { lat: 50.85, lon: 4.35, country: "Belgium", region: "Brussels-Central" },
         { lat: 51.22, lon: 4.40, country: "Belgium", region: "North-Sea-Coast" },
@@ -258,56 +262,72 @@ export async function runGlobalEurope() {
   ]
 };
 
-const phase1Results = [];
+// ==========================================================
+// 🧠 FONCTION PRINCIPALE
+// ==========================================================
+export async function runGlobalEurope() {
+  try {
+    await addEngineLog("🇪🇺 Démarrage runGlobalEurope", "info", "runGlobalEurope");
 
-    // ======================================================
-    // 🔁 Extraction multi-modèles réelle
-    // ======================================================
-    for (const z of zones) {
-      const { lat, lon, country, region } = z;
-      try {
-        const merged = await mergeMultiModels(lat, lon, country);
-        phase1Results.push({
-          lat,
-          lon,
-          country,
-          region,
-          altitude: merged.altitude || null,
-          temperature: merged.temperature,
-          precipitation: merged.precipitation,
-          wind: merged.wind,
-          reliability: merged.reliability,
-          sources: merged.sources,
-          timestamp: new Date(),
-        });
-        await addEngineLog(`✅ Données fusionnées : ${region} (${country})`, "info", "runGlobalEurope");
-      } catch (err) {
-        await addEngineError(`Erreur fusion ${region} : ${err.message}`, "runGlobalEurope");
-      }
-    }
+    // Fusion de toutes les zones
+    const zones = Object.values(EUROPE_ZONES).flat();
 
-    // ======================================================
-    // 💾 Enregistrement local + MongoDB
-    // ======================================================
-    const filePath = path.join(process.cwd(), "data", "europe.json");
-    fs.writeFileSync(filePath, JSON.stringify(phase1Results, null, 2), "utf8");
-    await addEngineLog(`💾 Fichier local enregistré : ${filePath}`, "info", "runGlobalEurope");
-
-    // 🧠 Enregistrement MongoDB (zone = Europe)
-    await saveExtractionToMongo({
-      zone: "Europe",
-      filePath,
-      data: phase1Results,
+    const result = await superForecast({
+      zones,
+      runType: "Europe",
+      withAI: false,
     });
 
-    await updateEngineState("ok", { region: "Europe", points: phase1Results.length });
-    await addEngineLog(`🏁 Extraction Europe terminée (${phase1Results.length} points)`, "success", "runGlobalEurope");
+    // ======================================================
+    // 💾 Sauvegarde locale
+    // ======================================================
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const filePath = path.join(dataDir, "europe.json");
+    fs.writeFileSync(filePath, JSON.stringify(result, null, 2), "utf8");
 
-    return { success: true, count: phase1Results.length, file: filePath };
+    // ======================================================
+    // ☁️ Sauvegarde MongoDB (réelle)
+    // ======================================================
+    await saveExtractionToMongo({
+      id: `EU-${Date.now()}`,
+      region: "Europe",
+      zones: Object.keys(EUROPE_ZONES),
+      file: filePath,
+      dataCount: zones.length,
+      status: "done",
+      timestamp: new Date(),
+    });
+
+    // ======================================================
+    // 🧩 Mise à jour état moteur
+    // ======================================================
+    await setLastExtraction({
+      id: `europe-${Date.now()}`,
+      zones: ["Europe"],
+      files: [filePath],
+      status: "done",
+    });
+
+    await updateEngineState("ok", {
+      engineStatus: "RUN_OK",
+      lastFilter: "Europe",
+      zonesCount: zones.length,
+    });
+
+    await addEngineLog(
+      `✅ runGlobalEurope terminé (${zones.length} zones)`,
+      "success",
+      "runGlobalEurope"
+    );
+
+    return result;
   } catch (err) {
     await addEngineError(`Erreur runGlobalEurope : ${err.message}`, "runGlobalEurope");
-    return { success: false, error: err.message };
+    return { error: err.message };
   }
 }
 
 export default { runGlobalEurope };
+
+  
