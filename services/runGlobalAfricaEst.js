@@ -1,13 +1,15 @@
 // ==========================================================
-// 🌍 TINSFLASH – runGlobalAfricaEst.js (Everest Protocol v3.0 PRO+++)
+// 🌍 TINSFLASH – runGlobalAfricaEst.js (Everest Protocol v4.1 PRO+++ REAL CONNECT)
 // ==========================================================
 // Couverture : Afrique de l’Est & Corne (Éthiopie, Somalie, Kenya, Tanzanie,
 // Ouganda, Rwanda, Burundi, Érythrée, Djibouti, Soudan du Sud)
 // Objectif : suivi Rift africain, flux de mousson, risques sécheresse/inondation.
 // ==========================================================
 
-import { addEngineLog } from "./engineState.js";
-
+import { addEngineLog, addEngineError, updateEngineState, setLastExtraction } from "./engineState.js";
+import { saveExtractionToMongo } from "./extractionStore.js"; // ✅ ajouté pour MongoDB
+import fs from "fs";
+import path from "path";
 export const AFRICA_EST_ZONES = {
   Ethiopia: [
     { lat: 8.98, lon: 38.79, region: "Addis Ababa - Highlands" },
@@ -68,7 +70,6 @@ export const AFRICA_EST_ZONES = {
     { lat: 11.78, lon: 42.88, region: "Tadjoura - Rift/Coast" }
   ]
 };
-
 // ===========================
 // ✅ Exports
 // ===========================
@@ -88,17 +89,58 @@ export function getAllAfricaEstZones() {
   return all;
 }
 
+// ===========================================================
+// 🚀 RUN OFFICIEL – Afrique Est & Corne
+// ===========================================================
 export async function runGlobalAfricaEst() {
   await addEngineLog("🌍 Démarrage runGlobalAfricaEst (Afrique Est & Corne)", "info", "runGlobal");
   const zones = getAllAfricaEstZones();
-  const summary = {
-    region: "Africa Est",
-    totalZones: zones.length,
-    generatedAt: new Date().toISOString(),
-    status: "ok"
-  };
-  await addEngineLog(`✅ Afrique Est & Corne : ${zones.length} zones traitées`, "success", "runGlobal");
-  return { summary, zones };
+
+  try {
+    const summary = {
+      region: "Africa Est",
+      totalZones: zones.length,
+      generatedAt: new Date().toISOString(),
+      status: "ok"
+    };
+
+    // 💾 Sauvegarde locale
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const filePath = path.join(dataDir, "africa_est.json");
+    fs.writeFileSync(filePath, JSON.stringify({ summary, zones }, null, 2), "utf8");
+
+    // ☁️ Sauvegarde Mongo (réelle)
+    await saveExtractionToMongo({
+      id: `AF-EST-${Date.now()}`,
+      region: "Africa Est",
+      zones: Object.keys(AFRICA_EST_ZONES),
+      file: filePath,
+      dataCount: zones.length,
+      status: "done",
+      timestamp: new Date(),
+    });
+
+    // 🧩 Mise à jour état moteur
+    await setLastExtraction({
+      id: `africaest-${Date.now()}`,
+      zones: ["Africa Est"],
+      files: [filePath],
+      status: "done",
+    });
+
+    await updateEngineState("ok", {
+      engineStatus: "RUN_OK",
+      lastFilter: "Africa Est",
+      zonesCount: zones.length,
+    });
+
+    await addEngineLog(`✅ Afrique Est & Corne : ${zones.length} zones traitées`, "success", "runGlobal");
+    return { summary, zones };
+  } catch (err) {
+    await addEngineError(`Erreur runGlobalAfricaEst : ${err.message}`, "runGlobalAfricaEst");
+    return { error: err.message };
+  }
 }
 
 export default { AFRICA_EST_ZONES, getAllAfricaEstZones, runGlobalAfricaEst };
