@@ -4,7 +4,10 @@
 // Objectif : suivi humidité, orages, précipitations, flux équatorial et intertropical
 // ==========================================================
 
-import { addEngineLog } from "./engineState.js";
+import { addEngineLog, addEngineError, updateEngineState, setLastExtraction } from "./engineState.js";
+import { saveExtractionToMongo } from "./extractionStore.js"; // ✅ ajouté pour sauvegarde Mongo
+import fs from "fs";
+import path from "path";
 
 /**
  * Journalise le chargement des zones Afrique Centrale
@@ -101,14 +104,53 @@ export function getAllAfricaCentraleZones() {
 export async function runGlobalAfricaCentrale() {
   await addEngineLog("🌍 Démarrage du runGlobalAfricaCentrale (Afrique Centrale)", "info", "runGlobal");
   const zones = getAllAfricaCentraleZones();
-  const summary = {
-    region: "Africa Centrale",
-    totalZones: zones.length,
-    generatedAt: new Date().toISOString(),
-    status: "ok",
-  };
-  await addEngineLog(`✅ Afrique Centrale : ${zones.length} zones traitées`, "success", "runGlobal");
-  return { summary, zones };
+
+  try {
+    // 🔄 Création du résumé
+    const summary = {
+      region: "Africa Centrale",
+      totalZones: zones.length,
+      generatedAt: new Date().toISOString(),
+      status: "ok",
+    };
+
+    // 💾 Sauvegarde locale
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const filePath = path.join(dataDir, "africa_centrale.json");
+    fs.writeFileSync(filePath, JSON.stringify({ summary, zones }, null, 2), "utf8");
+
+    // ☁️ Sauvegarde Mongo (réelle)
+    await saveExtractionToMongo({
+      id: `AF-CENT-${Date.now()}`,
+      region: "Africa Centrale",
+      zones: Object.keys(AFRICA_CENTRALE_ZONES),
+      file: filePath,
+      dataCount: zones.length,
+      status: "done",
+      timestamp: new Date(),
+    });
+
+    // 🧩 Mise à jour état moteur
+    await setLastExtraction({
+      id: `africacentrale-${Date.now()}`,
+      zones: ["Africa Centrale"],
+      files: [filePath],
+      status: "done",
+    });
+
+    await updateEngineState("ok", {
+      engineStatus: "RUN_OK",
+      lastFilter: "Africa Centrale",
+      zonesCount: zones.length,
+    });
+
+    await addEngineLog(`✅ Afrique Centrale : ${zones.length} zones traitées`, "success", "runGlobal");
+    return { summary, zones };
+  } catch (err) {
+    await addEngineError(`Erreur runGlobalAfricaCentrale : ${err.message}`, "runGlobalAfricaCentrale");
+    return { error: err.message };
+  }
 }
 
 // ===========================================================
