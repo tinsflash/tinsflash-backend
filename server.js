@@ -236,7 +236,7 @@ app.post("/api/run-bouke", safeRun(runBouke, "Bouke", { files: ["./data/bouke.js
 // ==========================================================
 // 🧠 PHASES 2 à 5 (IA, fusion, alertes, vidéo, status)
 // ==========================================================
-app.post("/api/runAI", async (req, res) => { ... });
+app.post("/api/runAIAnalysis", async (req, res) => { ... });
 app.post("/api/runAIExternal", async (req, res) => { ... });
 app.post("/api/runAICompare", async (req, res) => { ... });
 app.post("/api/runWorldAlerts", async (req, res) => { ... });
