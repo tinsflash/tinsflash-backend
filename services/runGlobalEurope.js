@@ -17,13 +17,14 @@ export async function runGlobalEurope() {
     await addEngineLog("🌍 Démarrage extraction Europe", "info", "runGlobalEurope");
 
     // --- Localités européennes conservées intégralement ---
-    const zones = [
-Belgique: [
-    { lat: 50.85, lon: 4.35, region: "Brussels-Central" },
-    { lat: 51.22, lon: 4.40, region: "North-Sea-Coast" },
-    { lat: 50.47, lon: 4.87, region: "Condroz" },
-    { lat: 50.25, lon: 5.57, region: "Ardennes" }
-  ],
+    const zones = {
+      Belgique: [
+        { lat: 50.85, lon: 4.35, country: "Belgium", region: "Brussels-Central" },
+        { lat: 51.22, lon: 4.40, country: "Belgium", region: "North-Sea-Coast" },
+        { lat: 50.47, lon: 4.87, country: "Belgium", region: "Condroz" },
+        { lat: 50.25, lon: 5.57, country: "Belgium", region: "Ardennes" }
+      ],
+
   France: [
     { lat: 48.85, lon: 2.35, region: "Île-de-France" },
     { lat: 43.6, lon: 1.44, region: "Southwest - Toulouse" },
