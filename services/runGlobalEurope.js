@@ -6,7 +6,7 @@
 import fs from "fs";
 import path from "path";
 import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
-import { mergeMultiModels } from "./superForecast.js";
+import { superForcast } from "./superForecast.js";
 import { saveExtractionToMongo } from "./extractionStore.js"; // ✅ import ajouté
 
 // ==========================================================
