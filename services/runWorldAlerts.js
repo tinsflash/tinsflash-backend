@@ -1,6 +1,6 @@
 // ==========================================================
 // 🌍 FUSION MONDIALE DES ALERTES — TINSFLASH PRO+++
-// Everest Protocol v3.1 – 100 % réel, 0 fallback open-data
+// Everest Protocol v4.1 – 100 % réel, 0 fallback open-data
 // ==========================================================
 
 import {
@@ -19,7 +19,17 @@ export async function runWorldAlerts() {
     const state = await getEngineState();
     state.checkup = state.checkup || {};
 
-    await addEngineLog("🌍 Initialisation RUN World Alerts (fusion globale des alertes)…", "info", "runWorldAlerts");
+    await addEngineLog(
+      "🌍 Fusion mondiale TINSFLASH – Everest Protocol v4.1 PRO+++",
+      "info",
+      "runWorldAlerts"
+    );
+
+    await addEngineLog(
+      "🌍 Initialisation RUN World Alerts (fusion globale des alertes)…",
+      "info",
+      "runWorldAlerts"
+    );
 
     // ======================================================
     // Vérification des sources internes disponibles
@@ -41,16 +51,21 @@ export async function runWorldAlerts() {
     }
 
     // ======================================================
+    // Clonage défensif (évite références partagées)
+    // ======================================================
+    const clone = (obj) => JSON.parse(JSON.stringify(obj || {}));
+
+    // ======================================================
     // Fusion des différentes zones — tout réel
     // ======================================================
     const worldAlerts = {
-      Europe: state.alertsEurope || {},
-      USA: state.alertsUSA || {},
-      Africa: state.alertsAfrica || {},
-      Asia: state.alertsAsia || {},
-      Oceania: state.alertsOceania || {},
-      AmericaSud: state.alertsAmericaSud || {},
-      World: state.alertsWorld || {},
+      Europe: clone(state.alertsEurope),
+      USA: clone(state.alertsUSA),
+      Africa: clone(state.alertsAfrica),
+      Asia: clone(state.alertsAsia),
+      Oceania: clone(state.alertsOceania),
+      AmericaSud: clone(state.alertsAmericaSud),
+      World: clone(state.alertsWorld),
     };
 
     // ======================================================
@@ -86,13 +101,15 @@ export async function runWorldAlerts() {
       summary.americaSud;
 
     summary.generatedAt = new Date().toISOString();
-    summary.sourceNote = "✅ Toutes les alertes proviennent du moteur TINSFLASH PRO+++ (IA J.E.A.N.)";
+    summary.sourceNote =
+      "✅ Toutes les alertes proviennent du moteur TINSFLASH PRO+++ (IA J.E.A.N.)";
 
     // ======================================================
     // Sauvegarde état moteur global
     // ======================================================
     state.alertsWorld = worldAlerts;
     state.alertsWorldSummary = summary;
+    state.lastWorldFusion = new Date(); // 🕓 horodatage fusion
     state.checkup.alertsWorld = "OK";
     await saveEngineState(state);
 
@@ -109,6 +126,12 @@ export async function runWorldAlerts() {
       `📊 Détails par continent → EU: ${summary.europe}, US: ${summary.usa}, AF: ${summary.africa}, AS: ${summary.asia}, OC: ${summary.oceania}, AMS: ${summary.americaSud}`,
       "info",
       "runWorldAlerts"
+    );
+
+    await addEngineLog(
+      `🔔 Nouvelle fusion mondiale terminée à ${new Date().toLocaleTimeString()}`,
+      "event",
+      "SSE"
     );
 
     return { summary, alerts: worldAlerts };
