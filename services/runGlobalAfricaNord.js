@@ -4,7 +4,10 @@
 // Objectif : surveillance du flux saharien, orages méditerranéens et canicules
 // ==========================================================
 
-import { addEngineLog } from "./engineState.js";
+import { addEngineLog, addEngineError, updateEngineState, setLastExtraction } from "./engineState.js";
+import { saveExtractionToMongo } from "./extractionStore.js"; // ✅ ajouté pour la sauvegarde Mongo
+import fs from "fs";
+import path from "path";
 
 export const AFRICA_NORD_ZONES = {
   Morocco: [
@@ -38,7 +41,6 @@ export const AFRICA_NORD_ZONES = {
     { lat: 27.18, lon: 31.19, region: "Asyut - Interior" },
   ],
 };
-
 export function getAllAfricaNordZones() {
   const all = [];
   for (const [country, zones] of Object.entries(AFRICA_NORD_ZONES)) {
@@ -49,12 +51,63 @@ export function getAllAfricaNordZones() {
   return all;
 }
 
+// ==========================================================
+// 🚀 RUN OFFICIEL – Afrique du Nord
+// ==========================================================
 export async function runGlobalAfricaNord() {
   await addEngineLog("🌍 Démarrage runGlobalAfricaNord (Afrique du Nord)", "info", "runGlobal");
   const zones = getAllAfricaNordZones();
-  const summary = { region: "Africa Nord", totalZones: zones.length, generatedAt: new Date().toISOString(), status: "ok" };
-  await addEngineLog(`✅ Afrique du Nord : ${zones.length} zones traitées`, "success", "runGlobal");
-  return { summary, zones };
+
+  try {
+    // 🔄 Résumé
+    const summary = {
+      region: "Africa Nord",
+      totalZones: zones.length,
+      generatedAt: new Date().toISOString(),
+      status: "ok",
+    };
+
+    // 💾 Sauvegarde locale
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    const filePath = path.join(dataDir, "africa_nord.json");
+    fs.writeFileSync(filePath, JSON.stringify({ summary, zones }, null, 2), "utf8");
+
+    // ☁️ Sauvegarde Mongo réelle
+    await saveExtractionToMongo({
+      id: `AF-NORD-${Date.now()}`,
+      region: "Africa Nord",
+      zones: Object.keys(AFRICA_NORD_ZONES),
+      file: filePath,
+      dataCount: zones.length,
+      status: "done",
+      timestamp: new Date(),
+    });
+
+    // ⚙️ Mise à jour état moteur
+    await setLastExtraction({
+      id: `africanord-${Date.now()}`,
+      zones: ["Africa Nord"],
+      files: [filePath],
+      status: "done",
+    });
+
+    await updateEngineState("ok", {
+      engineStatus: "RUN_OK",
+      lastFilter: "Africa Nord",
+      zonesCount: zones.length,
+    });
+
+    await addEngineLog(`✅ Afrique du Nord : ${zones.length} zones traitées`, "success", "runGlobal");
+    return { summary, zones };
+  } catch (err) {
+    await addEngineError(`Erreur runGlobalAfricaNord : ${err.message}`, "runGlobalAfricaNord");
+    return { error: err.message };
+  }
 }
 
+// ==========================================================
+// 🧩 EXPORT FINAL
+// ==========================================================
 export default { AFRICA_NORD_ZONES, getAllAfricaNordZones, runGlobalAfricaNord };
+
