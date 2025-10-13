@@ -235,14 +235,72 @@ app.post("/api/run-belgique", safeRun(runBelgique, "Belgique", { files: ["./data
 app.post("/api/run-bouke", safeRun(runBouke, "Bouke", { files: ["./data/bouke.json"] }));
 
 // ==========================================================
-// 🧠 PHASES 2 à 5 (IA, fusion, alertes, vidéo, status)
+// 🧠 PHASES 2 à 5 (IA J.E.A.N., IA externes, fusion, alertes, vidéo)
 // ==========================================================
-app.post("/api/runAIAnalysis", async (req, res) => { ... });
-app.post("/api/runAIExternal", async (req, res) => { ... });
-app.post("/api/runAICompare", async (req, res) => { ... });
-app.post("/api/runWorldAlerts", async (req, res) => { ... });
-app.post("/api/generateVideoNamur", async (req, res) => { ... });
 
+// 🧠 Phase 2 – IA J.E.A.N.
+app.post("/api/runAIAnalysis", async (req, res) => {
+  try {
+    await addEngineLog("🧠 Phase 2 – Démarrage IA J.E.A.N.", "info", "IA");
+    const result = await runAIAnalysis();
+    await addEngineLog("✅ Phase 2 terminée – IA J.E.A.N. OK", "success", "IA");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur Phase 2 – IA J.E.A.N.: " + e.message, "IA");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 🧩 Phase 3 – IA externes
+app.post("/api/runAIExternal", async (req, res) => {
+  try {
+    await addEngineLog("🧩 Phase 3 – Démarrage IA externes", "info", "IA.EXT");
+    const result = await runAIExternal();
+    await addEngineLog("✅ Phase 3 terminée – IA externes OK", "success", "IA.EXT");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur Phase 3 – IA externes: " + e.message, "IA.EXT");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 🔍 Phase 4 – Comparaison / Fusion IA globale
+app.post("/api/runAICompare", async (req, res) => {
+  try {
+    await addEngineLog("🔍 Phase 4 – Analyse globale IA", "info", "IA.COMP");
+    const result = await runAICompare();
+    await addEngineLog("✅ Phase 4 terminée – Synthèse IA complète", "success", "IA.COMP");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur Phase 4 – Analyse globale: " + e.message, "IA.COMP");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 🚨 Phase 5 – Fusion & Alertes mondiales
+app.post("/api/runWorldAlerts", async (req, res) => {
+  try {
+    await addEngineLog("🚨 Phase 5 – Fusion des alertes", "info", "alerts");
+    const result = await runWorldAlerts();
+    await addEngineLog("✅ Phase 5 terminée – Fusion alertes OK", "success", "alerts");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur Phase 5 – Alertes: " + e.message, "alerts");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 🎬 Génération vidéo IA Namur (manuelle)
+app.post("/api/generateVideoNamur", async (req, res) => {
+  try {
+    await addEngineLog("🎬 Génération manuelle vidéo Namur demandée", "info", "VIDEO.AI.NAMUR");
+    const result = await generateVideoNamur();
+    res.json(result);
+  } catch (e) {
+    await addEngineError("Erreur génération vidéo Namur : " + e.message, "VIDEO.AI.NAMUR");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 app.get("/api/status", async (req, res) => {
   try { res.json(await getEngineState()); }
   catch (e) { res.status(500).json({ error: e.message }); }
