@@ -8,10 +8,15 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body{margin:0;background:#020b17;color:#e8f6ff;font-family:"Segoe UI",sans-serif;}
+body{margin:0;background:#020b17;color:#e8f6ff;font-family:"Segoe UI",sans-serif;display:flex;min-height:100vh;}
+nav{width:230px;background:#001027;flex-shrink:0;display:flex;flex-direction:column;padding:16px 0;border-right:1px solid #093c60;}
+nav h1{color:#4fc3f7;text-align:center;margin:0 0 16px 0;font-size:1.1em;}
+nav a{color:#aeeaff;text-decoration:none;padding:10px 20px;display:block;transition:.2s;}
+nav a:hover{background:#032347;color:#fff;}
+nav .active{background:#4fc3f7;color:#000;}
+main{flex:1;padding:16px;overflow-y:auto;}
 header{background:#001027;text-align:center;padding:14px;color:#4fc3f7;
-font-size:1.5em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;}
-.container{max-width:1500px;margin:auto;padding:16px;}
+font-size:1.5em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;margin-bottom:10px;border-radius:8px;}
 h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;}
 button{background:#071d34;color:#4fc3f7;border:1px solid #4fc3f7;
 padding:10px;margin:6px;border-radius:10px;font-weight:bold;cursor:pointer;
@@ -29,7 +34,7 @@ button:hover{background:#4fc3f7;color:#000;}
 .logs{background:#081527;border-radius:10px;padding:10px;height:340px;overflow-y:auto;
 font-family:monospace;font-size:13px;white-space:pre-wrap;border:1px solid #093c60;}
 .shell{color:#4fc3f7;font-size:12px;margin-top:2px;font-family:monospace;opacity:0.7;}
-footer{margin-top:30px;text-align:center;font-size:13px;color:#555;}
+footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
 </style>
 </head>
 <body>
@@ -37,71 +42,55 @@ footer{margin-top:30px;text-align:center;font-size:13px;color:#555;}
 <script>
 if(!sessionStorage.getItem("tinsflashPIN")){
  const p=prompt("Code d’accès admin ?");
- if(p!=="202679"){alert("Accès refusé");location.href="/";} 
+ if(p!=="202679"){alert("Accès refusé");location.href="/";}
  else sessionStorage.setItem("tinsflashPIN","ok");
 }
 </script>
 
-<header>🛰️ CONSOLE IA J.E.A.N – COCKPIT TINSFLASH PRO+++</header>
+<nav>
+  <h1>🛰️ TINSFLASH PRO+++<br/>Menu Admin</h1>
+  <a href="/admin-pp.html" class="active">🏠 Tableau principal</a>
+  <a href="/admin-alerts.html">🚨 Alertes</a>
+  <a href="/admin-radar.html">🌦️ Radar IA</a>
+  <a href="/admin-news.html">📰 Actualités</a>
+  <a href="/admin-users.html">👥 Utilisateurs</a>
+  <a href="/admin-chat.html">💬 Chat IA</a>
+  <a href="/cockpit.html">🧠 Cockpit Standard</a>
+  <a href="/cockpit-pro.html">🚀 Cockpit Pro</a>
+  <a href="/cockpit-proplus.html">💎 Pro+</a>
+  <a href="/premium.html">⭐ Premium</a>
+  <a href="/provincenamur.html">📍 Province Namur</a>
+  <a href="/">↩️ Accueil public</a>
+</nav>
 
-<div class="container">
+<main>
+<header>COCKPIT ADMINISTRATEUR – IA J.E.A.N. – Moteur Central</header>
 
 <h2>⚙️ Extraction – Zones couvertes</h2>
 <div class="status-grid">
-  <div>
-    <button onclick="run('global-europe')">🇪🇺 Europe</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-global-europe</div>
-  </div>
-  <div>
-    <button onclick="run('global-usa')">🇺🇸 USA / 🇨🇦 Canada</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-global-usa</div>
-  </div>
-  <div>
-    <button onclick="run('afrique')">🌍 Afrique</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-afrique</div>
-  </div>
-  <div>
-    <button onclick="run('asie')">🌏 Asie</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-asie</div>
-  </div>
-  <div>
-    <button onclick="run('oceanie')">🌊 Océanie</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-oceanie</div>
-  </div>
-  <div>
-    <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-ameriquesud</div>
-  </div>
-  <div>
-    <button onclick="run('belgique')">🇧🇪 Belgique</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-belgique</div>
-  </div>
-  <div>
-    <button onclick="run('bouke')">📺 Bouké (Namur)</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/run-bouke</div>
-  </div>
+  <div><button onclick="run('global-europe')">🇪🇺 Europe</button></div>
+  <div><button onclick="run('global-usa')">🇺🇸 USA / 🇨🇦 Canada</button></div>
+  <div><button onclick="run('afrique')">🌍 Afrique</button></div>
+  <div><button onclick="run('asie')">🌏 Asie</button></div>
+  <div><button onclick="run('oceanie')">🌊 Océanie</button></div>
+  <div><button onclick="run('ameriquesud')">🌎 Amérique Sud</button></div>
+  <div><button onclick="run('belgique')">🇧🇪 Belgique</button></div>
+  <div><button onclick="run('bouke')">📺 Bouké (Namur)</button></div>
 </div>
 
 <h2>🧠 IA & Alertes</h2>
 <div class="status-grid">
-  <div>
-    <button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/runAI</div>
-  </div>
-  <div>
-    <button onclick="runAlerts()">🚨 Fusion alertes</button>
-    <div class="shell">curl -X POST https://tinsflash-backend.onrender.com/api/runWorldAlerts</div>
-  </div>
-  <div>
-    <button onclick="checkStatus()">🔍 Vérifier moteur</button>
-    <div class="shell">curl https://tinsflash-backend.onrender.com/api/status</div>
-  </div>
+  <div><button onclick="runAI()">🤖 Analyse IA J.E.A.N.</button></div>
+  <div><button onclick="runAIExternal()">🧩 IA Externes (GraphCast / Pangu / CorrDiff / NowcastNet)</button></div>
+  <div><button onclick="runAlerts()">🚨 Fusion alertes</button></div>
+  <div><button onclick="checkStatus()">🔍 Vérifier moteur</button></div>
 </div>
 
 <h2>📊 État du moteur</h2>
 <div id="status" class="status-grid">
   <div><span class="light idle" id="lightEngine"></span>Moteur principal</div>
   <div><span class="light idle" id="lightIA"></span>IA J.E.A.N.</div>
+  <div><span class="light idle" id="lightIAext"></span>IA Externes</div>
   <div><span class="light idle" id="lightAlerts"></span>Alertes</div>
   <div><span class="light idle" id="lightDB"></span>MongoDB</div>
 </div>
@@ -114,44 +103,31 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <div id="logs" class="logs">Connexion en cours...</div>
 
 <footer>© 2025 – Centrale Météo IA TINSFLASH PRO+++ • Moteur J.E.A.N.</footer>
-</div>
+</main>
 
 <script>
 const logs=document.getElementById("logs");
-function addLog(msg){
- const line=`${new Date().toLocaleTimeString()} ${msg}`;
- logs.textContent+="\n"+line;
- logs.scrollTop=logs.scrollHeight;
-}
+function addLog(msg){const line=`${new Date().toLocaleTimeString()} ${msg}`;logs.textContent+="\n"+line;logs.scrollTop=logs.scrollHeight;}
+function setLight(id,state){const e=document.getElementById(id);e.className="light "+state;}
 
 // ======================================================
 // 🔘 RUN Zones
 // ======================================================
 async function run(zone){
- const btns=document.querySelectorAll("button");
- btns.forEach(b=>b.classList.remove("btn-active"));
  event.target.classList.add("btn-active");
  addLog(`▶️ Lancement run-${zone}...`);
  try{
    const res=await fetch(`/api/run-${zone}`,{method:"POST"});
    const j=await res.json();
-   if(j.success){
-     addLog(`✅ Run ${zone} terminé`);
-     setLight("lightEngine","ok");
-   } else {
-     addLog(`⚠️ Erreur ${zone}: ${j.error}`);
-     setLight("lightEngine","warn");
-   }
- }catch(e){
-   addLog(`❌ Crash ${zone}: ${e.message}`);
-   setLight("lightEngine","err");
- }
+   if(j.success){addLog(`✅ Run ${zone} terminé`);setLight("lightEngine","ok");}
+   else{addLog(`⚠️ Erreur ${zone}: ${j.error}`);setLight("lightEngine","warn");}
+ }catch(e){addLog(`❌ Crash ${zone}: ${e.message}`);setLight("lightEngine","err");}
  event.target.classList.remove("btn-active");
- updateStatus();
+ checkStatus();
 }
 
 // ======================================================
-// 🧠 RUN IA + Alertes
+// 🧠 IA / IA Externes / Alertes
 // ======================================================
 async function runAI(){
  try{
@@ -160,6 +136,25 @@ async function runAI(){
    else addLog("⚠️ Erreur activation IA.");
  }catch(e){addLog("❌ Crash IA: "+e.message);}
 }
+
+async function runAIExternal(){
+ try{
+   addLog("🧩 Démarrage IA externes (phase 3)...");
+   const r=await fetch("/api/runAIExternal",{method:"POST"});
+   const j=await r.json();
+   if(j.success){
+     addLog("✅ IA externes terminées : "+(j.result?.synthese||"ok"));
+     setLight("lightIAext","ok");
+   }else{
+     addLog("⚠️ Échec IA externes : "+j.error);
+     setLight("lightIAext","warn");
+   }
+ }catch(e){
+   addLog("❌ Crash IA externes: "+e.message);
+   setLight("lightIAext","err");
+ }
+}
+
 async function runAlerts(){
  try{
    const r=await fetch("/api/runWorldAlerts",{method:"POST"});
@@ -176,7 +171,7 @@ async function checkStatus(){
    const r=await fetch("/api/status");
    if(!r.ok) throw new Error("Status HTTP "+r.status);
    const s=await r.json();
-   addLog("ℹ️ Etat moteur : "+JSON.stringify(s));
+   addLog("ℹ️ État moteur : "+JSON.stringify(s));
    setLight("lightEngine",s.status==="RUN_OK"?"ok":"warn");
    setLight("lightDB",s.db==="connected"?"ok":"err");
    if(s.checkup?.iaActive)setLight("lightIA","ok");
@@ -189,10 +184,8 @@ async function checkStatus(){
 // ======================================================
 const evt=new EventSource("/api/logs");
 evt.onmessage=e=>{
- try{
-   const log=JSON.parse(e.data);
-   addLog(log.message||e.data);
- }catch{addLog(e.data);}
+ try{const log=JSON.parse(e.data);addLog(log.message||e.data);}
+ catch{addLog(e.data);}
 };
 
 // ======================================================
@@ -224,6 +217,5 @@ async function loadAlerts(){
 }
 loadForecasts();loadAlerts();
 </script>
-
 </body>
 </html>
