@@ -1,6 +1,6 @@
 // ==========================================================
 // ⚙️ Gestion de l’état global du moteur TINSFLASH PRO+++
-// Version : Everest Protocol v3.97 — 100 % réel, connecté et Render-compatible
+// Version : Everest Protocol v3.98 — 100 % réel, connecté et Render-compatible
 // ==========================================================
 
 import mongoose from "mongoose";
@@ -11,7 +11,11 @@ import EventEmitter from "events";
 // ==========================================================
 const LogSchema = new mongoose.Schema({
   module: { type: String, required: true },
-  level: { type: String, enum: ["info", "warn", "error", "success"], default: "info" },
+  level: {
+    type: String,
+    enum: ["info", "warn", "warning", "error", "success"], // ✅ ajout warning
+    default: "info",
+  },
   message: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
@@ -20,9 +24,9 @@ const EngineStateSchema = new mongoose.Schema({
   status: { type: String, default: "idle" }, // idle | running | ok | fail
   lastRun: { type: Date, default: null },
   checkup: { type: Object, default: {} },
-  errorList: { type: Array, default: [] }, // ✅ renommé (évite conflit Mongoose)
+  errorList: { type: Array, default: [] }, // ✅ renommé pour éviter conflits
   alertsWorld: { type: Object, default: {} },
-  lastExtraction: { type: Object, default: {} }, // 🧩 Ajout pour IA J.E.A.N.
+  lastExtraction: { type: Object, default: {} }, // 🧩 pour IA J.E.A.N.
 });
 
 export const EngineState = mongoose.model("EngineState", EngineStateSchema);
@@ -112,7 +116,7 @@ export function stopExtraction() {
   extractionStopped = true;
   const msg = "🛑 Extraction stoppée manuellement";
   console.warn(msg);
-  engineEvents.emit("log", { message: msg, level: "warn", module: "core", timestamp: new Date() });
+  engineEvents.emit("log", { message: msg, level: "warning", module: "core", timestamp: new Date() });
   if (externalLogStream) externalLogStream(msg);
 }
 
