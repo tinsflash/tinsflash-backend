@@ -1,7 +1,7 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v3.99 PRO+++ REAL FULL CONNECT)
+// 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT)
 // ==========================================================
-// 100 % réel – IA J.E.A.N. – moteur complet + pages publiques Render-safe
+// 100 % réel – IA J.E.A.N. – moteur complet + IA externes optionnelles
 // ==========================================================
 
 import express from "express";
@@ -37,6 +37,7 @@ import { runAsie } from "./services/runGlobalAsie.js";
 import { runOceanie } from "./services/runGlobalOceanie.js";
 import { runAmeriqueSud } from "./services/runGlobalAmeriqueSud.js";
 import { runAIAnalysis } from "./services/aiAnalysis.js";
+import { runAIExternal } from "./services/runAIExternal.js"; // 🧠 Phase 3 ajoutée ici
 import {
   initEngineState,
   getEngineState,
@@ -236,6 +237,24 @@ app.post("/api/runAI", async (req, res) => {
   }
 });
 
+// ==========================================================
+// 🧠 ROUTE PHASE 3 – IA EXTERNES OPTIONNELLES
+// ==========================================================
+app.post("/api/runAIExternal", async (req, res) => {
+  try {
+    await addEngineLog("🧩 Phase 3 – Démarrage IA externes", "info", "IA.EXT");
+    const result = await runAIExternal();
+    await addEngineLog("✅ Phase 3 terminée – IA externes OK", "success", "IA.EXT");
+    res.json({ success: true, result });
+  } catch (e) {
+    await addEngineError("❌ Erreur IA externes: " + e.message, "IA.EXT");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ==========================================================
+// 🌍 ALERTES MONDIALES
+// ==========================================================
 app.post("/api/runWorldAlerts", async (req, res) => {
   try {
     await addEngineLog("🚨 Démarrage fusion alertes", "info", "alerts");
@@ -249,7 +268,7 @@ app.post("/api/runWorldAlerts", async (req, res) => {
 });
 
 // ==========================================================
-// 🛰️ STATUS DU MOTEUR (nouvelle route GET /api/status)
+// 🛰️ STATUS DU MOTEUR
 // ==========================================================
 app.get("/api/status", async (req, res) => {
   try {
