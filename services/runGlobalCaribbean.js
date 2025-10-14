@@ -1,6 +1,6 @@
 // ==========================================================
 // 🌴 TINSFLASH – runGlobalCaribbean.js
-// Everest Protocol v4.1 PRO+++ (Cyclones, HydroRisk & Volcanic zones)
+// Everest Protocol v4.2 PRO+++ (Cyclones, HydroRisk & Volcanic zones)
 // ==========================================================
 // Couvre : Antilles, Amérique Centrale & Golfe du Mexique
 // Objectif : suivi cyclones, ouragans, ondes tropicales et activité volcanique
@@ -10,7 +10,7 @@ import fs from "fs";
 import path from "path";
 import { superForecast } from "./superForecast.js";
 import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
-import { saveExtractionToMongo } from "./extractionStore.js";
+import { saveExtractionToMongo } from "./saveExtractionToMongo.js"; // ✅ nom exact
 
 // ==========================================================
 // 🗺️ ZONES DÉTAILLÉES – Caraïbes & Amérique Centrale
@@ -100,7 +100,13 @@ export async function runGlobalCaribbean() {
     }
 
     // --- Extraction réelle via superForecast ---
-    const result = await superForecast({ zones, runType: "Caribbean" });
+    const result = await superForecast({
+      zones,
+      runType: "Caribbean",
+      withAI: false,
+      phaseMode: "phase1",
+    });
+
     const timestamp = new Date().toISOString();
 
     // --- Sauvegarde locale + Mongo ---
@@ -109,12 +115,12 @@ export async function runGlobalCaribbean() {
     const outFile = path.join(dataDir, `caribbean_${Date.now()}.json`);
     fs.writeFileSync(outFile, JSON.stringify(result, null, 2), "utf8");
 
-    await saveExtractionToMongo({
-      zone: "Caraïbes & Amérique Centrale",
-      data: result,
-      filePath: outFile,
-      timestamp,
-    });
+    // ✅ Correction : passage des bons paramètres à saveExtractionToMongo
+    await saveExtractionToMongo(
+      "Caribbean",
+      "NorthAmerica",
+      result.phase1Results || []
+    );
 
     await updateEngineState("ok", {
       engineStatus: "RUN_OK",
@@ -129,7 +135,15 @@ export async function runGlobalCaribbean() {
       "runGlobalCaribbean"
     );
 
-    return { summary: { region: "Caraïbes & Amérique Centrale", totalZones: zones.length, file: outFile, status: "ok" }, zones };
+    return {
+      summary: {
+        region: "Caraïbes & Amérique Centrale",
+        totalZones: zones.length,
+        file: outFile,
+        status: "ok",
+      },
+      zones,
+    };
   } catch (err) {
     await addEngineError(`💥 Erreur runGlobalCaribbean : ${err.message}`, "runGlobalCaribbean");
     return { error: err.message };
