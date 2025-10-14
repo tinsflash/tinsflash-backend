@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.2 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.3 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 2 : IA J.E.A.N. optionnelle (fusion, pondération, alertes)
@@ -49,10 +49,14 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         name: "NASA POWER",
         url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
       },
-      // ✅ AJOUT VALIDÉ : Copernicus ERA5-Land (Archive Open-Meteo)
       {
         name: "Copernicus ERA5-Land",
         url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
+      },
+      // ✅ AJOUT VALIDÉ : Open-Meteo Forecast (Global)
+      {
+        name: "Open-Meteo Forecast",
+        url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
       },
     ];
 
