@@ -1,7 +1,8 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.4 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.5 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
+// 🔸 Phase 1.5 : HRRR (USA only, via Microsoft Planetary Computer)
 // 🔸 Phase 2 : IA J.E.A.N. optionnelle (fusion, pondération, alertes)
 // ==========================================================
 
@@ -12,6 +13,7 @@ import { applyLocalFactors } from "./localFactors.js";
 import { runAIAnalysis } from "./aiAnalysis.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
 import { autoCompareAfterRun } from "./compareExternalIA.js";
+import { fetchHRRR } from "./hrrrAdapter.js"; // ✅ nouveau
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -27,7 +29,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     const now = new Date();
     const ymd = now.toISOString().slice(0, 10).replace(/-/g, "");
 
-    // Liste des modèles physiques réels utilisés
+    // --- Liste des modèles réels ---
     const models = [
       {
         name: "GFS NOAA",
@@ -57,7 +59,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         name: "Open-Meteo Forecast",
         url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
       },
-      // ✅ AJOUT VALIDÉ : MET Norway – LocationForecast 2.0
       {
         name: "MET Norway – LocationForecast",
         url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
@@ -65,13 +66,13 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       },
     ];
 
-    // Exécution séquentielle avec tolérance d’erreur
+    // --- Exécution séquentielle ---
     for (const m of models) {
       try {
         const options = { timeout: 15000 };
         if (m.headers) options.headers = m.headers;
-
         const r = await axios.get(m.url, options);
+
         const d =
           r.data?.current ||
           r.data?.parameters ||
@@ -102,6 +103,20 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       }
     }
 
+    // --- HRRR (USA only) ---
+    if (lon < -60 && lon > -130 && lat > 20 && lat < 55) {
+      try {
+        const hrrr = await fetchHRRR(lat, lon);
+        if (!hrrr.error) {
+          push(hrrr);
+          log("HRRR NOAA (Microsoft PC)", true);
+        } else log("HRRR NOAA (Microsoft PC)", false);
+      } catch (e) {
+        log("HRRR NOAA (Microsoft PC)", false);
+      }
+    }
+
+    // --- Fusion & pondération ---
     const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
     const valid = sources.filter((s) => s.temperature !== null);
     const reliability = +(valid.length / (models.length || 1)).toFixed(2);
@@ -127,14 +142,13 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 }
 
 // ==========================================================
-// 🚀 SUPERFORECAST PRINCIPAL (extraction pure + IA optionnelle)
+// 🚀 SUPERFORECAST PRINCIPAL
 // ==========================================================
 export async function superForecast({ zones = [], runType = "global", withAI = false }) {
   try {
     console.log(`🛰️ SuperForecast lancé (${zones.length} zones – ${runType})`);
     await addEngineLog(`🛰️ SuperForecast ${runType} (${zones.length} zones)`, "info", "superForecast");
 
-    // --- PHASE 1 : Extraction pure ---
     const phase1Results = [];
     let counter = 0;
     for (const z of zones) {
@@ -149,11 +163,11 @@ export async function superForecast({ zones = [], runType = "global", withAI = f
         ...merged,
         timestamp: new Date(),
       });
-      if (counter % 5 === 0) await delay(300); // respiration anti-Render crash
+      if (counter % 5 === 0) await delay(300);
     }
-    await addEngineLog(`✅ Phase 1 terminée (${runType})`, "success", "superForecast");
 
-    // --- PHASE 2 : IA (optionnelle) ---
+    await addEngineLog(`✅ Phase 1 + HRRR terminée (${runType})`, "success", "superForecast");
+
     if (withAI) {
       const aiResults = await runAIAnalysis(phase1Results);
       const alerts = await runWorldAlerts();
