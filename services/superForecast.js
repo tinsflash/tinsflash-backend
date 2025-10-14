@@ -1,7 +1,8 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.6 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.7 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
+// 🔸 Phase 1B : VisionIA (captures satellites & multicouches)
 // 🔸 Phase 1.5 : HRRR (USA only, via Microsoft Planetary Computer)
 // 🔸 Phase 2 : IA J.E.A.N. optionnelle (fusion, pondération, alertes)
 // ==========================================================
@@ -39,7 +40,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         name: "ECMWF ERA5",
         url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
       },
-      // ✅ NOUVEAU : ECMWF Open-Meteo
       {
         name: "ECMWF Open-Meteo",
         url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
@@ -154,6 +154,7 @@ export async function superForecast({ zones = [], runType = "global", withAI = f
     console.log(`🛰️ SuperForecast lancé (${zones.length} zones – ${runType})`);
     await addEngineLog(`🛰️ SuperForecast ${runType} (${zones.length} zones)`, "info", "superForecast");
 
+    // --- PHASE 1 : Extraction physique multi-modèles ---
     const phase1Results = [];
     let counter = 0;
     for (const z of zones) {
@@ -173,6 +174,32 @@ export async function superForecast({ zones = [], runType = "global", withAI = f
 
     await addEngineLog(`✅ Phase 1 + HRRR terminée (${runType})`, "success", "superForecast");
 
+    // ==========================================================
+    // 🌫️ PHASE 1B – VisionIA : Captation satellite & multicouches
+    // ==========================================================
+    try {
+      const { runVisionCapture } = await import("./vision/visionCapture.js");
+      await addEngineLog("🌫️ Lancement VisionIA – Phase 1B (captures visuelles)", "info", "superForecast");
+      const vision = await runVisionCapture(zones);
+      if (vision?.success) {
+        await addEngineLog(
+          `📸 VisionIA terminée (${vision.stored?.length || 0} captures sauvegardées)`,
+          "success",
+          "superForecast"
+        );
+      } else {
+        await addEngineError(
+          `⚠️ VisionIA a rencontré un problème : ${vision?.error || "inconnu"}`,
+          "superForecast"
+        );
+      }
+    } catch (e) {
+      await addEngineError(`VisionIA non disponible ou erreur : ${e.message}`, "superForecast");
+    }
+
+    // ==========================================================
+    // 🤖 PHASE 2 – IA J.E.A.N. (optionnelle)
+    // ==========================================================
     if (withAI) {
       const aiResults = await runAIAnalysis(phase1Results);
       const alerts = await runWorldAlerts();
