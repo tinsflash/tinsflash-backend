@@ -160,7 +160,7 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
       status: "done",
     });
 
-    const msg = `✅ Run ${label} terminé`;
+    const msg = `❌ Erreur ${label}: terminé`;
     await addEngineLog(msg, "success", label);
     res.json({ success: true, result });
 
@@ -186,10 +186,9 @@ app.get("/api/forecast", async (req, res) => {
     res.json({
       lat,
       lon,
-      temperature: 17.2,
-      humidity: 62,
-      wind: 9,
-      condition: "Ciel dégagé et temps lumineux sur la région.",
+      temperature,
+      humidity,
+      wind,
       updated: new Date(),
       source: "TINSFLASH Engine – IA J.E.A.N.",
     });
@@ -216,11 +215,11 @@ app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe", { files: [
 app.post("/api/run-global-usa", safeRun(runGlobalUSA, "USA/Canada", { files: ["./data/usa.json"] }));
 
 // === Nouveaux découpages Afrique ===
-app.post("/api/run-africa-nord", safeRun(runGlobalAfricaNord, "AfriqueNord", { files: ["./data/afriquenord.json"] }));
-app.post("/api/run-africa-ouest", safeRun(runGlobalAfricaOuest, "AfriqueOuest", { files: ["./data/afriqueouest.json"] }));
-app.post("/api/run-africa-centre", safeRun(runGlobalAfricaCentre, "AfriqueCentrale", { files: ["./data/afriquecentrale.json"] }));
-app.post("/api/run-africa-est", safeRun(runGlobalAfricaEst, "AfriqueEst", { files: ["./data/afriqueest.json"] }));
-app.post("/api/run-africa-sud", safeRun(runGlobalAfricaSud, "AfriqueSud", { files: ["./data/afriquesud.json"] }));
+app.post("/api/run-africa-nord", safeRun(runGlobalAfricaNord, "AfricaNord", { files: ["./data/africanord.json"] }));
+app.post("/api/run-africa-ouest", safeRun(runGlobalAfricaOuest, "AfricaOuest", { files: ["./data/africaouest.json"] }));
+app.post("/api/run-africa-centre", safeRun(runGlobalAfricaCentre, "AfricaCentrale", { files: ["./data/africacentrale.json"] }));
+app.post("/api/run-africa-est", safeRun(runGlobalAfricaEst, "AfricaEst", { files: ["./data/africaest.json"] }));
+app.post("/api/run-africa-sud", safeRun(runGlobalAfricaSud, "AfricaSud", { files: ["./data/africasud.json"] }));
 
 // === Nouveaux découpages Asie ===
 app.post("/api/run-asia-est", safeRun(runGlobalAsiaEst, "AsieEst", { files: ["./data/asiaest.json"] }));
