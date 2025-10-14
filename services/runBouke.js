@@ -1,5 +1,5 @@
 // ==========================================================
-// 🎥 TINSFLASH – runBouke.js (Everest Protocol v4.0 PRO+++ REAL CONNECT)
+// 🎥 TINSFLASH – runBouke.js (Everest Protocol v4.1 PRO+++ REAL CONNECT)
 // Phase 1 uniquement : extraction locale + enregistrement Mongo
 // ==========================================================
 
@@ -9,7 +9,7 @@ import { saveExtractionToMongo } from "./saveExtractionToMongo.js";
 
 export async function runBouke() {
   try {
-    await addEngineLog("🎥 Démarrage runBouké (Province de Namur complète)", "info", "runBouke");
+    await addEngineLog("🎥 Démarrage runBouké (Province de Namur complète – sans spot TV)", "info", "runBouke");
 
     // ==========================================================
     // 📍 COMMUNES ET VILLAGES DE LA PROVINCE DE NAMUR (COMPLET)
@@ -92,8 +92,13 @@ export async function runBouke() {
       { name: "Gerpinnes", lat: 50.33, lon: 4.53 },
     ];
 
-    // 🚀 Extraction pure (Phase 1)
-    const result = await superForecast({ zones, runType: "Bouke-Namur", withAI: false });
+    // 🚀 Extraction pure (Phase 1 – sans IA, sans VisionIA, sans spot TV)
+    const result = await superForecast({
+      zones,
+      runType: "Bouke-Namur",
+      withAI: false,
+      phaseMode: "phase1", // ✅ empêche VisionIA + génération vidéo
+    });
 
     // 💾 Sauvegarde Mongo (Cloud)
     const phase1Data = result.phase1Results || result;
@@ -104,12 +109,16 @@ export async function runBouke() {
       engineStatus: "RUN_OK",
       lastFilter: "Bouke-Namur",
       zonesCount: zones.length,
-      lastPhase: "phase1"
+      lastPhase: "phase1",
     });
 
-    await addEngineLog(`✅ runBouké terminé – Phase 1 uniquement (${zones.length} zones locales)`, "success", "runBouke");
-    return phase1Data;
+    await addEngineLog(
+      `✅ runBouké terminé – Phase 1 uniquement (sans spot TV, ${zones.length} zones locales)`,
+      "success",
+      "runBouke"
+    );
 
+    return phase1Data;
   } catch (err) {
     await addEngineError(`Erreur runBouké : ${err.message}`, "runBouke");
     return { error: err.message };
