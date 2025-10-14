@@ -44,6 +44,9 @@ import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
 import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬 Automatisation Namur
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 
+// ✅ AJOUT : router actions alertes (formulaire/notifications/IA review/PDF)
+import alertsActionsRouter from "./services/alertsActions.js";
+
 import {
   initEngineState,
   getEngineState,
@@ -275,6 +278,9 @@ app.get("/api/alerts-detected", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+
+// ✅ AJOUT : montage du router d’actions alertes (formulaire/notify/IA/PDF)
+app.use("/api", alertsActionsRouter);
 
 // ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
