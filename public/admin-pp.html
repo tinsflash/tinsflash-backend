@@ -4,109 +4,141 @@
 <meta charset="utf-8"/>
 <meta name="robots" content="noindex,nofollow"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>🚀 TINSFLASH PRO+++ • Cockpit Administrateur</title>
+<title>🛰️ TINSFLASH PRO+++ – Console IA J.E.A.N.</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body{margin:0;background:#020b17;color:#e8f6ff;font-family:"Segoe UI",sans-serif;display:flex;min-height:100vh;}
-nav{width:230px;background:#001027;flex-shrink:0;display:flex;flex-direction:column;padding:16px 0;border-right:1px solid #093c60;}
-nav h1{color:#4fc3f7;text-align:center;margin:0 0 16px;font-size:1.1em;}
-nav a{color:#aeeaff;text-decoration:none;padding:10px 20px;display:block;transition:.2s;}
-nav a:hover{background:#032347;color:#fff;}
-nav .active{background:#4fc3f7;color:#000;}
-main{flex:1;padding:16px;overflow-y:auto;}
-header{background:#001027;text-align:center;padding:14px;color:#4fc3f7;font-size:1.5em;text-shadow:0 0 10px #4fc3f7,0 0 20px #0288d1;margin-bottom:10px;border-radius:8px;}
-h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px;}
-.phaseTitle{font-weight:bold;font-size:1.2em;color:#00ffcc;text-shadow:0 0 8px #00ffcc;margin:20px 0 8px;}
-button{background:#071d34;color:#4fc3f7;border:1px solid #4fc3f7;padding:10px;margin:6px;border-radius:10px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;transition:.2s;}
-button:hover{background:#4fc3f7;color:#000;}
-.cmd{font-size:12px;color:#888;background:#081527;padding:4px 8px;border-radius:6px;margin-bottom:10px;display:inline-block;}
-.logs{background:#081527;border-radius:10px;padding:10px;height:340px;overflow-y:auto;font-family:monospace;font-size:13px;white-space:pre-wrap;border:1px solid #093c60;}
-.map{height:250px;margin-top:10px;border-radius:10px;overflow:hidden;}
+body{margin:0;font-family:"Segoe UI",system-ui;background:#0b1220;color:#e6f6ff}
+header{padding:12px;text-align:center;background:#08121d;color:#4fc3f7;font-weight:700;font-size:1.3em}
+nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+button{background:#1b2b44;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+button:hover{background:#4fc3f7;color:#0b1220}
+.cmd{font-size:12px;color:#8ab4f8;margin-top:4px;text-align:center}
+.map{height:380px;margin:15px;border-radius:8px}
+#logs{background:#0d1624;color:#b3e5fc;padding:10px;height:220px;overflow-y:auto;border-top:1px solid #1e293b;font-family:monospace}
+footer{text-align:center;padding:8px;font-size:13px;color:#7dd3fc;background:#08121d}
 </style>
 </head>
 <body>
 
 <script>
+const PIN_ADMIN="202679";
 if(!sessionStorage.getItem("tinsflashPIN")){
  const p=prompt("Code d’accès admin ?");
- if(p!=="202679"){alert("Accès refusé");location.href="/";}
+ if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
  else sessionStorage.setItem("tinsflashPIN","ok");
 }
 </script>
 
-<nav>
-<h1>🛰️ TINSFLASH PRO+++<br/>Menu Admin</h1>
-<a href="/admin-pp.html" class="active">🏠 Tableau principal</a>
-<a href="/admin-alerts.html">🚨 Alertes</a>
-<a href="/admin-radar.html">🌦️ Radar IA</a>
-<a href="/admin-news.html">📰 Actualités</a>
-<a href="/admin-users.html">👥 Utilisateurs</a>
-<a href="/">↩️ Accueil public</a>
+<header>🛰️ TINSFLASH PRO+++ – Centrale IA J.E.A.N.</header>
+
+<!-- ===================== BOUTONS DE RUN ===================== -->
+<nav id="controls">
+<button onclick="run('/api/run-global-europe')">🇪🇺 Europe</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-europe</div>
+
+<button onclick="run('/api/run-global-usa')">🇺🇸 USA</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-usa</div>
+
+<button onclick="run('/api/run-global-afrique')">🌍 Afrique</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-afrique</div>
+
+<button onclick="run('/api/run-global-asie')">🌏 Asie</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-asie</div>
+
+<button onclick="run('/api/run-global-ameriquesud')">🌎 Amérique du Sud</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-ameriquesud</div>
+
+<button onclick="run('/api/run-global-oceanie')">🌊 Océanie</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-oceanie</div>
+
+<button onclick="run('/api/run-global-canada')">🍁 Canada</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-canada</div>
+
+<button onclick="run('/api/run-global-caribbean')">🏝️ Caraïbes</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-caribbean</div>
+
+<button onclick="run('/api/run-belgique')">🇧🇪 Belgique</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-belgique</div>
+
+<button onclick="run('/api/run-bouke')">📍 Bouke (local)</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-bouke</div>
+
+<hr style="width:100%;border:0;border-top:1px solid #1e293b;margin:10px 0"/>
+
+<button onclick="run('/api/runAIAnalysis')">🧠 Phase 2 – IA J.E.A.N.</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/runAIAnalysis</div>
+
+<button onclick="run('/api/runWorldAlerts')">🚨 Phase 5 – Fusion mondiale alertes</button>
+<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/runWorldAlerts</div>
 </nav>
 
-<main>
-<header>COCKPIT ADMINISTRATEUR – IA J.E.A.N. – Moteur Central</header>
+<!-- ===================== CARTES ===================== -->
+<h3 style="text-align:center;color:#7dd3fc">🗺️ Carte Prévisions IA J.E.A.N.</h3>
+<div class="map" id="mapForecast"></div>
 
-<!-- ===== PHASE 1 – Extraction ===== -->
-<div class="phaseTitle">PHASE 1 – Extraction des modèles</div>
+<h3 style="text-align:center;color:#7dd3fc">🚨 Carte Alertes Actives</h3>
+<div class="map" id="mapAlerts"></div>
 
-<div>
-  <button onclick="run('global-europe')">🇪🇺 Europe</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-europe</div>
+<!-- ===================== LOGS ===================== -->
+<h3 style="text-align:center;color:#7dd3fc">🧾 Journal du moteur (live)</h3>
+<div id="logs">[Démarrage du flux de logs...]</div>
 
-  <button onclick="run('global-usa')">🇺🇸 USA</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-usa</div>
-
-  <button onclick="run('belgique')">🇧🇪 Belgique</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-belgique</div>
-
-  <button onclick="run('bouke')">📺 Bouké (Namur)</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-bouke</div>
-
-  <button onclick="run('afrique')">🌍 Afrique</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-afrique</div>
-
-  <button onclick="run('asie')">🌏 Asie</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-asie</div>
-
-  <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-ameriquesud</div>
-
-  <button onclick="run('oceanie')">🌊 Océanie</button>
-  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-oceanie</div>
-</div>
-
-<!-- ===== PHASE 2 – IA J.E.A.N. ===== -->
-<div class="phaseTitle">PHASE 2 – Analyse IA J.E.A.N.</div>
-<button onclick="runAI()">🧠 Lancer IA J.E.A.N.</button>
-<div class="cmd">curl -X POST https://backend.onrender.com/api/runAI</div>
-
-<!-- ===== PHASE 5 – Fusion mondiale ===== -->
-<div class="phaseTitle">PHASE 5 – Fusion mondiale des alertes</div>
-<button onclick="runAlerts()">🚨 Fusionner toutes les alertes</button>
-<div class="cmd">curl -X POST https://backend.onrender.com/api/runWorldAlerts</div>
-
-<h2>📜 Logs en direct</h2>
-<div id="logs" class="logs">Connexion en cours...</div>
-
-<h2>🌍 Carte rapide</h2>
-<div id="map" class="map"></div>
-
-<footer style="text-align:center;color:#555;margin-top:20px;">
-© 2025 – Centrale Météo IA TINSFLASH PRO+++ • Moteur J.E.A.N.
-</footer>
-</main>
+<footer>© 2025 TINSFLASH PRO+++ – IA J.E.A.N. | Actualisation auto : 2 min</footer>
 
 <script>
-const logs=document.getElementById("logs");
-function addLog(m){logs.textContent+="\n"+new Date().toLocaleTimeString()+" "+m;logs.scrollTop=logs.scrollHeight;}
-async function run(zone){addLog("▶️ "+zone);try{const r=await fetch("/api/run-"+zone,{method:"POST"});const j=await r.json();addLog("✅ "+zone+" OK: "+JSON.stringify(j));}catch(e){addLog("❌ "+zone+" "+e.message);}}
-async function runAI(){try{const r=await fetch("/api/runAI",{method:"POST"});const j=await r.json();addLog("🧠 IA: "+JSON.stringify(j));}catch(e){addLog("❌ IA "+e.message);}}
-async function runAlerts(){try{const r=await fetch("/api/runWorldAlerts",{method:"POST"});const j=await r.json();addLog("🚨 Fusion: "+JSON.stringify(j.summary||j));}catch(e){addLog("❌ Fusion "+e.message);}}
+async function run(route){
+ try{
+  const r=await fetch(route,{method:"POST"});
+  const j=await r.json();
+  log(`▶️ ${route} → ${JSON.stringify(j)}`);
+ }catch(e){log(`❌ ${route} → ${e.message}`);}
+}
 
-const map=L.map("map").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+function log(msg){
+ const logs=document.getElementById("logs");
+ const line=document.createElement("div");
+ line.textContent=`${new Date().toLocaleTimeString()} ${msg}`;
+ logs.appendChild(line);
+ logs.scrollTop=logs.scrollHeight;
+}
+
+// ===================== MAP FORECAST =====================
+const map1=L.map("mapForecast").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6,minZoom:2}).addTo(map1);
+
+// ===================== MAP ALERTS =====================
+const map2=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6,minZoom:2}).addTo(map2);
+
+async function refreshMaps(){
+ try{
+  const f=await fetch("/api/forecast");const fj=await f.json();
+  L.circleMarker([fj.lat,fj.lon],{radius:6,color:"cyan",fillOpacity:0.6})
+   .addTo(map1).bindPopup(`🌤️ ${fj.condition}<br>${fj.temperature}°C`);
+ }catch(e){log("Forecast map error "+e.message);}
+
+ try{
+  const r=await fetch("/api/alerts");const data=await r.json();
+  map2.eachLayer(l=>{if(l instanceof L.CircleMarker) map2.removeLayer(l);});
+  data.forEach(a=>{
+    if(!a.lat||!a.lon) return;
+    let color="gray";
+    const conf=a.reliability||a.confidence||0;
+    if(a.isPrimeur) color="blue"; else if(conf>=0.9) color="green";
+    else if(conf>=0.7) color="orange"; else color="red";
+    L.circleMarker([a.lat,a.lon],{radius:6,color,fillOpacity:0.6})
+     .addTo(map2)
+     .bindPopup(`<b>${a.title||a.event||"Alerte"}</b><br>${(conf*100).toFixed(0)}%`);
+  });
+ }catch(e){log("Alerts map error "+e.message);}
+}
+refreshMaps();
+setInterval(refreshMaps,120000);
+
+// ===================== LOGS SSE =====================
+const evt=new EventSource("/api/logs");
+evt.onmessage=e=>{const d=JSON.parse(e.data);log(d.message);}
 </script>
 </body>
 </html>
