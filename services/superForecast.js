@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.7 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.8 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 1B : VisionIA (captures satellites & multicouches)
@@ -30,7 +30,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     const now = new Date();
     const ymd = now.toISOString().slice(0, 10).replace(/-/g, "");
 
-    // --- Liste des modèles réels ---
     const models = [
       {
         name: "GFS NOAA",
@@ -71,7 +70,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       },
     ];
 
-    // --- Exécution séquentielle ---
     for (const m of models) {
       try {
         const options = { timeout: 15000 };
@@ -121,7 +119,6 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       }
     }
 
-    // --- Fusion & pondération ---
     const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
     const valid = sources.filter((s) => s.temperature !== null);
     const reliability = +(valid.length / (models.length || 1)).toFixed(2);
@@ -149,10 +146,10 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 // ==========================================================
 // 🚀 SUPERFORECAST PRINCIPAL
 // ==========================================================
-export async function superForecast({ zones = [], runType = "global", withAI = false }) {
+export async function superForecast({ zones = [], runType = "global", withAI = false, phaseMode = "full" }) {
   try {
-    console.log(`🛰️ SuperForecast lancé (${zones.length} zones – ${runType})`);
-    await addEngineLog(`🛰️ SuperForecast ${runType} (${zones.length} zones)`, "info", "superForecast");
+    console.log(`🛰️ SuperForecast lancé (${zones.length} zones – ${runType} – ${phaseMode})`);
+    await addEngineLog(`🛰️ SuperForecast ${runType} (${zones.length} zones – ${phaseMode})`, "info", "superForecast");
 
     // --- PHASE 1 : Extraction physique multi-modèles ---
     const phase1Results = [];
@@ -175,40 +172,45 @@ export async function superForecast({ zones = [], runType = "global", withAI = f
     await addEngineLog(`✅ Phase 1 + HRRR terminée (${runType})`, "success", "superForecast");
 
     // ==========================================================
-    // 🌫️ PHASE 1B – VisionIA : Captation satellite & multicouches
+    // 🌫️ PHASE 1B – VisionIA (uniquement si autorisée)
     // ==========================================================
-    try {
-      const { runVisionCapture } = await import("./vision/visionCapture.js");
-      await addEngineLog("🌫️ Lancement VisionIA – Phase 1B (captures visuelles)", "info", "superForecast");
-      const vision = await runVisionCapture(zones);
-      if (vision?.success) {
-        await addEngineLog(
-          `📸 VisionIA terminée (${vision.stored?.length || 0} captures sauvegardées)`,
-          "success",
-          "superForecast"
-        );
-      } else {
-        await addEngineError(
-          `⚠️ VisionIA a rencontré un problème : ${vision?.error || "inconnu"}`,
-          "superForecast"
-        );
+    if (phaseMode === "phase1b" || phaseMode === "full") {
+      try {
+        const { runVisionCapture } = await import("./vision/visionCapture.js");
+        await addEngineLog("🌫️ Lancement VisionIA – Phase 1B (captures visuelles)", "info", "superForecast");
+        const vision = await runVisionCapture(zones);
+        if (vision?.success) {
+          await addEngineLog(
+            `📸 VisionIA terminée (${vision.stored?.length || 0} captures sauvegardées)`,
+            "success",
+            "superForecast"
+          );
+        } else {
+          await addEngineError(
+            `⚠️ VisionIA a rencontré un problème : ${vision?.error || "inconnu"}`,
+            "superForecast"
+          );
+        }
+      } catch (e) {
+        await addEngineError(`VisionIA non disponible ou erreur : ${e.message}`, "superForecast");
       }
-    } catch (e) {
-      await addEngineError(`VisionIA non disponible ou erreur : ${e.message}`, "superForecast");
+    } else {
+      await addEngineLog("Phase 1B ignorée (mode extraction seule)", "info", "superForecast");
     }
 
     // ==========================================================
-    // 🤖 PHASE 2 – IA J.E.A.N. (optionnelle)
+    // 🤖 PHASE 2 – IA J.E.A.N. (uniquement si demandée)
     // ==========================================================
-    if (withAI) {
+    if (withAI && phaseMode === "full") {
       const aiResults = await runAIAnalysis(phase1Results);
       const alerts = await runWorldAlerts();
       await autoCompareAfterRun(phase1Results);
       await addEngineLog(`🤖 IA J.E.A.N. & alertes terminées (${runType})`, "success", "superForecast");
       return { success: true, phase1Results, aiResults, alerts };
+    } else {
+      await addEngineLog("IA J.E.A.N. non déclenchée (mode extraction seule)", "info", "superForecast");
+      return { success: true, phase1Results };
     }
-
-    return { success: true, phase1Results };
   } catch (err) {
     await addEngineError(`Erreur SuperForecast : ${err.message}`, "superForecast");
     return { error: err.message };
