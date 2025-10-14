@@ -10,15 +10,18 @@
 <style>
 body{margin:0;font-family:"Segoe UI",system-ui;background:#0b1220;color:#e6f6ff}
 header{padding:12px;text-align:center;background:#08121d;color:#4fc3f7;font-weight:700;font-size:1.2em}
-nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624;flex-wrap:wrap}
 nav a{color:#4fc3f7;text-decoration:none;font-weight:600}
 nav a:hover{color:#fff;text-shadow:0 0 8px #4fc3f7}
-.map{height:420px;margin:10px;border-radius:8px}
+.map{height:440px;margin:10px;border-radius:8px}
 .alert-group{margin:12px;padding:10px;background:#111a2b;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3)}
 .alert{margin:6px 0;padding:6px;border-left:4px solid #4fc3f7;background:#0e1725;border-radius:4px}
 .alert b{color:#4fc3f7}
 h3{margin:0 0 8px 0;color:#7dd3fc}
+.count{float:right;font-size:.9em;color:#aaa}
 footer{padding:10px;text-align:center;font-size:13px;color:#777}
+.fade{animation:fadein 0.6s ease-in-out}
+@keyframes fadein{from{opacity:.4}to{opacity:1}}
 </style>
 </head>
 <body>
@@ -35,21 +38,19 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <header>🚨 Gestion des Alertes – IA J.E.A.N.</header>
 <nav>
 <a href="/admin-pp.html">Console</a>
-<a href="/admin-alerts.html">Alertes</a>
-<a href="/admin-chat.html">Chat</a>
+<a href="/admin-alerts.html" class="active">Alertes</a>
 <a href="/admin-radar.html">Radar</a>
-<a href="/admin-index.html">Index</a>
-<a href="/admin-local.html">Local</a>
-<a href="/admin-news.html">News</a>
+<a href="/admin-chat.html">Chat</a>
 <a href="/admin-users.html">Utilisateurs</a>
+<a href="/">Accueil</a>
 </nav>
 
 <div class="map" id="map"></div>
 
-<div class="alert-group"><h3>🔵 Alertes Primeur IA</h3><div id="primeur"></div></div>
-<div class="alert-group"><h3>🟢 Fiabilité > 90 %</h3><div id="haut"></div></div>
-<div class="alert-group"><h3>🟠 Fiabilité 70–89 %</h3><div id="moyen"></div></div>
-<div class="alert-group"><h3>🔴 Fiabilité < 70 %</h3><div id="bas"></div></div>
+<div class="alert-group fade"><h3>🔵 Alertes Primeur IA <span id="countPrimeur" class="count"></span></h3><div id="primeur"></div></div>
+<div class="alert-group fade"><h3>🟢 Fiabilité > 90 % <span id="countHaut" class="count"></span></h3><div id="haut"></div></div>
+<div class="alert-group fade"><h3>🟠 Fiabilité 70–89 % <span id="countMoyen" class="count"></span></h3><div id="moyen"></div></div>
+<div class="alert-group fade"><h3>🔴 Fiabilité < 70 % <span id="countBas" class="count"></span></h3><div id="bas"></div></div>
 
 <footer>🛰️ TINSFLASH PRO+++ – Moteur IA J.E.A.N • Actualisation auto toutes les 2 min</footer>
 
@@ -57,44 +58,52 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 let map=L.map("map").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6,minZoom:2}).addTo(map);
 
+// === Chargement combiné des 3 sources ===
 async function loadAlerts(){
  try{
-  const res=await fetch("/api/alerts");
-  const data=await res.json();
-  if(!Array.isArray(data)) return;
+  const [a1,a2,a3]=await Promise.all([
+    fetch("/api/alerts").then(r=>r.json()).catch(()=>[]),
+    fetch("/api/alerts-detected").then(r=>r.json()).catch(()=>[]),
+    fetch("/api/alerts-primeur").then(r=>r.json()).catch(()=>[])
+  ]);
+  const all=[...a1,...a2,...a3];
+  renderAlerts(all);
+ }catch(e){console.warn("Erreur loadAlerts",e);}
+}
 
-  document.getElementById("primeur").innerHTML="";
-  document.getElementById("haut").innerHTML="";
-  document.getElementById("moyen").innerHTML="";
-  document.getElementById("bas").innerHTML="";
+function renderAlerts(data){
+ ["primeur","haut","moyen","bas"].forEach(id=>document.getElementById(id).innerHTML="");
+ map.eachLayer(l=>{if(l instanceof L.CircleMarker)map.removeLayer(l);});
+ let cP=0,cH=0,cM=0,cB=0;
 
-  map.eachLayer(l=>{if(l instanceof L.Marker||l instanceof L.CircleMarker) map.removeLayer(l);});
+ data.forEach(a=>{
+   const lat=parseFloat(a.lat||a.latitude),lon=parseFloat(a.lon||a.longitude);
+   if(!lat||!lon)return;
+   const conf=a.reliability||a.confidence||0;
+   const title=a.phenomenon||a.title||a.event||"Alerte";
+   const zone=a.zone||a.country||"Zone inconnue";
+   let color="gray",cat="bas";
+   if(a.isPrimeur||a.primeur){color="blue";cat="primeur";cP++;}
+   else if(conf>=0.9){color="green";cat="haut";cH++;}
+   else if(conf>=0.7){color="orange";cat="moyen";cM++;}
+   else{color="red";cat="bas";cB++;}
 
-  data.forEach(a=>{
-    if(!a.lat||!a.lon) return;
-    const conf=a.reliability||a.confidence||0;
-    let color="gray",cat="bas";
-    if(a.isPrimeur){color="blue";cat="primeur";}
-    else if(conf>=0.9){color="green";cat="haut";}
-    else if(conf>=0.7){color="orange";cat="moyen";}
-    else{color="red";cat="bas";}
+   const html=`<div class="alert"><b>${title}</b><br>${zone} – ${(conf*100).toFixed(0)} %</div>`;
+   document.getElementById(cat).innerHTML+=html;
 
-    const title=a.title||a.event||"Alerte";
-    const html=`<div class="alert"><b>${title}</b><br>${a.zone||"Zone inconnue"} – ${(conf*100).toFixed(0)} %</div>`;
-    document.getElementById(cat).innerHTML+=html;
+   L.circleMarker([lat,lon],{radius:6,color,fillOpacity:0.6})
+    .addTo(map)
+    .bindPopup(`<b>${title}</b><br>${zone}<br>${(conf*100).toFixed(0)} %`);
+ });
 
-    L.circleMarker([a.lat,a.lon],{radius:6,color,fillOpacity:0.6})
-      .addTo(map)
-      .bindPopup(`<b>${title}</b><br>${(conf*100).toFixed(0)} %<br>${a.zone||""}`);
-  });
-
- }catch(e){
-  console.warn("Erreur loadAlerts:",e);
- }
+ document.getElementById("countPrimeur").textContent=cP?`(${cP})`:"";
+ document.getElementById("countHaut").textContent=cH?`(${cH})`:"";
+ document.getElementById("countMoyen").textContent=cM?`(${cM})`:"";
+ document.getElementById("countBas").textContent=cB?`(${cB})`:"";
 }
 
 loadAlerts();
-setInterval(loadAlerts,120000); // toutes les 2 min
+setInterval(loadAlerts,120000);
 </script>
 </body>
 </html>
