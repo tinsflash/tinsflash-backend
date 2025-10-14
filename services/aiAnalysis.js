@@ -151,4 +151,179 @@ export async function runAIAnalysis() {
         await addEngineLog(`⚠️ Analyse additionnelle KO : ${err.message}`, "warn", "IA.JEAN");
       }
 
-      // === PHÉNOMÈ
+      // === PHÉNOMÈNES ===
+      let phenomena = null;
+      try {
+        phenomena = evaluatePhenomena({
+          lat, lon, altitude,
+          base: r,
+          rain, snow, wind,
+          stations: stationsSummary,
+          factors: { relief, hydro, climate },
+          thresholds,
+        });
+      } catch (err) {
+        await addEngineLog(`⚠️ Phénomène erreur : ${err.message}`, "warn", "IA.JEAN");
+      }
+
+      // === INDICE LOCAL ===
+      const stationBoost = stationsSummary?.tempStation != null ? 1.05 : 1.0;
+      const indiceLocal = Math.round(relief * hydro * climate * stationBoost * 100) / 100;
+      const condition =
+        indiceLocal > 115 ? "Atmosphère instable" :
+        indiceLocal > 100 ? "Ciel variable" :
+        "Conditions calmes";
+
+      // === VISUAL PHASE 1B ===
+      let visualEvidence = false;
+      try {
+        const imgDir = path.join(dataDir, "vision");
+        if (fs.existsSync(imgDir)) {
+          const imgs = fs.readdirSync(imgDir).filter(f => f.includes(`${country}`) || f.includes(`${r.region}`));
+          visualEvidence = imgs.length > 0;
+        }
+      } catch { visualEvidence = false; }
+
+      analysed.push({
+        ...r,
+        country,
+        reliefFactor: relief,
+        hydroFactor: hydro,
+        climateFactor: climate,
+        stations: stationsSummary,
+        rain, snow, wind,
+        phenomena,
+        indiceLocal,
+        condition,
+        visualEvidence,
+      });
+
+      // === ALERTES ===
+      if (phenomena?.alerts?.length) {
+        for (const a of phenomena.alerts) {
+          await logDetectedAlert({
+            phenomenon: a.type,
+            zone: r.region || country,
+            country,
+            lat, lon,
+            alertLevel: a.level,
+            confidence: a.confidence ?? 1.0,
+            visualEvidence,
+            comparedToExternal: true,
+            primeur: a.primeur ?? false,
+            details: a,
+          });
+
+          if (a.primeur)
+            await logPrimeurAlert({
+              phenomenon: a.type,
+              zone: r.region || country,
+              tinsflashAlertLevel: a.level,
+              externalComparisons: a.externalComparisons || [],
+            });
+        }
+      }
+    }
+
+    // =======================================================
+    // 📊 SYNTHÈSE MONDIALE
+    // =======================================================
+    const moy = analysed.reduce((a, x) => a + x.indiceLocal, 0) / analysed.length;
+    const variance = analysed.reduce((a, x) => a + Math.pow(x.indiceLocal - moy, 2), 0) / analysed.length;
+    const indiceGlobal = Math.max(0, Math.min(100, Math.round((100 - variance) * 0.95)));
+
+    const synthese =
+      indiceGlobal > 90 ? "Atmosphère mondiale stable" :
+      indiceGlobal > 70 ? "Variabilité régionale modérée" :
+      indiceGlobal > 50 ? "Anomalies régionales multiples" :
+      "Instabilité globale – déclenchement d’alertes recommandé";
+
+    await addEngineLog(`📈 IA.J.E.A.N. Indice global ${indiceGlobal}% (${synthese})`, "success", "IA.JEAN");
+
+    // =======================================================
+    // 💾 ÉCRITURE MONGO (prévisions IA par point)
+    // - pas d'import statique : import dynamique de mongoose
+    // - écrase les anciennes prévisions des zones analysées
+    // - purge globale > 30 h
+    // =======================================================
+    const { default: mongoose } = await import("mongoose");
+
+    // Modèle dynamique (strict:false pour ne rien casser)
+    const AiPointForecastSchema = new mongoose.Schema({}, { strict: false });
+    // On fixe explicitement le nom de collection pour éviter les surprises
+    const AiPointForecast = mongoose.models.forecasts_ai_points
+      || mongoose.model("forecasts_ai_points", AiPointForecastSchema, "forecasts_ai_points");
+
+    const now = new Date();
+
+    // 1) Déterminer les zones couvertes dans ce run (par ex. r.region || country)
+    const zonesCovered = Array.from(
+      new Set(
+        analysed.map(p => String(p.region || p.zone || p.country || "Unknown"))
+      )
+    );
+
+    // 2) Écraser les anciennes prévisions de ces zones
+    try {
+      await AiPointForecast.deleteMany({ zone: { $in: zonesCovered } });
+      await addEngineLog(`🗑️ Suppression anciennes prévisions IA pour zones: ${zonesCovered.join(", ")}`, "info", "IA.JEAN");
+    } catch (err) {
+      await addEngineError(`Erreur deleteMany forecasts_ai_points: ${err.message}`, "IA.JEAN");
+    }
+
+    // 3) Insérer les nouvelles prévisions
+    const docs = analysed.map(p => ({
+      zone: String(p.region || p.zone || p.country || "Unknown"),
+      country: p.country || null,
+      lat: Number(p.lat ?? p.latitude ?? 0),
+      lon: Number(p.lon ?? p.longitude ?? 0),
+      altitude: Number(p.altitude ?? 150),
+
+      analysedAt: now,
+      // Condensé « prévision IA »
+      indiceLocal: p.indiceLocal,
+      condition: p.condition,
+      factors: {
+        relief: p.reliefFactor,
+        hydro: p.hydroFactor,
+        climate: p.climateFactor,
+      },
+      stations: p.stations || null,
+      rain: p.rain || null,
+      snow: p.snow || null,
+      wind: p.wind || null,
+      visualEvidence: !!p.visualEvidence,
+
+      // Base brute pour traçabilité (on garde le point original + phénomènes)
+      base: p.base || undefined,
+      phenomena: p.phenomena || null,
+      // Tag moteur
+      source: "TINSFLASH IA.J.E.A.N.",
+      version: "v5.11",
+    }));
+
+    if (docs.length) {
+      await AiPointForecast.insertMany(docs, { ordered: false });
+      await addEngineLog(`💾 ${docs.length} prévisions IA écrites (Mongo: forecasts_ai_points)`, "success", "IA.JEAN");
+    }
+
+    // 4) Purge globale > 30 h
+    try {
+      const cutoff = new Date(Date.now() - 30 * 60 * 60 * 1000);
+      const del = await AiPointForecast.deleteMany({ analysedAt: { $lt: cutoff } });
+      await addEngineLog(`🧹 Purge forecasts_ai_points >30h: ${del?.deletedCount ?? 0} doc(s) supprimé(s)`, "info", "IA.JEAN");
+    } catch (err) {
+      await addEngineError(`Erreur purge >30h forecasts_ai_points: ${err.message}`, "IA.JEAN");
+    }
+
+    // =======================================================
+    // ✅ Retour identique (on garde l’API stable)
+    // =======================================================
+    return { indiceGlobal, synthese, count: analysed.length, zones: zonesCovered };
+  } catch (e) {
+    await addEngineError("Erreur IA.J.E.A.N. globale : " + e.message, "IA.JEAN");
+    return { error: e.message };
+  }
+}
+
+export default { runAIAnalysis };
