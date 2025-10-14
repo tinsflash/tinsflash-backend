@@ -1,0 +1,64 @@
+{
+  "vent": {
+    "prealerte": 73,
+    "alerte": 80,
+    "extreme": 120,
+    "unite": "km/h",
+    "context": "ajuster selon relief, altitude, couloirs de vent"
+  },
+  "pluie": {
+    "prealerte": { "1h": 18, "6h": 23, "24h": 23 },
+    "alerte": { "1h": 30, "6h": 40, "24h": 60 },
+    "extreme": { "1h": 45, "6h": 55, "24h": 90 },
+    "unite": "mm",
+    "context": "pondérer selon saturation, relief, vision satellite"
+  },
+  "orage_grele": {
+    "prealerte": "CAPE > 1000 J/kg",
+    "alerte": "grêle ≥ 2 cm ou convection forte",
+    "extreme": "grêle > 4 cm ou supercellule",
+    "context": "analyse modèles convectifs + vision satellite"
+  },
+  "neige": {
+    "prealerte": "neige en plaine",
+    "alerte": { "6h": 5, "24h": 10 },
+    "extreme": { "24h": 20 },
+    "unite": "cm",
+    "context": "modulé par relief, altitude, température sol"
+  },
+  "verglas": {
+    "prealerte": "risque pluie verglaçante ou Tsol -1°C",
+    "alerte": "épisode confirmé",
+    "extreme": "durée > 2h ou large zone",
+    "context": "croiser modèles précipitation et T° sol"
+  },
+  "chaleur": {
+    "prealerte": "écart +3°C vs normales locales",
+    "alerte": "canicule ≥ 3 jours/3 nuits seuils locaux",
+    "extreme": "HeatIndex > 45°C",
+    "context": "ajuster selon altitude, humidité, orientation"
+  },
+  "brouillard": {
+    "prealerte": "< 200 m",
+    "alerte": "< 100 m durable",
+    "extreme": "< 50 m étendu",
+    "unite": "m",
+    "context": "analyse humidité + vision satellite"
+  },
+  "submersion": {
+    "prealerte": "surcote détectée",
+    "alerte": "houle > 3 m ou pression < 985 hPa",
+    "extreme": "houle > 5 m + vent fort",
+    "context": "fusion marées/vents/mers"
+  },
+  "phenomenes_majeurs": {
+    "prealerte": "risque structure spirale ou onde tropicale",
+    "alerte": "système organisé détecté",
+    "extreme": "intensification rapide ou impact < 72h",
+    "context": "analyse globale J.E.A.N. + vision satellite"
+  },
+  "signaux": {
+    "pression": { "prealerte": 995, "alerte": 990, "extreme": 980, "type": "inf" },
+    "humidite": { "prealerte": 90, "alerte": 95, "extreme": 98, "type": "sup" }
+  }
+}
