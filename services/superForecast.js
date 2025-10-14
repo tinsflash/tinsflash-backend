@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.8 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.9 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 1B : VisionIA (captures satellites & multicouches)
@@ -176,7 +176,9 @@ export async function superForecast({ zones = [], runType = "global", withAI = f
     // ==========================================================
     if (phaseMode === "phase1b" || phaseMode === "full") {
       try {
-        const { runVisionCapture } = await import("./vision/visionCapture.js");
+        // ✅ Chemin corrigé (dossier Vision à la racine du projet)
+        const { runVisionCapture } = await import("../vision/visionCapture.js");
+
         await addEngineLog("🌫️ Lancement VisionIA – Phase 1B (captures visuelles)", "info", "superForecast");
         const vision = await runVisionCapture(zones);
         if (vision?.success) {
