@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="robots" content="noindex,nofollow"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>🚀 TINSFLASH PRO+++ • Cockpit Administrateur</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -20,26 +20,9 @@ h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:30px
 .phaseTitle{font-weight:bold;font-size:1.2em;color:#00ffcc;text-shadow:0 0 8px #00ffcc;margin:20px 0 8px;}
 button{background:#071d34;color:#4fc3f7;border:1px solid #4fc3f7;padding:10px;margin:6px;border-radius:10px;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;transition:.2s;}
 button:hover{background:#4fc3f7;color:#000;}
-.btn-active{background:#22c55e;color:#000!important;animation:blink 1s infinite alternate;}
-@keyframes blink{from{opacity:1;}to{opacity:.5;}}
-.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
-.light{width:14px;height:14px;border-radius:50%;display:inline-block;margin-right:6px;}
-.ok{background:#00ff88;box-shadow:0 0 8px #00ff88;}
-.warn{background:#ffaa00;box-shadow:0 0 8px #ffaa00;}
-.err{background:#ff4444;box-shadow:0 0 8px #ff4444;}
-.idle{background:#555;}
-.map{height:280px;margin-top:10px;border-radius:10px;overflow:hidden;}
+.cmd{font-size:12px;color:#888;background:#081527;padding:4px 8px;border-radius:6px;margin-bottom:10px;display:inline-block;}
 .logs{background:#081527;border-radius:10px;padding:10px;height:340px;overflow-y:auto;font-family:monospace;font-size:13px;white-space:pre-wrap;border:1px solid #093c60;}
-.table-ia{width:100%;border-collapse:collapse;margin-top:10px;}
-.table-ia th,.table-ia td{border:1px solid #093c60;padding:6px 8px;font-size:13px;}
-.table-ia th{background:#02213f;color:#4fc3f7;text-align:left;}
-.badge{padding:2px 6px;border-radius:6px;font-weight:bold;font-size:11px;}
-.badge.orange{background:#ff9800;color:#000;}
-.badge.red{background:#f44336;color:#fff;}
-.badge.green{background:#00e676;color:#000;}
-.badge.gold{background:gold;color:#000;}
-footer{text-align:center;font-size:13px;color:#555;margin:30px 0;}
-@media(max-width:900px){body{flex-direction:column;}nav{width:100%;flex-direction:row;flex-wrap:wrap;justify-content:center;border-right:none;border-bottom:1px solid #093c60;background:#001027;padding:8px 0;}nav h1{width:100%;text-align:center;font-size:1em;margin-bottom:6px;}nav a{padding:6px 10px;font-size:0.9em;margin:2px;border-radius:6px;background:#02132d;}main{padding:10px;}}
+.map{height:250px;margin-top:10px;border-radius:10px;overflow:hidden;}
 </style>
 </head>
 <body>
@@ -59,120 +42,71 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <a href="/admin-radar.html">🌦️ Radar IA</a>
 <a href="/admin-news.html">📰 Actualités</a>
 <a href="/admin-users.html">👥 Utilisateurs</a>
-<a href="/admin-chat.html">💬 Chat IA</a>
-<a href="/cockpit.html">🧠 Cockpit Standard</a>
-<a href="/cockpit-pro.html">🚀 Cockpit Pro</a>
-<a href="/cockpit-proplus.html">💎 Pro+</a>
-<a href="/premium.html">⭐ Premium</a>
-<a href="/provincenamur.html">📍 Province Namur</a>
 <a href="/">↩️ Accueil public</a>
 </nav>
 
 <main>
 <header>COCKPIT ADMINISTRATEUR – IA J.E.A.N. – Moteur Central</header>
 
-<!-- === BOUTONS PHASES (inchangés) === -->
-<div class="phaseTitle">PHASE 1 à 5 + Vision IA (voir version précédente)</div>
+<!-- ===== PHASE 1 – Extraction ===== -->
+<div class="phaseTitle">PHASE 1 – Extraction des modèles</div>
 
-<!-- ========================================================= -->
-<h2>📈 Alertes détectées (IA J.E.A.N.)</h2>
-<table class="table-ia" id="tblDetected">
-  <thead>
-    <tr><th>Phénomène</th><th>Zone</th><th>Niveau</th><th>Confiance</th><th>Visuel</th><th>Heure</th></tr>
-  </thead>
-  <tbody><tr><td colspan="6">Chargement...</td></tr></tbody>
-</table>
+<div>
+  <button onclick="run('global-europe')">🇪🇺 Europe</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-europe</div>
 
-<h2>🥇 Alertes PRIMEUR (avant les autres)</h2>
-<table class="table-ia" id="tblPrimeur">
-  <thead>
-    <tr><th>Phénomène</th><th>Zone</th><th>Niveau</th><th>Δ (min)</th><th>Sources externes</th><th>Heure</th></tr>
-  </thead>
-  <tbody><tr><td colspan="6">Chargement...</td></tr></tbody>
-</table>
+  <button onclick="run('global-usa')">🇺🇸 USA</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-usa</div>
 
-<h2>🌍 Carte des alertes IA.J.E.A.N.</h2>
-<div id="mapAlerts" class="map"></div>
+  <button onclick="run('belgique')">🇧🇪 Belgique</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-belgique</div>
+
+  <button onclick="run('bouke')">📺 Bouké (Namur)</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-bouke</div>
+
+  <button onclick="run('afrique')">🌍 Afrique</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-afrique</div>
+
+  <button onclick="run('asie')">🌏 Asie</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-asie</div>
+
+  <button onclick="run('ameriquesud')">🌎 Amérique Sud</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-ameriquesud</div>
+
+  <button onclick="run('oceanie')">🌊 Océanie</button>
+  <div class="cmd">curl -X POST https://backend.onrender.com/api/run-global-oceanie</div>
+</div>
+
+<!-- ===== PHASE 2 – IA J.E.A.N. ===== -->
+<div class="phaseTitle">PHASE 2 – Analyse IA J.E.A.N.</div>
+<button onclick="runAI()">🧠 Lancer IA J.E.A.N.</button>
+<div class="cmd">curl -X POST https://backend.onrender.com/api/runAI</div>
+
+<!-- ===== PHASE 5 – Fusion mondiale ===== -->
+<div class="phaseTitle">PHASE 5 – Fusion mondiale des alertes</div>
+<button onclick="runAlerts()">🚨 Fusionner toutes les alertes</button>
+<div class="cmd">curl -X POST https://backend.onrender.com/api/runWorldAlerts</div>
 
 <h2>📜 Logs en direct</h2>
 <div id="logs" class="logs">Connexion en cours...</div>
 
-<footer>© 2025 – Centrale Météo IA TINSFLASH PRO+++ • Moteur J.E.A.N.</footer>
+<h2>🌍 Carte rapide</h2>
+<div id="map" class="map"></div>
+
+<footer style="text-align:center;color:#555;margin-top:20px;">
+© 2025 – Centrale Météo IA TINSFLASH PRO+++ • Moteur J.E.A.N.
+</footer>
 </main>
 
 <script>
 const logs=document.getElementById("logs");
-function addLog(m){const l=`${new Date().toLocaleTimeString()} ${m}`;logs.textContent+="\n"+l;logs.scrollTop=logs.scrollHeight;}
+function addLog(m){logs.textContent+="\n"+new Date().toLocaleTimeString()+" "+m;logs.scrollTop=logs.scrollHeight;}
+async function run(zone){addLog("▶️ "+zone);try{const r=await fetch("/api/run-"+zone,{method:"POST"});const j=await r.json();addLog("✅ "+zone+" OK: "+JSON.stringify(j));}catch(e){addLog("❌ "+zone+" "+e.message);}}
+async function runAI(){try{const r=await fetch("/api/runAI",{method:"POST"});const j=await r.json();addLog("🧠 IA: "+JSON.stringify(j));}catch(e){addLog("❌ IA "+e.message);}}
+async function runAlerts(){try{const r=await fetch("/api/runWorldAlerts",{method:"POST"});const j=await r.json();addLog("🚨 Fusion: "+JSON.stringify(j.summary||j));}catch(e){addLog("❌ Fusion "+e.message);}}
 
-// ========= 🧠 CHARGEMENT DES ALERTES IA =========
-async function loadDetected(){
- try{
-   const r=await fetch("/api/alerts-detected");
-   const a=await r.json();
-   const tb=document.querySelector("#tblDetected tbody");
-   tb.innerHTML="";
-   a.forEach(x=>{
-     const tr=document.createElement("tr");
-     const badge=x.alertLevel==="rouge"?"red":x.alertLevel==="orange"?"orange":x.alertLevel==="jaune"?"green":"";
-     tr.innerHTML=`
-       <td>${x.phenomenon||"?"}</td>
-       <td>${x.zone||x.country||"?"}</td>
-       <td><span class="badge ${badge}">${x.alertLevel}</span></td>
-       <td>${(x.confidence*100||100).toFixed(0)}%</td>
-       <td>${x.visualEvidence?"🛰️":"—"}</td>
-       <td>${new Date(x.detectedAt).toLocaleTimeString()}</td>`;
-     tb.appendChild(tr);
-   });
- }catch(e){addLog("⚠️ loadDetected: "+e.message);}
-}
-
-async function loadPrimeur(){
- try{
-   const r=await fetch("/api/alerts-primeur");
-   const a=await r.json();
-   const tb=document.querySelector("#tblPrimeur tbody");
-   tb.innerHTML="";
-   a.forEach(x=>{
-     const tr=document.createElement("tr");
-     const badge=x.tinsflashAlertLevel==="rouge"?"red":x.tinsflashAlertLevel==="orange"?"orange":x.tinsflashAlertLevel==="jaune"?"green":"";
-     const src=(x.externalSources||[]).map(s=>s.name).join(", ");
-     tr.innerHTML=`
-       <td>${x.phenomenon||"?"}</td>
-       <td>${x.zone||"?"}</td>
-       <td><span class="badge ${badge}">${x.tinsflashAlertLevel}</span></td>
-       <td>${x.delayMinutes?.toFixed(1)||"—"}</td>
-       <td>${src||"—"}</td>
-       <td>${new Date(x.issuedAt).toLocaleTimeString()}</td>`;
-     tb.appendChild(tr);
-   });
- }catch(e){addLog("⚠️ loadPrimeur: "+e.message);}
-}
-
-// ========= 🗺️ CARTE DES ALERTES =========
-const mapA=L.map("mapAlerts").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
-
-async function refreshMap(){
- try{
-   const r=await fetch("/api/alerts-detected");
-   const alerts=await r.json();
-   alerts.forEach(x=>{
-     if(x.lat&&x.lon){
-       const color=x.alertLevel==="rouge"?"#ff0000":x.alertLevel==="orange"?"#ffa500":"#00ff88";
-       L.circle([x.lat,x.lon],{radius:80000,color}).addTo(mapA)
-        .bindPopup(`<b>${x.phenomenon}</b><br>${x.zone||x.country}<br>${x.alertLevel}`);
-     }
-   });
- }catch(e){addLog("⚠️ refreshMap: "+e.message);}
-}
-
-// ========= 🔁 ACTUALISATION TOUTES LES 60s =========
-function refreshAll(){loadDetected();loadPrimeur();refreshMap();}
-refreshAll();setInterval(refreshAll,60000);
-
-// ========= 🔊 LOGS SSE =========
-const evt=new EventSource("/api/logs");
-evt.onmessage=e=>{try{const l=JSON.parse(e.data);addLog(l.message||e.data);}catch{addLog(e.data);}};
+const map=L.map("map").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 </script>
 </body>
 </html>
