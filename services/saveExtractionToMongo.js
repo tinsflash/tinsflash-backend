@@ -1,6 +1,6 @@
 // ==========================================================
-// 💾 TINSFLASH – saveExtractionToMongo.js (Everest Protocol v4.3 PRO+++)
-// Sauvegarde Cloud + purge sélective des données >30 h
+// 💾 TINSFLASH – saveExtractionToMongo.js (Everest Protocol v4.4 PRO+++)
+// Sauvegarde Cloud + validation stricte + purge sélective des données >30 h
 // ==========================================================
 
 import { ExtractionModel } from "../models/ExtractionModel.js";
@@ -8,44 +8,55 @@ import { addEngineLog, addEngineError } from "./engineState.js";
 
 export async function saveExtractionToMongo(runType, zoneGroup, data) {
   try {
-    if (!data || data.length === 0) {
-      await addEngineError(`[MONGO] Données vides pour ${runType}`, "mongo");
+    // ✅ Étape 0 – Validation basique
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      await addEngineError(`[MONGO] Données vides ou invalides pour ${runType}`, "mongo");
       return false;
     }
 
-    // 🧹 Étape 1 : écraser uniquement les anciennes extractions du même run
+    // ✅ Étape 1 – Vérification / correction des champs manquants
+    const now = new Date();
+    const cleaned = data.map((z, i) => {
+      return {
+        zone: z.zone || z.region || z.country || `${runType}_Z${i + 1}`,
+        country: z.country || "unknown",
+        lat: z.lat ?? null,
+        lon: z.lon ?? null,
+        reliability: z.reliability ?? null,
+        timestamp: z.timestamp || now,
+        ...z,
+      };
+    });
+
+    // 🧹 Étape 2 – Supprimer uniquement les anciennes extractions du même run
     await ExtractionModel.deleteMany({ runType });
 
-    // 💾 Étape 2 : sauvegarder la nouvelle extraction
+    // 💾 Étape 3 – Sauvegarder la nouvelle extraction
     const extraction = new ExtractionModel({
-      runType,        // ex. "Bouke-Namur"
-      zoneGroup,      // ex. "EU"
-      timestamp: new Date(),
-      zonesCount: data.length,
-      data,
+      runType,              // ex. "Bouke-Namur"
+      zoneGroup: zoneGroup || "unknown",
+      timestamp: now,
+      zonesCount: cleaned.length,
+      data: cleaned,
       status: "done",
     });
 
     await extraction.save();
 
-    // ⏳ Étape 3 : purge sélective – supprimer uniquement les enregistrements
-    // dont le timestamp est antérieur à 30 heures, tous runs confondus
+    // ⏳ Étape 4 – Purge sélective : supprimer les enregistrements de plus de 30 h
     const cutoff = new Date(Date.now() - 30 * 60 * 60 * 1000);
     const deleted = await ExtractionModel.deleteMany({ timestamp: { $lt: cutoff } });
 
     await addEngineLog(
-      `[MONGO] ✅ ${runType}/${zoneGroup} sauvegardé (${data.length} zones). ` +
-      `Purge sélective : ${deleted.deletedCount} anciens documents (>30 h) supprimés.`,
+      `[MONGO] ✅ ${runType}/${zoneGroup || "?"} sauvegardé (${cleaned.length} zones). `
+        + `Purge : ${deleted.deletedCount} anciens (> 30 h) supprimés.`,
       "info",
       "mongo"
     );
 
     return true;
   } catch (err) {
-    await addEngineError(
-      `[MONGO] ❌ Échec sauvegarde ${runType} : ${err.message}`,
-      "mongo"
-    );
+    await addEngineError(`[MONGO] ❌ Échec sauvegarde ${runType} : ${err.message}`, "mongo");
     return false;
   }
 }
