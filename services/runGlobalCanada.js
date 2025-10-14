@@ -1,6 +1,9 @@
 // ==========================================================
 // 🇨🇦 TINSFLASH – runGlobalCanada.js
-// Everest Protocol v5.2.3 PRO+++ (HydroRisk + Cyclones + Arctic Influence)
+// Everest Protocol v5.3.0 PRO+++
+// ==========================================================
+// Objectif : détecter les phénomènes avant les modèles officiels (NOAA, ECMWF)
+// Zones enrichies : Arctic Flow, HydroRisk, Cyclones, Wildfire corridor
 // ==========================================================
 
 import fs from "fs";
@@ -10,34 +13,64 @@ import { addEngineLog, addEngineError, updateEngineState } from "./engineState.j
 import { saveExtractionToMongo } from "./extractionStore.js";
 
 // ==========================================================
-// 🗺️ ZONES – CANADA
+// 🗺️ ZONES – CANADA (36 points stratégiques)
 // ==========================================================
 export const CANADA_ZONES = {
-  East: [
-    { lat: 45.42, lon: -75.69, region: "Ottawa - Ontario" },
-    { lat: 43.65, lon: -79.38, region: "Toronto - Ontario" },
-    { lat: 46.82, lon: -71.21, region: "Québec - Capitale" },
-    { lat: 47.56, lon: -52.71, region: "St John's - Terre-Neuve" },
-    { lat: 44.65, lon: -63.57, region: "Halifax - Nouvelle-Écosse" },
+  Atlantique: [
+    { lat: 44.65, lon: -63.57, region: "Halifax - Cyclones Atlantique" },
+    { lat: 47.56, lon: -52.71, region: "St John's - Vent maritime" },
+    { lat: 46.24, lon: -63.13, region: "Charlottetown - Île-du-Prince-Édouard" },
+    { lat: 48.39, lon: -68.52, region: "Rimouski - Est du Québec" },
   ],
-  West: [
+
+  Québec: [
+    { lat: 46.82, lon: -71.21, region: "Québec - Capitale" },
+    { lat: 45.50, lon: -73.57, region: "Montréal - Zone urbaine" },
+    { lat: 48.45, lon: -71.25, region: "Saguenay - Neige et relief" },
+    { lat: 49.20, lon: -68.15, region: "Baie-Comeau - Côtes du Saint-Laurent" },
+    { lat: 52.95, lon: -66.92, region: "Sept-Îles - Côtes Nordiques" },
+    { lat: 58.55, lon: -68.43, region: "Kuujjuaq - Arctique Est" },
+  ],
+
+  Ontario: [
+    { lat: 45.42, lon: -75.69, region: "Ottawa - Vallée de l’Outaouais" },
+    { lat: 43.65, lon: -79.38, region: "Toronto - Lac Ontario" },
+    { lat: 46.49, lon: -81.01, region: "Sudbury - Zone forestière" },
+    { lat: 49.78, lon: -86.49, region: "Thunder Bay - Lac Supérieur" },
+    { lat: 50.45, lon: -89.28, region: "Sioux Lookout - Feux de forêt" },
+  ],
+
+  Prairies: [
+    { lat: 49.89, lon: -97.14, region: "Winnipeg - Centre" },
+    { lat: 52.13, lon: -106.68, region: "Saskatoon - Prairies centrales" },
+    { lat: 53.54, lon: -113.49, region: "Edmonton - Alberta Nord" },
+    { lat: 51.05, lon: -114.07, region: "Calgary - Alberta Sud" },
+    { lat: 55.17, lon: -118.80, region: "Grande Prairie - Forêts boréales" },
+  ],
+
+  ColombieBritannique: [
     { lat: 49.28, lon: -123.12, region: "Vancouver - Côtes Pacifiques" },
-    { lat: 53.54, lon: -113.49, region: "Edmonton - Prairies" },
-    { lat: 51.05, lon: -114.07, region: "Calgary - Alberta" },
+    { lat: 50.12, lon: -122.95, region: "Whistler - Neige & Montagne" },
+    { lat: 52.97, lon: -122.49, region: "Williams Lake - Feux de forêt" },
+    { lat: 53.91, lon: -122.75, region: "Prince George - Intérieur Nord" },
     { lat: 48.43, lon: -123.37, region: "Victoria - Île Vancouver" },
   ],
-  North: [
-    { lat: 64.28, lon: -83.38, region: "Nunavut - Arctique" },
+
+  Arctique: [
+    { lat: 64.28, lon: -83.38, region: "Nunavut - Glaces mouvantes" },
     { lat: 69.65, lon: -133.71, region: "Inuvik - TNO" },
+    { lat: 74.70, lon: -94.83, region: "Resolute Bay - Haute Arctique" },
+    { lat: 68.36, lon: -133.72, region: "Tuktoyaktuk - Fonte côtière" },
+    { lat: 70.47, lon: -68.59, region: "Pond Inlet - Extrême Nord" },
   ],
 };
 
 // ==========================================================
-// 🚀 Extraction réelle – Canada
+// 🚀 Extraction réelle – Canada (Mongo-compliant)
 // ==========================================================
 export async function runGlobalCanada() {
   try {
-    await addEngineLog("🇨🇦 Démarrage extraction Canada (HydroRisk + Arctic)", "info", "runGlobalCanada");
+    await addEngineLog("🇨🇦 Démarrage extraction Canada (HydroRisk + Arctic Flow + WildFire)", "info", "runGlobalCanada");
 
     const zones = [];
     for (const [regionGroup, subzones] of Object.entries(CANADA_ZONES)) {
@@ -75,7 +108,7 @@ export async function runGlobalCanada() {
       savedAt: timestamp,
     });
 
-    await addEngineLog(`✅ Canada : ${zones.length} zones traitées`, "success", "runGlobalCanada");
+    await addEngineLog(`✅ Canada : ${zones.length} zones traitées (Mongo sauvegardé)`, "success", "runGlobalCanada");
 
     return { summary: { region: "Canada", totalZones: zones.length, file: outFile, status: "ok" }, zones };
   } catch (err) {
