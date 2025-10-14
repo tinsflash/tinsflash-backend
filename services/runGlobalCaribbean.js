@@ -1,126 +1,118 @@
 // ==========================================================
 // 🌴 TINSFLASH – runGlobalCaribbean.js
-// Everest Protocol v4.2 PRO+++ (Cyclones, HydroRisk & Volcanic zones)
+// Everest Protocol v5.3.0 PRO+++
 // ==========================================================
-// Couvre : Antilles, Amérique Centrale & Golfe du Mexique
-// Objectif : suivi cyclones, ouragans, ondes tropicales et activité volcanique
+// Objectif : détecter cyclones, pluies extrêmes, volcans et tsunamis
+// avant tous les modèles officiels (NOAA / ECMWF / MeteoFrance)
 // ==========================================================
 
 import fs from "fs";
 import path from "path";
 import { superForecast } from "./superForecast.js";
 import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
-import { saveExtractionToMongo } from "./saveExtractionToMongo.js"; // ✅ nom exact
+import { saveExtractionToMongo } from "./extractionStore.js";
 
 // ==========================================================
-// 🗺️ ZONES DÉTAILLÉES – Caraïbes & Amérique Centrale
+// 🗺️ ZONES – Caraïbes / Amérique Centrale (44 points stratégiques)
 // ==========================================================
 export const CARIBBEAN_ZONES = {
-  Cuba: [
-    { lat: 23.13, lon: -82.38, region: "La Havane - Nord-Ouest" },
-    { lat: 20.02, lon: -75.83, region: "Santiago - Sud-Est" },
+  AntillesFrançaises: [
+    { lat: 16.27, lon: -61.53, region: "Basse-Terre - Guadeloupe" },
+    { lat: 14.61, lon: -61.05, region: "Fort-de-France - Martinique" },
+    { lat: 15.30, lon: -61.38, region: "Roseau - Dominique (Volcan actif)" },
+    { lat: 17.12, lon: -62.63, region: "Basseterre - Saint-Kitts-et-Nevis" },
+    { lat: 18.07, lon: -63.05, region: "Philipsburg - Saint-Martin" },
   ],
-  DominicanRepublic: [
-    { lat: 18.47, lon: -69.89, region: "Saint-Domingue - Sud" },
-    { lat: 19.45, lon: -70.70, region: "Santiago - Nord" },
+
+  GrandesAntilles: [
+    { lat: 23.13, lon: -82.38, region: "La Havane - Cuba Ouest" },
+    { lat: 20.02, lon: -75.83, region: "Santiago - Cuba Est" },
+    { lat: 18.54, lon: -72.34, region: "Port-au-Prince - Haïti" },
+    { lat: 18.47, lon: -69.89, region: "Saint-Domingue - République Dominicaine" },
+    { lat: 18.46, lon: -66.10, region: "San Juan - Porto Rico" },
   ],
-  Haiti: [
-    { lat: 18.54, lon: -72.34, region: "Port-au-Prince - Ouest" },
-    { lat: 19.00, lon: -71.70, region: "Cap-Haïtien - Nord" },
+
+  PetitesAntillesSud: [
+    { lat: 13.09, lon: -59.61, region: "Bridgetown - Barbade" },
+    { lat: 12.05, lon: -61.75, region: "Saint-Georges - Grenade" },
+    { lat: 12.11, lon: -68.93, region: "Willemstad - Curaçao" },
+    { lat: 11.00, lon: -63.92, region: "Isla Margarita - Venezuela Nord" },
   ],
-  Jamaica: [
-    { lat: 17.98, lon: -76.80, region: "Kingston - Sud-Est" },
-    { lat: 18.47, lon: -77.92, region: "Montego Bay - Nord" },
+
+  CaraibesNord: [
+    { lat: 25.04, lon: -77.35, region: "Nassau - Bahamas Centre" },
+    { lat: 21.58, lon: -72.27, region: "Providenciales - Turks & Caicos" },
+    { lat: 24.56, lon: -81.78, region: "Key West - Dorsale Floride" },
+    { lat: 26.12, lon: -79.42, region: "Atlantique Nord - Couloir cyclonique" },
   ],
-  PuertoRico: [
-    { lat: 18.46, lon: -66.10, region: "San Juan - Nord" },
-    { lat: 18.22, lon: -67.15, region: "Mayagüez - Ouest" },
+
+  AmeriqueCentrale: [
+    { lat: 17.50, lon: -88.20, region: "Belize City - Côte caraïbe" },
+    { lat: 15.50, lon: -84.33, region: "Puerto Lempira - Honduras Est" },
+    { lat: 13.35, lon: -86.09, region: "Managua - Nicaragua" },
+    { lat: 12.10, lon: -83.70, region: "Bluefields - Risque cyclonique" },
+    { lat: 9.93, lon: -84.08, region: "San José - Costa Rica (HydroRisk)" },
+    { lat: 8.98, lon: -79.52, region: "Panama City - Dorsale Pacifique" },
   ],
-  LesserAntilles: [
-    { lat: 14.61, lon: -61.05, region: "Martinique - Fort-de-France" },
-    { lat: 16.27, lon: -61.53, region: "Guadeloupe - Basse-Terre" },
-    { lat: 13.10, lon: -59.61, region: "Barbade - Sud-Est" },
-    { lat: 15.30, lon: -61.39, region: "Dominique - Volcans" },
-    { lat: 17.12, lon: -62.63, region: "Saint-Kitts - Nord" },
-    { lat: 18.08, lon: -63.05, region: "Saint-Martin - Nord" },
+
+  VolcansActifs: [
+    { lat: 16.70, lon: -62.18, region: "Soufrière Hills - Montserrat" },
+    { lat: 14.50, lon: -60.87, region: "Mont Pelée - Martinique" },
+    { lat: 13.33, lon: -61.17, region: "La Soufrière - Saint-Vincent" },
+    { lat: 10.83, lon: -61.32, region: "Trinité - Tobago Nord" },
   ],
-  TrinidadTobago: [
-    { lat: 10.67, lon: -61.52, region: "Port of Spain - Trinidad" },
-    { lat: 11.25, lon: -60.67, region: "Scarborough - Tobago" },
+
+  AtlantiqueLarge: [
+    { lat: 19.5, lon: -55.2, region: "Bassin cyclonique central Atlantique" },
+    { lat: 14.2, lon: -49.8, region: "Formation cyclonique Sud Atlantique" },
+    { lat: 22.7, lon: -50.5, region: "Couloir ouragan Nord Atlantique" },
+    { lat: 10.0, lon: -42.0, region: "Dorsale intertropicale Atlantique" },
   ],
-  Bahamas: [
-    { lat: 25.04, lon: -77.35, region: "Nassau - New Providence" },
-    { lat: 23.65, lon: -75.90, region: "Exuma - Archipel Central" },
-  ],
-  Mexico: [
-    { lat: 21.16, lon: -86.85, region: "Cancún - Riviera Maya" },
-    { lat: 19.43, lon: -99.13, region: "Mexico City - Plateau Central" },
-    { lat: 19.51, lon: -98.63, region: "Popocatépetl - Volcan Actif" },
-  ],
-  Guatemala: [
-    { lat: 14.63, lon: -90.55, region: "Guatemala City - Plateau" },
-    { lat: 14.47, lon: -90.88, region: "Volcán de Fuego - Actif" },
-  ],
-  Honduras: [
-    { lat: 14.08, lon: -87.21, region: "Tegucigalpa - Centre" },
-    { lat: 15.50, lon: -87.00, region: "La Ceiba - Côte Caraïbe" },
-  ],
-  Nicaragua: [
-    { lat: 12.13, lon: -86.25, region: "Managua - Centre" },
-    { lat: 11.98, lon: -86.10, region: "Masaya - Volcan" },
-  ],
-  CostaRica: [
-    { lat: 9.93, lon: -84.08, region: "San José - Vallée Centrale" },
-    { lat: 10.47, lon: -84.70, region: "Arenal - Volcan Actif" },
-  ],
-  Panama: [
-    { lat: 8.98, lon: -79.52, region: "Panama City - Canal" },
-    { lat: 8.77, lon: -82.43, region: "David - Côte Pacifique" },
-  ],
-  Belize: [
-    { lat: 17.50, lon: -88.20, region: "Belize City - Côte Caraïbe" },
+
+  GolfeDuMexique: [
+    { lat: 25.68, lon: -100.31, region: "Monterrey - Mexique Nord" },
+    { lat: 22.22, lon: -97.85, region: "Tampico - Côtes du Golfe" },
+    { lat: 19.43, lon: -99.13, region: "Mexico City - Plateau central" },
+    { lat: 21.16, lon: -86.85, region: "Cancún - Zone cyclonique" },
+    { lat: 18.75, lon: -88.30, region: "Chetumal - Péninsule Yucatán" },
   ],
 };
 
 // ==========================================================
-// 🧠 Extraction réelle – Caraïbes & Amérique Centrale
+// 🚀 Extraction réelle – Caraïbes (Mongo + Cyclones + Volcans)
 // ==========================================================
 export async function runGlobalCaribbean() {
   try {
-    await addEngineLog("🌴 Démarrage extraction Caraïbes / Amérique Centrale (Cyclones+Volcans)", "info", "runGlobalCaribbean");
+    await addEngineLog("🌴 Extraction Caraïbes (Cyclone Corridor + Volcans + Mongo)", "info", "runGlobalCaribbean");
 
     const zones = [];
-    for (const [country, subzones] of Object.entries(CARIBBEAN_ZONES)) {
-      for (const z of subzones) zones.push({ country, ...z, continent: "North America" });
+    for (const [regionGroup, subzones] of Object.entries(CARIBBEAN_ZONES)) {
+      for (const z of subzones) {
+        zones.push({
+          sourceRun: "runGlobalCaribbean",
+          zoneId: `CARIB-${regionGroup}-${z.region}`,
+          country: "Caraïbes",
+          ...z,
+          continent: "NorthAmerica",
+          timestampRun: new Date().toISOString(),
+        });
+      }
     }
 
-    if (!zones.length) {
-      await addEngineError("Aucune zone Caraïbes trouvée", "runGlobalCaribbean");
-      return { status: "fail", message: "Aucune zone trouvée" };
-    }
-
-    // --- Extraction réelle via superForecast ---
-    const result = await superForecast({
-      zones,
-      runType: "Caribbean",
-      withAI: false,
-      phaseMode: "phase1",
-    });
-
+    const result = await superForecast({ zones, runType: "Caribbean" });
     const timestamp = new Date().toISOString();
 
-    // --- Sauvegarde locale + Mongo ---
     const dataDir = path.join(process.cwd(), "data");
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     const outFile = path.join(dataDir, `caribbean_${Date.now()}.json`);
     fs.writeFileSync(outFile, JSON.stringify(result, null, 2), "utf8");
 
-    // ✅ Correction : passage des bons paramètres à saveExtractionToMongo
-    await saveExtractionToMongo(
-      "Caribbean",
-      "NorthAmerica",
-      result.phase1Results || []
-    );
+    await saveExtractionToMongo({
+      zone: "Caribbean",
+      data: result,
+      filePath: outFile,
+      timestamp,
+    });
 
     await updateEngineState("ok", {
       engineStatus: "RUN_OK",
@@ -129,29 +121,14 @@ export async function runGlobalCaribbean() {
       savedAt: timestamp,
     });
 
-    await addEngineLog(
-      `✅ Caraïbes : ${zones.length} zones traitées (Cyclones+Volcans, Mongo + ${path.basename(outFile)})`,
-      "success",
-      "runGlobalCaribbean"
-    );
+    await addEngineLog(`✅ Caraïbes : ${zones.length} zones traitées & Mongo sauvegardé`, "success", "runGlobalCaribbean");
 
-    return {
-      summary: {
-        region: "Caraïbes & Amérique Centrale",
-        totalZones: zones.length,
-        file: outFile,
-        status: "ok",
-      },
-      zones,
-    };
+    return { summary: { region: "Caribbean", totalZones: zones.length, file: outFile, status: "ok" }, zones };
   } catch (err) {
     await addEngineError(`💥 Erreur runGlobalCaribbean : ${err.message}`, "runGlobalCaribbean");
     return { error: err.message };
   }
 }
 
-// ==========================================================
-// 🧩 EXPORT FINAL
-// ==========================================================
 export default { CARIBBEAN_ZONES, runGlobalCaribbean };
 export { runGlobalCaribbean as runCaribbean };
