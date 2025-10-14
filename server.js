@@ -36,7 +36,7 @@ import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import { generateVideoNamur } from "./services/generateVideoNamur.js";
 import { getDetectedAlerts } from "./services/alertDetectedLogger.js";
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
-import { runWorldAlerts } from "./services/runWorldAlerts.js";
+
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
 import { generateForecast } from "./services/forecastService.js";
