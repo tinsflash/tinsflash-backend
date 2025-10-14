@@ -4,106 +4,419 @@
 <meta charset="utf-8"/>
 <meta name="robots" content="noindex,nofollow"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>🚨 Alertes – TINSFLASH PRO+++</title>
+<title>🚨 Alertes – TINSFLASH PRO+++ (Admin)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body{margin:0;font-family:"Segoe UI",system-ui;background:#0b1220;color:#e6f6ff}
-header{padding:12px;text-align:center;background:#08121d;color:#4fc3f7;font-weight:700;font-size:1.2em}
-nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624;flex-wrap:wrap}
-nav a{color:#4fc3f7;text-decoration:none;font-weight:600}
-nav a:hover{color:#fff;text-shadow:0 0 8px #4fc3f7}
-.map{height:440px;margin:10px;border-radius:8px}
-.alert-group{margin:12px;padding:10px;background:#111a2b;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.3)}
-.alert{margin:6px 0;padding:6px;border-left:4px solid #4fc3f7;background:#0e1725;border-radius:4px}
-.alert b{color:#4fc3f7}
-h3{margin:0 0 8px 0;color:#7dd3fc}
-.count{float:right;font-size:.9em;color:#aaa}
-footer{padding:10px;text-align:center;font-size:13px;color:#777}
-.fade{animation:fadein 0.6s ease-in-out}
-@keyframes fadein{from{opacity:.4}to{opacity:1}}
+  :root{--bg:#0b1220;--panel:#111a2b;--accent:#4fc3f7;--muted:#8ab4f8}
+  body{margin:0;font-family:"Segoe UI",system-ui;background:var(--bg);color:#e6f6ff}
+  header{padding:12px;text-align:center;background:#08121d;color:var(--accent);font-weight:700;font-size:1.2em}
+  nav{display:flex;justify-content:center;gap:10px;padding:8px;background:#0d1624;flex-wrap:wrap}
+  nav a{color:var(--accent);text-decoration:none;font-weight:600;padding:6px 10px;border-radius:6px}
+  nav a.active{background:var(--accent);color:#02121a}
+  .wrap{display:grid;grid-template-columns:1fr 420px;gap:14px;padding:12px}
+  .left{min-height:640px}
+  .map{height:420px;border-radius:8px;margin-bottom:12px}
+  .alert-panel{background:var(--panel);padding:10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.4);height:180px;overflow:auto}
+  .alert-list{background:var(--panel);padding:10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.35);max-height:300px;overflow:auto;margin-bottom:12px}
+  .alert-item{padding:8px;margin:6px 0;border-left:4px solid var(--accent);background:#0e1725;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .alert-item.small{padding:6px;font-size:13px}
+  .alert-item .meta{color:#9fcff7;font-size:12px}
+  .btn{background:#1b2b44;color:var(--accent);border:1px solid var(--accent);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+  .btn:hover{background:var(--accent);color:#02121a}
+  .btn-ghost{background:transparent;border:1px solid #2a3b57;color:#9fcff7;padding:6px 8px;border-radius:6px;cursor:pointer}
+  .small{font-size:12px;color:var(--muted)}
+  .counts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .count-pill{background:#08202b;padding:6px 8px;border-radius:999px;color:var(--muted);font-weight:700}
+  .right{display:flex;flex-direction:column;gap:10px}
+  .actions{display:flex;flex-direction:column;gap:8px}
+  .form-row{display:flex;flex-direction:column;gap:6px}
+  .input,textarea,select{background:#0b1520;border:1px solid #123040;color:#dff4ff;padding:8px;border-radius:6px;width:100%}
+  #logs{background:#0d1624;color:#b3e5fc;padding:10px;height:180px;overflow-y:auto;border-top:1px solid #1e293b;font-family:monospace}
+  footer{text-align:center;padding:10px;font-size:13px;color:#7dd3fc;background:#08121d;margin-top:12px}
+  .modal{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:9999}
+  .modal.open{display:flex}
+  .card{background:var(--panel);padding:16px;border-radius:10px;min-width:320px;max-width:900px;max-height:90vh;overflow:auto}
+  .row{display:flex;gap:8px;align-items:center}
+  .danger{color:#ff6b6b}
+  .ok{color:#9effc8}
+  .muted{color:#9fcff7}
+  .cmd{font-size:12px;color:#8ab4f8;margin-top:4px;text-align:center}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}.right{order:2}.left{order:1}}
 </style>
 </head>
 <body>
 
 <script>
-const PIN_ADMIN="202679";
-if(!sessionStorage.getItem("tinsflashPIN")){
- const p=prompt("Code d’accès admin ?");
- if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
- else sessionStorage.setItem("tinsflashPIN","ok");
-}
+  // PIN check (code demandé : 2026)
+  const PIN_ADMIN="2026";
+  if(!sessionStorage.getItem("tinsflashPIN")){
+    const p=prompt("Code d’accès admin ?");
+    if(p!==PIN_ADMIN){alert("Accès refusé");location.href="/";}
+    else sessionStorage.setItem("tinsflashPIN","ok");
+  }
 </script>
 
-<header>🚨 Gestion des Alertes – IA J.E.A.N.</header>
+<header>🚨 TINSFLASH PRO+++ — Console Alertes (IA J.E.A.N.)</header>
+
 <nav>
-<a href="/admin-pp.html">Console</a>
-<a href="/admin-alerts.html" class="active">Alertes</a>
-<a href="/admin-radar.html">Radar</a>
-<a href="/admin-chat.html">Chat</a>
-<a href="/admin-users.html">Utilisateurs</a>
-<a href="/">Accueil</a>
+  <a href="/admin-pp.html">Console</a>
+  <a href="/admin-alerts.html" class="active">Alertes</a>
+  <a href="/admin-radar.html">Radar</a>
+  <a href="/admin-chat.html">Chat IA</a>
+  <a href="/admin-users.html">Utilisateurs</a>
+  <a href="/">Accueil</a>
 </nav>
 
-<div class="map" id="map"></div>
+<div class="wrap">
+  <div class="left">
+    <div class="map" id="map"></div>
 
-<div class="alert-group fade"><h3>🔵 Alertes Primeur IA <span id="countPrimeur" class="count"></span></h3><div id="primeur"></div></div>
-<div class="alert-group fade"><h3>🟢 Fiabilité > 90 % <span id="countHaut" class="count"></span></h3><div id="haut"></div></div>
-<div class="alert-group fade"><h3>🟠 Fiabilité 70–89 % <span id="countMoyen" class="count"></span></h3><div id="moyen"></div></div>
-<div class="alert-group fade"><h3>🔴 Fiabilité < 70 % <span id="countBas" class="count"></span></h3><div id="bas"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="counts">
+        <div class="count-pill" id="pillPrimeur">Primeur: 0</div>
+        <div class="count-pill" id="pillHigh">>90%: 0</div>
+        <div class="count-pill" id="pillMid">70–89%: 0</div>
+        <div class="count-pill" id="pillLow"><70%: 0</div>
+      </div>
+      <div>
+        <button class="btn" onclick="refreshAll()">🔄 Rafraîchir</button>
+      </div>
+    </div>
 
-<footer>🛰️ TINSFLASH PRO+++ – Moteur IA J.E.A.N • Actualisation auto toutes les 2 min</footer>
+    <div class="alert-list" id="alertList" aria-live="polite"></div>
+
+    <div class="alert-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>Actions rapides</strong> <span class="small"> (sélectionne une alerte pour activer)</span></div>
+        <div><button class="btn-ghost" onclick="openBulkForm()">✉️ Envoyer notification groupée</button></div>
+      </div>
+      <div style="margin-top:10px" class="small">Utilise la modale d'alerte pour valider/rejeter/mettre en surveillance/générer PDF et notifier.</div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="actions">
+      <div style="background:var(--panel);padding:10px;border-radius:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong>Source</strong><div class="small">alerts / alerts-detected / alerts-primeur</div></div>
+          <div><button class="btn" onclick="refreshAll()">Actualiser</button></div>
+        </div>
+        <div style="margin-top:8px" class="small">Ops: les actions POST appellent les routes serveur définies en bas de cette page.</div>
+      </div>
+
+      <div style="background:var(--panel);padding:10px;border-radius:8px">
+        <strong>Journal (flux SSE)</strong>
+        <div id="logs">Connexion au flux de logs...</div>
+      </div>
+
+      <div style="background:var(--panel);padding:10px;border-radius:8px">
+        <strong>Commande rapide (shell)</strong>
+        <div class="small">Ex. lancer fusion alertes :</div>
+        <div class="cmd">curl -X POST https://tinsflash.onrender.com/api/runWorldAlerts</div>
+        <div class="cmd" style="margin-top:6px">Générer PDF alerte (ex): curl -X POST /api/alerts-pdf -H 'Content-Type: application/json' -d '{"id":"ALERT_ID"}' --output alert.pdf</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal détail alerte -->
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div><h3 id="m_title">Alerte</h3><div id="m_zone" class="small muted"></div></div>
+      <div><button class="btn-ghost" onclick="closeModal()">✖️ Fermer</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:12px">
+      <div>
+        <div><strong>Détails</strong></div>
+        <div id="m_body" style="margin-top:8px;font-size:14px"></div>
+
+        <div style="margin-top:12px">
+          <strong>Confiance</strong>
+          <div id="m_conf" class="small muted"></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <strong>Observations IA</strong>
+          <pre id="m_ai" style="background:#06101a;padding:8px;border-radius:6px;color:#cfeeff;white-space:pre-wrap;"></pre>
+        </div>
+      </div>
+
+      <div>
+        <div><strong>Actions</strong></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <button class="btn" onclick="actionAlert('validate')">✅ Valider</button>
+          <button class="btn" onclick="actionAlert('reject')">❌ Rejeter</button>
+          <button class="btn" onclick="actionAlert('watch')">🕵️ Mettre sous surveillance</button>
+          <button class="btn" onclick="actionAlert('primeur')">🔵 Marquer Primeur</button>
+          <button class="btn" onclick="actionAlert('askAI')">🤖 Demander avis IA</button>
+          <button class="btn" onclick="notifyInstitutions()">📣 Notifier institutions</button>
+          <button class="btn" onclick="generatePDF()">🧾 Générer PDF</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <strong>Formulaire rapide</strong>
+          <div class="form-row"><label class="small">Note opérateur</label><textarea id="op_note" rows="4" class="input"></textarea></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk notify modal (simple) -->
+<div id="modalBulk" class="modal"><div class="card">
+  <h3>Notification groupée</h3>
+  <div class="small">Envoyer un message aux institutions listées pour les alertes sélectionnées.</div>
+  <div style="margin-top:8px"><textarea id="bulk_msg" rows="6" class="input">Alerte TINSFLASH - demande de vérification urgente.</textarea></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+    <button class="btn-ghost" onclick="closeBulk()">Annuler</button>
+    <button class="btn" onclick="sendBulkNotify()">Envoyer</button>
+  </div>
+</div></div>
+
+<footer>🛰️ TINSFLASH PRO+++ – Moteur IA J.E.A.N • Actualisation auto : 2 min</footer>
 
 <script>
-let map=L.map("map").setView([20,0],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6,minZoom:2}).addTo(map);
+/* ========= Utilities & State ========= */
+let map = L.map("map").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:8,minZoom:2}).addTo(map);
+let markers = [];
+let selectedAlert = null;
+const sources = ["/api/alerts","/api/alerts-detected","/api/alerts-primeur"];
 
-// === Chargement combiné des 3 sources ===
-async function loadAlerts(){
- try{
-  const [a1,a2,a3]=await Promise.all([
-    fetch("/api/alerts").then(r=>r.json()).catch(()=>[]),
-    fetch("/api/alerts-detected").then(r=>r.json()).catch(()=>[]),
-    fetch("/api/alerts-primeur").then(r=>r.json()).catch(()=>[])
-  ]);
-  const all=[...a1,...a2,...a3];
-  renderAlerts(all);
- }catch(e){console.warn("Erreur loadAlerts",e);}
+/* ========= Fetch + render ========= */
+async function refreshAll(){
+  try{
+    const results = await Promise.all(sources.map(u => fetch(u).then(r=>r.json()).catch(()=>[])));
+    const merged = [].concat(...results);
+    renderAlerts(merged);
+    appendLog("Refreshed alerts ("+merged.length+")");
+  }catch(e){appendLog("Erreur refreshAll: "+e.message);}
+}
+
+function clearMarkers(){
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
 }
 
 function renderAlerts(data){
- ["primeur","haut","moyen","bas"].forEach(id=>document.getElementById(id).innerHTML="");
- map.eachLayer(l=>{if(l instanceof L.CircleMarker)map.removeLayer(l);});
- let cP=0,cH=0,cM=0,cB=0;
+  // dedupe by id if possible
+  const byId = {};
+  (data||[]).forEach(a => {
+    const id = a._id || a.id || (a.uid || JSON.stringify([a.lat,a.lon,a.title]).slice(0,40));
+    byId[id] = a;
+  });
+  const arr = Object.values(byId);
 
- data.forEach(a=>{
-   const lat=parseFloat(a.lat||a.latitude),lon=parseFloat(a.lon||a.longitude);
-   if(!lat||!lon)return;
-   const conf=a.reliability||a.confidence||0;
-   const title=a.phenomenon||a.title||a.event||"Alerte";
-   const zone=a.zone||a.country||"Zone inconnue";
-   let color="gray",cat="bas";
-   if(a.isPrimeur||a.primeur){color="blue";cat="primeur";cP++;}
-   else if(conf>=0.9){color="green";cat="haut";cH++;}
-   else if(conf>=0.7){color="orange";cat="moyen";cM++;}
-   else{color="red";cat="bas";cB++;}
+  // counts
+  let cP=0,cH=0,cM=0,cB=0;
+  document.getElementById("alertList").innerHTML = "";
+  clearMarkers();
 
-   const html=`<div class="alert"><b>${title}</b><br>${zone} – ${(conf*100).toFixed(0)} %</div>`;
-   document.getElementById(cat).innerHTML+=html;
+  arr.forEach(a => {
+    const lat = parseFloat(a.lat || a.latitude || a.location?.lat);
+    const lon = parseFloat(a.lon || a.longitude || a.location?.lon);
+    if(!lat || !lon) return;
 
-   L.circleMarker([lat,lon],{radius:6,color,fillOpacity:0.6})
-    .addTo(map)
-    .bindPopup(`<b>${title}</b><br>${zone}<br>${(conf*100).toFixed(0)} %`);
- });
+    const conf = typeof a.reliability === "number" ? a.reliability : (a.confidence||0);
+    const title = a.title || a.event || a.phenomenon || "Alerte";
+    const zone = a.zone || a.country || a.region || "Zone inconnue";
+    const isPrimeur = !!(a.isPrimeur || a.primeur);
 
- document.getElementById("countPrimeur").textContent=cP?`(${cP})`:"";
- document.getElementById("countHaut").textContent=cH?`(${cH})`:"";
- document.getElementById("countMoyen").textContent=cM?`(${cM})`:"";
- document.getElementById("countBas").textContent=cB?`(${cB})`:"";
+    let color="gray", cat="low";
+    if(isPrimeur){ color="blue"; cat="primeur"; cP++; }
+    else if(conf>=0.9){ color="green"; cat="high"; cH++; }
+    else if(conf>=0.7){ color="orange"; cat="mid"; cM++; }
+    else { color="red"; cat="low"; cB++; }
+
+    // list item
+    const div = document.createElement("div");
+    div.className = "alert-item small";
+    div.innerHTML = `<div>
+        <div style="font-weight:700">${title}</div>
+        <div class="meta">${zone} · ${(conf*100).toFixed(0)}% · src: ${a.source||a._source||'tins'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <button class="btn-ghost" onclick='openModalFromItem(${JSON.stringify(idSafe(a))})'>Détails</button>
+      </div>`;
+    document.getElementById("alertList").appendChild(div);
+
+    // marker
+    const m = L.circleMarker([lat,lon],{radius:6,color,fillOpacity:0.7}).addTo(map)
+      .bindPopup(`<b>${title}</b><br>${zone}<br>${(conf*100).toFixed(0)}%`);
+    markers.push(m);
+  });
+
+  document.getElementById("pillPrimeur").textContent = `Primeur: ${cP}`;
+  document.getElementById("pillHigh").textContent = `>90%: ${cH}`;
+  document.getElementById("pillMid").textContent = `70–89%: ${cM}`;
+  document.getElementById("pillLow").textContent = `<70%: ${cB}`;
 }
 
-loadAlerts();
-setInterval(loadAlerts,120000);
+/* Helper to safely identify an alert item: returns id or a small descriptor */
+function idSafe(a){
+  return a._id || a.id || a.uid || (a.lat&&a.lon?`${a.lat}_${a.lon}_${(a.title||a.event||'x').slice(0,20)}`:JSON.stringify(a).slice(0,40));
+}
+
+/* open modal given object id (we will refetch single alert by id if server supports) */
+async function openModalFromItem(id){
+  // if id looks like an object-key style (contains _) try to find it in currently fetched items
+  // for simplicity we'll request from combined sources and find matching id/hash
+  try{
+    const results = await Promise.all(sources.map(u => fetch(u).then(r=>r.json()).catch(()=>[])));
+    const merged = [].concat(...results);
+    const found = merged.find(x => (x._id===id||x.id===id||idSafe(x)===id));
+    if(found) openModal(found);
+    else {
+      appendLog("Alerte introuvable localement, ouverture brut id.");
+      openModal({ _id: id, title: "Alerte (détails indisponibles)", lat:0, lon:0, reliability:0, note:"Détails non trouvés" });
+    }
+  }catch(e){appendLog("Erreur openModalFromItem: "+e.message);}
+}
+
+function openModal(obj){
+  selectedAlert = obj;
+  document.getElementById("m_title").textContent = obj.title || obj.event || obj.phenomenon || "Alerte";
+  document.getElementById("m_zone").textContent = (obj.zone || obj.country || obj.region || "") + (obj.issuedAt?(" • "+new Date(obj.issuedAt).toLocaleString()):"");
+  document.getElementById("m_body").innerHTML = `
+    <div><strong>Coordinates</strong> ${obj.lat||obj.latitude||''}, ${obj.lon||obj.longitude||''}</div>
+    <div style="margin-top:6px"><strong>Source</strong> ${obj.source||obj._source||'unknown'}</div>
+    <div style="margin-top:6px"><strong>Raw</strong> <pre style="white-space:pre-wrap;max-height:120px;overflow:auto;background:#06101a;padding:8px;border-radius:6px;color:#cfeeff;">${JSON.stringify(obj, null, 2)}</pre></div>
+  `;
+  document.getElementById("m_conf").textContent = "Confiance: " + ( (obj.reliability||obj.confidence||0) * 100 ).toFixed(0) + "%";
+  document.getElementById("m_ai").textContent = obj.aiNotes || obj.analysis || "Aucune note IA";
+  document.getElementById("op_note").value = "";
+  document.getElementById("modal").classList.add("open");
+}
+
+/* modal actions */
+function closeModal(){ document.getElementById("modal").classList.remove("open"); selectedAlert = null; }
+function openBulkForm(){ document.getElementById("modalBulk").classList.add("open"); }
+function closeBulk(){ document.getElementById("modalBulk").classList.remove("open"); }
+
+/* ========= Actions (calls to server endpoints) ========= */
+async function actionAlert(action){
+  if(!selectedAlert){ appendLog("Aucune alerte sélectionnée"); return; }
+  const body = {
+    id: selectedAlert._id || selectedAlert.id || idSafe(selectedAlert),
+    action,
+    note: document.getElementById("op_note").value || "",
+    operator: "admin", // could be improved with JWT user
+    ts: new Date().toISOString()
+  };
+  try{
+    appendLog(`Envoi action ${action} pour ${body.id}`);
+    const res = await fetch("/api/alerts-action", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+    const j = await res.json();
+    if(res.ok) {
+      appendLog("Action OK: " + (j.message||JSON.stringify(j)));
+      // refresh lists
+      await refreshAll();
+      closeModal();
+    } else {
+      appendLog("Action KO: " + (j.error||JSON.stringify(j)));
+    }
+  }catch(e){ appendLog("Erreur actionAlert: "+e.message); }
+}
+
+async function notifyInstitutions(){
+  if(!selectedAlert){ appendLog("Aucune alerte sélectionnée"); return; }
+  const payload = {
+    id: selectedAlert._id || idSafe(selectedAlert),
+    title: selectedAlert.title || selectedAlert.event,
+    zone: selectedAlert.zone || selectedAlert.country,
+    lat: selectedAlert.lat || selectedAlert.latitude,
+    lon: selectedAlert.lon || selectedAlert.longitude,
+    operatorNote: document.getElementById("op_note").value || ""
+  };
+  try{
+    appendLog("Notification institutions pour " + payload.id);
+    const r = await fetch("/api/alerts-notify", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+    const j = await r.json();
+    if(r.ok) appendLog("Notification envoyée: " + (j.message||"OK"));
+    else appendLog("Erreur notify: " + (j.error||JSON.stringify(j)));
+  }catch(e){ appendLog("Erreur notifyInstitutions: "+e.message); }
+}
+
+async function generatePDF(){
+  if(!selectedAlert){ appendLog("Aucune alerte sélectionnée"); return; }
+  const payload = { id: selectedAlert._id || idSafe(selectedAlert) };
+  try{
+    appendLog("Génération PDF pour " + payload.id);
+    const r = await fetch("/api/alerts-pdf", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+    if(!r.ok){ const t = await r.text(); appendLog("Erreur PDF: "+t); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `alerte_${payload.id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    appendLog("PDF téléchargé");
+  }catch(e){ appendLog("Erreur generatePDF: "+e.message); }
+}
+
+/* bulk notify */
+async function sendBulkNotify(){
+  const msg = document.getElementById("bulk_msg").value;
+  try{
+    appendLog("Envoi notification groupée");
+    const r = await fetch("/api/alerts-notify-bulk", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ message: msg })});
+    const j = await r.json();
+    if(r.ok) appendLog("Bulk notify OK: "+(j.message||"OK")); else appendLog("Bulk notify KO: "+(j.error||JSON.stringify(j)));
+    closeBulk();
+  }catch(e){ appendLog("Erreur sendBulkNotify: "+e.message); }
+}
+
+/* ask AI for review (simplified) */
+async function askAIReview(){
+  if(!selectedAlert) return appendLog("Aucune alerte");
+  try{
+    appendLog("Demande d'avis IA pour " + idSafe(selectedAlert));
+    const r = await fetch("/api/alerts-ai-review", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id: idSafe(selectedAlert) })});
+    const j = await r.json();
+    if(r.ok) {
+      appendLog("IA a répondu");
+      // show result if present
+      if(j.analysis){
+        document.getElementById("m_ai").textContent = j.analysis;
+      }
+    } else appendLog("AI review KO: "+(j.error||JSON.stringify(j)));
+  }catch(e){ appendLog("Erreur askAIReview: "+e.message); }
+}
+
+/* convenience wrapper used by one button */
+async function actionAlertWrapper(act){
+  if(act==='askAI') return askAIReview();
+  return actionAlert(act);
+}
+
+/* wrapper to map button which calls actionAlert('askAI') */
+window.actionAlert = actionAlertWrapper;
+
+/* ========= Logs SSE ========= */
+const evt = new EventSource("/api/logs");
+evt.onmessage = e => {
+  try{
+    const d = JSON.parse(e.data);
+    appendLog(d.message || e.data);
+  }catch{ appendLog(e.data); }
+};
+function appendLog(m){
+  const el = document.getElementById("logs");
+  const line = document.createElement("div");
+  line.textContent = `${new Date().toLocaleTimeString()} ${m}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ========= Startup ========= */
+refreshAll();
+setInterval(refreshAll, 120000); // 2 min
 </script>
 </body>
 </html>
