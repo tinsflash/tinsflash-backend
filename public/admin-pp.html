@@ -10,7 +10,10 @@
 <style>
 body{margin:0;font-family:"Segoe UI",system-ui;background:#0b1220;color:#e6f6ff}
 header{padding:12px;text-align:center;background:#08121d;color:#4fc3f7;font-weight:700;font-size:1.3em}
-nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:8px;background:#0d1624}
+nav.menu{display:flex;justify-content:center;flex-wrap:wrap;gap:14px;padding:10px;background:#0d1624;border-bottom:1px solid #1e293b}
+nav.menu a{color:#4fc3f7;text-decoration:none;font-weight:600}
+nav.menu a:hover{color:#fff;text-shadow:0 0 8px #4fc3f7}
+nav#controls{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:8px;background:#0d1624}
 button{background:#1b2b44;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
 button:hover{background:#4fc3f7;color:#0b1220}
 .cmd{font-size:12px;color:#8ab4f8;margin-top:4px;text-align:center}
@@ -31,6 +34,20 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 </script>
 
 <header>🛰️ TINSFLASH PRO+++ – Centrale IA J.E.A.N.</header>
+
+<!-- ===================== MENU CONNECTÉ ===================== -->
+<nav class="menu">
+<a href="/admin-pp.html">🧠 Console</a>
+<a href="/admin-alerts.html">🚨 Alertes</a>
+<a href="/admin-radar.html">🗺️ Radar</a>
+<a href="/admin-news.html">📰 News</a>
+<a href="/admin-chat.html">💬 Chat</a>
+<a href="/admin-local.html">📍 Local</a>
+<a href="/admin-users.html">👥 Utilisateurs</a>
+<a href="/provincenamur.html">🏛️ Province de Namur</a>
+<a href="/protest.html">📢 Protest</a>
+<a href="/">🏠 Index</a>
+</nav>
 
 <!-- ===================== BOUTONS DE RUN ===================== -->
 <nav id="controls">
