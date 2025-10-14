@@ -1,50 +1,77 @@
-// ====================================================================
-// FICHIER : /vision/captureSatelliteMulti.js
-// ====================================================================
-// 🛰️ VisionIA – Capture Satellite Multi-Sources & Multi-Couches
-// ====================================================================
+// ==========================================================
+// 🌍 /vision/captureSatelliteMulti.js (TINSFLASH PRO+++ v6.3)
+// ==========================================================
+// 🔸 Phase 1B – VisionIA Capture (multi-couches satellite)
+// 🔸 Objectif : capturer plusieurs couches météorologiques visuelles
+// 🔸 Pas d’IA ici — uniquement extraction physique d’images satellites
+// ==========================================================
 
 import axios from "axios";
 import fs from "fs";
 import path from "path";
+import { addVisionLog } from "./logVisionCapture.js";
+import { storeCapture } from "./storeCapture.js";
 
-export async function captureSatelliteMulti() {
-  const now = new Date().toISOString().replace(/[:.-]/g, "");
-  const dir = `/tmp/vision/${now.slice(0,8)}`;
-  fs.mkdirSync(dir, { recursive: true });
+// ==========================================================
+// 🔧 CONFIGURATION DES COUCHES & SOURCES
+// ==========================================================
+const layers = [
+  { key: "wind", name: "Vent", url: (lat, lon) => `https://tile.open-meteo.com/map/wind/4/${lat}/${lon}.png` },
+  { key: "temp", name: "Température", url: (lat, lon) => `https://tile.open-meteo.com/map/temp/4/${lat}/${lon}.png` },
+  { key: "rain", name: "Précipitations", url: (lat, lon) => `https://tile.open-meteo.com/map/precipitation/4/${lat}/${lon}.png` },
+  { key: "snow", name: "Neige", url: (lat, lon) => `https://tile.open-meteo.com/map/snow/4/${lat}/${lon}.png` },
+  { key: "cloud", name: "Nuages", url: (lat, lon) => `https://tile.open-meteo.com/map/cloud/4/${lat}/${lon}.png` },
+  { key: "accumulation", name: "Accumulation", url: (lat, lon) => `https://tile.open-meteo.com/map/accumulation/4/${lat}/${lon}.png` },
+  { key: "extreme", name: "Phénomènes extrêmes", url: (lat, lon) => `https://tile.open-meteo.com/map/extreme/4/${lat}/${lon}.png` },
+];
 
-  // --- Couches satellites globales ---
-  const satellites = [
-    { name: "EUMETSAT_IR", url: "https://eumetview.eumetsat.int/static-images/MSG/MSG_IR108E/WESTERNEUROPE/thumbnail.jpg" },
-    { name: "NASA_BLUE", url: "https://neo.gsfc.nasa.gov/archive/bluemarble/2025/thumbnail.jpg" },
-    { name: "GOES_EAST", url: "https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/eus/GEOCOLOR/latest.jpg" },
-    { name: "HIMAWARI", url: "https://rammb.cira.colostate.edu/ramsdis/online/images/himawari-8/full_disk_ahi_ir.jpg" },
-    { name: "METEOBLUE_WIND", url: "https://my.meteoblue.com/visimage/meteogram?apikey=demo" },
-  ];
+// Dossier de stockage local temporaire (avant envoi Mongo)
+const CAPTURE_DIR = path.join(process.cwd(), "data/vision_captures");
+if (!fs.existsSync(CAPTURE_DIR)) fs.mkdirSync(CAPTURE_DIR, { recursive: true });
 
-  // --- Couches physiques multi-variables ---
-  const layers = [
-    { name: "WIND", url: "https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/5/16/10.png" },
-    { name: "RAIN", url: "https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/5/17/10.png" },
-    { name: "SNOW", url: "https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/5/18/10.png" },
-    { name: "TEMP", url: "https://tile.open-meteo.com/v1/temperature/latest.png" },
-    { name: "STORM", url: "https://tile.open-meteo.com/v1/thunderstorm/latest.png" },
-  ];
-
-  const sources = [...satellites, ...layers];
+// ==========================================================
+// 🚀 CAPTURE MULTI-COUCHES
+// ==========================================================
+export async function captureSatelliteMulti(lat = 50.46, lon = 4.86, region = "Global") {
+  const timestamp = new Date().toISOString();
   const results = [];
 
-  for (const s of sources) {
+  await addVisionLog(`🎥 Lancement des captures multi-couches pour ${region}`, "info");
+
+  for (const layer of layers) {
     try {
-      const res = await axios.get(s.url, { responseType: "arraybuffer", timeout: 20000 });
-      const filePath = path.join(dir, `${s.name}_${now}.jpg`);
-      fs.writeFileSync(filePath, res.data);
-      results.push({ source: s.name, file: filePath, date: now });
-      console.log(`✅ Capture réussie : ${s.name}`);
-    } catch (e) {
-      console.error(`⚠️ Capture échouée : ${s.name}`);
+      const imageUrl = layer.url(lat, lon);
+      const filename = `${region}_${layer.key}_${timestamp.replace(/[:.]/g, "-")}.png`;
+      const filepath = path.join(CAPTURE_DIR, filename);
+
+      const response = await axios.get(imageUrl, { responseType: "arraybuffer", timeout: 15000 });
+      fs.writeFileSync(filepath, response.data);
+
+      const fileSize = fs.statSync(filepath).size;
+      if (fileSize < 5000) throw new Error("Image trop petite ou vide");
+
+      const captureData = {
+        region,
+        layer: layer.key,
+        source: imageUrl,
+        timestamp,
+        filePath: filepath,
+        size: fileSize,
+      };
+
+      await storeCapture(captureData);
+      await addVisionLog(`✅ Capture ${layer.name} réussie (${Math.round(fileSize / 1024)} Ko)`, "success");
+      results.push(captureData);
+    } catch (err) {
+      await addVisionLog(`⚠️ Échec capture ${layer.name} : ${err.message}`, "error");
     }
   }
 
+  await addVisionLog(`📸 ${results.length}/${layers.length} couches capturées pour ${region}`, "summary");
   return results;
 }
+
+// ==========================================================
+// 🧩 EXPORTS
+// ==========================================================
+export default { captureSatelliteMulti };
