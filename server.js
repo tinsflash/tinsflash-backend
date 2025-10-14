@@ -35,18 +35,6 @@ import { runAICompare } from "./services/runAICompare.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import { generateVideoNamur } from "./services/generateVideoNamur.js";
 import { getDetectedAlerts } from "./services/alertDetectedLogger.js";
-
-import {
-initEngineState,
-getEngineState,
-addEngineLog,
-addEngineError,
-stopExtraction,
-resetStopFlag,
-isExtractionStopped,
-setLastExtraction,
-} from "./services/engineState.js";
-
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import Alert from "./models/Alert.js";
