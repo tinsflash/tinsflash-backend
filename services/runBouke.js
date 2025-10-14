@@ -1,17 +1,11 @@
 // ==========================================================
-// 🎥 TINSFLASH – runBouke.js (Everest Protocol v3.97 PRO+++ REAL CONNECT)
-// Extraction locale complète – Province de Namur (Bouké TV)
+// 🎥 TINSFLASH – runBouke.js (Everest Protocol v4.0 PRO+++ REAL CONNECT)
+// Phase 1 uniquement : extraction locale + enregistrement Mongo
 // ==========================================================
 
-import fs from "fs";
-import path from "path";
 import { superForecast } from "./superForecast.js";
-import {
-  addEngineLog,
-  addEngineError,
-  updateEngineState,
-  setLastExtraction,
-} from "./engineState.js";
+import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
+import { saveExtractionToMongo } from "./saveExtractionToMongo.js";
 
 export async function runBouke() {
   try {
@@ -109,51 +103,26 @@ export async function runBouke() {
       { name: "Cerfontaine", lat: 50.18, lon: 4.46 },
       { name: "Gerpinnes", lat: 50.33, lon: 4.53 },
     ];
-
-    // ==========================================================
-    // 🚀 Lancement extraction via superForecast (phase1)
-    // ==========================================================
+// 🚀 Extraction pure (Phase 1)
     const result = await superForecast({ zones, runType: "Bouke-Namur", withAI: false });
 
-    // ==========================================================
-    // 💾 Sauvegarde locale — fichier /data/bouke.json (strict)
-    // ==========================================================
-    try {
-      const dataDir = path.join(process.cwd(), "data");
-      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-      const filePath = path.join(dataDir, "bouke.json");
-      fs.writeFileSync(filePath, JSON.stringify(result.phase1Results || result, null, 2), "utf8");
+    // 💾 Sauvegarde Mongo (Cloud)
+    const phase1Data = result.phase1Results || result;
+    await saveExtractionToMongo("Bouke-Namur", phase1Data);
 
-      // Enregistrer la dernière extraction pour que l'IA lise correctement
-      await setLastExtraction({
-        id: `bouke-${Date.now()}`,
-        zones: ["bouke"],
-        files: [filePath],
-        status: "done",
-      });
-
-      await addEngineLog(`💾 Données sauvegardées localement dans ${filePath}`, "info", "runBouke");
-    } catch (err) {
-      await addEngineError(`❌ Erreur écriture bouke.json : ${err.message}`, "runBouke");
-    }
-
-    // ==========================================================
-    // ✅ Mise à jour état moteur & logs finaux
-    // ==========================================================
+    // ✅ Mise à jour état moteur
     await updateEngineState("ok", {
       engineStatus: "RUN_OK",
       lastFilter: "Bouke-Namur",
       zonesCount: zones.length,
+      lastPhase: "phase1"
     });
 
-    await addEngineLog(`✅ runBouké terminé (${zones.length} zones locales)`, "success", "runBouke");
-    return result;
+    await addEngineLog(`✅ runBouké terminé – Phase 1 uniquement (${zones.length} zones locales)`, "success", "runBouke");
+    return phase1Data;
+
   } catch (err) {
     await addEngineError(`Erreur runBouké : ${err.message}`, "runBouke");
     return { error: err.message };
   }
 }
-
-// Export pour usage centralisé dans zonesCovered.js si besoin
-export const BOUKE_ZONES = [];
-export default { runBouke };
