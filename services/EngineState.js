@@ -1,234 +1,126 @@
 // ==========================================================
-// ⚙️ Gestion de l’état global du moteur TINSFLASH PRO+++
-// Version : Everest Protocol v4.2 — REAL GLOBAL CONNECT (Horodatage Multi-Zones)
-// 100 % réel, connecté et Render-compatible
+// 🧠 TINSFLASH – engineState.js (Everest Protocol v5.2 PRO+++)
+// ==========================================================
+// Gestion centralisée de l’état du moteur, des logs et des erreurs
 // ==========================================================
 
 import mongoose from "mongoose";
-import EventEmitter from "events";
 
-// ==========================================================
-// 🧩 Schémas MongoDB
-// ==========================================================
-const LogSchema = new mongoose.Schema({
-  module: { type: String, required: true },
-  level: {
-    type: String,
-    enum: ["info", "warn", "warning", "error", "success"],
-    default: "info",
-  },
+// ----------------------------------------------------------
+// 🗒️ Schéma des erreurs
+const ErrorSchema = new mongoose.Schema({
   message: { type: String, required: true },
+  module: { type: String, default: "core" },
   timestamp: { type: Date, default: Date.now },
 });
 
-const EngineStateSchema = new mongoose.Schema({
-  status: { type: String, default: "idle" }, // idle | running | ok | fail
-  lastRun: { type: Date, default: null },
-  checkup: { type: Object, default: {} },
-  errorList: { type: Array, default: [] },
-  alertsWorld: { type: Object, default: {} },
-  lastExtraction: { type: Object, default: {} },
-  extractionHistory: { type: Array, default: [] }, // 🧩 toutes les zones horodatées
+// ----------------------------------------------------------
+// 🧾 Schéma des logs du moteur
+const LogSchema = new mongoose.Schema({
+  message: { type: String, required: true },
+  module: { type: String, default: "core" },
+  // ✅ Enum enrichi pour supporter tous les types de logs (évite le bug “event non reconnu”)
+  level: {
+    type: String,
+    enum: ["info", "warn", "warning", "error", "success", "event", "system", "debug"],
+    default: "info",
+  },
+  timestamp: { type: Date, default: Date.now },
 });
 
-export const EngineState = mongoose.model("EngineState", EngineStateSchema);
-export const EngineLog = mongoose.model("EngineLog", LogSchema);
+// ----------------------------------------------------------
+// ⚙️ Schéma principal : état du moteur TINSFLASH
+const EngineStateSchema = new mongoose.Schema({
+  status: { type: String, default: "idle" }, // idle, running, ok, fail
+  lastRun: { type: Date, default: null },
+  engineStatus: { type: String, default: "IDLE" }, // IDLE, RUN_OK, FAIL, etc.
+  lastFilter: { type: String, default: null }, // dernier filtre ou région exécutée
+  zonesCount: { type: Number, default: 0 },
+  lastPhase: { type: String, default: "phase1" }, // phase actuelle ou dernière terminée
+  checkup: { type: Object, default: {} },
+  logs: { type: [LogSchema], default: [] },
+  errors: { type: [ErrorSchema], default: [] },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+// ----------------------------------------------------------
+// 📡 Création du modèle principal
+export const EngineState =
+  mongoose.models.EngineState || mongoose.model("EngineState", EngineStateSchema);
 
 // ==========================================================
-// 🔊 Event Emitter global (pour logs SSE temps réel)
+// 🧩 FONCTIONS DE GESTION DU MOTEUR
 // ==========================================================
-export const engineEvents = new EventEmitter();
-let externalLogStream = null;
-export function bindExternalLogStream(fn) {
-  externalLogStream = fn;
-}
 
-// ==========================================================
-// 🔧 Fonctions utilitaires — Logs, erreurs & statut moteur
-// ==========================================================
+// 📝 Ajouter un log moteur
 export async function addEngineLog(message, level = "info", module = "core") {
   try {
-    const log = new EngineLog({ message, level, module });
-    await log.save();
-    const payload = { message, level, module, timestamp: new Date() };
-    console.log(`🛰️ [${level.toUpperCase()}][${module}] ${message}`);
-    engineEvents.emit("log", payload);
-    if (externalLogStream) externalLogStream(`[${module}] ${message}`);
+    const state = await EngineState.findOne() || new EngineState();
+    state.logs.push({ message, level, module });
+    state.updatedAt = new Date();
+    await state.save();
+    console.log(`[LOG] ${level.toUpperCase()} – ${module}: ${message}`);
   } catch (err) {
-    console.error("❌ Erreur log:", err.message);
+    console.error("Erreur addEngineLog:", err.message);
   }
 }
 
+// ⚠️ Ajouter une erreur moteur
 export async function addEngineError(message, module = "core") {
   try {
-    const log = new EngineLog({ message, level: "error", module });
-    await log.save();
-    const payload = { message, level: "error", module, timestamp: new Date() };
-    console.error(`💥 [ERREUR][${module}] ${message}`);
-    engineEvents.emit("log", payload);
-    if (externalLogStream) externalLogStream(`❌ [${module}] ${message}`);
-  } catch (err) {
-    console.error("❌ Erreur enregistrement erreur:", err.message);
-  }
-}
-
-// ==========================================================
-// 🔁 Gestion de l’état moteur
-// ==========================================================
-export async function saveEngineState(data) {
-  try {
-    const state = await EngineState.findOneAndUpdate({}, data, { new: true, upsert: true });
-    return state;
-  } catch (err) {
-    await addEngineError(`Erreur saveEngineState: ${err.message}`, "core");
-  }
-}
-
-export async function updateEngineState(status, checkup = {}) {
-  try {
-    const state = await EngineState.findOneAndUpdate(
-      {},
-      { status, lastRun: new Date(), checkup },
-      { new: true, upsert: true }
-    );
-    await addEngineLog(`État moteur mis à jour : ${status}`, "info", "core");
-    return state;
-  } catch (err) {
-    await addEngineError(`Erreur updateEngineState: ${err.message}`, "core");
-  }
-}
-
-export async function getEngineState() {
-  try {
-    const state = await EngineState.findOne({});
-    return state || { status: "idle", lastRun: null, checkup: {}, errorList: [] };
-  } catch (err) {
-    await addEngineError(`Erreur getEngineState: ${err.message}`, "core");
-    return { status: "fail", lastRun: null, errorList: [] };
-  }
-}
-
-// ==========================================================
-// 🛑 Gestion du drapeau d’arrêt manuel
-// ==========================================================
-let extractionStopped = false;
-export function stopExtraction() {
-  extractionStopped = true;
-  const msg = "🛑 Extraction stoppée manuellement";
-  console.warn(msg);
-  engineEvents.emit("log", { message: msg, level: "warning", module: "core", timestamp: new Date() });
-  if (externalLogStream) externalLogStream(msg);
-}
-export function resetStopFlag() {
-  extractionStopped = false;
-  const msg = "✅ Flag stop extraction réinitialisé";
-  console.log(msg);
-  engineEvents.emit("log", { message: msg, level: "info", module: "core", timestamp: new Date() });
-  if (externalLogStream) externalLogStream(msg);
-}
-export function isExtractionStopped() {
-  return extractionStopped;
-}
-
-// ==========================================================
-// 🧠 Initialisation moteur
-// ==========================================================
-export async function initEngineState() {
-  const existing = await EngineState.findOne({});
-  if (!existing) {
-    await EngineState.create({
-      status: "idle",
-      lastRun: null,
-      checkup: { engineStatus: "init" },
-      errorList: [],
-      extractionHistory: [],
-    });
-    await addEngineLog("💡 État moteur initialisé", "info", "core");
-  }
-  await addEngineLog("🔋 Initialisation moteur TINSFLASH terminée", "info", "core");
-}
-
-// ==========================================================
-// 🧩 Gestion intelligente des extractions (horodatées)
-// ==========================================================
-export async function setLastExtraction({ id, zones = [], files = [], ts = new Date(), status = "done" }) {
-  try {
-    const state = (await EngineState.findOne({})) || new EngineState();
-    const zoneName = zones.join(", ") || "Zone inconnue";
-
-    // 🧮 Enregistre la nouvelle extraction
-    const record = {
-      id,
-      zones,
-      files,
-      ts: new Date(ts),
-      status,
-      timestamp: Date.now(),
-    };
-
-    // ❌ Supprime les anciennes pour ces zones
-    state.extractionHistory = (state.extractionHistory || []).filter(
-      (r) => !zones.some((z) => r.zones?.includes(z))
-    );
-
-    // ✅ Ajoute la nouvelle
-    state.extractionHistory.push(record);
-    state.lastExtraction = record;
-
+    const state = await EngineState.findOne() || new EngineState();
+    state.errors.push({ message, module });
+    state.status = "fail";
+    state.engineStatus = "FAIL";
+    state.updatedAt = new Date();
     await state.save();
-
-    await addEngineLog(
-      `🧾 Extraction ${zoneName} enregistrée (${status}) à ${new Date(ts).toLocaleTimeString()}`,
-      "info",
-      "extraction"
-    );
-    return state;
+    console.error(`[ERR] ${module}: ${message}`);
   } catch (err) {
-    await addEngineError(`Erreur setLastExtraction : ${err.message}`, "extraction");
+    console.error("Erreur addEngineError:", err.message);
   }
 }
 
-// ==========================================================
-// 🔍 Récupération des extractions récentes (<2h par défaut)
-// ==========================================================
-export async function getRecentExtractions(hours = 2) {
+// 🚀 Mise à jour du statut global
+export async function updateEngineState(status = "ok", extra = {}) {
   try {
-    const state = await EngineState.findOne({});
-    if (!state || !Array.isArray(state.extractionHistory)) return [];
-
-    const cutoff = Date.now() - hours * 60 * 60 * 1000;
-    const recent = state.extractionHistory.filter((r) => r.timestamp >= cutoff);
-
-    if (!recent.length) {
-      await addEngineLog(`⏳ Aucune extraction récente (<${hours}h) trouvée`, "warning", "extraction");
-    } else {
-      await addEngineLog(`📡 ${recent.length} extraction(s) récente(s) détectée(s)`, "info", "extraction");
-    }
-
-    return recent;
+    const state = await EngineState.findOne() || new EngineState();
+    state.status = status;
+    state.engineStatus = extra.engineStatus || state.engineStatus;
+    state.lastRun = new Date();
+    state.lastFilter = extra.lastFilter || state.lastFilter;
+    state.zonesCount = extra.zonesCount || state.zonesCount;
+    state.lastPhase = extra.lastPhase || state.lastPhase;
+    state.checkup = { ...state.checkup, ...extra };
+    state.updatedAt = new Date();
+    await state.save();
+    console.log(`[STATE] Moteur ${status.toUpperCase()} – zones: ${state.zonesCount}`);
   } catch (err) {
-    await addEngineError(`Erreur getRecentExtractions : ${err.message}`, "extraction");
-    return [];
+    console.error("Erreur updateEngineState:", err.message);
+  }
+}
+
+// 🧹 Purge automatique des anciens logs/erreurs (optionnel)
+export async function cleanupOldEngineData(hours = 72) {
+  try {
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const state = await EngineState.findOne();
+    if (!state) return;
+    state.logs = state.logs.filter((log) => log.timestamp > cutoff);
+    state.errors = state.errors.filter((err) => err.timestamp > cutoff);
+    await state.save();
+    console.log(`[CLEANUP] Logs/erreurs > ${hours}h purgés.`);
+  } catch (err) {
+    console.error("Erreur cleanupOldEngineData:", err.message);
   }
 }
 
 // ==========================================================
-// 📤 Exports
+// ✅ EXPORTS FINAUX
 // ==========================================================
 export default {
+  EngineState,
   addEngineLog,
   addEngineError,
   updateEngineState,
-  saveEngineState,
-  getEngineState,
-  stopExtraction,
-  resetStopFlag,
-  isExtractionStopped,
-  initEngineState,
-  setLastExtraction,
-  getRecentExtractions,
-  EngineState,
-  EngineLog,
-  engineEvents,
-  bindExternalLogStream,
+  cleanupOldEngineData,
 };
