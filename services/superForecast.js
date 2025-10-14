@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.1 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 2 : IA J.E.A.N. optionnelle (fusion, pondération, alertes)
@@ -44,6 +44,10 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       {
         name: "ICON DWD",
         url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+      },
+      {
+        name: "NASA POWER",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
       },
     ];
 
