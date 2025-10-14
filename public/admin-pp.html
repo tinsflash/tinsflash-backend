@@ -70,21 +70,20 @@ if(!sessionStorage.getItem("tinsflashPIN")){
   <div><button onclick="run('global-usa')">🇺🇸 USA</button></div>
   <div><button onclick="run('global-canada')">🇨🇦 Canada</button></div>
   <div><button onclick="run('caribbean')">🏝️ Caraïbes</button></div>
-
-  <!-- Afrique centralisée -->
   <div><button onclick="run('global-afrique')">🌍 Afrique (centralisée)</button></div>
-
-  <!-- Asie -->
   <div><button onclick="run('asia-est')">🌏 Asie Est</button></div>
   <div><button onclick="run('asia-sud')">🌏 Asie Sud</button></div>
-
-  <!-- Autres zones -->
   <div><button onclick="run('oceanie')">🌊 Océanie</button></div>
   <div><button onclick="run('ameriquesud')">🌎 Amérique Sud</button></div>
-
-  <!-- Local -->
   <div><button onclick="run('belgique')">🇧🇪 Belgique</button></div>
   <div><button onclick="run('bouke')">📺 Bouké (Namur)</button></div>
+</div>
+
+<!-- 🛰️ PHASE 1B – Vision Satellitaire IA -->
+<div class="phaseTitle">PHASE 1B – Vision Satellitaire IA (J.E.A.N.)</div>
+<div class="status-grid">
+  <div><button onclick="runVision()">🛰️ Captures multi-couches (vision satellite)</button></div>
+  <div><button onclick="cleanupOldCaptures()">🧹 Nettoyer anciennes captures</button></div>
 </div>
 
 <!-- PHASE 2 -->
@@ -138,7 +137,87 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 </main>
 
 <script>
-// (Le reste du JS reste identique à ta version actuelle)
+const logs=document.getElementById("logs");
+function addLog(m){const l=`${new Date().toLocaleTimeString()} ${m}`;logs.textContent+="\n"+l;logs.scrollTop=logs.scrollHeight;}
+function setLight(id,s){const e=document.getElementById(id);if(e)e.className="light "+s;}
+
+// ===============================
+// PHASE 1 – Extraction
+// ===============================
+async function run(z){
+ event.target.classList.add("btn-active");
+ addLog(`▶️ run-${z}`);
+ try{
+  const r=await fetch(`/api/run-${z}`,{method:"POST"});
+  const j=await r.json();
+  if(j.success){addLog(`✅ ${z} OK`);setLight("lightEngine","ok");}
+  else{addLog(`⚠️ ${z}: ${j.error}`);setLight("lightEngine","warn");}
+ }catch(e){
+  addLog(`❌ ${z}: ${e.message}`);setLight("lightEngine","err");
+ }
+ event.target.classList.remove("btn-active");
+ checkStatus();
+}
+
+// ===============================
+// 🛰️ PHASE 1B – Vision Satellitaire IA J.E.A.N.
+// ===============================
+async function runVision(){
+ event.target.classList.add("btn-active");
+ addLog("🛰️ Lancement Vision Satellitaire IA...");
+ try{
+  const r=await fetch("/api/capture-satellite",{method:"POST"});
+  const j=await r.json();
+  if(j.success){
+   addLog("✅ Captures multi-couches terminées ("+j.count+" images)");
+   setLight("lightEngine","ok");
+  }else{
+   addLog("⚠️ Erreur vision satellite : "+j.error);
+   setLight("lightEngine","warn");
+  }
+ }catch(e){
+  addLog("❌ Vision Satellitaire IA : "+e.message);
+  setLight("lightEngine","err");
+ }
+ event.target.classList.remove("btn-active");
+ checkStatus();
+}
+
+async function cleanupOldCaptures(){
+ addLog("🧹 Nettoyage anciennes captures...");
+ try{
+  const r=await fetch("/api/cleanup-captures",{method:"POST"});
+  const j=await r.json();
+  if(j.success)addLog("✅ Nettoyage terminé ("+j.deleted+" fichiers)");
+  else addLog("⚠️ Nettoyage : "+j.error);
+ }catch(e){
+  addLog("❌ Nettoyage captures : "+e.message);
+ }
+}
+
+// ===============================
+// PHASES 2–5 et Vidéo (inchangées)
+// ===============================
+async function runAI(){try{const r=await fetch("/api/runAI",{method:"POST"});if(r.ok){addLog("🧠 IA J.E.A.N. OK");setLight("lightIA","ok");}else addLog("⚠️ Erreur IA J.E.A.N.");}catch(e){addLog("❌ IA J.E.A.N.: "+e.message);}}
+async function runAIExternal(){try{addLog("🧩 IA externes...");const r=await fetch("/api/runAIExternal",{method:"POST"});const j=await r.json();if(j.success){addLog("✅ IA externes OK");setLight("lightIAext","ok");}else{addLog("⚠️ IA externes: "+j.error);setLight("lightIAext","warn");}}catch(e){addLog("❌ IA externes: "+e.message);setLight("lightIAext","err");}}
+async function runAICompare(){try{addLog("⚖️ Comparaison IA...");const r=await fetch("/api/runAICompare",{method:"POST"});const j=await r.json();if(j.success){addLog("✅ Comparaison terminée: "+(j.result?.summary||"OK"));setLight("lightIAext","ok");}else{addLog("⚠️ Comparaison: "+j.error);setLight("lightIAext","warn");}}catch(e){addLog("❌ Comparaison: "+e.message);setLight("lightIAext","err");}}
+async function runAlerts(){try{const r=await fetch("/api/runWorldAlerts",{method:"POST"});if(r.ok){addLog("🚨 Fusion alertes OK");setLight("lightAlerts","ok");}else addLog("⚠️ Erreur fusion alertes");}catch(e){addLog("❌ Alertes: "+e.message);}}
+async function generateVideoNamur(){try{addLog("🎬 Vidéo IA Namur...");const r=await fetch("/api/generateNamurVideo",{method:"POST"});const j=await r.json();if(j.success)addLog("✅ Vidéo générée.");else addLog("⚠️ Vidéo: "+j.error);}catch(e){addLog("❌ Vidéo: "+e.message);}}
+async function checkStatus(){try{const r=await fetch("/api/status");const s=await r.json();addLog("ℹ️ État: "+JSON.stringify(s));setLight("lightEngine",s.status==="RUN_OK"?"ok":"warn");setLight("lightDB",s.db==="connected"?"ok":"err");if(s.checkup?.iaActive)setLight("lightIA","ok");if(s.checkup?.alerts)setLight("lightAlerts","ok");}catch(e){addLog("❌ Status: "+e.message);}}
+
+// ===============================
+// Logs temps réel et cartes
+// ===============================
+const evt=new EventSource("/api/logs");
+evt.onmessage=e=>{try{const l=JSON.parse(e.data);addLog(l.message||e.data);}catch{addLog(e.data);}};
+
+const mapF=L.map("mapForecast").setView([50,4],6);
+const mapA=L.map("mapAlerts").setView([20,0],2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapF);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapA);
+async function loadForecasts(){try{const r=await fetch("/api/forecast?lat=50&lon=4");const d=await r.json();L.marker([d.lat||50,d.lon||4]).addTo(mapF).bindPopup(`${d.temperature||"--"}°C<br>${d.condition||""}`);}catch(e){addLog("⚠️ Forecast: "+e.message);}}
+async function loadAlerts(){try{const r=await fetch("/api/alerts");const a=await r.json();a.forEach(x=>{if(x.lat&&x.lon)L.circle([x.lat,x.lon],{radius:60000,color:"red"}).addTo(mapA).bindPopup(`<b>${x.title||"Alerte"}</b><br>${x.zone||""}`);});}catch(e){addLog("⚠️ Alerts: "+e.message);}}
+loadForecasts();loadAlerts();
 </script>
 </body>
 </html>
