@@ -27,7 +27,6 @@ await initZones();
 // ==========================================================
 // 🧩 IMPORTS INTERNES
 // ==========================================================
-
 import { runGlobal } from "./services/runGlobal.js";
 import { runBouke } from "./services/runBouke.js";
 import { runBelgique } from "./services/runBelgique.js";
@@ -306,6 +305,24 @@ app.get("/api/status", async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ==========================================================
+// 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
+// ==========================================================
+const publicPath = path.join(__dirname, "public");
+app.use(express.static(publicPath));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(publicPath, "index.html"));
+});
+
+app.get("/admin-pp.html", (req, res) => {
+  res.sendFile(path.join(publicPath, "admin-pp.html"));
+});
+
+app.get("/admin-alerts.html", (req, res) => {
+  res.sendFile(path.join(publicPath, "admin-alerts.html"));
 });
 
 // ==========================================================
