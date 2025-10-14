@@ -44,9 +44,6 @@ import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
 import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬 Automatisation Namur
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 
-// ✅ AJOUT : router actions alertes (formulaire/notifications/IA review/PDF)
-import alertsActionsRouter from "./services/alertsActions.js";
-
 import {
   initEngineState,
   getEngineState,
@@ -174,23 +171,69 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
 // ==========================================================
 app.get("/api/forecast", async (req, res) => {
   try {
-    const lat = parseFloat(req.query.lat || 50);
-    const lon = parseFloat(req.query.lon || 4);
-    const temperature = 17.2;
-    const humidity = 62;
-    const wind = 9;
+    const lat = parseFloat(req.query.lat);
+    const lon = parseFloat(req.query.lon);
+    const qLat = isFinite(lat) ? lat : 50.45;
+    const qLon = isFinite(lon) ? lon : 4.77;
+
+    const col = mongoose.connection.db.collection("forecasts_ai_points");
+    const latest = await col.find({}).sort({ timestamp: -1 }).limit(500).toArray();
+
+    if (!latest || latest.length === 0) {
+      return res.json({
+        lat: qLat,
+        lon: qLon,
+        temperature: 17.2,
+        humidity: 62,
+        wind: 9,
+        condition: "Ciel dégagé et temps lumineux sur la région.",
+        updated: new Date(),
+        source: "TINSFLASH Engine – IA J.E.A.N. (fallback)",
+        reliability: 0,
+        reliability_pct: 0,
+      });
+    }
+
+    const R = 6371e3;
+    const toRad = (v) => (v * Math.PI) / 180;
+    const dist = (aLat, aLon, bLat, bLon) => {
+      const φ1 = toRad(aLat), φ2 = toRad(bLat);
+      const Δφ = toRad(bLat - aLat);
+      const Δλ = toRad(bLon - aLon);
+      const s = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(s));
+    };
+
+    let best = latest[0];
+    let bestD = dist(qLat, qLon, best.lat, best.lon);
+    for (let i = 1; i < latest.length; i++) {
+      const d = dist(qLat, qLon, latest[i].lat, latest[i].lon);
+      if (d < bestD) { best = latest[i]; bestD = d; }
+    }
+
+    const r = typeof best.reliability === "number" ? best.reliability : 0;
+    const reliability_pct = r <= 1 ? Math.round(r * 100) : Math.round(r);
+
     res.json({
-      lat,
-      lon,
-      temperature,
-      humidity,
-      wind,
-      condition: "Ciel dégagé et temps lumineux sur la région.",
-      updated: new Date(),
-      source: "TINSFLASH Engine – IA J.E.A.N.",
+      lat: qLat,
+      lon: qLon,
+      nearestPoint: { zone: best.zone, country: best.country, lat: best.lat, lon: best.lon, distance_m: Math.round(bestD) },
+      temperature: best.temperature,
+      temperature_min: best.temperature_min ?? null,
+      temperature_max: best.temperature_max ?? null,
+      humidity: best.humidity ?? null,
+      wind: best.wind,
+      precipitation: best.precipitation,
+      sources: best.sources,
+      localAdjust: best.localAdjust,
+      condition: undefined,
+      updated: best.timestamp || new Date(),
+      source: "TINSFLASH Engine – IA J.E.A.N. (forecasts_ai_points)",
+      reliability: r,
+      reliability_pct,
     });
   } catch (e) {
-    await addEngineError("Erreur /api/forecast: " + e.message, "forecast");
+    await addEngineError("Erreur /api/forecast (IA): " + e.message, "forecast");
     res.status(500).json({ error: e.message });
   }
 });
@@ -278,9 +321,6 @@ app.get("/api/alerts-detected", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-
-// ✅ AJOUT : montage du router d’actions alertes (formulaire/notify/IA/PDF)
-app.use("/api", alertsActionsRouter);
 
 // ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
