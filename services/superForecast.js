@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.5 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.6 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 1.5 : HRRR (USA only, via Microsoft Planetary Computer)
@@ -13,7 +13,7 @@ import { applyLocalFactors } from "./localFactors.js";
 import { runAIAnalysis } from "./aiAnalysis.js";
 import { runWorldAlerts } from "./runWorldAlerts.js";
 import { autoCompareAfterRun } from "./compareExternalIA.js";
-import { fetchHRRR } from "./hrrrAdapter.js"; // ✅ nouveau
+import { fetchHRRR } from "./hrrrAdapter.js";
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -38,6 +38,11 @@ async function mergeMultiModels(lat, lon, country = "EU") {
       {
         name: "ECMWF ERA5",
         url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
+      },
+      // ✅ NOUVEAU : ECMWF Open-Meteo
+      {
+        name: "ECMWF Open-Meteo",
+        url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
       },
       {
         name: "AROME MeteoFrance",
