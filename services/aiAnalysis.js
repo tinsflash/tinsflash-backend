@@ -1,6 +1,6 @@
 // ==========================================================
 // 🤖 TINSFLASH – aiAnalysis.js
-// v5.10 REAL GLOBAL CONNECT – PHASE 2 FINALE (recent+safe)
+// v5.11 REAL GLOBAL CONNECT + VISUAL PHASE 1B
 // ==========================================================
 // IA J.E.A.N. – Intelligence Atmosphérique interne
 // Mission : produire des prévisions hyper-locales et globales
@@ -16,9 +16,12 @@ import { evaluatePhenomena } from "./phenomena/evaluate.js";
 import { analyzeRain } from "./rainService.js";
 import { analyzeSnow } from "./snowService.js";
 import { analyzeWind } from "./windService.js";
+import { logDetectedAlert } from "./alertDetectedLogger.js";
+import { logPrimeurAlert } from "./alertPrimeurLogger.js";
+import { getThresholds } from "../config/alertThresholds.js";
 
 // ==========================================================
-// 🧮 Facteurs physiques et environnementaux
+// ⚙️ Facteurs physiques et environnementaux
 // ==========================================================
 function computeReliefFactor(lat, lon, altitude = 0) {
   const reliefImpact = Math.min(1.3, 1 + altitude / 3000);
@@ -36,36 +39,25 @@ function computeClimateFactor(lat) {
   if (lat < 40 && lat > -40) return 1.1;
   return 1.0;
 }
-function safeAvg(arr) {
-  if (!arr || !arr.length) return null;
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
+const safeAvg = (arr) => (arr?.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
 
 // ==========================================================
 // 🧠 IA J.E.A.N. – Phase 2 : Analyse interne réelle mondiale
 // ==========================================================
 export async function runAIAnalysis() {
   try {
-    await addEngineLog("🧠 Phase 2 – Démarrage IA J.E.A.N. interne (Global recent+safe)", "info", "IA.JEAN");
-    await addEngineLog("🌍 IA J.E.A.N. initialisée – mission humanitaire mondiale activée", "info", "IA.JEAN");
+    await addEngineLog("🧠 Phase 2 – IA J.E.A.N. activée (analyse réelle mondiale)", "info", "IA.JEAN");
 
-    // =======================================================
-    // 🧭 DIRECTIVE COGNITIVE MONDIALE
-    // =======================================================
     const DIRECTIVE =
-      "Tu es J.E.A.N., météorologue, climatologue, physicien et mathématicien de niveau mondial. " +
-      "Ta mission : produire des prévisions locales et globales ultra-précises, détecter les anomalies " +
-      "(tempêtes, ouragans, inondations, orages violents, crues, vagues de chaleur ou de froid), " +
-      "anticiper les risques et sauver des vies. Tu analyses toutes les extractions récentes Phase 1 " +
-      "provenant de toutes les zones (Europe, Afrique, Amériques, Asie, Océanie, USA), " +
-      "tu croises les facteurs environnementaux (relief, climat, altitude, proximité océans et rivières), " +
-      "tu consolides avec les stations météo locales, et tu évalues la stabilité atmosphérique. " +
-      "Tu produis une synthèse mondiale fiable et explicative.";
-
-    await addEngineLog("🧭 Directive J.E.A.N. mondiale activée – analyse interprétative complète", "info", "IA.JEAN");
+      "Tu es J.E.A.N., météorologue, climatologue, physicien et mathématicien de renommée mondiale. " +
+      "Ta mission est d'analyser les extractions récentes Phase 1 (modèles physiques) et les captures satellites Phase 1B. " +
+      "Tu détectes les anomalies météorologiques (vent, pluie, neige, verglas, chaleur, orages, crues, submersions, etc.), " +
+      "en tenant compte du relief, de l'altitude, du climat, de la proximité des mers et rivières. " +
+      "Tu compares les résultats avec les stations météo locales et les sources officielles, " +
+      "et tu produis des alertes précises, fiables et, si possible, avant les autres pour sauver des vies.";
 
     // =======================================================
-    // 🔎 Récupération automatique des extractions récentes (<2h)
+    // 🔎 Récupération des extractions (<2 h)
     // =======================================================
     const recentExtractions = await getRecentExtractions(2);
     let files = [];
@@ -73,21 +65,21 @@ export async function runAIAnalysis() {
 
     const dataDir = path.join(process.cwd(), "data");
     if (fs.existsSync(dataDir)) {
-      const all = fs.readdirSync(dataDir).filter(f => f.endsWith(".json")).map(f => path.join(dataDir, f));
+      const all = fs.readdirSync(dataDir).filter((f) => f.endsWith(".json")).map((f) => path.join(dataDir, f));
       for (const f of all) if (!files.includes(f)) files.push(f);
     }
 
-    await addEngineLog(`🌐 ${files.length} fichier(s) détecté(s) pour analyse`, "info", "IA.JEAN");
-
     if (!files.length) {
-      await addEngineError("Aucune extraction récente détectée (<2h)", "IA.JEAN");
-      return { indiceGlobal: 0, synthese: "Aucune donnée récente trouvée" };
+      await addEngineError("Aucune extraction récente trouvée", "IA.JEAN");
+      return { indiceGlobal: 0, synthese: "Aucune donnée récente disponible" };
     }
 
+    await addEngineLog(`🌐 ${files.length} fichiers détectés pour analyse IA.J.E.A.N.`, "info", "IA.JEAN");
+
     // =======================================================
-    // 📦 Lecture stricte des extractions
+    // 📦 Lecture stricte
     // =======================================================
-    let results = [];
+    const results = [];
     for (const filePath of files) {
       try {
         const fullPath = path.resolve(filePath);
@@ -105,43 +97,40 @@ export async function runAIAnalysis() {
     }
 
     if (!results.length) {
-      await addEngineError("Aucune donnée valide trouvée (toutes zones)", "IA.JEAN");
-      return { indiceGlobal: 0, synthese: "Aucune donnée exploitable" };
+      await addEngineError("Aucune donnée exploitable trouvée", "IA.JEAN");
+      return { indiceGlobal: 0, synthese: "Données invalides ou incomplètes" };
     }
 
     // =======================================================
-    // 🔍 Analyse météorologique mondiale
+    // 🔬 Analyse globale par point
     // =======================================================
+    const thresholds = getThresholds();
     const analysed = [];
+
     for (const r of results) {
       const lat = Number(r.lat ?? r.latitude ?? 0);
       const lon = Number(r.lon ?? r.longitude ?? 0);
       const altitude = Number(r.altitude ?? 150);
-      const freshnessScore = Number(r.freshnessScore ?? 100);
       const country = r.country || "Unknown";
-
       const relief = computeReliefFactor(lat, lon, altitude);
       const hydro = computeHydroFactor(lat, lon);
       const climate = computeClimateFactor(lat);
 
-      // 🌡️ Stations locales
+      // === STATIONS LOCALES ===
       let stationsSummary = null;
       try {
-        const stationRes = await fetchStationData(lat, lon, country, r.region || "");
-        if (stationRes?.data) {
+        const s = await fetchStationData(lat, lon, country, r.region || "");
+        if (s?.data) {
           const temps = [], hums = [], winds = [], press = [];
-          const pushIf = (val, arr) => typeof val === "number" && !isNaN(val) && arr.push(val);
-          const entries = Array.isArray(stationRes.data) ? stationRes.data : [stationRes.data];
+          const pushIf = (v, arr) => typeof v === "number" && !isNaN(v) && arr.push(v);
+          const entries = Array.isArray(s.data) ? s.data : [s.data];
           for (const e of entries) {
-            if (!e) continue;
-            pushIf(e.temperature_2m ?? e.temp ?? e.temperature, temps);
+            pushIf(e.temperature_2m ?? e.temp, temps);
             pushIf(e.relative_humidity_2m ?? e.humidity, hums);
             pushIf(e.wind_speed_10m ?? e.wind_speed, winds);
             pushIf(e.pressure_msl ?? e.pressure, press);
           }
           stationsSummary = {
-            sourcesOK: stationRes.summary?.sourcesOK || [],
-            sourcesFail: stationRes.summary?.sourcesFail || [],
             tempStation: safeAvg(temps),
             humidityStation: safeAvg(hums),
             windStation: safeAvg(winds),
@@ -149,47 +138,55 @@ export async function runAIAnalysis() {
           };
         }
       } catch (err) {
-        await addEngineLog(`⚠️ Station error ${country} (${lat},${lon}): ${err.message}`, "warning", "IA.JEAN");
+        await addEngineLog(`⚠️ Station KO ${country}: ${err.message}`, "warn", "IA.JEAN");
       }
 
-      // 🌧️ Pluie, neige, vent
+      // === SERVICES LOCAUX ===
       let rain = null, snow = null, wind = null;
       try {
         rain = await analyzeRain(lat, lon);
         snow = await analyzeSnow(lat, lon);
         wind = await analyzeWind(lat, lon);
       } catch (err) {
-        await addEngineLog(`⚠️ Données météo additionnelles KO : ${err.message}`, "warning", "IA.JEAN");
+        await addEngineLog(`⚠️ Analyse additionnelle KO : ${err.message}`, "warn", "IA.JEAN");
       }
 
-      // ⚡ Phénomènes
+      // === PHÉNOMÈNES ===
       let phenomena = null;
       try {
-        if (typeof evaluatePhenomena === "function") {
-          phenomena = evaluatePhenomena({
-            lat, lon, altitude,
-            base: r,
-            rain, snow, wind,
-            stations: stationsSummary,
-            factors: { relief, hydro, climate, freshnessScore },
-          });
-        }
+        phenomena = evaluatePhenomena({
+          lat, lon, altitude,
+          base: r,
+          rain, snow, wind,
+          stations: stationsSummary,
+          factors: { relief, hydro, climate },
+          thresholds,
+        });
       } catch (err) {
-        await addEngineLog(`⚠️ Erreur phenomena: ${err.message}`, "warning", "IA.JEAN");
+        await addEngineLog(`⚠️ Phénomène erreur : ${err.message}`, "warn", "IA.JEAN");
       }
 
-      // 📈 Indice local
+      // === INDICE LOCAL ===
       const stationBoost = stationsSummary?.tempStation != null ? 1.05 : 1.0;
-      const indiceLocal = Math.round(relief * hydro * climate * (freshnessScore / 100) * stationBoost * 100) / 100;
+      const indiceLocal = Math.round(relief * hydro * climate * stationBoost * 100) / 100;
       const condition =
-        indiceLocal > 115 ? "Atmosphère instable – risque d’averses ou vent fort"
-        : indiceLocal > 100 ? "Ciel variable – humidité modérée"
-        : "Conditions calmes et stables";
+        indiceLocal > 115 ? "Atmosphère instable" :
+        indiceLocal > 100 ? "Ciel variable" :
+        "Conditions calmes";
+
+      // === VISUAL PHASE 1B ===
+      let visualEvidence = false;
+      try {
+        const imgDir = path.join(dataDir, "vision");
+        if (fs.existsSync(imgDir)) {
+          const imgs = fs.readdirSync(imgDir).filter(f => f.includes(`${country}`) || f.includes(`${r.region}`));
+          visualEvidence = imgs.length > 0;
+        }
+      } catch { visualEvidence = false; }
 
       analysed.push({
         ...r,
         country,
-        altitude,
         reliefFactor: relief,
         hydroFactor: hydro,
         climateFactor: climate,
@@ -198,35 +195,62 @@ export async function runAIAnalysis() {
         phenomena,
         indiceLocal,
         condition,
+        visualEvidence,
       });
+
+      // === ALERTES ===
+      if (phenomena?.alerts?.length) {
+        for (const a of phenomena.alerts) {
+          await logDetectedAlert({
+            phenomenon: a.type,
+            zone: r.region || country,
+            country,
+            lat, lon,
+            alertLevel: a.level,
+            confidence: a.confidence ?? 1.0,
+            visualEvidence,
+            comparedToExternal: true,
+            primeur: a.primeur ?? false,
+            details: a,
+          });
+
+          if (a.primeur)
+            await logPrimeurAlert({
+              phenomenon: a.type,
+              zone: r.region || country,
+              tinsflashAlertLevel: a.level,
+              externalComparisons: a.externalComparisons || [],
+            });
+        }
+      }
     }
 
     // =======================================================
-    // 🧮 Synthèse mondiale
+    // 📊 SYNTHÈSE MONDIALE
     // =======================================================
     const moy = analysed.reduce((a, x) => a + x.indiceLocal, 0) / analysed.length;
     const variance = analysed.reduce((a, x) => a + Math.pow(x.indiceLocal - moy, 2), 0) / analysed.length;
     const indiceGlobal = Math.max(0, Math.min(100, Math.round((100 - variance) * 0.95)));
 
     const synthese =
-      indiceGlobal > 90 ? "Atmosphère mondiale stable et prévisible"
-      : indiceGlobal > 70 ? "Variabilité régionale modérée – surveillance requise"
-      : indiceGlobal > 50 ? "Anomalies détectées sur plusieurs zones"
-      : "Instabilité globale – déclenchement d’alertes recommandées";
+      indiceGlobal > 90 ? "Atmosphère mondiale stable" :
+      indiceGlobal > 70 ? "Variabilité régionale modérée" :
+      indiceGlobal > 50 ? "Anomalies régionales multiples" :
+      "Instabilité globale – déclenchement d’alertes recommandé";
 
-    await addEngineLog(`📊 IA J.E.A.N. – Indice global ${indiceGlobal}% (${synthese})`, "success", "IA.JEAN");
+    await addEngineLog(`📈 IA.J.E.A.N. Indice global ${indiceGlobal}% (${synthese})`, "success", "IA.JEAN");
 
     // =======================================================
-    // 💾 Sauvegarde mondiale
+    // 💾 SAUVEGARDE
     // =======================================================
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     const outFile = path.join(dataDir, "jean_analysis_global.json");
     fs.writeFileSync(outFile, JSON.stringify(analysed, null, 2), "utf8");
-    await addEngineLog(`💾 Résultats IA J.E.A.N. enregistrés dans ${outFile}`, "info", "IA.JEAN");
 
+    await addEngineLog(`💾 Résultats IA.J.E.A.N. sauvegardés → ${outFile}`, "info", "IA.JEAN");
     return { indiceGlobal, synthese, count: analysed.length, file: outFile };
   } catch (e) {
-    await addEngineError("Erreur IA J.E.A.N. (Globale): " + e.message, "IA.JEAN");
+    await addEngineError("Erreur IA.J.E.A.N. globale : " + e.message, "IA.JEAN");
     return { error: e.message };
   }
 }
