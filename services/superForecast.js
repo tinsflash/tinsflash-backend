@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.1 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.2 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 2 : IA J.E.A.N. optionnelle (fusion, pondération, alertes)
@@ -49,13 +49,27 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         name: "NASA POWER",
         url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
       },
+      // ✅ AJOUT VALIDÉ : Copernicus ERA5-Land (Archive Open-Meteo)
+      {
+        name: "Copernicus ERA5-Land",
+        url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
+      },
     ];
 
     // Exécution séquentielle avec tolérance d’erreur
     for (const m of models) {
       try {
         const r = await axios.get(m.url, { timeout: 15000 });
-        const d = r.data?.current || r.data?.parameters || {};
+        const d =
+          r.data?.current ||
+          r.data?.parameters ||
+          (r.data?.hourly
+            ? {
+                temperature_2m: r.data.hourly.temperature_2m?.slice(-1)[0],
+                precipitation: r.data.hourly.precipitation?.slice(-1)[0],
+                wind_speed_10m: r.data.hourly.wind_speed_10m?.slice(-1)[0],
+              }
+            : {});
         const T = d.temperature_2m ?? d.T2M ?? null;
         const P = d.precipitation ?? d.PRECTOTCORR ?? 0;
         const W = d.wind_speed_10m ?? d.WS10M ?? null;
