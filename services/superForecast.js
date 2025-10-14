@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.3 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.4 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 2 : IA J.E.A.N. optionnelle (fusion, pondération, alertes)
@@ -53,17 +53,25 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         name: "Copernicus ERA5-Land",
         url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
       },
-      // ✅ AJOUT VALIDÉ : Open-Meteo Forecast (Global)
       {
         name: "Open-Meteo Forecast",
         url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+      },
+      // ✅ AJOUT VALIDÉ : MET Norway – LocationForecast 2.0
+      {
+        name: "MET Norway – LocationForecast",
+        url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
+        headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0" },
       },
     ];
 
     // Exécution séquentielle avec tolérance d’erreur
     for (const m of models) {
       try {
-        const r = await axios.get(m.url, { timeout: 15000 });
+        const options = { timeout: 15000 };
+        if (m.headers) options.headers = m.headers;
+
+        const r = await axios.get(m.url, options);
         const d =
           r.data?.current ||
           r.data?.parameters ||
@@ -73,10 +81,19 @@ async function mergeMultiModels(lat, lon, country = "EU") {
                 precipitation: r.data.hourly.precipitation?.slice(-1)[0],
                 wind_speed_10m: r.data.hourly.wind_speed_10m?.slice(-1)[0],
               }
+            : r.data?.properties?.timeseries?.[0]?.data?.instant?.details
+            ? {
+                temperature_2m: r.data.properties.timeseries[0].data.instant.details.air_temperature,
+                precipitation:
+                  r.data.properties.timeseries[0].data.next_1_hours?.details?.precipitation_amount ?? 0,
+                wind_speed_10m:
+                  r.data.properties.timeseries[0].data.instant.details.wind_speed ?? null,
+              }
             : {});
-        const T = d.temperature_2m ?? d.T2M ?? null;
+
+        const T = d.temperature_2m ?? d.air_temperature ?? null;
         const P = d.precipitation ?? d.PRECTOTCORR ?? 0;
-        const W = d.wind_speed_10m ?? d.WS10M ?? null;
+        const W = d.wind_speed_10m ?? d.wind_speed ?? d.WS10M ?? null;
         push({ source: m.name, temperature: T, precipitation: P, wind: W });
         log(m.name, true);
       } catch (e) {
