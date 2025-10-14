@@ -23,9 +23,8 @@ import { runGlobalUSA } from "./services/runGlobalUSA.js";
 import { runBelgique } from "./services/runBelgique.js";
 import { runBouke } from "./services/runBouke.js";
 import { runGlobalAfricaNord, runGlobalAfricaOuest, runGlobalAfricaCentrale,
-         runGlobalAfricaEst, runGlobalAfricaSud } from "./services/runGlobalAfrica.js";
-import { runGlobalAsiaEst } from "./services/runGlobalAsiaEst.js";
-import { runGlobalAsiaSud } from "./services/runGlobalAsiaSud.js";
+         runGlobalAfricaEst, runGlobalAfricaSud } from "./services/runGlobalAfrique.js";
+import { runAsie } from "./services/runGlobalAsie.js";
 import { runGlobalCanada } from "./services/runGlobalCanada.js";
 import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
 import { runOceanie } from "./services/runGlobalOceanie.js";
@@ -36,6 +35,26 @@ import { runAICompare } from "./services/runAICompare.js";
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import { generateVideoNamur } from "./services/generateVideoNamur.js";
 import { getDetectedAlerts } from "./services/alertDetectedLogger.js";
+
+import {
+initEngineState,
+getEngineState,
+addEngineLog,
+addEngineError,
+stopExtraction,
+resetStopFlag,
+isExtractionStopped,
+setLastExtraction,
+} from "./services/engineState.js";
+
+import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
+import { runWorldAlerts } from "./services/runWorldAlerts.js";
+import Alert from "./models/Alert.js";
+import * as chatService from "./services/chatService.js";
+import { generateForecast } from "./services/forecastService.js";
+import { getNews } from "./services/newsService.js";
+import { checkAIHealth } from "./services/aiHealth.js";
+import User from "./models/User.js";
 
 // ==========================================================
 // ⚙️ CONFIGURATION
