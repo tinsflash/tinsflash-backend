@@ -10,7 +10,10 @@
 import { addEngineLog, addEngineError, setLastExtraction } from "./engineState.js";
 import { saveExtractionToMongo } from "./extractionStore.js";
 import { superForecast } from "./superForecast.js";
-
+// ----------------------------------------------------------
+// 🛰️ VisionIA – capture et analyse satellite automatique
+// ----------------------------------------------------------
+import { runVisionIA } from "./runVisionIA.js";
 // ==========================================================
 // 🚀 RUN BOUKÉ – Quadrillage central Namur
 // ==========================================================
@@ -71,7 +74,27 @@ export async function runBouke() {
       "success",
       runType
     );
-
+// ==========================================================
+// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
+// ==========================================================
+try {
+  const vision = await runVisionIA("Europe");
+  if (vision?.confidence >= 50) {
+    await addEngineLog(
+      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
+      "info",
+      "vision"
+    );
+  } else {
+    await addEngineLog(
+      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
+      "warn",
+      "vision"
+    );
+  }
+} catch (e) {
+  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
+}
     return { success: true };
   } catch (e) {
     await addEngineError(`runBouke: ${e.message}`, runType);
