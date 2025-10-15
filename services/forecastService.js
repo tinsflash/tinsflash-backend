@@ -49,25 +49,22 @@ function pickIcon(d) {
  * @param {string} country
  * @param {string} region
  */
+
 export async function generateForecast(lat, lon, country = "Unknown", region = "GENERIC") {
   try {
-    // 1️⃣ Appel du moteur SuperForecast (corrigé)
+    // 1️⃣ Appel du moteur SuperForecast
     const sf = await superForecast({
-      lat,
-      lon,
-      country,
-      region,
+      lat, lon, country, region,
       horizonDays: 7,
       includeNational: true
     });
 
-    // Tolérance format
+    // 2️⃣ Extraction et normalisation
     const nowLocal = sf?.forecast ?? sf?.now ?? {};
     const localDaily = sf?.dailyLocal ?? sf?.daily?.local ?? [];
     const nationalDaily = sf?.dailyNational ?? sf?.daily?.national ?? [];
 
-    // 2️⃣ Normalisations
-    const forecast = {
+    let forecast = {
       lat, lon, country, region,
       temperature: nowLocal.temperature ?? nowLocal.temp ?? null,
       precipitation: nowLocal.precipitation ?? nowLocal.rain ?? 0,
@@ -92,23 +89,39 @@ export async function generateForecast(lat, lon, country = "Unknown", region = "
     const localDaily7 = mapDays(localDaily);
     const nationalDaily7 = mapDays(nationalDaily);
 
-    // 3️⃣ Alertes proches
+    // 3️⃣ Si aucune donnée immédiate, fallback minimal
+    if (!forecast.temperature && localDaily7.length > 0) {
+      forecast = {
+        ...forecast,
+        temperature: localDaily7[0].tmax ?? 0,
+        precipitation: localDaily7[0].precipitation ?? 0,
+        wind: localDaily7[0].wind ?? 0,
+        humidity: localDaily7[0].humidity ?? 0,
+        reliability: 0.5,
+        icon: localDaily7[0].icon,
+        condition: "Données locales en cours d’actualisation"
+      };
+    }
+
+    // 4️⃣ Alertes proches
     let alertsNearby = [];
     try {
       const all = await Alert.find().lean();
       alertsNearby = (all || [])
         .map(a => ({
           ...a,
-          distanceKm: (a.lat != null && a.lon != null) ? haversineKm(lat, lon, a.lat, a.lon) : 999999
+          distanceKm: (a.lat != null && a.lon != null)
+            ? haversineKm(lat, lon, a.lat, a.lon)
+            : 999999
         }))
         .filter(a => a.distanceKm <= 250)
         .sort((a, b) => (b.reliability ?? 0) - (a.reliability ?? 0))
         .slice(0, 15);
-    } catch (e) {
+    } catch {
       await addEngineLog("⚠️ Lecture alertes proches échouée (fallback vide)", "warn", "forecast");
     }
 
-    // 4️⃣ Persistance légère
+    // 5️⃣ Persistance
     const state = await getEngineState();
     if (!state.forecasts) state.forecasts = [];
     state.forecasts.push({ ...forecast, savedAt: new Date() });
@@ -120,18 +133,8 @@ export async function generateForecast(lat, lon, country = "Unknown", region = "
       "info",
       "forecast"
     );
-// ✅ Si aucune prévision directe, on crée un fallback minimal
-if (!forecast || Object.keys(forecast).length === 0) {
-  forecast = {
-    temperature: localDaily7?.[0]?.tmax ?? 0,
-    condition: "Données locales en cours d’actualisation",
-    wind: localDaily7?.[0]?.wind ?? 0,
-    humidity: localDaily7?.[0]?.humidity ?? 0,
-    reliability: 0.5,
-    generatedAt: new Date()
-  };
-}
-    // 5️⃣ Retour final
+
+    // 6️⃣ Retour final
     return {
       forecast,
       localDaily: localDaily7,
