@@ -193,6 +193,24 @@ app.get("/api/forecast", async (req, res) => {
       return res.status(400).json({ error: "Latitude et longitude obligatoires" });
 
     const result = await generateForecast(lat, lon, country, region);
+
+    // ======= bloc distance replacé à l’intérieur du try =======
+    const R = 6371e3;
+    const toRad = (v) => (v * Math.PI) / 180;
+    const dist = (aLat, aLon, bLat, bLon) => {
+      const φ1 = toRad(aLat), φ2 = toRad(bLat);
+      const Δφ = toRad(bLat - aLat);
+      const Δλ = toRad(bLon - aLon);
+      const s =
+        Math.sin(Δφ / 2) ** 2 +
+        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(s));
+    };
+
+    // 🔹 exemple d’utilisation : si tu veux renvoyer la distance du point IA le plus proche
+    // const latest = ... ; // (selon ta logique, si tu veux garder cette partie)
+    // ...
+
     res.json({
       forecast: result.forecast,
       nextDays: result.localDaily,
@@ -200,10 +218,10 @@ app.get("/api/forecast", async (req, res) => {
       alerts: result.alerts,
     });
   } catch (err) {
+    await addEngineError("Erreur /api/forecast (IA): " + err.message, "forecast");
     res.status(500).json({ error: err.message });
   }
 });
-
 
     const R = 6371e3;
     const toRad = (v) => (v * Math.PI) / 180;
