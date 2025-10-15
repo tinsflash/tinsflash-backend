@@ -384,7 +384,6 @@ app.get("/api/alerts", async (req, res) => {
 // ==========================================================
 
 import { fetchVisionCaptures } from "./services/visionFetchers.js";
-import { addEngineLog, addEngineError } from "./services/engineState.js";
 
 async function scheduleVisionFetch() {
   try {
