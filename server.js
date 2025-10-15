@@ -186,26 +186,24 @@ app.get("/api/forecast", async (req, res) => {
   try {
     const lat = parseFloat(req.query.lat);
     const lon = parseFloat(req.query.lon);
-    const qLat = isFinite(lat) ? lat : 50.45;
-    const qLon = isFinite(lon) ? lon : 4.77;
+    const country = req.query.country || "Unknown";
+    const region = req.query.region || "GENERIC";
 
-    const col = mongoose.connection.db.collection("forecasts_ai_points");
-    const latest = await col.find({}).sort({ timestamp: -1 }).limit(500).toArray();
+    if (isNaN(lat) || isNaN(lon))
+      return res.status(400).json({ error: "Latitude et longitude obligatoires" });
 
-    if (!latest || latest.length === 0) {
-      return res.json({
-        lat: qLat,
-        lon: qLon,
-        temperature: 17.2,
-        humidity: 62,
-        wind: 9,
-        condition: "Ciel dégagé et temps lumineux sur la région.",
-        updated: new Date(),
-        source: "TINSFLASH Engine – IA J.E.A.N. (fallback)",
-        reliability: 0,
-        reliability_pct: 0,
-      });
-    }
+    const result = await generateForecast(lat, lon, country, region);
+    res.json({
+      forecast: result.forecast,
+      nextDays: result.localDaily,
+      national: result.nationalDaily,
+      alerts: result.alerts,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
     const R = 6371e3;
     const toRad = (v) => (v * Math.PI) / 180;
@@ -337,24 +335,7 @@ app.get("/api/alerts-detected", async (req, res) => {
   }
 });
 
-app.get("/api/forecast", async (req, res) => {
-  try {
-    const lat = parseFloat(req.query.lat);
-    const lon = parseFloat(req.query.lon);
-    const country = req.query.country || "Unknown";
-    const region = req.query.region || "GENERIC";
-    const result = await generateForecast(lat, lon, country, region);
 
-    res.json({
-      forecast: result.forecast,
-      nextDays: result.localDaily,
-      national: result.nationalDaily,
-      alerts: result.alerts
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // ==========================================================
 // 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
