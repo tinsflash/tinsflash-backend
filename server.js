@@ -63,7 +63,15 @@ import { generateForecast } from "./services/forecastService.js";
 import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
-
+import { checkReliability } from "./services/checkReliability.js";
+app.get("/api/check-reliability", async (_, res) => {
+  try {
+    const data = await checkReliability();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 // ==========================================================
 // ⚙️ CONFIG ENV
 // ==========================================================
