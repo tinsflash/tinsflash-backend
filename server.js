@@ -180,7 +180,7 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
 };
 
 // ==========================================================
-// 🌦️ ROUTES DE DONNÉES (Forecasts + Alerts)
+// 🌦️ ROUTE API FORECAST – IA J.E.A.N.
 // ==========================================================
 app.get("/api/forecast", async (req, res) => {
   try {
@@ -189,16 +189,21 @@ app.get("/api/forecast", async (req, res) => {
     const country = req.query.country || "Unknown";
     const region = req.query.region || "GENERIC";
 
-    if (isNaN(lat) || isNaN(lon))
-      return res.status(400).json({ error: "Latitude et longitude obligatoires" });
+    if (isNaN(lat) || isNaN(lon)) {
+      return res.status(400).json({
+        error: "Latitude et longitude obligatoires"
+      });
+    }
 
+    // --- Appel du moteur IA ---
     const result = await generateForecast(lat, lon, country, region);
 
-    // ======= bloc distance replacé à l’intérieur du try =======
+    // --- Fonction distance locale ---
     const R = 6371e3;
     const toRad = (v) => (v * Math.PI) / 180;
     const dist = (aLat, aLon, bLat, bLon) => {
-      const φ1 = toRad(aLat), φ2 = toRad(bLat);
+      const φ1 = toRad(aLat),
+        φ2 = toRad(bLat);
       const Δφ = toRad(bLat - aLat);
       const Δλ = toRad(bLon - aLon);
       const s =
@@ -207,65 +212,63 @@ app.get("/api/forecast", async (req, res) => {
       return 2 * R * Math.asin(Math.sqrt(s));
     };
 
-    // 🔹 exemple d’utilisation : si tu veux renvoyer la distance du point IA le plus proche
-    // const latest = ... ; // (selon ta logique, si tu veux garder cette partie)
-    // ...
+    // --- Recherche du point le plus proche (si les données existent) ---
+    let best = null;
+    let bestD = Infinity;
+    if (result && result.forecast && Array.isArray(result.forecast)) {
+      const latest = result.forecast;
+      best = latest[0];
+      bestD = dist(lat, lon, best.lat, best.lon);
+      for (let i = 1; i < latest.length; i++) {
+        const d = dist(lat, lon, latest[i].lat, latest[i].lon);
+        if (d < bestD) {
+          best = latest[i];
+          bestD = d;
+        }
+      }
+    }
 
+    // --- Calcul fiabilité ---
+    const r = typeof best?.reliability === "number" ? best.reliability : 0;
+    const reliability_pct = r <= 1 ? Math.round(r * 100) : Math.round(r);
+
+    // --- Réponse JSON ---
     res.json({
+      lat,
+      lon,
+      nearestPoint: best
+        ? {
+            zone: best.zone,
+            country: best.country,
+            lat: best.lat,
+            lon: best.lon,
+            distance_m: Math.round(bestD),
+          }
+        : null,
+      temperature: best?.temperature ?? null,
+      temperature_min: best?.temperature_min ?? null,
+      temperature_max: best?.temperature_max ?? null,
+      humidity: best?.humidity ?? null,
+      wind: best?.wind ?? null,
+      precipitation: best?.precipitation ?? null,
+      sources: best?.sources ?? [],
+      localAdjust: best?.localAdjust ?? null,
+      condition: undefined,
+      updated: best?.timestamp || new Date(),
+      source: "TINSFLASH Engine – IA J.E.A.N. (forecasts_ai_points)",
+      reliability: r,
+      reliability_pct,
       forecast: result.forecast,
       nextDays: result.localDaily,
       national: result.nationalDaily,
       alerts: result.alerts,
     });
-  } catch (err) {
-    await addEngineError("Erreur /api/forecast (IA): " + err.message, "forecast");
-    res.status(500).json({ error: err.message });
-  }
-});
-
-    const R = 6371e3;
-    const toRad = (v) => (v * Math.PI) / 180;
-    const dist = (aLat, aLon, bLat, bLon) => {
-      const φ1 = toRad(aLat), φ2 = toRad(bLat);
-      const Δφ = toRad(bLat - aLat);
-      const Δλ = toRad(bLon - aLon);
-      const s = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-      return 2 * R * Math.asin(Math.sqrt(s));
-    };
-
-    let best = latest[0];
-    let bestD = dist(qLat, qLon, best.lat, best.lon);
-    for (let i = 1; i < latest.length; i++) {
-      const d = dist(qLat, qLon, latest[i].lat, latest[i].lon);
-      if (d < bestD) { best = latest[i]; bestD = d; }
-    }
-
-    const r = typeof best.reliability === "number" ? best.reliability : 0;
-    const reliability_pct = r <= 1 ? Math.round(r * 100) : Math.round(r);
-
-    res.json({
-      lat: qLat,
-      lon: qLon,
-      nearestPoint: { zone: best.zone, country: best.country, lat: best.lat, lon: best.lon, distance_m: Math.round(bestD) },
-      temperature: best.temperature,
-      temperature_min: best.temperature_min ?? null,
-      temperature_max: best.temperature_max ?? null,
-      humidity: best.humidity ?? null,
-      wind: best.wind,
-      precipitation: best.precipitation,
-      sources: best.sources,
-      localAdjust: best.localAdjust,
-      condition: undefined,
-      updated: best.timestamp || new Date(),
-      source: "TINSFLASH Engine – IA J.E.A.N. (forecasts_ai_points)",
-      reliability: r,
-      reliability_pct,
-    });
   } catch (e) {
     await addEngineError("Erreur /api/forecast (IA): " + e.message, "forecast");
-  
-res.status(500).json({ error: e.message });
-} // ✅ le catch se ferme ici
+    res.status(500).json({ error: e.message });
+  }
+});
+// ==========================================================
 // ==========================================================
 // 🛰️ ROUTES API DE RUN – PHASE 1 (ZONES REGROUPÉES)
 // ==========================================================
