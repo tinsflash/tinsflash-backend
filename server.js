@@ -1,3 +1,4 @@
+
 // ==========================================================
 // 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT – ZONES REGROUPÉES)
 // ==========================================================
@@ -45,25 +46,8 @@ import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
 import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬 Automatisation Namur
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 
-import {
-  initEngineState,
-  getEngineState,
-  addEngineLog,
-  addEngineError,
-  stopExtraction,
-  resetStopFlag,
-  isExtractionStopped,
-  setLastExtraction,
-} from "./services/engineState.js";
-
-import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
-import { getDetectedAlerts } from "./services/alertDetectedLogger.js";
-import Alert from "./models/Alert.js";
-import * as chatService from "./services/chatService.js";
-import { generateForecast } from "./services/forecastService.js";
-import { getNews } from "./services/newsService.js";
-import { checkAIHealth } from "./services/aiHealth.js";
-import User from "./models/User.js";
+// ✅ Ajout Phase 5 IA avancée
+import { runPhase5 } from "./services/aiphase5.js";
 
 // ==========================================================
 // ⚙️ CONFIG ENV
@@ -95,6 +79,18 @@ app.get("/api/check-reliability", async (_, res) => {
 });
 
 // ==========================================================
+// 🧠 Nouvelle route Phase 5 IA avancée
+// ==========================================================
+app.post("/api/runPhase5", async (_req, res) => {
+  try {
+    const r = await runPhase5();
+    res.json(r);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ==========================================================
 // 🔐 STRIPE / JWT
 // ==========================================================
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -120,6 +116,7 @@ async function connectMongo() {
 }
 if (process.env.MONGO_URI) connectMongo();
 
+// (le reste du fichier inchangé : seedAdminUser, routes des runs, IA Phases 2–4, alerts, statiques, lancement Render)
 // ==========================================================
 // 👑 ADMIN AUTO
 // ==========================================================
