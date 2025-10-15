@@ -8,12 +8,12 @@
 
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { superForecast } from "./superForecast.js";
-import { saveExtractionToMongo, setLastExtraction } from "./extractionTools.js";
 
 export async function runBouke(runType = "core") {
   try {
     await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
-  const zones = [
+
+    const zones = [
     // --- Axe Namur / Floreffe
     { lat: 50.46, lon: 4.86, region: "Namur", country: "BE" },
     { lat: 50.45, lon: 4.84, region: "Floreffe", country: "BE" },
