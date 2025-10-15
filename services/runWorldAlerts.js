@@ -129,10 +129,10 @@ export async function runWorldAlerts() {
     );
 
     await addEngineLog(
-      `🔔 Nouvelle fusion mondiale terminée à ${new Date().toLocaleTimeString()}`,
-      "event",
-      "SSE"
-    );
+  `🔔 Nouvelle fusion mondiale terminée à ${new Date().toLocaleTimeString()}`,
+  "info",
+  "runWorldAlerts"
+);
 
     return { summary, alerts: worldAlerts };
   } catch (err) {
