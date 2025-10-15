@@ -263,8 +263,9 @@ app.get("/api/forecast", async (req, res) => {
     });
   } catch (e) {
     await addEngineError("Erreur /api/forecast (IA): " + e.message, "forecast");
-    res.status(500).json({ error: e.message });
-
+  
+res.status(500).json({ error: e.message });
+} // ✅ le catch se ferme ici
 // ==========================================================
 // 🛰️ ROUTES API DE RUN – PHASE 1 (ZONES REGROUPÉES)
 // ==========================================================
