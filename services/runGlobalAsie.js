@@ -13,7 +13,10 @@ import path from "path";
 import { superForecast } from "./superForecast.js";
 import { addEngineLog, addEngineError, updateEngineState } from "./engineState.js";
 import { saveExtractionToMongo } from "./extractionStore.js";
-
+// ----------------------------------------------------------
+// 🛰️ VisionIA – capture et analyse satellite automatique
+// ----------------------------------------------------------
+import { runVisionIA } from "./runVisionIA.js";
 // ==========================================================
 // 🗺️ ZONES – ASIE (Est + Sud, enrichies HydroRisk + Volcans)
 // ==========================================================
@@ -156,7 +159,27 @@ export async function runGlobalAsie() {
       "success",
       "runGlobalAsie"
     );
-
+// ==========================================================
+// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
+// ==========================================================
+try {
+  const vision = await runVisionIA("Europe");
+  if (vision?.confidence >= 50) {
+    await addEngineLog(
+      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
+      "info",
+      "vision"
+    );
+  } else {
+    await addEngineLog(
+      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
+      "warn",
+      "vision"
+    );
+  }
+} catch (e) {
+  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
+}
     return { summary: { region: "Asie", totalZones: zones.length, file: outFile, status: "ok" }, zones };
   } catch (err) {
     await addEngineError(`💥 Erreur runGlobalAsie : ${err.message}`, "runGlobalAsie");
