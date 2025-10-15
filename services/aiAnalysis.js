@@ -335,7 +335,76 @@ export async function runAIAnalysis() {
         }
       }
     }
+ // =======================================================
+// 🛰️  VALIDATION DES PRÉ-ALERTES TOCSIN (surveillance continue)
+// =======================================================
+try {
+  const WatchdogPrealert =
+    mongoose.models.watchdog_prealerts ||
+    mongoose.model(
+      "watchdog_prealerts",
+      new mongoose.Schema({}, { strict: false }),
+      "watchdog_prealerts"
+    );
 
+  const prealerts = await WatchdogPrealert.find({
+    createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+  }).lean();
+
+  if (prealerts.length) {
+    await addEngineLog(`🕵️ ${prealerts.length} pré-alertes en attente de validation IA`, "info", "TOCSIN");
+
+    for (const a of prealerts) {
+      const match = analysed.find(
+        (x) =>
+          x.lat && x.lon &&
+          Math.abs(x.lat - a.lat) < 0.3 &&
+          Math.abs(x.lon - a.lon) < 0.3
+      );
+      if (match) {
+        const confIA = clamp01((match.reliabilityForecast + (a.confidence ?? 0.6)) / 2);
+        const validated = confIA >= 0.6;
+        const alertType = a.phenomenon || "phénomène inconnu";
+        const alertLvl = a.level || "pré-alerte";
+
+        if (validated) {
+          await logDetectedAlert({
+            phenomenon: alertType,
+            zone: a.zone || match.country || "Inconnue",
+            country: match.country || null,
+            lat: match.lat,
+            lon: match.lon,
+            alertLevel: alertLvl,
+            confidence: confIA,
+            confidence_pct: Math.round(confIA * 100),
+            visualEvidence: a.visualEvidence ?? false,
+            primeur: true,
+            details: { source: "TOCSIN", ...a },
+          });
+
+          if (confIA >= 0.9) {
+            await logPrimeurAlert({
+              phenomenon: alertType,
+              zone: a.zone || match.country || "Inconnue",
+              tinsflashAlertLevel: alertLvl,
+              externalComparisons: [],
+            });
+          }
+
+          await addEngineLog(
+            `✅ Pré-alerte ${alertType} validée par IA (fiabilité ${Math.round(confIA * 100)}%)`,
+            "success",
+            "TOCSIN"
+          );
+        } else {
+          await addEngineLog(`⚪ Pré-alerte ${alertType} non confirmée (fiabilité ${Math.round(confIA * 100)}%)`, "info", "TOCSIN");
+        }
+      }
+    }
+  }
+} catch (err) {
+  await addEngineError("Erreur validation pré-alertes TOCSIN : " + err.message, "TOCSIN");
+}   
     // SYNTHÈSE
     const moy = analysed.reduce((a, x) => a + x.indiceLocal, 0) / analysed.length;
     const variance = analysed.reduce((a, x) => a + Math.pow(x.indiceLocal - moy, 2), 0) / analysed.length;
