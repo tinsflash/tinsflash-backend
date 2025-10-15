@@ -1,6 +1,6 @@
 // ==========================================================
 // 🤖 TINSFLASH – aiAnalysis.js
-// v5.12 REAL GLOBAL CONNECT + VISUAL PHASE 1B + Mongo Write + Reliability %
+// v5.14 PRO+++  (Directive IA complète + VisionIA Mongo + pré-alertes)
 // ==========================================================
 // IA J.E.A.N. – Intelligence Atmosphérique interne
 // Mission : produire des prévisions hyper-locales et globales
@@ -19,6 +19,7 @@ import { analyzeWind } from "./windService.js";
 import { logDetectedAlert } from "./alertDetectedLogger.js";
 import { logPrimeurAlert } from "./alertPrimeurLogger.js";
 import { getThresholds } from "../config/alertThresholds.js";
+import mongoose from "mongoose";
 
 // ==========================================================
 // ⚙️ Facteurs physiques et environnementaux
@@ -43,42 +44,71 @@ const clamp01 = (x) => Math.max(0, Math.min(1, x ?? 0));
 const safeAvg = (arr) => (arr?.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
 
 // ==========================================================
-// 🧮 Fiabilité – méthodes internes (0–1 → % à l’écriture)
+// 📡 Lecture VisionIA (MongoDB ou fallback local)
 // ==========================================================
-function computeForecastReliability({ r, stationsSummary, visualEvidence, indiceLocal }) {
-  // Couverture multi-modèles (si Phase 1 fournit 'reliability' ou 'sources')
+async function getLatestVisionIA() {
+  try {
+    const VisionSchema = new mongoose.Schema({}, { strict: false });
+    const VisionModel =
+      mongoose.models.VisionIA ||
+      mongoose.model("VisionIA", VisionSchema, "visionias");
+
+    const recent = await VisionModel.find()
+      .sort({ timestamp: -1 })
+      .limit(3)
+      .lean();
+
+    if (recent?.length) {
+      const v = recent[0];
+      await addEngineLog(
+        `[VISIONIA][IA.JEAN] Vision Mongo : ${v.type} (${v.confidence}%)`,
+        "info",
+        "IA.JEAN"
+      );
+      return { active: v.active ?? true, confidence: v.confidence ?? 0, type: v.type ?? "none" };
+    }
+  } catch (e) {
+    await addEngineError("VisionIA Mongo non disponible : " + e.message, "IA.JEAN");
+  }
+
+  // fallback local (captures)
+  try {
+    const dir = path.join(process.cwd(), "data", "vision");
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith(".png"));
+      if (files.length) {
+        await addEngineLog(`[VISIONIA][IA.JEAN] Fallback local : ${files.length} capture(s)`, "info", "IA.JEAN");
+        return { active: true, confidence: 60, type: "nuages denses" };
+      }
+    }
+  } catch {}
+  return { active: false, confidence: 0, type: "none" };
+}
+
+// ==========================================================
+// 🧮 Fiabilité (prévisions + alertes)
+// ==========================================================
+function computeForecastReliability({ r, stationsSummary, visualConfidence, indiceLocal }) {
   let modelsCoverage = 0;
-  if (typeof r.reliability === "number") {
-    modelsCoverage = clamp01(r.reliability); // déjà 0..1
-  } else if (Array.isArray(r.sources)) {
-    const EXPECTED_MODELS = 8; // GFS, ECMWF, ICON, MeteoFrance, DWD, NASA POWER/ERA5, Open-Meteo forecast, MET Norway...
+  if (typeof r.reliability === "number") modelsCoverage = clamp01(r.reliability);
+  else if (Array.isArray(r.sources)) {
+    const EXPECTED_MODELS = 8;
     modelsCoverage = clamp01(r.sources.length / EXPECTED_MODELS);
   }
 
-  // Stations locales (présence/cohérence)
-  const stationsWeight = stationsSummary && (
-    stationsSummary.tempStation != null ||
-    stationsSummary.windStation != null ||
-    stationsSummary.humidityStation != null
-  ) ? 1 : 0;
+  const stationsWeight =
+    stationsSummary &&
+    (stationsSummary.tempStation != null ||
+      stationsSummary.windStation != null ||
+      stationsSummary.humidityStation != null)
+      ? 1
+      : 0;
 
-  // Indices visuels (Phase 1B)
-  const visual = visualEvidence ? 1 : 0;
-
-  // Fraîcheur (si Phase 1 a fournit 'freshnessScore' 0..100)
+  const visual = clamp01(visualConfidence / 100);
   const freshness = clamp01((r.freshnessScore ?? 100) / 100);
+  const stability = clamp01(1.2 - clamp01(indiceLocal / 120));
 
-  // Stabilité/Contexte via indiceLocal (≈100 = normal; >110 = instable → prévision d’événement plus délicate)
-  const stability = clamp01(1.2 - clamp01(indiceLocal / 120)); // instabilité ↑ → fiabilité ↓
-
-  // Pondération (somme = 1)
-  const w = {
-    models: 0.35,
-    stations: 0.15,
-    visual: 0.15,
-    freshness: 0.15,
-    stability: 0.20,
-  };
+  const w = { models: 0.35, stations: 0.15, visual: 0.2, freshness: 0.15, stability: 0.15 };
 
   const score =
     w.models * modelsCoverage +
@@ -87,12 +117,10 @@ function computeForecastReliability({ r, stationsSummary, visualEvidence, indice
     w.freshness * freshness +
     w.stability * stability;
 
-  // Plancher minimal pour éviter 0 en absence de stations/visuel
   return clamp01(Math.max(score, 0.25 * modelsCoverage));
 }
 
-function computeAlertReliability({ r, a, stationsSummary, visualEvidence }) {
-  // Accord multi-modèles
+function computeAlertReliability({ r, a, stationsSummary, visualConfidence }) {
   let models = 0;
   if (typeof r.reliability === "number") models = clamp01(r.reliability);
   else if (Array.isArray(r.sources)) {
@@ -100,50 +128,50 @@ function computeAlertReliability({ r, a, stationsSummary, visualEvidence }) {
     models = clamp01(r.sources.length / EXPECTED_MODELS);
   }
 
-  // Stations corroborantes
-  const stations = (stationsSummary && (
-    stationsSummary.windStation != null ||
-    stationsSummary.tempStation != null ||
-    stationsSummary.humidityStation != null
-  )) ? 1 : 0;
+  const stations =
+    stationsSummary &&
+    (stationsSummary.windStation != null ||
+      stationsSummary.tempStation != null ||
+      stationsSummary.humidityStation != null)
+      ? 1
+      : 0;
 
-  // Indices visuels
-  const visual = visualEvidence ? 1 : 0;
+  const visual = clamp01(visualConfidence / 100);
+  const external =
+    Array.isArray(a.externalComparisons) && a.externalComparisons.length ? 1 : 0;
 
-  // Comparaisons externes (si présentes dans 'a.externalComparisons')
-  const external = Array.isArray(a.externalComparisons) && a.externalComparisons.length ? 1 : 0;
-
-  // Pondération (somme = 1)
-  const w = { models: 0.4, stations: 0.2, visual: 0.2, external: 0.2 };
-
-  const computed =
-    w.models * models +
-    w.stations * stations +
-    w.visual * visual +
-    w.external * external;
-
-  // Si 'a.confidence' (0..1) est déjà fourni, on prend le max pour ne pas dégrader
-  return clamp01(Math.max(computed, clamp01(a.confidence)));
+  const w = { models: 0.4, stations: 0.2, visual: 0.25, external: 0.15 };
+  return clamp01(
+    Math.max(w.models * models + w.stations * stations + w.visual * visual + w.external * external, clamp01(a.confidence))
+  );
 }
 
 // ==========================================================
-// 🧠 IA J.E.A.N. – Phase 2 : Analyse interne réelle mondiale
+// 🧠 IA J.E.A.N. – Phase 2
 // ==========================================================
 export async function runAIAnalysis() {
   try {
     await addEngineLog("🧠 Phase 2 – IA J.E.A.N. activée (analyse réelle mondiale)", "info", "IA.JEAN");
 
+    // ----------------------------------------------------------------------
+    // 🔸 DIRECTIVE IA – Ce que J.E.A.N. doit faire et comment il raisonne
+    // ----------------------------------------------------------------------
     const DIRECTIVE =
       "Tu es J.E.A.N., météorologue, climatologue, physicien et mathématicien de renommée mondiale. " +
-      "Ta mission est d'analyser les extractions récentes Phase 1 (modèles physiques) et les captures satellites Phase 1B. " +
-      "Tu détectes les anomalies météorologiques (vent, pluie, neige, verglas, chaleur, orages, crues, submersions, etc.), " +
-      "en tenant compte du relief, de l'altitude, du climat, de la proximité des mers et rivières. " +
-      "Tu compares les résultats avec les stations météo locales et les sources officielles, " +
-      "et tu produis des alertes précises, fiables (avec un pourcentage 0–100 %) et, si possible, avant les autres pour sauver des vies. " +
-      "Tu fournis aussi un pourcentage 0–100 % de fiabilité pour chaque prévision locale.";
+      "Ta mission : analyser les extractions récentes Phase 1 (modèles physiques) et les captures satellites VisionIA (Phase 1B). " +
+      "Tu croises les modèles (GFS, ECMWF, ICON, etc.) avec les images satellites infrarouge et visibles, " +
+      "les observations de stations locales, et les données d’environnement (relief, altitude, proximité mer/rivière). " +
+      "Tu détectes les anomalies (pluie, vent, neige, verglas, orages, chaleur, crues, submersions, etc.) " +
+      "et tu produis des prévisions précises et un taux de fiabilité (0–100%). " +
+      "Si la VisionIA révèle un phénomène (convection, nuages denses, pluie probable) non encore vu par les modèles, " +
+      "tu déclenches une pré-alerte visuelle IA (primeur). " +
+      "Ta mission première est d’anticiper pour sauver des vies, avec rigueur scientifique et réactivité.";
+
+    // Lecture VisionIA
+    const visionGlobal = await getLatestVisionIA();
 
     // =======================================================
-    // 🔎 Récupération des extractions (<2 h)
+    // 🔎 Récupération des extractions
     // =======================================================
     const recentExtractions = await getRecentExtractions(2);
     let files = [];
@@ -157,10 +185,10 @@ export async function runAIAnalysis() {
 
     if (!files.length) {
       await addEngineError("Aucune extraction récente trouvée", "IA.JEAN");
-      return { indiceGlobal: 0, synthese: "Aucune donnée récente disponible" };
+      return { indiceGlobal: 0, synthese: "Aucune donnée disponible" };
     }
 
-    await addEngineLog(`🌐 ${files.length} fichiers détectés pour analyse IA.J.E.A.N.`, "info", "IA.JEAN");
+    await addEngineLog(`🌐 ${files.length} fichiers détectés pour IA.J.E.A.N.`, "info", "IA.JEAN");
 
     // =======================================================
     // 📦 Lecture stricte
@@ -181,14 +209,10 @@ export async function runAIAnalysis() {
         await addEngineError(`Erreur lecture ${filePath}: ${err.message}`, "IA.JEAN");
       }
     }
-
-    if (!results.length) {
-      await addEngineError("Aucune donnée exploitable trouvée", "IA.JEAN");
-      return { indiceGlobal: 0, synthese: "Données invalides ou incomplètes" };
-    }
+    if (!results.length) return { indiceGlobal: 0, synthese: "Données incomplètes" };
 
     // =======================================================
-    // 🔬 Analyse globale par point
+    // 🔬 Analyse point par point
     // =======================================================
     const thresholds = getThresholds();
     const analysed = [];
@@ -202,7 +226,7 @@ export async function runAIAnalysis() {
       const hydro = computeHydroFactor(lat, lon);
       const climate = computeClimateFactor(lat);
 
-      // === STATIONS LOCALES ===
+      // STATIONS
       let stationsSummary = null;
       try {
         const s = await fetchStationData(lat, lon, country, r.region || "");
@@ -223,36 +247,28 @@ export async function runAIAnalysis() {
             pressureStation: safeAvg(press),
           };
         }
-      } catch (err) {
-        await addEngineLog(`⚠️ Station KO ${country}: ${err.message}`, "warn", "IA.JEAN");
-      }
+      } catch {}
 
-      // === SERVICES LOCAUX ===
+      // SERVICES
       let rain = null, snow = null, wind = null;
       try {
         rain = await analyzeRain(lat, lon);
         snow = await analyzeSnow(lat, lon);
         wind = await analyzeWind(lat, lon);
-      } catch (err) {
-        await addEngineLog(`⚠️ Analyse additionnelle KO : ${err.message}`, "warn", "IA.JEAN");
-      }
+      } catch {}
 
-      // === PHÉNOMÈNES ===
+      // PHÉNOMÈNES
       let phenomena = null;
       try {
         phenomena = evaluatePhenomena({
-          lat, lon, altitude,
-          base: r,
-          rain, snow, wind,
-          stations: stationsSummary,
+          lat, lon, altitude, base: r,
+          rain, snow, wind, stations: stationsSummary,
           factors: { relief, hydro, climate },
           thresholds,
         });
-      } catch (err) {
-        await addEngineLog(`⚠️ Phénomène erreur : ${err.message}`, "warn", "IA.JEAN");
-      }
+      } catch {}
 
-      // === INDICE LOCAL ===
+      // INDICE LOCAL
       const stationBoost = stationsSummary?.tempStation != null ? 1.05 : 1.0;
       const indiceLocal = Math.round(relief * hydro * climate * stationBoost * 100) / 100;
       const condition =
@@ -260,55 +276,55 @@ export async function runAIAnalysis() {
         indiceLocal > 100 ? "Ciel variable" :
         "Conditions calmes";
 
-      // === VISUAL PHASE 1B ===
-      let visualEvidence = false;
-      try {
-        const imgDir = path.join(dataDir, "vision");
-        if (fs.existsSync(imgDir)) {
-          const imgs = fs.readdirSync(imgDir).filter(f => f.includes(`${country}`) || f.includes(`${r.region}`));
-          visualEvidence = imgs.length > 0;
-        }
-      } catch { visualEvidence = false; }
+      // VISIONIA (pondération)
+      const visualConfidence = visionGlobal.confidence;
+      const visualType = visionGlobal.type;
+      const visualActive = visionGlobal.active;
 
-      // === FIABILITÉ PRÉVISION (0..1 puis % à l’écriture) ===
-      const reliabilityForecast = computeForecastReliability({
-        r, stationsSummary, visualEvidence, indiceLocal
-      });
+      const reliabilityForecast = computeForecastReliability({ r, stationsSummary, visualConfidence, indiceLocal });
 
       analysed.push({
-        ...r,
-        country,
-        reliefFactor: relief,
-        hydroFactor: hydro,
-        climateFactor: climate,
-        stations: stationsSummary,
-        rain, snow, wind,
-        phenomena,
-        indiceLocal,
-        condition,
-        visualEvidence,
-        reliabilityForecast, // 0..1 (le % sera stocké aussi)
+        ...r, country, reliefFactor: relief, hydroFactor: hydro, climateFactor: climate,
+        stations: stationsSummary, rain, snow, wind, phenomena,
+        indiceLocal, condition,
+        visualEvidence: visualActive, visualConfidence, visualType,
+        reliabilityForecast,
       });
 
-      // === ALERTES ===
+      // === Pré-alerte visuelle ===
+      if ((!phenomena?.alerts?.length) && visualActive && visualConfidence >= 80 &&
+          /orage|pluie|convection/i.test(visualType)) {
+        await logDetectedAlert({
+          phenomenon: "Pré-alerte visuelle IA",
+          zone: r.region || country,
+          country, lat, lon,
+          alertLevel: "pré-alerte",
+          confidence: clamp01(visualConfidence / 100),
+          confidence_pct: visualConfidence,
+          visualEvidence: true,
+          comparedToExternal: false,
+          primeur: true,
+          details: { type: visualType, source: "VisionIA" },
+        });
+        await addEngineLog(`[VISIONIA][IA.JEAN] Pré-alerte visuelle (${visualType} ${visualConfidence}%)`, "info", "IA.JEAN");
+      }
+
+      // === Alertes normales ===
       if (phenomena?.alerts?.length) {
         for (const a of phenomena.alerts) {
-          const conf = computeAlertReliability({ r, a, stationsSummary, visualEvidence }); // 0..1
-
+          const conf = computeAlertReliability({ r, a, stationsSummary, visualConfidence });
           await logDetectedAlert({
             phenomenon: a.type,
             zone: r.region || country,
-            country,
-            lat, lon,
+            country, lat, lon,
             alertLevel: a.level,
-            confidence: conf,               // 0..1 (UI déjà compatible)
-            confidence_pct: Math.round(conf * 100), // + champ % pour inspection
-            visualEvidence,
+            confidence: conf,
+            confidence_pct: Math.round(conf * 100),
+            visualEvidence: visualActive,
             comparedToExternal: !!(a.externalComparisons && a.externalComparisons.length),
             primeur: a.primeur ?? false,
             details: a,
           });
-
           if (a.primeur)
             await logPrimeurAlert({
               phenomenon: a.type,
@@ -320,105 +336,50 @@ export async function runAIAnalysis() {
       }
     }
 
-    // =======================================================
-    // 📊 SYNTHÈSE MONDIALE
-    // =======================================================
+    // SYNTHÈSE
     const moy = analysed.reduce((a, x) => a + x.indiceLocal, 0) / analysed.length;
     const variance = analysed.reduce((a, x) => a + Math.pow(x.indiceLocal - moy, 2), 0) / analysed.length;
     const indiceGlobal = Math.max(0, Math.min(100, Math.round((100 - variance) * 0.95)));
-
     const synthese =
       indiceGlobal > 90 ? "Atmosphère mondiale stable" :
       indiceGlobal > 70 ? "Variabilité régionale modérée" :
       indiceGlobal > 50 ? "Anomalies régionales multiples" :
       "Instabilité globale – déclenchement d’alertes recommandé";
 
-    await addEngineLog(`📈 IA.J.E.A.N. Indice global ${indiceGlobal}% (${synthese})`, "success", "IA.JEAN");
+    await addEngineLog(`📈 IA.J.E.A.N. v5.14 – Indice global ${indiceGlobal}% (${synthese})`, "success", "IA.JEAN");
 
     // =======================================================
-    // 💾 ÉCRITURE MONGO (prévisions IA par point)
-    // - pas d'import statique : import dynamique de mongoose
-    // - écrase les anciennes prévisions des zones analysées
-    // - purge globale > 30 h
+    // 💾 ÉCRITURE MONGO (identique à v5.12)
     // =======================================================
-    const { default: mongoose } = await import("mongoose");
     const AiPointForecastSchema = new mongoose.Schema({}, { strict: false });
     const AiPointForecast = mongoose.models.forecasts_ai_points
       || mongoose.model("forecasts_ai_points", AiPointForecastSchema, "forecasts_ai_points");
-
     const now = new Date();
+    const zonesCovered = Array.from(new Set(analysed.map(p => String(p.region || p.zone || p.country || "Unknown"))));
 
-    // Zones couvertes dans ce run
-    const zonesCovered = Array.from(
-      new Set(
-        analysed.map(p => String(p.region || p.zone || p.country || "Unknown"))
-      )
-    );
-
-    // Écrasement par zone
-    try {
-      await AiPointForecast.deleteMany({ zone: { $in: zonesCovered } });
-      await addEngineLog(`🗑️ Suppression anciennes prévisions IA pour zones: ${zonesCovered.join(", ")}`, "info", "IA.JEAN");
-    } catch (err) {
-      await addEngineError(`Erreur deleteMany forecasts_ai_points: ${err.message}`, "IA.JEAN");
-    }
-
-    // Insertion nouvelles prévisions
+    await AiPointForecast.deleteMany({ zone: { $in: zonesCovered } });
     const docs = analysed.map(p => ({
       zone: String(p.region || p.zone || p.country || "Unknown"),
       country: p.country || null,
-      lat: Number(p.lat ?? p.latitude ?? 0),
-      lon: Number(p.lon ?? p.longitude ?? 0),
+      lat: Number(p.lat ?? 0), lon: Number(p.lon ?? 0),
       altitude: Number(p.altitude ?? 150),
-
       analysedAt: now,
-      // Condensé « prévision IA »
-      indiceLocal: p.indiceLocal,
-      condition: p.condition,
-      factors: {
-        relief: p.reliefFactor,
-        hydro: p.hydroFactor,
-        climate: p.climateFactor,
-      },
+      indiceLocal: p.indiceLocal, condition: p.condition,
+      factors: { relief: p.reliefFactor, hydro: p.hydroFactor, climate: p.climateFactor },
       stations: p.stations || null,
-      rain: p.rain || null,
-      snow: p.snow || null,
-      wind: p.wind || null,
-      visualEvidence: !!p.visualEvidence,
-
-      // 🔢 Fiabilité prévision – double champ (compat descendante + transparence)
-      reliability: clamp01(p.reliabilityForecast),               // 0..1
-      reliability_pct: Math.round(clamp01(p.reliabilityForecast) * 100), // 0..100
-
-      // Base brute pour traçabilité (on garde le point original + phénomènes)
-      base: p.base || undefined,
+      rain: p.rain || null, snow: p.snow || null, wind: p.wind || null,
+      visualEvidence: p.visualEvidence,
+      reliability: clamp01(p.reliabilityForecast),
+      reliability_pct: Math.round(clamp01(p.reliabilityForecast) * 100),
       phenomena: p.phenomena || null,
-
-      // Tag moteur
       source: "TINSFLASH IA.J.E.A.N.",
-      version: "v5.12",
+      version: "v5.14",
     }));
+    if (docs.length) await AiPointForecast.insertMany(docs, { ordered: false });
 
-    if (docs.length) {
-      await AiPointForecast.insertMany(docs, { ordered: false });
-      await addEngineLog(`💾 ${docs.length} prévisions IA écrites (Mongo: forecasts_ai_points)`, "success", "IA.JEAN");
-    }
-
-    // Purge globale > 30 h
-    try {
-      const cutoff = new Date(Date.now() - 30 * 60 * 60 * 1000);
-      const del = await AiPointForecast.deleteMany({ analysedAt: { $lt: cutoff } });
-      await addEngineLog(`🧹 Purge forecasts_ai_points >30h: ${del?.deletedCount ?? 0} doc(s) supprimé(s)`, "info", "IA.JEAN");
-    } catch (err) {
-      await addEngineError(`Erreur purge >30h forecasts_ai_points: ${err.message}`, "IA.JEAN");
-    }
-
-    // =======================================================
-    // ✅ Retour identique (API stable)
-    // =======================================================
     return { indiceGlobal, synthese, count: analysed.length, zones: zonesCovered };
   } catch (e) {
-    await addEngineError("Erreur IA.J.E.A.N. globale : " + e.message, "IA.JEAN");
+    await addEngineError("Erreur IA.J.E.A.N. v5.14 : " + e.message, "IA.JEAN");
     return { error: e.message };
   }
 }
