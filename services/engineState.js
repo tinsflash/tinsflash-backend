@@ -211,7 +211,47 @@ export async function getRecentExtractions(hours = 2) {
     return [];
   }
 }
+// ==========================================================
+// 💾 saveExtractionToMongo – Sauvegarde Phase 1 (superForecast)
+// ==========================================================
 
+const ExtractionSchema = new mongoose.Schema({
+  zoneName: String,
+  continentCode: String,
+  results: Array,
+  timestamp: { type: Date, default: Date.now },
+});
+
+const ExtractionModel =
+  mongoose.models.Extraction || mongoose.model("Extraction", ExtractionSchema);
+
+/**
+ * Sauvegarde les résultats de la Phase 1 (superForecast) sur Mongo Cloud
+ * @param {string} zoneName - nom de la zone ("Afrique", "Europe", etc.)
+ * @param {string} continentCode - code court du continent (AF, EU, US…)
+ * @param {Array} results - données météorologiques extraites
+ */
+export async function saveExtractionToMongo(zoneName, continentCode, results) {
+  try {
+    if (!Array.isArray(results) || results.length === 0) {
+      throw new Error("Aucune donnée valide à sauvegarder");
+    }
+
+    const doc = new ExtractionModel({
+      zoneName,
+      continentCode,
+      results,
+    });
+
+    await doc.save();
+
+    console.log(`✅ [Mongo] Données ${zoneName} (${results.length} points) sauvegardées avec succès.`);
+    return { success: true, count: results.length };
+  } catch (err) {
+    console.error(`❌ [Mongo] Échec sauvegarde ${zoneName}: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
 // ==========================================================
 // 📤 Exports
 // ==========================================================
