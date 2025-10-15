@@ -20,7 +20,8 @@ const ExtractionSchema = new mongoose.Schema({
   data: { type: Array, default: [] },
 });
 
-export const Extraction = mongoose.model("Extraction", ExtractionSchema);
+const Extraction =
+  mongoose.models.Extraction || mongoose.model("Extraction", ExtractionSchema);
 
 // ==========================================================
 // 💾 Enregistrement d’une extraction complète
