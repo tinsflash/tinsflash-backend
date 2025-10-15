@@ -124,26 +124,25 @@ const zones = [
 // 🚀 LANCEUR GLOBAL – PHASE 1 PURE
 // ==========================================================
 export async function runGlobalAfrique() {
-  try {
-    await addEngineLog("🚀 Lancement runGlobalAfrique – Phase 1 pure", "info", "runGlobalAfrique");
+  const result = await superForecast({ zones, runType, withAI: false });
 
-    const result = await superForecast({ zones, runType: "Afrique", withAI: false });
+    if (!result?.success) throw new Error(result?.error || "Échec extraction Afrique");
+
+    await saveExtractionToMongo("Afrique", "AF", result.phase1Results);
+    await setLastExtraction(runType, { status: "OK", count: zones.length });
 
     await addEngineLog(
-      `✅ runGlobalAfrique terminé (phase 1 pure) – ${zones.length} points couverts`,
+      `✅ Extraction Afrique terminée (${zones.length} points couverts) et stockée sur Mongo Cloud`,
       "success",
-      "runGlobalAfrique"
+      runType
     );
-    
-}
-    return { success: true, result };
+
+    return { success: true };
+
   } catch (err) {
-    await addEngineError(`runGlobalAfrique : ${err.message}`, "runGlobalAfrique");
+    await addEngineError(`Erreur inattendue : ${err.message}`, "core");
     return { success: false, error: err.message };
   }
 }
 
-// ==========================================================
-// 📦 EXPORTS OFFICIELS (intouchables – compatibilité Render)
-// ==========================================================
 export default { runGlobalAfrique };
