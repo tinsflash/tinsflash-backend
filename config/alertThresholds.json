@@ -1,34 +1,31 @@
 {
   "vent": {
-  "prealerte": 60,
-  "alerte": 75,
-  "extreme": 100,
-  "unite": "km/h",
-  "context": "ajuster selon relief, altitude, couloirs de vent"
-},
-
-"pluie": {
-  "prealerte": { "1h": 10, "6h": 15, "24h": 20 },
-  "alerte": { "1h": 20, "6h": 30, "24h": 40 },
-  "extreme": { "1h": 35, "6h": 50, "24h": 75 },
-  "unite": "mm",
-  "context": "pondérer selon saturation, relief, vision satellite"
-},
-
-"neige": {
-  "prealerte": "neige en plaine",
-  "alerte": { "6h": 3, "12h": 5, "24h": 8 },
-  "extreme": { "6h": 8, "12h": 10, "24h": 15 },
-  "unite": "cm",
-  "context": "modulé par relief, altitude, température sol"
-},
-
-"orage_grele": {
-  "prealerte": "CAPE > 400 J/kg",
-  "alerte": "grêle > 1 cm ou convection modérée",
-  "extreme": "grêle > 3 cm ou supercellule",
-  "context": "analyse modèles convectifs + vision satellite"
-}
+    "prealerte": 60,
+    "alerte": 75,
+    "extreme": 100,
+    "unite": "km/h",
+    "context": "ajuster selon relief, altitude, couloirs de vent"
+  },
+  "pluie": {
+    "prealerte": { "1h": 10, "6h": 15, "24h": 20 },
+    "alerte": { "1h": 20, "6h": 30, "24h": 40 },
+    "extreme": { "1h": 35, "6h": 50, "24h": 75 },
+    "unite": "mm",
+    "context": "pondérer selon saturation, relief, vision satellite"
+  },
+  "neige": {
+    "prealerte": "neige en plaine",
+    "alerte": { "6h": 3, "12h": 5, "24h": 8 },
+    "extreme": { "6h": 8, "12h": 10, "24h": 15 },
+    "unite": "cm",
+    "context": "modulé par relief, altitude, température sol"
+  },
+  "orage_grele": {
+    "prealerte": "CAPE > 400 J/kg",
+    "alerte": "grêle > 1 cm ou convection modérée",
+    "extreme": "grêle > 3 cm ou supercellule",
+    "context": "analyse modèles convectifs + vision satellite"
+  },
   "verglas": {
     "prealerte": "risque pluie verglaçante ou Tsol -1°C",
     "alerte": "épisode confirmé",
