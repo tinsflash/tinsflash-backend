@@ -1,64 +1,57 @@
 {
-  "vent": {
-    "prealerte": 60,
-    "alerte": 75,
+  "meta": {
+    "version": "5.15-PRO+++",
+    "calibration": "Assurance-BE/UE",
+    "updated": "2025-10-15T00:00:00Z",
+    "description": "Seuils d'alerte calibrés sur normes assurantielles et risques physiques réels. Utilisés par evaluate.js, aiAnalysis.js, watchdogService.js."
+  },
+  "rain": {
+    "prealert": 8,
+    "alert": 20,
+    "extreme": 50,
+    "unit": "mm/h",
+    "notes": "Seuils ajustés pour ruissellement urbain et crue rapide. Modulation IA : relief, pente, imperméabilité, VisionIA."
+  },
+  "snow": {
+    "prealert": 1,
+    "alert": 3,
+    "extreme": 10,
+    "unit": "cm/h",
+    "notes": "Seuils modulés selon altitude et température du sol (<0°C -> abaissement automatique)."
+  },
+  "wind": {
+    "prealert": 60,
+    "alert": 80,
+    "extreme": 110,
+    "unit": "km/h",
+    "notes": "80 km/h = seuil légal 'tempête' pour couverture assurance habitation (BE/UE)."
+  },
+  "heat": {
+    "prealert": 30,
+    "alert": 36,
+    "extreme": 40,
+    "unit": "°C",
+    "notes": "Seuils relatifs à stress thermique population et animaux."
+  },
+  "cold": {
+    "prealert": -5,
+    "alert": -10,
+    "extreme": -15,
+    "unit": "°C",
+    "notes": "Risque gel/verglas. Modulation IA si humidité >80 %."
+  },
+  "humidity": {
+    "prealert": 95,
+    "alert": 98,
     "extreme": 100,
-    "unite": "km/h",
-    "context": "ajuster selon relief, altitude, couloirs de vent"
+    "unit": "%",
+    "notes": "Utilisé pour stress végétal / moisissures / condensation."
   },
-  "pluie": {
-    "prealerte": { "1h": 10, "6h": 15, "24h": 20 },
-    "alerte": { "1h": 20, "6h": 30, "24h": 40 },
-    "extreme": { "1h": 35, "6h": 50, "24h": 75 },
-    "unite": "mm",
-    "context": "pondérer selon saturation, relief, vision satellite"
-  },
-  "neige": {
-    "prealerte": "neige en plaine",
-    "alerte": { "6h": 3, "12h": 5, "24h": 8 },
-    "extreme": { "6h": 8, "12h": 10, "24h": 15 },
-    "unite": "cm",
-    "context": "modulé par relief, altitude, température sol"
-  },
-  "orage_grele": {
-    "prealerte": "CAPE > 400 J/kg",
-    "alerte": "grêle > 1 cm ou convection modérée",
-    "extreme": "grêle > 3 cm ou supercellule",
-    "context": "analyse modèles convectifs + vision satellite"
-  },
-  "verglas": {
-    "prealerte": "risque pluie verglaçante ou Tsol -1°C",
-    "alerte": "épisode confirmé",
-    "extreme": "durée > 2h ou large zone",
-    "context": "croiser modèles précipitation et T° sol"
-  },
-  "chaleur": {
-    "prealerte": "écart +3°C vs normales locales",
-    "alerte": "canicule ≥ 3 jours/3 nuits seuils locaux",
-    "extreme": "HeatIndex > 45°C",
-    "context": "ajuster selon altitude, humidité, orientation"
-  },
-  "brouillard": {
-    "prealerte": "< 200 m",
-    "alerte": "< 100 m durable",
-    "extreme": "< 50 m étendu",
-    "unite": "m",
-    "context": "analyse humidité + vision satellite"
-  },
-  "submersion": {
-    "prealerte": "surcote détectée",
-    "alerte": "houle > 3 m ou pression < 985 hPa",
-    "extreme": "houle > 5 m + vent fort",
-    "context": "fusion marées/vents/mers"
-  },
-  "phenomenes_majeurs": {
-    "prealerte": "risque structure spirale ou onde tropicale",
-    "alerte": "système organisé détecté",
-    "extreme": "intensification rapide ou impact < 72h",
-    "context": "analyse globale J.E.A.N. + vision satellite"
-  },
-  "signaux": {
-    "pression": { "prealerte": 995, "alerte": 990, "extreme": 980, "type": "inf" },
-    "humidite": { "prealerte": 90, "alerte": 95, "extreme": 98, "type": "sup" }
+  "visionia": {
+    "prealert": 75,
+    "alert": 85,
+    "extreme": 92,
+    "unit": "%",
+    "notes": "Indice de convection et instabilité observé par VisionIA (satellites)."
   }
 }
