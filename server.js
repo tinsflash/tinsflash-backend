@@ -375,7 +375,32 @@ app.get("/api/alerts", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ==========================================================
+// 🔭 TINSFLASH – Vision automatique (Phase 1B autonome)
+// ==========================================================
+// Télécharge les images satellites toutes les 30 minutes,
+// sans déclencher l’analyse IA. L’IA les exploitera
+// automatiquement lors des runs (Phase 2).
+// ==========================================================
 
+import { fetchVisionCaptures } from "./services/visionFetchers.js";
+import { addEngineLog, addEngineError } from "./services/engineState.js";
+
+async function scheduleVisionFetch() {
+  try {
+    await fetchVisionCaptures();
+  } catch (err) {
+    await addEngineError("Erreur Vision auto: " + err.message, "server");
+  }
+}
+
+// Démarrage immédiat au boot
+scheduleVisionFetch();
+
+// Relance toutes les 30 minutes (1 800 000 ms)
+setInterval(scheduleVisionFetch, 30 * 60 * 1000);
+
+await addEngineLog("✅ Planification VisionIA active (30 min)", "server");
 // ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
 // ==========================================================
