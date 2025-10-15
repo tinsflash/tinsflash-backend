@@ -59,28 +59,23 @@ export async function runBouke() {
   ];
 
   try {
-    await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
-    const result = await superForecast({ zones, runType, withAI: false });
+  await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
 
-    if (!result?.success) throw new Error(result?.error || "Échec extraction Bouké-Namur");
+  const result = await superForecast({ zones, runType, withAI: false });
+  if (!result?.success) throw new Error(result?.error || "Échec extraction Bouké-Namur");
 
-    await saveExtractionToMongo("Bouke-Namur", "EU", result.phase1Results);
-    await setLastExtraction(runType, { status: "OK", count: zones.length });
+  await saveExtractionToMongo("Bouke-Namur", "EU", result.phase1Results);
+  await setLastExtraction(runType, { status: "OK", count: zones.length });
 
-    await addEngineLog(
-      `✅ Extraction Bouké-Namur terminée (${zones.length} points couverts) et stockée sur Mongo Cloud`,
-      "success",
-      runType
-    )};
-  
-} catch (e) {
-  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
+  await addEngineLog(
+    `✅ Extraction Bouké-Namur terminée (${zones.length} points couverts) et stockée sur Mongo Cloud`,
+    "success",
+    runType
+  );
+
+  return { success: true };
+
+} catch (err) {
+  await addEngineError(`Erreur inattendue : ${err.message}`, "core");
+  return { success: false, error: err.message };
 }
-    return { success: true };
-  } catch (e) {
-    await addEngineError(`runBouke: ${e.message}`, runType);
-    return { success: false, error: e.message };
-  }
-}
-
-export default { runBouke };
