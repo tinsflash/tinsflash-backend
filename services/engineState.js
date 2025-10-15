@@ -222,9 +222,13 @@ const ExtractionSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
 });
 
-const ExtractionModel =
-  mongoose.models.Extraction || mongoose.model("Extraction", ExtractionSchema);
+let ExtractionModel;
 
+try {
+  ExtractionModel = mongoose.model("Extraction");
+} catch {
+  ExtractionModel = mongoose.model("Extraction", ExtractionSchema);
+}
 /**
  * Sauvegarde les résultats de la Phase 1 (superForecast) sur Mongo Cloud
  * @param {string} zoneName - nom de la zone ("Afrique", "Europe", etc.)
