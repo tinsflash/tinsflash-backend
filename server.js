@@ -336,7 +336,6 @@ app.get("/api/alerts-detected", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-import { generateForecast } from "./services/forecastService.js";
 
 app.get("/api/forecast", async (req, res) => {
   try {
