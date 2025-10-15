@@ -213,17 +213,22 @@ function computeAlertReliabilityPct(s, hasVisual, sourcesCount) {
 // (une zone peut de facto être une région; on garde zone + country)
 // ----------------------------------------------------------
 function makePublicForecastFromPoint(s) {
+  const temp = s?.stations?.tempStation ?? null;
+  const wind = s?.wind_kmh ?? s?.gust_kmh ?? null;
+
   return {
     zone: s.zone,
     country: s.country,
     lat: s.lat,
     lon: s.lon,
     condition: s.condition || "Conditions variables",
+    temp_min: temp ? Math.round(temp - 2) : null,
+    temp_max: temp ? Math.round(temp + 2) : null,
+    wind: wind ?? 0,
+    reliability: (s.reliability_pct ?? 0) / 100,
     reliability_pct: s.reliability_pct ?? null,
     updated: new Date(),
-    indices: {
-      indiceLocal: s.indiceLocal ?? null,
-    },
+    indices: { indiceLocal: s.indiceLocal ?? null },
   };
 }
 
