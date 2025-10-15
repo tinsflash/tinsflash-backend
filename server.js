@@ -343,6 +343,25 @@ app.get("/admin-alerts.html", (_, res) => res.sendFile(path.join(publicPath, "ad
 // ==========================================================
 const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
+// ==========================================================
+// 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
+// ==========================================================
+import { MongoClient } from "mongodb";
+
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const db = client.db(); // base par défaut de ta connexion
+    const alerts = await db.collection("alerts").find({}).toArray();
+    await client.close();
+
+    res.json(alerts || []);
+  } catch (err) {
+    console.error("Erreur /api/alerts:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 app.listen(PORT, "0.0.0.0", () => {
   console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
