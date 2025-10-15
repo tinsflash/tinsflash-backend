@@ -20,6 +20,8 @@ button:hover{background:#4fc3f7;color:#0b1220}
 .map{height:380px;margin:15px;border-radius:8px}
 #logs{background:#0d1624;color:#b3e5fc;padding:10px;height:220px;overflow-y:auto;border-top:1px solid #1e293b;font-family:monospace}
 footer{text-align:center;padding:8px;font-size:13px;color:#7dd3fc;background:#08121d}
+#reliabilityBox{margin:12px auto;text-align:center;padding:10px;background:#102030;border:1px solid #1e293b;border-radius:10px;width:280px}
+#reliabilityValue{font-size:1.6em;color:#4fc3f7;font-weight:700}
 </style>
 </head>
 <body>
@@ -90,6 +92,13 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <div class="cmd">curl -X POST https://tinsflash.onrender.com/api/runWorldAlerts</div>
 </nav>
 
+<!-- ===================== NOUVELLE SECTION FIABILITÉ IA ===================== -->
+<div id="reliabilityBox">
+  <button onclick="checkReliability()">🔍 Vérifier Fiabilité IA J.E.A.N.</button>
+  <div id="reliabilityValue">-- %</div>
+  <div class="cmd">curl -X GET https://tinsflash.onrender.com/api/check-reliability</div>
+</div>
+
 <!-- ===================== CARTES ===================== -->
 <h3 style="text-align:center;color:#7dd3fc">🗺️ Carte Prévisions IA J.E.A.N.</h3>
 <div class="map" id="mapForecast"></div>
@@ -110,6 +119,17 @@ async function run(route){
   const j=await r.json();
   log(`▶️ ${route} → ${JSON.stringify(j)}`);
  }catch(e){log(`❌ ${route} → ${e.message}`);}
+}
+
+async function checkReliability(){
+ try{
+  const r=await fetch("/api/check-reliability");
+  const j=await r.json();
+  if(j.reliability_pct!==undefined){
+    document.getElementById("reliabilityValue").textContent=j.reliability_pct+" %";
+    log(`📊 Fiabilité IA J.E.A.N. : ${j.reliability_pct}%`);
+  }else log("⚠️ Donnée de fiabilité non reçue");
+ }catch(e){log("❌ Erreur fiabilité : "+e.message);}
 }
 
 function log(msg){
