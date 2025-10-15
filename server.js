@@ -336,6 +336,26 @@ app.get("/api/alerts-detected", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+import { generateForecast } from "./services/forecastService.js";
+
+app.get("/api/forecast", async (req, res) => {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lon = parseFloat(req.query.lon);
+    const country = req.query.country || "Unknown";
+    const region = req.query.region || "GENERIC";
+    const result = await generateForecast(lat, lon, country, region);
+
+    res.json({
+      forecast: result.forecast,
+      nextDays: result.localDaily,
+      national: result.nationalDaily,
+      alerts: result.alerts
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ==========================================================
 // 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
