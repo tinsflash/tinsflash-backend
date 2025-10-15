@@ -7,7 +7,12 @@
 // 🔸 Respect strict des règles TINSFLASH (imports/exports intouchables)
 // ==========================================================
 
-import { addEngineLog, addEngineError } from "./engineState.js";
+import {
+  addEngineLog,
+  addEngineError,
+  saveExtractionToMongo,
+  setLastExtraction,
+} from "./engineState.js";
 import { superForecast } from "./superForecast.js";
 
 // ==========================================================
@@ -47,7 +52,7 @@ const zones = [
   { name: "Cotonou", lat: 6.37, lon: 2.43, country: "BJ", region: "Bénin" },
   { name: "Lomé", lat: 6.13, lon: 1.22, country: "TG", region: "Togo" },
   { name: "Lagos", lat: 6.45, lon: 3.40, country: "NG", region: "Nigeria" },
-  { name: "Kano", lat: 12.00, lon: 8.52, country: "NG", region: "Nord Nigéria" },
+  { name: "Kano", lat: 12.0, lon: 8.52, country: "NG", region: "Nord Nigéria" },
   { name: "Conakry", lat: 9.64, lon: -13.58, country: "GN", region: "Guinée" },
   { name: "Monrovia", lat: 6.30, lon: -10.80, country: "LR", region: "Liberia" },
   { name: "Freetown", lat: 8.47, lon: -13.23, country: "SL", region: "Sierra Leone" },
@@ -121,12 +126,17 @@ const zones = [
 ];
 
 // ==========================================================
-// 🚀 LANCEUR GLOBAL – PHASE 1 PURE
+// 🚀 LANCEUR GLOBAL – PHASE 1 PURE (extraction + sauvegarde Mongo)
 // ==========================================================
-export async function runGlobalAfrique() {
-  const result = await superForecast({ zones, runType, withAI: false });
+export async function runGlobalAfrique(runType = "AFRICA_PHASE1") {
+  try {
+    await addEngineLog("🎥 Phase 1 – Extraction Afrique (superForecast) lancée", "info", runType);
 
-    if (!result?.success) throw new Error(result?.error || "Échec extraction Afrique");
+    const result = await superForecast({ zones, runType, withAI: false });
+
+    if (!result?.success) {
+      throw new Error(result?.error || "Échec extraction Afrique");
+    }
 
     await saveExtractionToMongo("Afrique", "AF", result.phase1Results);
     await setLastExtraction(runType, { status: "OK", count: zones.length });
@@ -138,7 +148,6 @@ export async function runGlobalAfrique() {
     );
 
     return { success: true };
-
   } catch (err) {
     await addEngineError(`Erreur inattendue : ${err.message}`, "core");
     return { success: false, error: err.message };
