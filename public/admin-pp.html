@@ -22,6 +22,40 @@ button:hover{background:#4fc3f7;color:#0b1220}
 footer{text-align:center;padding:8px;font-size:13px;color:#7dd3fc;background:#08121d}
 #reliabilityBox{margin:12px auto;text-align:center;padding:10px;background:#102030;border:1px solid #1e293b;border-radius:10px;width:280px}
 #reliabilityValue{font-size:1.6em;color:#4fc3f7;font-weight:700}
+
+/* 🧭 Légendes dynamiques */
+.legend {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(8,18,29,0.9);
+  color: #b3e5fc;
+  padding: 8px 12px;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.4em;
+  z-index: 9999;
+  width: 200px;
+  box-shadow: 0 0 10px rgba(79,195,247,0.3);
+}
+.legend b{color:#4fc3f7;display:block;margin-bottom:4px;}
+.legend .box{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;}
+#legendAlerts{right:230px;}
+/* 🧮 Compteur global */
+#globalStats {
+  position: fixed;
+  top: 12px;
+  right: 20px;
+  background: rgba(10,20,35,0.85);
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 6px 10px;
+  color: #7dd3fc;
+  font-size: 13px;
+  z-index: 9999;
+  box-shadow: 0 0 8px rgba(79,195,247,0.4);
+}
 </style>
 </head>
 <body>
@@ -37,7 +71,6 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 
 <header>🛰️ TINSFLASH PRO+++ – Centrale IA J.E.A.N.</header>
 
-<!-- ===================== MENU CONNECTÉ ===================== -->
 <nav class="menu">
 <a href="/admin-pp.html">🧠 Console</a>
 <a href="/admin-alerts.html">🚨 Alertes</a>
@@ -51,67 +84,80 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <a href="/">🏠 Index</a>
 </nav>
 
-<!-- ===================== BOUTONS DE RUN ===================== -->
 <nav id="controls">
 <button onclick="run('/api/run-global-europe')">🇪🇺 Europe</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-europe</div>
+<div class="cmd">curl -X POST /api/run-global-europe</div>
 
 <button onclick="run('/api/run-global-usa')">🇺🇸 USA</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-usa</div>
+<div class="cmd">curl -X POST /api/run-global-usa</div>
 
 <button onclick="run('/api/run-global-afrique')">🌍 Afrique</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-afrique</div>
+<div class="cmd">curl -X POST /api/run-global-afrique</div>
 
 <button onclick="run('/api/run-global-asie')">🌏 Asie</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-asie</div>
+<div class="cmd">curl -X POST /api/run-global-asie</div>
 
 <button onclick="run('/api/run-global-ameriquesud')">🌎 Amérique du Sud</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-ameriquesud</div>
+<div class="cmd">curl -X POST /api/run-global-ameriquesud</div>
 
 <button onclick="run('/api/run-global-oceanie')">🌊 Océanie</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-oceanie</div>
+<div class="cmd">curl -X POST /api/run-global-oceanie</div>
 
 <button onclick="run('/api/run-global-canada')">🍁 Canada</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-canada</div>
+<div class="cmd">curl -X POST /api/run-global-canada</div>
 
 <button onclick="run('/api/run-global-caribbean')">🏝️ Caraïbes</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-global-caribbean</div>
+<div class="cmd">curl -X POST /api/run-global-caribbean</div>
 
 <button onclick="run('/api/run-belgique')">🇧🇪 Belgique</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-belgique</div>
+<div class="cmd">curl -X POST /api/run-belgique</div>
 
 <button onclick="run('/api/run-bouke')">📍 Bouke (local)</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/run-bouke</div>
+<div class="cmd">curl -X POST /api/run-bouke</div>
 
 <hr style="width:100%;border:0;border-top:1px solid #1e293b;margin:10px 0"/>
 
 <button onclick="run('/api/runAIAnalysis')">🧠 Phase 2 – IA J.E.A.N.</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/runAIAnalysis</div>
+<div class="cmd">curl -X POST /api/runAIAnalysis</div>
 
-<!-- ✅ Phase 5 corrigée pour utiliser le nouveau service aiphase5.js -->
 <button onclick="run('/api/runPhase5')">🚨 Phase 5 – Fusion mondiale alertes</button>
-<div class="cmd">curl -X POST https://tinsflash.onrender.com/api/runPhase5</div>
+<div class="cmd">curl -X POST /api/runPhase5</div>
 </nav>
 
-<!-- ===================== NOUVELLE SECTION FIABILITÉ IA ===================== -->
 <div id="reliabilityBox">
   <button onclick="checkReliability()">🔍 Vérifier Fiabilité IA J.E.A.N.</button>
   <div id="reliabilityValue">-- %</div>
-  <div class="cmd">curl -X GET https://tinsflash.onrender.com/api/check-reliability</div>
+  <div class="cmd">curl -X GET /api/check-reliability</div>
 </div>
 
-<!-- ===================== CARTES ===================== -->
 <h3 style="text-align:center;color:#7dd3fc">🗺️ Carte Prévisions IA J.E.A.N.</h3>
 <div class="map" id="mapForecast"></div>
 
 <h3 style="text-align:center;color:#7dd3fc">🚨 Carte Alertes Actives</h3>
 <div class="map" id="mapAlerts"></div>
 
-<!-- ===================== LOGS ===================== -->
 <h3 style="text-align:center;color:#7dd3fc">🧾 Journal du moteur (live)</h3>
 <div id="logs">[Démarrage du flux de logs...]</div>
 
 <footer>© 2025 TINSFLASH PRO+++ – IA J.E.A.N. | Actualisation auto : 2 min</footer>
+
+<!-- 🧭 Légendes dynamiques -->
+<div id="legendForecast" class="legend">
+  <b>🌤️ Légende Prévisions IA</b><br>
+  <span class="box" style="background:#00ffcc"></span> Fiabilité ≥ 90 % (excellente)<br>
+  <span class="box" style="background:#00aaff"></span> Fiabilité ≥ 70 % (bonne)<br>
+  <span class="box" style="background:#ffaa00"></span> Fiabilité ≥ 50 % (moyenne)<br>
+  <span class="box" style="background:#ff4444"></span> Fiabilité < 50 % (faible)
+</div>
+<div id="legendAlerts" class="legend">
+  <b>🚨 Légende Alertes</b><br>
+  <span class="box" style="background:red"></span> Extrême / ≥90 %<br>
+  <span class="box" style="background:orange"></span> Alerte / ≥70 %<br>
+  <span class="box" style="background:yellow"></span> Préalerte / ≥50 %<br>
+  <span class="box" style="background:#00ffcc"></span> Surveillance
+</div>
+
+<div id="globalStats">🌍 Prévisions : 0 • 🚨 Alertes : 0 • Fiabilité : -- %</div>
 
 <script>
 async function run(route){
@@ -128,6 +174,8 @@ async function checkReliability(){
   const j=await r.json();
   if(j.reliability_pct!==undefined){
     document.getElementById("reliabilityValue").textContent=j.reliability_pct+" %";
+    document.getElementById("globalStats").textContent=
+      `🌍 Prévisions : ${lastForecastCount} • 🚨 Alertes : ${lastAlertCount} • Fiabilité : ${j.reliability_pct}%`;
     log(`📊 Fiabilité IA J.E.A.N. : ${j.reliability_pct}%`);
   }else log("⚠️ Donnée de fiabilité non reçue");
  }catch(e){log("❌ Erreur fiabilité : "+e.message);}
@@ -141,34 +189,47 @@ function log(msg){
  logs.scrollTop=logs.scrollHeight;
 }
 
-// ===================== MAP FORECAST =====================
+// ===================== CARTES =====================
 const map1=L.map("mapForecast").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6,minZoom:2}).addTo(map1);
-
-// ===================== MAP ALERTS =====================
 const map2=L.map("mapAlerts").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6,minZoom:2}).addTo(map2);
 
+let lastForecastCount=0,lastAlertCount=0;
+
 async function refreshMaps(){
  try{
-  const f=await fetch("/api/forecast");const fj=await f.json();
-  L.circleMarker([fj.lat,fj.lon],{radius:6,color:"cyan",fillOpacity:0.6})
-   .addTo(map1).bindPopup(`🌤️ ${fj.condition}<br>${fj.temperature}°C`);
+   const f=await fetch("/api/forecast");
+   const forecasts=await f.json();
+   map1.eachLayer(l=>{if(l instanceof L.CircleMarker) map1.removeLayer(l);});
+   lastForecastCount=forecasts.length||1;
+   forecasts.forEach(p=>{
+     if(!p.lat||!p.lon)return;
+     let color=p.reliability_pct>=90?"#00ffcc":p.reliability_pct>=70?"#00aaff":p.reliability_pct>=50?"#ffaa00":"#ff4444";
+     L.circleMarker([p.lat,p.lon],{radius:5,color,fillOpacity:0.7})
+       .addTo(map1)
+       .bindPopup(`<b>${p.zone||p.country||"Zone"}</b><br>🌡️ ${p.condition||"?"}<br>📊 ${p.reliability_pct||0}%`);
+   });
+   log(`🌍 ${forecasts.length} prévisions IA affichées`);
  }catch(e){log("Forecast map error "+e.message);}
 
  try{
-  const r=await fetch("/api/alerts");const data=await r.json();
-  map2.eachLayer(l=>{if(l instanceof L.CircleMarker) map2.removeLayer(l);});
-  data.forEach(a=>{
-    if(!a.lat||!a.lon) return;
-    let color="gray";
-    const conf=a.reliability||a.confidence||0;
-    if(a.isPrimeur) color="blue"; else if(conf>=0.9) color="green";
-    else if(conf>=0.7) color="orange"; else color="red";
-    L.circleMarker([a.lat,a.lon],{radius:6,color,fillOpacity:0.6})
-     .addTo(map2)
-     .bindPopup(`<b>${a.title||a.event||"Alerte"}</b><br>${(conf*100).toFixed(0)}%`);
-  });
+   const r=await fetch("/api/alerts");
+   const alerts=await r.json();
+   map2.eachLayer(l=>{if(l instanceof L.CircleMarker) map2.removeLayer(l);});
+   lastAlertCount=alerts.length||0;
+   alerts.forEach(a=>{
+     if(!a.lat||!a.lon)return;
+     let color="gray";
+     if(a.level==="extreme"||a.confidence>=0.9)color="red";
+     else if(a.level==="alerte"||a.confidence>=0.7)color="orange";
+     else if(a.level==="prealerte"||a.confidence>=0.5)color="yellow";
+     else color="#00ffcc";
+     L.circleMarker([a.lat,a.lon],{radius:6,color,fillOpacity:0.7})
+      .addTo(map2)
+      .bindPopup(`<b>${a.title||a.type||"Alerte"}</b><br>Zone : ${a.zone||"?"}<br>Niveau : ${a.level||"?"}<br>Confiance : ${(a.confidence*100||0).toFixed(0)}%`);
+   });
+   log(`🚨 ${alerts.length} alertes actives affichées`);
  }catch(e){log("Alerts map error "+e.message);}
 }
 refreshMaps();
