@@ -416,7 +416,43 @@ try {
       "Instabilité globale – déclenchement d’alertes recommandé";
 
     await addEngineLog(`📈 IA.J.E.A.N. v5.14 – Indice global ${indiceGlobal}% (${synthese})`, "success", "IA.JEAN");
+// =======================================================
+// 🔔 Intégration des pré-alertes TOCSIN (Watchdog)
+// =======================================================
+import { runWatchdog } from "./watchdogService.js";
+import mongoose from "mongoose";
 
+const PrealertModel =
+  mongoose.models.watchdog_prealerts ||
+  mongoose.model("watchdog_prealerts", new mongoose.Schema({}, { strict: false }), "watchdog_prealerts");
+
+async function integrateWatchdogAlerts() {
+  try {
+    const recent = await PrealertModel.find({ createdAt: { $gte: new Date(Date.now() - 3 * 60 * 60 * 1000) } }).lean();
+    if (!recent.length) {
+      await addEngineLog("🕐 Aucune pré-alerte TOCSIN récente à intégrer", "info", "IA.JEAN");
+      return [];
+    }
+
+    await addEngineLog(`📡 ${recent.length} pré-alerte(s) TOCSIN détectée(s) – intégration IA`, "info", "IA.JEAN");
+    return recent.map((a) => ({
+      lat: a.lat,
+      lon: a.lon,
+      region: a.zone,
+      country: a.country || "Unknown",
+      phenomenon: a.phenomenon,
+      alertLevel: a.level,
+      confidence: a.confidence ?? 0.7,
+      source: "TOCSIN",
+    }));
+  } catch (e) {
+    await addEngineError("Erreur intégration TOCSIN : " + e.message, "IA.JEAN");
+    return [];
+  }
+}
+
+// Lecture des pré-alertes pour les intégrer dans le cycle d’analyse
+const preAlerts = await integrateWatchdogAlerts();
     // =======================================================
     // 💾 ÉCRITURE MONGO (identique à v5.12)
     // =======================================================
