@@ -10,9 +10,7 @@ import { addEngineLog, addEngineError, setLastExtraction } from "./engineState.j
 import { saveExtractionToMongo } from "./extractionStore.js";
 import { superForecast } from "./superForecast.js";
 // ----------------------------------------------------------
-// 🛰️ VisionIA – capture et analyse satellite automatique
-// ----------------------------------------------------------
-import { runVisionIA } from "./runVisionIA.js";
+
 // ==========================================================
 // 🚀 RUN BELGIQUE – Maillage haute précision
 // ==========================================================
@@ -117,27 +115,6 @@ export async function runBelgique() {
     await setLastExtraction(runType, { status: "OK", count: zones.length });
 
     await addEngineLog(`✅ Extraction Belgique (${zones.length} zones) terminée et stockée sur Mongo Cloud`, "success", runType);
-    // ==========================================================
-// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
-// ==========================================================
-try {
-  const vision = await runVisionIA("Europe");
-  if (vision?.confidence >= 50) {
-    await addEngineLog(
-      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
-      "info",
-      "vision"
-    );
-  } else {
-    await addEngineLog(
-      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
-      "warn",
-      "vision"
-    );
-  }
-} catch (e) {
-  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
-}
     return { success: true };
   } catch (e) {
     await addEngineError(`runBelgique: ${e.message}`, runType);
