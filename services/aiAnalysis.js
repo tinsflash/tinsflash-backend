@@ -20,6 +20,7 @@ import { logDetectedAlert } from "./alertDetectedLogger.js";
 import { logPrimeurAlert } from "./alertPrimeurLogger.js";
 import { getThresholds } from "../config/alertThresholds.js";
 import mongoose from "mongoose";
+import { runWatchdog } from "./watchdogService.js";
 
 // ==========================================================
 // ⚙️ Facteurs physiques et environnementaux
@@ -419,8 +420,6 @@ try {
 // =======================================================
 // 🔔 Intégration des pré-alertes TOCSIN (Watchdog)
 // =======================================================
-import { runWatchdog } from "./watchdogService.js";
-import mongoose from "mongoose";
 
 const PrealertModel =
   mongoose.models.watchdog_prealerts ||
