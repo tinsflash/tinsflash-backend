@@ -44,7 +44,7 @@ import { runAIExternal } from "./services/runAIExternal.js";    // 🧠 Phase 3
 import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
 import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬 Automatisation Namur
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
-
+import { runPhase5 } from "./services/aiphase5.js";
 import {
   initEngineState,
   getEngineState,
@@ -313,6 +313,18 @@ app.post("/api/runWorldAlerts", async (req, res) => {
   } catch (e) {
     await addEngineError("❌ Erreur Phase 5 – Alertes: " + e.message, "alerts");
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post("/api/runPhase5", async (_req, res) => {
+  try {
+    await addEngineLog("🚨 Phase 5 – Démarrage IA aiphase5", "info", "IA.PHASE5");
+    const r = await runPhase5();
+    await addEngineLog("✅ Phase 5 terminée – IA aiphase5 OK", "success", "IA.PHASE5");
+    res.json(r);
+  } catch (e) {
+    await addEngineError("❌ Erreur Phase 5 – IA aiphase5 : " + e.message, "IA.PHASE5");
+    res.status(500).json({ error: e.message });
   }
 });
 
