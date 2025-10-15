@@ -120,7 +120,17 @@ export async function generateForecast(lat, lon, country = "Unknown", region = "
       "info",
       "forecast"
     );
-
+// ✅ Si aucune prévision directe, on crée un fallback minimal
+if (!forecast || Object.keys(forecast).length === 0) {
+  forecast = {
+    temperature: localDaily7?.[0]?.tmax ?? 0,
+    condition: "Données locales en cours d’actualisation",
+    wind: localDaily7?.[0]?.wind ?? 0,
+    humidity: localDaily7?.[0]?.humidity ?? 0,
+    reliability: 0.5,
+    generatedAt: new Date()
+  };
+}
     // 5️⃣ Retour final
     return {
       forecast,
