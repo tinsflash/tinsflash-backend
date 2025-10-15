@@ -330,7 +330,44 @@ export async function runPhase5() {
       await Alerts.insertMany(consolidatedAlerts, { ordered: false });
       inserted = consolidatedAlerts.length;
     }
+// 5 bis) Écriture Mongo (PRÉVISIONS PUBLIQUES)
+    try {
+      const PublicForecast =
+        mongoose.models.PublicForecast ||
+        mongoose.model(
+          "PublicForecast",
+          new mongoose.Schema(
+            {
+              lat: Number,
+              lon: Number,
+              country: String,
+              zone: String,
+              condition: String,
+              reliability_pct: Number,
+              indices: Object,
+              updated: Date,
+            },
+            { strict: false }
+          ),
+          "publicForecasts"
+        );
 
+      if (publicForecasts.length) {
+        // on efface les anciennes prévisions trop vieilles (> 6 h)
+        const cutoffPublic = new Date(Date.now() - 6 * 60 * 60 * 1000);
+        await PublicForecast.deleteMany({ updated: { $lt: cutoffPublic } });
+        await PublicForecast.insertMany(publicForecasts, { ordered: false });
+        await addEngineLog(
+          `📊 Phase 5 : ${publicForecasts.length} prévisions publiques écrites dans Mongo.`,
+          "info",
+          "alerts"
+        );
+      } else {
+        await addEngineLog("ℹ️ Phase 5 : aucune prévision publique à écrire.", "info", "alerts");
+      }
+    } catch (err) {
+      await addEngineError(`Écriture prévisions publiques échouée : ${err.message}`, "alerts");
+    }
     // 6) Purge > 30 h des anciennes alertes
     try {
       const cutoff = new Date(Date.now() - 30 * 60 * 60 * 1000);
