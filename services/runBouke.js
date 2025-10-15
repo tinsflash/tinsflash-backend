@@ -1,23 +1,18 @@
 // ==========================================================
-// 🎥 TINSFLASH – runBouke.js (Everest Protocol v5.2.0 PRO+++)
+// 🎥 TINSFLASH – runBouke.js
+// v5.15 PRO+++
 // ==========================================================
-// Phase 1 uniquement – Extraction réelle (pas d’IA ni vidéo)
-// Quadrillage haute densité Province de Namur et zones voisines
-// Ajout : Erpent, Bouge, Wépion, Daussoulx
-// Persistance Mongo Cloud (saveExtractionToMongo)
+// Rôle : extraction Phase 1 (Bouké–Namur quadrillage complet)
+// Aucun appel IA ou VisionIA (extraction pure)
 // ==========================================================
 
-import { addEngineLog, addEngineError, setLastExtraction } from "./engineState.js";
-import { saveExtractionToMongo } from "./extractionStore.js";
+import { addEngineLog, addEngineError } from "./engineState.js";
 import { superForecast } from "./superForecast.js";
-// ----------------------------------------------------------
+import { saveExtractionToMongo, setLastExtraction } from "./extractionTools.js";
 
-// ==========================================================
-// 🚀 RUN BOUKÉ – Quadrillage central Namur
-// ==========================================================
-export async function runBouke() {
-  const runType = "Bouke-Namur";
-
+export async function runBouke(runType = "core") {
+  try {
+    await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
   const zones = [
     // --- Axe Namur / Floreffe
     { lat: 50.46, lon: 4.86, region: "Namur", country: "BE" },
@@ -58,24 +53,26 @@ export async function runBouke() {
     { lat: 50.47, lon: 4.63, region: "Auvelais", country: "BE" },
   ];
 
-  try {
-  await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
+  // Extraction réelle via SuperForecast
+    const result = await superForecast({ zones, runType, withAI: false });
 
-  const result = await superForecast({ zones, runType, withAI: false });
-  if (!result?.success) throw new Error(result?.error || "Échec extraction Bouké-Namur");
+    if (!result?.success) throw new Error(result?.error || "Échec extraction Bouké-Namur");
 
-  await saveExtractionToMongo("Bouke-Namur", "EU", result.phase1Results);
-  await setLastExtraction(runType, { status: "OK", count: zones.length });
+    await saveExtractionToMongo("Bouke-Namur", "EU", result.phase1Results);
+    await setLastExtraction(runType, { status: "OK", count: zones.length });
 
-  await addEngineLog(
-    `✅ Extraction Bouké-Namur terminée (${zones.length} points couverts) et stockée sur Mongo Cloud`,
-    "success",
-    runType
-  );
+    await addEngineLog(
+      `✅ Extraction Bouké-Namur terminée (${zones.length} points couverts) et stockée sur Mongo Cloud`,
+      "success",
+      runType
+    );
 
-  return { success: true };
+    return { success: true };
 
-} catch (err) {
-  await addEngineError(`Erreur inattendue : ${err.message}`, "core");
-  return { success: false, error: err.message };
+  } catch (err) {
+    await addEngineError(`Erreur inattendue : ${err.message}`, "core");
+    return { success: false, error: err.message };
+  }
 }
+
+export default { runBouke };
