@@ -9,10 +9,7 @@
 
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { superForecast } from "./superForecast.js";
-// ----------------------------------------------------------
-// 🛰️ VisionIA – capture et analyse satellite automatique
-// ----------------------------------------------------------
-import { runVisionIA } from "./runVisionIA.js";
+
 // ==========================================================
 // 📍 ZONES GÉOGRAPHIQUES – COUVERTURE INTÉGRALE AFRIQUE
 // ==========================================================
@@ -137,26 +134,7 @@ export async function runGlobalAfrique() {
       "success",
       "runGlobalAfrique"
     );
-    // ==========================================================
-// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
-// ==========================================================
-try {
-  const vision = await runVisionIA("Europe");
-  if (vision?.confidence >= 50) {
-    await addEngineLog(
-      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
-      "info",
-      "vision"
-    );
-  } else {
-    await addEngineLog(
-      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
-      "warn",
-      "vision"
-    );
-  }
-} catch (e) {
-  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
+    
 }
     return { success: true, result };
   } catch (err) {
