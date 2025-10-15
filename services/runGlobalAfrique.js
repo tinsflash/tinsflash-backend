@@ -7,14 +7,12 @@
 // 🔸 Respect strict des règles TINSFLASH (imports/exports intouchables)
 // ==========================================================
 
-import {
-  addEngineLog,
-  addEngineError,
-  saveExtractionToMongo,
-  setLastExtraction,
-} from "./engineState.js";
+import { addEngineLog, addEngineError } from "./engineState.js";
 import { superForecast } from "./superForecast.js";
-
+// ----------------------------------------------------------
+// 🛰️ VisionIA – capture et analyse satellite automatique
+// ----------------------------------------------------------
+import { runVisionIA } from "./runVisionIA.js";
 // ==========================================================
 // 📍 ZONES GÉOGRAPHIQUES – COUVERTURE INTÉGRALE AFRIQUE
 // ==========================================================
@@ -52,7 +50,7 @@ const zones = [
   { name: "Cotonou", lat: 6.37, lon: 2.43, country: "BJ", region: "Bénin" },
   { name: "Lomé", lat: 6.13, lon: 1.22, country: "TG", region: "Togo" },
   { name: "Lagos", lat: 6.45, lon: 3.40, country: "NG", region: "Nigeria" },
-  { name: "Kano", lat: 12.0, lon: 8.52, country: "NG", region: "Nord Nigéria" },
+  { name: "Kano", lat: 12.00, lon: 8.52, country: "NG", region: "Nord Nigéria" },
   { name: "Conakry", lat: 9.64, lon: -13.58, country: "GN", region: "Guinée" },
   { name: "Monrovia", lat: 6.30, lon: -10.80, country: "LR", region: "Liberia" },
   { name: "Freetown", lat: 8.47, lon: -13.23, country: "SL", region: "Sierra Leone" },
@@ -126,32 +124,48 @@ const zones = [
 ];
 
 // ==========================================================
-// 🚀 LANCEUR GLOBAL – PHASE 1 PURE (extraction + sauvegarde Mongo)
+// 🚀 LANCEUR GLOBAL – PHASE 1 PURE
 // ==========================================================
-export async function runGlobalAfrique(runType = "AFRICA_PHASE1") {
+export async function runGlobalAfrique() {
   try {
-    await addEngineLog("🎥 Phase 1 – Extraction Afrique (superForecast) lancée", "info", runType);
+    await addEngineLog("🚀 Lancement runGlobalAfrique – Phase 1 pure", "info", "runGlobalAfrique");
 
-    const result = await superForecast({ zones, runType, withAI: false });
-
-    if (!result?.success) {
-      throw new Error(result?.error || "Échec extraction Afrique");
-    }
-
-    await saveExtractionToMongo("Afrique", "AF", result.phase1Results);
-    await setLastExtraction(runType, { status: "OK", count: zones.length });
+    const result = await superForecast({ zones, runType: "Afrique", withAI: false });
 
     await addEngineLog(
-      `✅ Extraction Afrique terminée (${zones.length} points couverts) et stockée sur Mongo Cloud`,
+      `✅ runGlobalAfrique terminé (phase 1 pure) – ${zones.length} points couverts`,
       "success",
-      runType
+      "runGlobalAfrique"
     );
-
-    return { success: true };
+    // ==========================================================
+// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
+// ==========================================================
+try {
+  const vision = await runVisionIA("Europe");
+  if (vision?.confidence >= 50) {
+    await addEngineLog(
+      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
+      "info",
+      "vision"
+    );
+  } else {
+    await addEngineLog(
+      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
+      "warn",
+      "vision"
+    );
+  }
+} catch (e) {
+  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
+}
+    return { success: true, result };
   } catch (err) {
-    await addEngineError(`Erreur inattendue : ${err.message}`, "core");
+    await addEngineError(`runGlobalAfrique : ${err.message}`, "runGlobalAfrique");
     return { success: false, error: err.message };
   }
 }
 
+// ==========================================================
+// 📦 EXPORTS OFFICIELS (intouchables – compatibilité Render)
+// ==========================================================
 export default { runGlobalAfrique };

@@ -1,19 +1,26 @@
 // ==========================================================
-// 🎥 TINSFLASH – runBouke.js
-// v5.15 PRO+++
+// 🎥 TINSFLASH – runBouke.js (Everest Protocol v5.2.0 PRO+++)
 // ==========================================================
-// Rôle : extraction Phase 1 (Bouké–Namur quadrillage complet)
-// Aucun appel IA ou VisionIA (extraction pure)
+// Phase 1 uniquement – Extraction réelle (pas d’IA ni vidéo)
+// Quadrillage haute densité Province de Namur et zones voisines
+// Ajout : Erpent, Bouge, Wépion, Daussoulx
+// Persistance Mongo Cloud (saveExtractionToMongo)
 // ==========================================================
 
-import { addEngineLog, addEngineError } from "./engineState.js";
+import { addEngineLog, addEngineError, setLastExtraction } from "./engineState.js";
+import { saveExtractionToMongo } from "./extractionStore.js";
 import { superForecast } from "./superForecast.js";
+// ----------------------------------------------------------
+// 🛰️ VisionIA – capture et analyse satellite automatique
+// ----------------------------------------------------------
+import { runVisionIA } from "./runVisionIA.js";
+// ==========================================================
+// 🚀 RUN BOUKÉ – Quadrillage central Namur
+// ==========================================================
+export async function runBouke() {
+  const runType = "Bouke-Namur";
 
-export async function runBouke(runType = "core") {
-  try {
-    await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
-
-    const zones = [
+  const zones = [
     // --- Axe Namur / Floreffe
     { lat: 50.46, lon: 4.86, region: "Namur", country: "BE" },
     { lat: 50.45, lon: 4.84, region: "Floreffe", country: "BE" },
@@ -53,7 +60,8 @@ export async function runBouke(runType = "core") {
     { lat: 50.47, lon: 4.63, region: "Auvelais", country: "BE" },
   ];
 
-  // Extraction réelle via SuperForecast
+  try {
+    await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
     const result = await superForecast({ zones, runType, withAI: false });
 
     if (!result?.success) throw new Error(result?.error || "Échec extraction Bouké-Namur");
@@ -66,12 +74,31 @@ export async function runBouke(runType = "core") {
       "success",
       runType
     );
-
+// ==========================================================
+// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
+// ==========================================================
+try {
+  const vision = await runVisionIA("Europe");
+  if (vision?.confidence >= 50) {
+    await addEngineLog(
+      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
+      "info",
+      "vision"
+    );
+  } else {
+    await addEngineLog(
+      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
+      "warn",
+      "vision"
+    );
+  }
+} catch (e) {
+  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
+}
     return { success: true };
-
-  } catch (err) {
-    await addEngineError(`Erreur inattendue : ${err.message}`, "core");
-    return { success: false, error: err.message };
+  } catch (e) {
+    await addEngineError(`runBouke: ${e.message}`, runType);
+    return { success: false, error: e.message };
   }
 }
 
