@@ -71,8 +71,8 @@ export async function runBouke() {
       `✅ Extraction Bouké-Namur terminée (${zones.length} points couverts) et stockée sur Mongo Cloud`,
       "success",
       runType
-    );
-  }
+    )};
+  
 } catch (e) {
   await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
 }
