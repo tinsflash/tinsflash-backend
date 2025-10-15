@@ -1,6 +1,6 @@
 // ==========================================================
 // 🌪️ TINSFLASH – aiphase5.js
-// v1.0  —  PHASE 5 UNIQUEMENT (prévisions publiques + alertes)
+// v1.1  —  PHASE 5 UNIQUEMENT (prévisions publiques + alertes)
 // ==========================================================
 // Rôle :
 // 1) Lire les sorties d'analyse IA (Phase 2/4) sur les 3 dernières heures
@@ -42,10 +42,8 @@ const WINDOW_HOURS = 3;
 
 // ----------------------------------------------------------
 // 🔎 Aides d’extraction depuis un point IA (Phase 2/4)
-// Les champs viennent de aiAnalysis.js (reliés tels quels si dispo).
 // ----------------------------------------------------------
 function pickScalarFromPoint(p) {
-  // Température/vent/pluie/neige : s’ils sont disponibles dans les sous-objets
   const wind = p?.wind || {};
   const rain = p?.rain || {};
   const snow = p?.snow || {};
@@ -55,13 +53,9 @@ function pickScalarFromPoint(p) {
     lon: mm(Number(p.lon ?? p.longitude)),
     country: p.country || null,
     zone: String(p.zone || p.region || p.country || "Unknown"),
-
-    // indicateurs généraux
     reliability_pct: mm(Number(p.reliability_pct ?? p.reliability * 100)),
     indiceLocal: mm(Number(p.indiceLocal)),
     condition: p.condition || null,
-
-    // métriques météo (tolère multiples clés)
     gust_kmh: mm(Number(wind.gust_kmh ?? wind.gust ?? wind.max_kmh ?? wind.max)),
     wind_kmh: mm(Number(wind.avg_kmh ?? wind.avg ?? wind.speed_kmh ?? wind.speed)),
     rain_1h_mm: mm(Number(rain["1h"] ?? rain.h1 ?? rain.last1h)),
@@ -70,10 +64,9 @@ function pickScalarFromPoint(p) {
     snow_6h_cm: mm(Number(snow["6h_cm"] ?? snow.h6_cm ?? snow.h6)),
     snow_12h_cm: mm(Number(snow["12h_cm"] ?? snow.h12_cm ?? snow.h12)),
     snow_24h_cm: mm(Number(snow["24h_cm"] ?? snow.h24_cm ?? snow.h24)),
-
     analysedAt: p.analysedAt ? new Date(p.analysedAt) : null,
     visualEvidence: !!p.visualEvidence,
-    phenomena: p.phenomena || null, // si Phase 2 a identifié des phénomènes
+    phenomena: p.phenomena || null,
     sources: Array.isArray(p.sources) ? p.sources : null,
   };
 }
@@ -82,7 +75,6 @@ function pickScalarFromPoint(p) {
 // 📏 Application des seuils d’alerte
 // ----------------------------------------------------------
 function evaluateAgainstThresholds(s, thresholds) {
-  // s = scalar metrics for a single point
   const alerts = [];
 
   // --- Vent (rafales en km/h)
@@ -177,45 +169,28 @@ function evaluateAgainstThresholds(s, thresholds) {
     }
   }
 
-  // TODO : on peut étendre ici (verglas, chaleur, submersion, orage_grêle, etc.)
-  // en suivant la même mécanique et en s’appuyant sur s.phenomena si fourni par la Phase 2.
-
   return alerts;
 }
 
 // ----------------------------------------------------------
-// 🧮 Fiabilité alerte (simple, robuste et explicable)
+// 🧮 Fiabilité alerte (pondérée et explicable)
 // ----------------------------------------------------------
 function computeAlertReliabilityPct(s, hasVisual, sourcesCount) {
-  // pondération : modèles (sources), visuel, cohérence locale
   const w = { models: 0.45, visual: 0.25, local: 0.30 };
-
-  // modèles : on approxime par nb de sources vs 8 attendues
   const EXPECTED = 8;
   const models = clamp01((sourcesCount ?? 0) / EXPECTED);
-
-  // visuel : booléen => 0/1
   const visual = hasVisual ? 1 : 0;
-
-  // local : on se sert de la fiabilité locale si disponible
   const local = clamp01((s.reliability_pct ?? 60) / 100);
-
-  const score =
-    w.models * models +
-    w.visual * visual +
-    w.local * local;
-
-  return Math.round(clamp01(score) * 100); // %
+  const score = w.models * models + w.visual * visual + w.local * local;
+  return Math.round(clamp01(score) * 100);
 }
 
 // ----------------------------------------------------------
-// 🗺️ Consolidation "nationale" simple par agrégation
-// (une zone peut de facto être une région; on garde zone + country)
+// 🗺️ Consolidation publique simple
 // ----------------------------------------------------------
 function makePublicForecastFromPoint(s) {
   const temp = s?.stations?.tempStation ?? null;
   const wind = s?.wind_kmh ?? s?.gust_kmh ?? null;
-
   return {
     zone: s.zone,
     country: s.country,
@@ -236,33 +211,22 @@ function makePublicForecastFromPoint(s) {
 // 🚀 Entrée principale Phase 5
 // ----------------------------------------------------------
 export async function runPhase5() {
+  const { default: mongoose } = await import("mongoose");
   try {
     await addEngineLog("🚨 Phase 5 – Fusion des alertes (aiphase5.js)", "info", "alerts");
 
-    // 0) Charger seuils
     const thresholds = getThresholds();
-
-    // 1) Connexion Mongo + modèles dynamiques
-    const { default: mongoose } = await import("mongoose");
     const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
     if (!uri) throw new Error("MONGO_URI absent");
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 20000 });
 
     const AnySchema = new mongoose.Schema({}, { strict: false });
+    const AiPoints = mongoose.models.forecasts_ai_points || mongoose.model("forecasts_ai_points", AnySchema, "forecasts_ai_points");
+    const Alerts = mongoose.models.alerts || mongoose.model("alerts", AnySchema, "alerts");
 
-    const AiPoints =
-      mongoose.models.forecasts_ai_points ||
-      mongoose.model("forecasts_ai_points", AnySchema, "forecasts_ai_points");
-
-    const Alerts =
-      mongoose.models.alerts ||
-      mongoose.model("alerts", AnySchema, "alerts");
-
-    // 2) Fenêtre temporelle (≤ 3 h)
     const since = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000);
-
-    // 3) Charger points IA récents
     const points = await AiPoints.find({ analysedAt: { $gte: since } }).lean();
+
     if (!points.length) {
       await addEngineLog("ℹ️ Phase 5: aucun point IA récent (<3h).", "info", "alerts");
       await mongoose.disconnect();
@@ -271,27 +235,16 @@ export async function runPhase5() {
 
     await addEngineLog(`📥 Phase 5: ${points.length} points IA chargés (<${WINDOW_HOURS}h).`, "info", "alerts");
 
-    // 4) Balayage points -> prévisions publiques + alertes
     const publicForecasts = [];
     const consolidatedAlerts = [];
 
     for (const p of points) {
       const s = pickScalarFromPoint(p);
       if (!s.lat || !s.lon) continue;
-
-      // prévision publique minimale (pour front)
       publicForecasts.push(makePublicForecastFromPoint(s));
-
-      // seuils -> alertes
       const localAlerts = evaluateAgainstThresholds(s, thresholds);
-
       for (const a of localAlerts) {
-        const reliability_pct = computeAlertReliabilityPct(
-          s,
-          !!s.visualEvidence,
-          Array.isArray(s.sources) ? s.sources.length : 0
-        );
-
+        const reliability_pct = computeAlertReliabilityPct(s, !!s.visualEvidence, Array.isArray(s.sources) ? s.sources.length : 0);
         consolidatedAlerts.push({
           title:
             a.type === "vent"
@@ -302,19 +255,14 @@ export async function runPhase5() {
               ? `Chutes de neige ${s.zone}`
               : `Alerte ${a.type} ${s.zone}`,
           phenomenon: a.type,
-          level: a.level, // prealerte | alerte | extreme
+          level: a.level,
           zone: s.zone,
           country: s.country,
           lat: s.lat,
           lon: s.lon,
-          metrics: {
-            value: a.value,
-            unit: a.unit ?? null,
-            window: a.window ?? null,
-          },
+          metrics: { value: a.value, unit: a.unit ?? null, window: a.window ?? null },
           reason: a.reason,
           reliability_pct,
-          // primeur si aucune comparaison/externe connue :
           isPrimeur: !(p?.phenomena?.externalComparisons?.length),
           comparedToExternal: !!(p?.phenomena?.externalComparisons?.length),
           sourcesCount: Array.isArray(s.sources) ? s.sources.length : null,
@@ -322,82 +270,52 @@ export async function runPhase5() {
           createdAt: new Date(),
           updatedAt: new Date(),
           engine: "TINSFLASH IA.J.E.A.N.",
-          version: "phase5.v1.0",
+          version: "phase5.v1.1",
         });
       }
     }
 
-    // 5) Écriture Mongo (ALERTES)
-    //    Politique : on n’efface que les alertes >30h ; on ajoute en plus
-    //    (si tu veux écraser par zone, on peut le faire dans une itération suivante).
     let inserted = 0;
     if (consolidatedAlerts.length) {
       await Alerts.insertMany(consolidatedAlerts, { ordered: false });
       inserted = consolidatedAlerts.length;
     }
-// 5 bis) Écriture Mongo (PRÉVISIONS PUBLIQUES)
-    try {
-      const PublicForecast =
-        mongoose.models.PublicForecast ||
-        mongoose.model(
-          "PublicForecast",
-          new mongoose.Schema(
-            {
-              lat: Number,
-              lon: Number,
-              country: String,
-              zone: String,
-              condition: String,
-              reliability_pct: Number,
-              indices: Object,
-              updated: Date,
-            },
-            { strict: false }
-          ),
-          "publicForecasts"
-        );
 
+    try {
+      const PublicForecast = mongoose.models.PublicForecast || mongoose.model("PublicForecast", new mongoose.Schema({}, { strict: false }), "publicForecasts");
       if (publicForecasts.length) {
-        // on efface les anciennes prévisions trop vieilles (> 6 h)
         const cutoffPublic = new Date(Date.now() - 6 * 60 * 60 * 1000);
         await PublicForecast.deleteMany({ updated: { $lt: cutoffPublic } });
         await PublicForecast.insertMany(publicForecasts, { ordered: false });
-        await addEngineLog(
-          `📊 Phase 5 : ${publicForecasts.length} prévisions publiques écrites dans Mongo.`,
-          "info",
-          "alerts"
-        );
+        await addEngineLog(`📊 Phase 5 : ${publicForecasts.length} prévisions publiques écrites dans Mongo.`, "info", "alerts");
       } else {
         await addEngineLog("ℹ️ Phase 5 : aucune prévision publique à écrire.", "info", "alerts");
       }
     } catch (err) {
       await addEngineError(`Écriture prévisions publiques échouée : ${err.message}`, "alerts");
     }
-    // 6) Purge > 30 h des anciennes alertes
+
     try {
       const cutoff = new Date(Date.now() - 30 * 60 * 60 * 1000);
       const del = await Alerts.deleteMany({ createdAt: { $lt: cutoff } });
-      await addEngineLog(
-        `🧹 Phase 5: purge alerts >30h: ${del?.deletedCount ?? 0} supprimée(s)`,
-        "info",
-        "alerts"
-      );
+      await addEngineLog(`🧹 Phase 5: purge alerts >30h: ${del?.deletedCount ?? 0} supprimée(s)`, "info", "alerts");
     } catch (err) {
       await addEngineError(`Purge alerts >30h: ${err.message}`, "alerts");
     }
 
-    await addEngineLog(
-      `✅ Phase 5: ${inserted} alerte(s) consolidée(s), ${publicForecasts.length} prévision(s) publiques calculées.`,
-      "success",
-      "alerts"
-    );
+    await addEngineLog(`✅ Phase 5: ${inserted} alerte(s) consolidée(s), ${publicForecasts.length} prévision(s) publiques calculées.`, "success", "alerts");
 
-    await mongoose.disconnect();
+    // déconnexion retardée (protection Render)
+    setTimeout(async () => {
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.disconnect();
+        await addEngineLog("🔌 Déconnexion Mongo Phase 5 OK (attente 500ms)", "info", "alerts");
+      }
+    }, 500);
 
     return {
       alerts: inserted,
       forecasts: publicForecasts.length,
-      note: "Prévisions publiques non écrites (front les récupère via /api/forecast existant).",
       directive: PHASE5_DIRECTIVE.trim(),
     };
   } catch (e) {
