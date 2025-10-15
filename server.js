@@ -1,4 +1,3 @@
-
 // ==========================================================
 // 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT – ZONES REGROUPÉES)
 // ==========================================================
@@ -18,7 +17,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import { EventEmitter } from "events";
-import { checkReliability } from "./services/checkReliability.js"; // ✅ ajout unique
+import { checkReliability } from "./services/checkReliability.js"; // ✅ ajouté précédemment
 
 // ==========================================================
 // 🚀 INITIALISATION DES ZONES COUVERTES
@@ -253,9 +252,6 @@ app.get("/api/forecast", async (req, res) => {
 });
 
 // ==========================================================
-// (reste inchangé – toutes les autres routes, runs, phases, etc.)
-// ==========================================================
-// ==========================================================
 // 🛰️ ROUTES API DE RUN – PHASE 1 (ZONES REGROUPÉES)
 // ==========================================================
 app.post("/api/run-global-europe", safeRun(runGlobalEurope, "Europe"));
@@ -330,6 +326,25 @@ app.get("/api/alerts-detected", async (req, res) => {
 });
 
 // ==========================================================
+// 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
+// ==========================================================
+import { MongoClient } from "mongodb";
+
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const db = client.db();
+    const alerts = await db.collection("alerts").find({}).toArray();
+    await client.close();
+    res.json(alerts || []);
+  } catch (err) {
+    console.error("Erreur /api/alerts:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
 // ==========================================================
 const publicPath = path.join(__dirname, "public");
@@ -343,25 +358,7 @@ app.get("/admin-alerts.html", (_, res) => res.sendFile(path.join(publicPath, "ad
 // ==========================================================
 const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
-// ==========================================================
-// 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
-// ==========================================================
-import { MongoClient } from "mongodb";
 
-app.get("/api/alerts", async (req, res) => {
-  try {
-    const client = new MongoClient(process.env.MONGO_URI);
-    await client.connect();
-    const db = client.db(); // base par défaut de ta connexion
-    const alerts = await db.collection("alerts").find({}).toArray();
-    await client.close();
-
-    res.json(alerts || []);
-  } catch (err) {
-    console.error("Erreur /api/alerts:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
 app.listen(PORT, "0.0.0.0", () => {
   console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
