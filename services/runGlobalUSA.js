@@ -9,7 +9,10 @@ import { superForecast } from "./superForecast.js";
 import { addEngineLog, updateEngineState, setLastExtraction } from "./engineState.js";
 import { saveExtractionToMongo } from "./extractionStore.js";
 import fs from "fs";
-
+// ----------------------------------------------------------
+// 🛰️ VisionIA – capture et analyse satellite automatique
+// ----------------------------------------------------------
+import { runVisionIA } from "./runVisionIA.js";
 export async function runGlobalUSA() {
   try {
     await addEngineLog("🇺🇸 Phase 1 – Extraction USA lancée...", "info", "runGlobalUSA");
@@ -99,6 +102,27 @@ export async function runGlobalUSA() {
   } catch (err) {
     await addEngineLog(`❌ Erreur runGlobalUSA : ${err.message}`, "error", "runGlobalUSA");
     await updateEngineState("fail", "runGlobalUSA");
+  // ==========================================================
+// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
+// ==========================================================
+try {
+  const vision = await runVisionIA("Europe");
+  if (vision?.confidence >= 50) {
+    await addEngineLog(
+      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
+      "info",
+      "vision"
+    );
+  } else {
+    await addEngineLog(
+      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
+      "warn",
+      "vision"
+    );
+  }
+} catch (e) {
+  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
+}
     return { success: false, error: err.message };
   }
 }
