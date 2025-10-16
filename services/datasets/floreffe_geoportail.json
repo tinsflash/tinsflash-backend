@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "source": "geoportail.wallonie.be",
+    "dataset": "Occupation du sol - Relief - Forêts et zones agricoles",
+    "updated": "2025-09-30",
+    "notes": "Découpage simplifié du territoire communal de Floreffe pour usage IA et run local"
+  },
+  "features": [
+    { "id": "GEO_01", "type": "urbain", "area_km2": 1.8, "elevation_mean": 95, "slope_avg": 3.2, "description": "Centre de Floreffe, Abbaye et zones résidentielles" },
+    { "id": "GEO_02", "type": "vallée", "area_km2": 2.1, "elevation_mean": 80, "slope_avg": 1.5, "description": "Vallée de la Sambre – Franière, zone inondable" },
+    { "id": "GEO_03", "type": "colline", "area_km2": 3.4, "elevation_mean": 165, "slope_avg": 8.4, "description": "Floriffoux – Sovimont – Lesve haute, pentes exposées" },
+    { "id": "GEO_04", "type": "boisé", "area_km2": 4.2, "elevation_mean": 190, "slope_avg": 11.6, "description": "Bois de Floreffe, Bois du Roi et Bois de Lesve" },
+    { "id": "GEO_05", "type": "agricole", "area_km2": 6.8, "elevation_mean": 150, "slope_avg": 5.7, "description": "Plateaux agricoles : Soye, Robermont, Floriffoux" },
+    { "id": "GEO_06", "type": "industriel", "area_km2": 0.9, "elevation_mean": 90, "slope_avg": 2.1, "description": "Zoning Franière – Usine Materne" }
+  ]
+}
+
