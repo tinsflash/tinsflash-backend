@@ -1,19 +1,15 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.9 PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.9 PHASE1/1B PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 1B : VisionIA (captures satellites & multicouches)
 // 🔸 Phase 1.5 : HRRR (USA only, via Microsoft Planetary Computer)
-// 🔸 Phase 2 : IA J.E.A.N. optionnelle (fusion, pondération, alertes)
 // ==========================================================
 
 import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
-import { runAIAnalysis } from "./aiAnalysis.js";
-import { runWorldAlerts } from "./runWorldAlerts.js";
-import { autoCompareAfterRun } from "./compareExternalIA.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -30,6 +26,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     const now = new Date();
     const ymd = now.toISOString().slice(0, 10).replace(/-/g, "");
 
+    // 🔒 Modèles conservés à l’identique
     const models = [
       {
         name: "GFS NOAA",
@@ -98,6 +95,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
         const T = d.temperature_2m ?? d.air_temperature ?? null;
         const P = d.precipitation ?? d.PRECTOTCORR ?? 0;
         const W = d.wind_speed_10m ?? d.wind_speed ?? d.WS10M ?? null;
+
         push({ source: m.name, temperature: T, precipitation: P, wind: W });
         log(m.name, true);
       } catch (e) {
@@ -144,9 +142,9 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 }
 
 // ==========================================================
-// 🚀 SUPERFORECAST PRINCIPAL
+// 🚀 SUPERFORECAST PRINCIPAL (Phase 1 + 1B uniquement)
 // ==========================================================
-export async function superForecast({ zones = [], runType = "global", withAI = false, phaseMode = "full" }) {
+export async function superForecast({ zones = [], runType = "global", phaseMode = "full" }) {
   try {
     console.log(`🛰️ SuperForecast lancé (${zones.length} zones – ${runType} – ${phaseMode})`);
     await addEngineLog(`🛰️ SuperForecast ${runType} (${zones.length} zones – ${phaseMode})`, "info", "superForecast");
@@ -172,13 +170,11 @@ export async function superForecast({ zones = [], runType = "global", withAI = f
     await addEngineLog(`✅ Phase 1 + HRRR terminée (${runType})`, "success", "superForecast");
 
     // ==========================================================
-    // 🌫️ PHASE 1B – VisionIA (uniquement si autorisée)
+    // 🌫️ PHASE 1B – VisionIA (si autorisée)
     // ==========================================================
     if (phaseMode === "phase1b" || phaseMode === "full") {
       try {
-        // ✅ Chemin corrigé (dossier Vision à la racine du projet)
         const { runVisionCapture } = await import("../vision/visionCapture.js");
-
         await addEngineLog("🌫️ Lancement VisionIA – Phase 1B (captures visuelles)", "info", "superForecast");
         const vision = await runVisionCapture(zones);
         if (vision?.success) {
@@ -188,31 +184,18 @@ export async function superForecast({ zones = [], runType = "global", withAI = f
             "superForecast"
           );
         } else {
-          await addEngineError(
-            `⚠️ VisionIA a rencontré un problème : ${vision?.error || "inconnu"}`,
-            "superForecast"
-          );
+          await addEngineError(`⚠️ VisionIA problème : ${vision?.error || "inconnu"}`, "superForecast");
         }
       } catch (e) {
-        await addEngineError(`VisionIA non disponible ou erreur : ${e.message}`, "superForecast");
+        await addEngineError(`VisionIA non disponible : ${e.message}`, "superForecast");
       }
     } else {
       await addEngineLog("Phase 1B ignorée (mode extraction seule)", "info", "superForecast");
     }
 
-    // ==========================================================
-    // 🤖 PHASE 2 – IA J.E.A.N. (uniquement si demandée)
-    // ==========================================================
-    if (withAI && phaseMode === "full") {
-      const aiResults = await runAIAnalysis(phase1Results);
-      const alerts = await runWorldAlerts();
-      await autoCompareAfterRun(phase1Results);
-      await addEngineLog(`🤖 IA J.E.A.N. & alertes terminées (${runType})`, "success", "superForecast");
-      return { success: true, phase1Results, aiResults, alerts };
-    } else {
-      await addEngineLog("IA J.E.A.N. non déclenchée (mode extraction seule)", "info", "superForecast");
-      return { success: true, phase1Results };
-    }
+    // ✅ Fin de Phase 1 / 1B : aucune Phase 2 automatique ici
+    await addEngineLog("🏁 Cycle Phase 1 / 1B terminé – en attente déclenchement Phase 2 manuel", "info", "superForecast");
+    return { success: true, phase1Results };
   } catch (err) {
     await addEngineError(`Erreur SuperForecast : ${err.message}`, "superForecast");
     return { error: err.message };
