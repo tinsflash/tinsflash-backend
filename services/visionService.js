@@ -1,21 +1,40 @@
 // ==========================================================
 // 🧠 TINSFLASH — services/visionService.js
 // Analyse automatique des captures radar/satellite (PNG)
-// Version VisionIA v2 — multi-couches IR / Visible / Radar
+// Version VisionIA v2.1 PRO+++ — multi-couches IR / Visible / Radar
+// 100 % réel, robuste et Render-compatible
 // ==========================================================
 // Dépendances : npm i jimp
 // ==========================================================
 import fs from "fs";
 import path from "path";
+import https from "https";
 import Jimp from "jimp";
+import axios from "axios";
 import { addEngineLog, addEngineError } from "./engineState.js";
 
 const VISION_DIR = path.join(process.cwd(), "data", "vision");
 const clamp01 = (x) => Math.max(0, Math.min(1, x ?? 0));
 
-// ----------------------------------------------------------
-// 🧩 Analyse individuelle d'une image
-// ----------------------------------------------------------
+// ==========================================================
+// 🧩 Récupération sécurisée des images (avec retry et SSL tolérant)
+// ==========================================================
+async function safeDownload(url, dest) {
+  try {
+    const agent = new https.Agent({ rejectUnauthorized: false }); // accepte SSL auto-signé
+    const response = await axios.get(url, { responseType: "arraybuffer", timeout: 15000, httpsAgent: agent });
+    fs.writeFileSync(dest, Buffer.from(response.data));
+    await addEngineLog(`📥 VisionIA: image téléchargée ${path.basename(dest)}`, "info", "vision");
+    return true;
+  } catch (err) {
+    await addEngineError(`VisionIA safeDownload: ${err.message}`, "vision");
+    return false;
+  }
+}
+
+// ==========================================================
+// 🧩 Analyse individuelle d'une image (réel)
+// ==========================================================
 async function analyzeImage(file) {
   const img = await Jimp.read(file);
   const { width, height, data } = img.bitmap;
@@ -67,9 +86,9 @@ async function analyzeImage(file) {
   };
 }
 
-// ----------------------------------------------------------
-// 🌍 Analyse globale VisionIA (toutes les dernières captures)
-// ----------------------------------------------------------
+// ==========================================================
+// 🌍 Analyse globale VisionIA (captures radar/satellite)
+// ==========================================================
 export async function analyzeVision(lat = null, lon = null, zone = "Global") {
   try {
     if (!fs.existsSync(VISION_DIR)) {
@@ -83,7 +102,7 @@ export async function analyzeVision(lat = null, lon = null, zone = "Global") {
       return { active: false, confidence: 0, type: "none", details: {} };
     }
 
-    // Trier par date et garder les 6 plus récentes (2 par source environ)
+    // Trier par date et garder les 6 plus récentes
     const byTime = files
       .map((f) => ({ f, t: fs.statSync(path.join(VISION_DIR, f)).mtimeMs }))
       .sort((a, b) => b.t - a.t)
@@ -98,14 +117,13 @@ export async function analyzeVision(lat = null, lon = null, zone = "Global") {
         await addEngineError("VisionIA analyzeImage: " + e.message, "vision");
       }
     }
+
     if (!analyses.length)
       return { active: false, confidence: 0, type: "none", details: {} };
 
     // Pondération selon le type spectral
     const weights = { IR: 0.6, Visible: 0.3, Radar: 0.1, WV: 0.4 };
-    let wSum = 0,
-      dSum = 0,
-      sSum = 0;
+    let wSum = 0, dSum = 0, sSum = 0;
     analyses.forEach((x) => {
       const w = weights[x.spectrum] ?? 0.2;
       wSum += w;
@@ -117,12 +135,10 @@ export async function analyzeVision(lat = null, lon = null, zone = "Global") {
     const structure = sSum / wSum;
     const convective = analyses.some((x) => x.convective);
     const confidence = Math.round(clamp01((density * 0.6 + structure * 0.4)) * 100);
-
     let type = "nuages épars";
     if (convective) type = "convection / orage probable";
     else if (density > 0.7) type = "nuages denses / pluie probable";
     else if (density > 0.5) type = "ciel chargé";
-
     const active = confidence >= 50;
 
     await addEngineLog(
@@ -151,4 +167,29 @@ export async function analyzeVision(lat = null, lon = null, zone = "Global") {
   }
 }
 
-export default { analyzeVision };
+// ==========================================================
+// 🛰️ Téléchargement manuel des images satellite (fallback EUMETSAT / GOES)
+// ==========================================================
+export async function downloadVisionSet() {
+  const urls = [
+    // 🌍 Europe
+    "https://eumetview.eumetsat.int/static-images/MSG/RGB/Europe-IR.jpg",
+    "https://eumetview.eumetsat.int/static-images/MSG/RGB/Airmass.jpg",
+    "https://eumetview.eumetsat.int/static-images/MSG/RGB/NaturalColor.jpg",
+    // 🌎 Amériques
+    "https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/americas/GEOCOLOR/latest.jpg",
+    // 🌏 Asie (Himawari, SSL tolérant)
+    "https://www.data.jma.go.jp/mscweb/data/himawari/img/satimg_Western_Pacific.jpg",
+  ];
+
+  if (!fs.existsSync(VISION_DIR)) fs.mkdirSync(VISION_DIR, { recursive: true });
+
+  for (const url of urls) {
+    const file = path.join(VISION_DIR, path.basename(url).replace(".jpg", ".png"));
+    await safeDownload(url, file);
+  }
+
+  await addEngineLog(`🌐 VisionIA: téléchargement multi-sources terminé (${urls.length} images)`, "info", "vision");
+}
+
+export default { analyzeVision, downloadVisionSet };
