@@ -1,21 +1,26 @@
 // ==========================================================
-// 🎥 TINSFLASH – runBouke.js (Everest Protocol v5.2.0 PRO+++)
+// 🛰️ TINSFLASH – runBouke.js (Everest Protocol v5.2.3 PRO+++)
 // ==========================================================
 // Phase 1 uniquement – Extraction réelle (pas d’IA ni vidéo)
-// Quadrillage haute densité Province de Namur et zones voisines
-// Ajout : Erpent, Bouge, Wépion, Daussoulx
+// Phase 1B = CAPTURE PURE (satellites) — aucune analyse
+// Quadrillage haute densité Province de Namur et zones voisines élargi au Sud
+// Ajout : Erpent, Bouge, Wépion, Daussoulx, Rochefort, Hamois, Walcourt, Wellin, Gedinne, Vresse-sur-Semois
 // Persistance Mongo Cloud (saveExtractionToMongo)
 // ==========================================================
 
 import { addEngineLog, addEngineError, setLastExtraction } from "./engineState.js";
 import { saveExtractionToMongo } from "./extractionStore.js";
 import { superForecast } from "./superForecast.js";
+
 // ----------------------------------------------------------
-// 🛰️ VisionIA – capture et analyse satellite automatique
+// 🛰️ VisionIA – CAPTURE SEULE (pas d'analyse ici)
 // ----------------------------------------------------------
-import { runVisionIA } from "./runVisionIA.js";
+// NOTE: on utilise le module de capture pure pour respecter Phase 1B.
+//       Aucune confidence ni interprétation ne sont calculées ici.
+import { runVisionCapture } from "../vision/visionCapture.js";
+
 // ==========================================================
-// 🚀 RUN BOUKÉ – Quadrillage central Namur
+// 🚀 RUN BOUKÉ – Quadrillage central Namur élargi au sud
 // ==========================================================
 export async function runBouke() {
   const runType = "Bouke-Namur";
@@ -58,14 +63,25 @@ export async function runBouke() {
     { lat: 50.54, lon: 4.60, region: "Sombreffe", country: "BE" },
     { lat: 50.49, lon: 4.61, region: "Tamines", country: "BE" },
     { lat: 50.47, lon: 4.63, region: "Auvelais", country: "BE" },
+
+    // --- Sud/Condroz–Famenne–Ardenne (ajouts 2025-10)
+    { lat: 50.166, lon: 5.222, region: "Rochefort", country: "BE" },
+    { lat: 50.356, lon: 5.157, region: "Hamois", country: "BE" },
+    { lat: 50.253, lon: 4.436, region: "Walcourt", country: "BE" },
+    { lat: 50.091, lon: 5.113, region: "Wellin", country: "BE" },
+    { lat: 49.987, lon: 4.940, region: "Gedinne", country: "BE" },
+    { lat: 49.842, lon: 4.928, region: "Vresse-sur-Semois", country: "BE" },
   ];
 
   try {
-    await addEngineLog("🎥 Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
+    await addEngineLog("🛰️ Phase 1 – Extraction Bouké-Namur (quadrillage complet) lancée", "info", runType);
+
+    // Phase 1 : extraction physique pure
     const result = await superForecast({ zones, runType, withAI: false });
 
     if (!result?.success) throw new Error(result?.error || "Échec extraction Bouké-Namur");
 
+    // Sauvegarde Mongo + horodatage run
     await saveExtractionToMongo("Bouke-Namur", "EU", result.phase1Results);
     await setLastExtraction(runType, { status: "OK", count: zones.length });
 
@@ -74,27 +90,31 @@ export async function runBouke() {
       "success",
       runType
     );
-// ==========================================================
-// 🛰️ PHASE 1B – VISION IA (SATELLITES IR / VISIBLE / RADAR)
-// ==========================================================
-try {
-  const vision = await runVisionIA("Europe");
-  if (vision?.confidence >= 50) {
-    await addEngineLog(
-      `🌍 VisionIA (${vision.zone}) active – ${vision.type} (${vision.confidence} %)`,
-      "info",
-      "vision"
-    );
-  } else {
-    await addEngineLog(
-      `🌫️ VisionIA (${vision.zone}) inerte – fiabilité ${vision.confidence} %`,
-      "warn",
-      "vision"
-    );
-  }
-} catch (e) {
-  await addEngineError("Erreur exécution VisionIA : " + e.message, "vision");
-}
+
+    // ==========================================================
+    // 🛰️ PHASE 1B – CAPTURE SATELLITES (IR / Visible / Radar) — CAPTURE SEULE
+    // ==========================================================
+    try {
+      // On capture les images pour les zones du run, sans analyse.
+      const vision = await runVisionCapture(zones);
+
+      if (vision?.success) {
+        await addEngineLog(
+          `📸 VisionIA (capture seule) – ${vision.stored?.length || 0} capture(s) sauvegardée(s)`,
+          "info",
+          "vision"
+        );
+      } else {
+        await addEngineError(
+          `⚠️ VisionIA (capture seule) – problème : ${vision?.error || "inconnu"}`,
+          "vision"
+        );
+      }
+    } catch (e) {
+      await addEngineError("Erreur capture VisionIA : " + e.message, "vision");
+    }
+
+    // Fin stricte Phase 1 / 1B — aucune autre phase déclenchée ici
     return { success: true };
   } catch (e) {
     await addEngineError(`runBouke: ${e.message}`, runType);
