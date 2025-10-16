@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "source": "hydrometrie.wallonie.be",
+    "dataset": "Cours d’eau et débits hydrométriques en temps réel",
+    "updated": "2025-10-16",
+    "notes": "Sambre et affluents surveillés dans le périmètre de Floreffe"
+  },
+  "rivieres": [
+    {
+      "id": "HYD_01",
+      "name": "Sambre – secteur Floreffe",
+      "station": "Floreffe-Pont",
+      "debit_m3s": 38.2,
+      "niveau_m": 1.72,
+      "alert_threshold": 2.2,
+      "risk": "crue rapide"
+    },
+    {
+      "id": "HYD_02",
+      "name": "Ruisseau de Sovimont",
+      "station": "Lesve-Sovimont",
+      "debit_m3s": 1.4,
+      "niveau_m": 0.38,
+      "alert_threshold": 0.60,
+      "risk": "ruissellement local"
+    },
+    {
+      "id": "HYD_03",
+      "name": "Ruisseau du Bois du Roi",
+      "station": "Floriffoux",
+      "debit_m3s": 0.9,
+      "niveau_m": 0.42,
+      "alert_threshold": 0.75,
+      "risk": "débordement ponctuel"
+    }
+  ]
+}
