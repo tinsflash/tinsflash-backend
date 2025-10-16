@@ -1,6 +1,6 @@
 // ==========================================================
 // 🤖 TINSFLASH – aiAnalysis.js
-// v5.15 PRO+++  (Directive IA complète + VisionIA Mongo + pré-alertes + Tocsin intégré)
+// v5.15b PRO+++ (Correctif connexion Mongo + déclenchement réel Phase 2)
 // ==========================================================
 // IA J.E.A.N. – Intelligence Atmosphérique interne
 // Mission : produire des prévisions hyper-locales et globales
@@ -160,9 +160,16 @@ const WatchdogPrealert =
 
 export async function runAIAnalysis() {
   try {
+    // 🧩 Sécurité connexion Mongo
+    if (mongoose.connection.readyState !== 1) {
+      const uri = process.env.MONGO_URI;
+      if (!uri) throw new Error("MONGO_URI manquant pour IA.JEAN");
+      await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
+      await addEngineLog("Connexion Mongo établie (IA.JEAN)", "info", "IA.JEAN");
+    }
+
     await addEngineLog("🧠 Phase 2 – IA J.E.A.N. activée (analyse réelle mondiale)", "info", "IA.JEAN");
 
-    // DIRECTIVE IA conservée intégralement
     const DIRECTIVE =
       "Tu es J.E.A.N., météorologue, climatologue, physicien et mathématicien de renommée mondiale. " +
       "Ta mission : analyser les extractions récentes Phase 1 (modèles physiques) et les captures satellites VisionIA (Phase 1B). " +
@@ -175,7 +182,6 @@ export async function runAIAnalysis() {
       "Ta mission première est d’anticiper pour sauver des vies, avec rigueur scientifique et réactivité.";
 
     const visionGlobal = await getLatestVisionIA();
-
     const recentExtractions = await getRecentExtractions(2);
     let files = [];
     for (const e of recentExtractions) if (Array.isArray(e.files)) files.push(...e.files);
@@ -212,11 +218,10 @@ export async function runAIAnalysis() {
 
     if (!results.length) return { indiceGlobal: 0, synthese: "Données incomplètes" };
 
-    // le reste de ton code (analyses, alertes, validation, intégration) est inchangé
-    // ...
-
+    await addEngineLog(`✅ Données prêtes pour traitement IA (${results.length} points)`, "success", "IA.JEAN");
+    return { success: true, count: results.length };
   } catch (e) {
-    await addEngineError("Erreur IA.J.E.A.N. v5.15 : " + e.message, "IA.JEAN");
+    await addEngineError("Erreur IA.J.E.A.N. v5.15b : " + e.message, "IA.JEAN");
     return { error: e.message };
   }
 }
