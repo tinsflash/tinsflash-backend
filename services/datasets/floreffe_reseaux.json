@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "source": "SPGE / Commune de Floreffe",
+    "dataset": "Réseaux d’égouttage et collecteurs pluviaux",
+    "updated": "2025-10-01",
+    "notes": "Schéma d’ensemble simplifié du réseau pluvial communal (inspiré SPGE/IPALLE)"
+  },
+  "collecteurs": [
+    { "id": "COL_01", "name": "Collecteur central – Rue du Pont", "diam_mm": 800, "type": "unitaire", "slope_pct": 1.2, "status": "fonctionnel" },
+    { "id": "COL_02", "name": "Collecteur Sovimont", "diam_mm": 600, "type": "pluvial", "slope_pct": 0.8, "status": "bassin_orage" },
+    { "id": "COL_03", "name": "Collecteur Floriffoux", "diam_mm": 700, "type": "unitaire", "slope_pct": 1.0, "status": "fonctionnel" },
+    { "id": "COL_04", "name": "Bassin d’orage Sovimont", "capacity_m3": 1200, "type": "rétention", "status": "en_service" },
+    { "id": "COL_05", "name": "Station d’épuration SPGE", "type": "traitement", "capacity_eqh": 6500, "status": "actif" }
+  ]
+}
