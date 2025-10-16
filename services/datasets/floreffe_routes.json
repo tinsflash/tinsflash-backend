@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "source": "geoportail.wallonie.be",
+    "dataset": "Voiries communales et régionales",
+    "updated": "2025-08-15",
+    "notes": "Routes principales et points sensibles pour gestion voirie et alertes verglas/inondation"
+  },
+  "routes": [
+    { "id": "RTE_01", "name": "N90", "type": "régionale", "length_km": 6.1, "risk": "ruissellement", "alt_min": 82, "alt_max": 110 },
+    { "id": "RTE_02", "name": "N947 (Floreffe – Lesve)", "type": "régionale", "length_km": 4.3, "risk": "verglas", "alt_min": 94, "alt_max": 178 },
+    { "id": "RTE_03", "name": "Rue du Pont", "type": "communale", "length_km": 0.8, "risk": "inondation", "alt_min": 82, "alt_max": 90 },
+    { "id": "RTE_04", "name": "Rue du Baty", "type": "communale", "length_km": 1.3, "risk": "verglas", "alt_min": 165, "alt_max": 180 },
+    { "id": "RTE_05", "name": "Rue de la Pêcherie", "type": "communale", "length_km": 0.9, "risk": "pluvial", "alt_min": 88, "alt_max": 94 },
+    { "id": "RTE_06", "name": "Chemin de Halage", "type": "piéton", "length_km": 5.2, "risk": "inondation", "alt_min": 78, "alt_max": 82 }
+  ]
+}
