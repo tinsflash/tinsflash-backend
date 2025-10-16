@@ -1,6 +1,6 @@
 // ==========================================================
 // 🤖 TINSFLASH – aiAnalysis.js
-// v5.15b PRO+++ (Correctif connexion Mongo + déclenchement réel Phase 2)
+// v5.15c PRO+++ (Directive IA intégrée + multi-zones + sauvegarde IA + Watchdog)
 // ==========================================================
 // IA J.E.A.N. – Intelligence Atmosphérique interne
 // Mission : produire des prévisions hyper-locales et globales
@@ -42,7 +42,7 @@ function computeClimateFactor(lat) {
   return 1.0;
 }
 const clamp01 = (x) => Math.max(0, Math.min(1, x ?? 0));
-const safeAvg = (arr) => (arr?.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+const safeAvg = (arr) => (arr?.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 
 // ==========================================================
 // 📡 Lecture VisionIA (MongoDB ou fallback local)
@@ -121,42 +121,13 @@ function computeForecastReliability({ r, stationsSummary, visualConfidence, indi
   return clamp01(Math.max(score, 0.25 * modelsCoverage));
 }
 
-function computeAlertReliability({ r, a, stationsSummary, visualConfidence }) {
-  let models = 0;
-  if (typeof r.reliability === "number") models = clamp01(r.reliability);
-  else if (Array.isArray(r.sources)) {
-    const EXPECTED_MODELS = 8;
-    models = clamp01(r.sources.length / EXPECTED_MODELS);
-  }
-
-  const stations =
-    stationsSummary &&
-    (stationsSummary.windStation != null ||
-      stationsSummary.tempStation != null ||
-      stationsSummary.humidityStation != null)
-      ? 1
-      : 0;
-
-  const visual = clamp01(visualConfidence / 100);
-  const external =
-    Array.isArray(a.externalComparisons) && a.externalComparisons.length ? 1 : 0;
-
-  const w = { models: 0.4, stations: 0.2, visual: 0.25, external: 0.15 };
-  return clamp01(
-    Math.max(w.models * models + w.stations * stations + w.visual * visual + w.external * external, clamp01(a.confidence))
-  );
-}
-
 // ==========================================================
 // 🧠 IA J.E.A.N. – Phase 2
 // ==========================================================
-const WatchdogPrealert =
-  mongoose.models.watchdog_prealerts ||
-  mongoose.model(
-    "watchdog_prealerts",
-    new mongoose.Schema({}, { strict: false }),
-    "watchdog_prealerts"
-  );
+const AIPointSchema = new mongoose.Schema({}, { strict: false });
+const AIPointModel =
+  mongoose.models.forecasts_ai_points ||
+  mongoose.model("forecasts_ai_points", AIPointSchema, "forecasts_ai_points");
 
 export async function runAIAnalysis() {
   try {
@@ -168,21 +139,25 @@ export async function runAIAnalysis() {
       await addEngineLog("Connexion Mongo établie (IA.JEAN)", "info", "IA.JEAN");
     }
 
-    await addEngineLog("🧠 Phase 2 – IA J.E.A.N. activée (analyse réelle mondiale)", "info", "IA.JEAN");
+    await addEngineLog("🧠 Phase 2 – IA J.E.A.N. activée (analyse réelle mondiale multi-zones)", "info", "IA.JEAN");
 
-    const DIRECTIVE =
-      "Tu es J.E.A.N., météorologue, climatologue, physicien et mathématicien de renommée mondiale. " +
-      "Ta mission : analyser les extractions récentes Phase 1 (modèles physiques) et les captures satellites VisionIA (Phase 1B). " +
-      "Tu croises les modèles (GFS, ECMWF, ICON, etc.) avec les images satellites infrarouge et visibles, " +
-      "les observations de stations locales, et les données d’environnement (relief, altitude, proximité mer/rivière). " +
-      "Tu détectes les anomalies (pluie, vent, neige, verglas, orages, chaleur, crues, submersions, etc.) " +
-      "et tu produis des prévisions précises et un taux de fiabilité (0–100%). " +
-      "Si la VisionIA révèle un phénomène (convection, nuages denses, pluie probable) non encore vu par les modèles, " +
-      "tu déclenches une pré-alerte visuelle IA (primeur). " +
-      "Ta mission première est d’anticiper pour sauver des vies, avec rigueur scientifique et réactivité.";
+    // 🎯 Directive IA — Mission scientifique J.E.A.N.
+    const IA_PROMPT =
+      "Tu es J.E.A.N., météorologue, climatologue, physicien et mathématicien d’élite. " +
+      "Tu maîtrises les équations de Navier-Stokes, les modèles GFS, ECMWF, ICON et AROME, " +
+      "et tu comprends la dynamique du relief et des flux atmosphériques. " +
+      "Ta mission : analyser toutes les extractions récentes de la Phase 1, qu’elles proviennent d’Europe, d’Amérique, d’Afrique ou d’Asie. " +
+      "Tu dois croiser les modèles physiques, les images VisionIA et les données de stations pour : " +
+      "1️⃣ Détecter tout signe de risque météorologique précoce (orage, pluie extrême, vent, neige, chaleur, verglas, submersion). " +
+      "2️⃣ Calculer la fiabilité de chaque prévision en fonction du nombre de modèles concordants et de la cohérence géographique. " +
+      "3️⃣ Prioriser les zones où la combinaison relief × humidité × vent × pression montre une instabilité atmosphérique. " +
+      "4️⃣ Si VisionIA détecte un signal anormal (nuages convectifs, structure frontale), crée une pré-alerte IA. " +
+      "Tu n’attends pas de validation humaine : tu agis pour anticiper et sauver des vies.";
+
+    await addEngineLog(`🎯 Directive IA chargée : ${IA_PROMPT.substring(0, 160)}...`, "info", "IA.JEAN");
 
     const visionGlobal = await getLatestVisionIA();
-    const recentExtractions = await getRecentExtractions(2);
+    const recentExtractions = await getRecentExtractions(10);
     let files = [];
     for (const e of recentExtractions) if (Array.isArray(e.files)) files.push(...e.files);
 
@@ -200,6 +175,8 @@ export async function runAIAnalysis() {
     await addEngineLog(`🌐 ${files.length} fichiers détectés pour IA.J.E.A.N.`, "info", "IA.JEAN");
 
     const results = [];
+    const reliabilities = [];
+
     for (const filePath of files) {
       try {
         const fullPath = path.resolve(filePath);
@@ -208,8 +185,12 @@ export async function runAIAnalysis() {
         const content = JSON.parse(raw);
         const data = Array.isArray(content) ? content : content.phase1Results || [];
         if (data.length) {
-          results.push(...data);
-          await addEngineLog(`📂 ${path.basename(filePath)} → ${data.length} points`, "info", "IA.JEAN");
+          for (const r of data) {
+            const reliability = computeForecastReliability({ r });
+            reliabilities.push(reliability);
+            results.push({ ...r, reliability_pct: Math.round(reliability * 100) });
+          }
+          await addEngineLog(`📂 ${path.basename(filePath)} → ${data.length} points analysés`, "info", "IA.JEAN");
         }
       } catch (err) {
         await addEngineError(`Erreur lecture ${filePath}: ${err.message}`, "IA.JEAN");
@@ -218,10 +199,20 @@ export async function runAIAnalysis() {
 
     if (!results.length) return { indiceGlobal: 0, synthese: "Données incomplètes" };
 
-    await addEngineLog(`✅ Données prêtes pour traitement IA (${results.length} points)`, "success", "IA.JEAN");
-    return { success: true, count: results.length };
+    await AIPointModel.insertMany(results, { ordered: false });
+    const avgReliability = Math.round(safeAvg(reliabilities) * 100);
+
+    await addEngineLog(
+      `✅ Phase 2 terminée – ${results.length} points IA traités, fiabilité moyenne ${avgReliability}%`,
+      "success",
+      "IA.JEAN"
+    );
+
+    await runWatchdog("post-phase2");
+
+    return { success: true, count: results.length, reliability: avgReliability };
   } catch (e) {
-    await addEngineError("Erreur IA.J.E.A.N. v5.15b : " + e.message, "IA.JEAN");
+    await addEngineError("Erreur IA.J.E.A.N. v5.15c : " + e.message, "IA.JEAN");
     return { error: e.message };
   }
 }
