@@ -109,7 +109,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
         name: "MET Norway – LocationForecast",
         url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
         headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0" },
-      };
+      }
 
     for (const m of models) {
       try {
