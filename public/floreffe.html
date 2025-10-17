@@ -181,27 +181,25 @@ const alerts = await fetch("floreffe_alerts.json?" + Date.now()).then(r=>r.json(
 
     // ================== 🔹 Rendu Prévisions ==================
     function renderForecastToday(data){
-      const c=document.getElementById("forecast-today");
-      if(!data){c.textContent="Aucune donnée";return;}
-      c.innerHTML=`<div class='forecast-card'>
-        🌡️ <b>${data.temperature?.toFixed(1)}°C</b><br>
-        🌧️ ${data.precipitation?.toFixed(1)} mm/h<br>
-        💨 ${data.wind?.toFixed(1)} km/h<br>
-        🔹 Fiabilité ${(data.reliability*100).toFixed(0)}%
-      </div>`;
-    }
+  const c=document.getElementById("forecast-today");
+  if(!data){c.textContent="Aucune donnée";return;}
+  c.innerHTML=`<div class='forecast-card'>
+    🌡️ <b>${data.temp_min}° / ${data.temp_max}°</b><br>
+    🌦️ ${data.condition}<br>
+    🔹 Fiabilité ${(data.reliability*100).toFixed(0)}%
+  </div>`;
+}
 
-    function renderForecastWeek(data){
-      const c=document.getElementById("forecast-week");
-      c.innerHTML="";
-      for(let i=1;i<=7;i++){
-        const d=document.createElement("div");
-        d.className="forecast-card";
-        d.innerHTML=`Jour ${i}<br><b>${data.temperature?.toFixed(1)}°C</b><br><small>tendance stable</small>`;
-        c.appendChild(d);
-      }
-    }
-
+function renderForecastWeek(data){
+  const c=document.getElementById("forecast-week");
+  c.innerHTML='';
+  data.week.forEach(j=>{
+    const d=document.createElement('div');
+    d.className='forecast-card';
+    d.innerHTML=`${j.day}<br><b>${j.temp_min}° / ${j.temp_max}°</b><br><small>${j.condition}</small>`;
+    c.appendChild(d);
+  });
+}
     function renderZone(z,alerts){
       const c=document.getElementById("zoneForecast");
       c.innerHTML="";
