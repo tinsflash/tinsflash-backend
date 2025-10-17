@@ -15,6 +15,7 @@ import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
+import { useEffect, useState } from "react";
 
 dotenv.config();
 
