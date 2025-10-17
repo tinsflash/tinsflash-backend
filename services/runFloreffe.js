@@ -304,7 +304,7 @@ await db.collection("floreffe_phase1").insertMany(cleanResultsWithTime);
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [{ role: "user", content: aiPrompt }],
-      temperature: 0.2,
+      temperature: 1,
     });
 
     let phase2Results;
