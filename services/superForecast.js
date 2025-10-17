@@ -1,5 +1,5 @@
 // ==========================================================
-// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.1.9 PHASE1/1B PRO+++)
+// 🌍 TINSFLASH – superForecast.js (Everest Protocol v5.2 PRO+++)
 // ==========================================================
 // 🔸 Phase 1 : Extraction pure (physique, sans IA)
 // 🔸 Phase 1B : VisionIA (captures satellites & multicouches)
@@ -11,6 +11,7 @@ import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
+import { downloadVisionSet, analyzeVisionSet } from "./visionService.js"; // ✅ Nouveau import
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -26,40 +27,15 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     const now = new Date();
     const ymd = now.toISOString().slice(0, 10).replace(/-/g, "");
 
-    // 🔒 Modèles conservés à l’identique
     const models = [
-      {
-        name: "GFS NOAA",
-        url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "ECMWF ERA5",
-        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
-      },
-      {
-        name: "ECMWF Open-Meteo",
-        url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "AROME MeteoFrance",
-        url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "ICON DWD",
-        url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "NASA POWER",
-        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
-      },
-      {
-        name: "Copernicus ERA5-Land",
-        url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "Open-Meteo Forecast",
-        url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
+      { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "ECMWF ERA5", url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON` },
+      { name: "ECMWF Open-Meteo", url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "AROME MeteoFrance", url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "ICON DWD", url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "NASA POWER", url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON` },
+      { name: "Copernicus ERA5-Land", url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m` },
+      { name: "Open-Meteo Forecast", url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m` },
       {
         name: "MET Norway – LocationForecast",
         url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
@@ -85,10 +61,8 @@ async function mergeMultiModels(lat, lon, country = "EU") {
             : r.data?.properties?.timeseries?.[0]?.data?.instant?.details
             ? {
                 temperature_2m: r.data.properties.timeseries[0].data.instant.details.air_temperature,
-                precipitation:
-                  r.data.properties.timeseries[0].data.next_1_hours?.details?.precipitation_amount ?? 0,
-                wind_speed_10m:
-                  r.data.properties.timeseries[0].data.instant.details.wind_speed ?? null,
+                precipitation: r.data.properties.timeseries[0].data.next_1_hours?.details?.precipitation_amount ?? 0,
+                wind_speed_10m: r.data.properties.timeseries[0].data.instant.details.wind_speed ?? null,
               }
             : {});
 
@@ -108,12 +82,9 @@ async function mergeMultiModels(lat, lon, country = "EU") {
     if (lon < -60 && lon > -130 && lat > 20 && lat < 55) {
       try {
         const hrrr = await fetchHRRR(lat, lon);
-        if (!hrrr.error) {
-          push(hrrr);
-          log("HRRR NOAA (Microsoft PC)", true);
-        } else log("HRRR NOAA (Microsoft PC)", false);
+        if (!hrrr.error) push(hrrr);
       } catch (e) {
-        log("HRRR NOAA (Microsoft PC)", false);
+        await addEngineError(`HRRR NOAA indisponible : ${e.message}`, "superForecast");
       }
     }
 
@@ -142,7 +113,7 @@ async function mergeMultiModels(lat, lon, country = "EU") {
 }
 
 // ==========================================================
-// 🚀 SUPERFORECAST PRINCIPAL (Phase 1 + 1B uniquement)
+// 🚀 SUPERFORECAST PRINCIPAL (Phase 1 + 1B)
 // ==========================================================
 export async function superForecast({ zones = [], runType = "global", phaseMode = "full" }) {
   try {
@@ -170,31 +141,35 @@ export async function superForecast({ zones = [], runType = "global", phaseMode 
     await addEngineLog(`✅ Phase 1 + HRRR terminée (${runType})`, "success", "superForecast");
 
     // ==========================================================
-    // 🌫️ PHASE 1B – VisionIA (si autorisée)
+    // 🌫️ PHASE 1B – VisionIA (captures satellites réelles)
     // ==========================================================
     if (phaseMode === "phase1b" || phaseMode === "full") {
       try {
-        const { runVisionCapture } = await import("../vision/visionCapture.js");
-        await addEngineLog("🌫️ Lancement VisionIA – Phase 1B (captures visuelles)", "info", "superForecast");
-        const vision = await runVisionCapture(zones);
-        if (vision?.success) {
+        await addEngineLog("🌫️ Lancement VisionIA – Phase 1B (captures & analyse)", "info", "superForecast");
+
+        const visionCap = await downloadVisionSet(runType);
+        if (!visionCap?.success) throw new Error("Téléchargement VisionIA échoué");
+
+        await delay(1000); // Pause pour la stabilité Render
+        const visionAnalysis = await analyzeVisionSet(runType);
+
+        if (visionAnalysis?.success) {
           await addEngineLog(
-            `📸 VisionIA terminée (${vision.stored?.length || 0} captures sauvegardées)`,
+            `📸 VisionIA terminée (${visionCap.count} captures, ${visionAnalysis.results.length} analyses)`,
             "success",
             "superForecast"
           );
         } else {
-          await addEngineError(`⚠️ VisionIA problème : ${vision?.error || "inconnu"}`, "superForecast");
+          await addEngineError(`⚠️ Analyse VisionIA échouée : ${visionAnalysis?.error}`, "superForecast");
         }
       } catch (e) {
-        await addEngineError(`VisionIA non disponible : ${e.message}`, "superForecast");
+        await addEngineError(`Erreur VisionIA : ${e.message}`, "superForecast");
       }
     } else {
       await addEngineLog("Phase 1B ignorée (mode extraction seule)", "info", "superForecast");
     }
 
-    // ✅ Fin de Phase 1 / 1B : aucune Phase 2 automatique ici
-    await addEngineLog("🏁 Cycle Phase 1 / 1B terminé – en attente déclenchement Phase 2 manuel", "info", "superForecast");
+    await addEngineLog("🏁 Cycle Phase 1 / 1B terminé – prêt pour Phase 2", "info", "superForecast");
     return { success: true, phase1Results };
   } catch (err) {
     await addEngineError(`Erreur SuperForecast : ${err.message}`, "superForecast");
