@@ -1,306 +1,214 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</title>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex,nofollow" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <style>
-    body {margin:0;font-family:"Segoe UI",sans-serif;background:#0f172a;color:#f5faff;}
-    header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
-    .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:.9em;}
-    .video-container{position:relative;overflow:hidden;}
-    video{width:100%;max-height:180px;object-fit:cover;display:block;filter:brightness(0.95);}
-    .video-overlay{position:absolute;bottom:0;width:100%;height:60px;background:linear-gradient(to bottom,rgba(15,23,42,0)0%,#0f172a100%);pointer-events:none;}
-    .sound-btn{position:absolute;right:15px;bottom:15px;background:rgba(0,0,0,0.5);border:none;border-radius:50%;color:#4fc3f7;font-size:18px;padding:6px;cursor:pointer;}
-    main{max-width:1200px;margin:auto;padding:20px;}
-    h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
-    p{color:#e0e8f9;line-height:1.5;text-align:justify;}
-    .intro-title{text-align:center;color:#4fc3f7;font-size:1.6em;margin-top:25px;text-shadow:0 0 10px #4fc3f7;}
-    .intro-block{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
-    .intro-block img{border-radius:10px;width:140px;max-height:220px;object-fit:contain;box-shadow:0 0 18px rgba(0,0,0,0.4);}
-    .intro-text{flex:1;max-height:200px;overflow-y:auto;background:#131a2b;padding:12px;border-radius:10px;color:#e0e8f9;line-height:1.5;}
-    .forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
-    .forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,0.3);}
-    .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
-    .alert-section .alert-box{background:#1b2439;border-left:4px solid #4fc3f7;padding:8px;margin-bottom:8px;border-radius:8px;}
-    .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
-    .premium-box{background:#11203a;border:1px solid #4fc3f7;border-radius:10px;padding:14px;margin-top:25px;text-align:center;}
-    .premium-box a{color:#4fc3f7;text-decoration:none;font-weight:bold;}
-    .premium-box a:hover{text-decoration:underline;}
-    footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:.9em;}
-    footer a{color:#4fc3f7;text-decoration:none;}
-    footer a:hover{text-decoration:underline;}
-    select{padding:8px;margin:10px 0;border-radius:6px;border:1px solid #4fc3f7;background:#11203a;color:#f5faff;}
-    .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,0.6);font-size:18px;transition:transform .3s ease;z-index:999;}
-    .btn-ai:hover{transform:scale(1.1);}
-    .chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:320px;height:420px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,0.5);z-index:999;}
-    .chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
-    .chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
-    .chat-input{display:flex;border-top:1px solid #333;}
-    .chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
-    .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
-    #lock{position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;}
-    #lock input{padding:8px;border-radius:6px;border:1px solid #4fc3f7;background:#11203a;color:#f5faff;margin-top:8px}
-    #lock button{margin-top:8px;background:#1b2b44;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
-  </style>
+<style>
+body{margin:0;font-family:"Segoe UI",sans-serif;background:#0f172a;color:#f5faff;}
+header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
+.subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:.9em;}
+.video-container{position:relative;overflow:hidden;}
+video{width:100%;max-height:180px;object-fit:cover;display:block;filter:brightness(.95);}
+.video-overlay{position:absolute;bottom:0;width:100%;height:60px;background:linear-gradient(to bottom,rgba(15,23,42,0)0%,#0f172a100%);pointer-events:none;}
+.sound-btn{position:absolute;right:15px;bottom:15px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#4fc3f7;font-size:18px;padding:6px;cursor:pointer;}
+main{max-width:1200px;margin:auto;padding:20px;}
+h2{color:#4fc3f7;border-left:4px solid #4fc3f7;padding-left:10px;margin-top:35px;}
+p{color:#e0e8f9;line-height:1.5;text-align:justify;}
+.intro-title{text-align:center;color:#4fc3f7;font-size:1.6em;margin-top:25px;text-shadow:0 0 10px #4fc3f7;}
+.intro-block{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.intro-block img{border-radius:10px;width:140px;max-height:220px;object-fit:contain;box-shadow:0 0 18px rgba(0,0,0,.4);}
+.intro-text{flex:1;max-height:200px;overflow-y:auto;background:#131a2b;padding:12px;border-radius:10px;color:#e0e8f9;line-height:1.5;}
+.forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+.forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.3);}
+.map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,.4);}
+.alert-section .alert-box{background:#1b2439;border-left:4px solid #4fc3f7;padding:8px;margin-bottom:8px;border-radius:8px;}
+.alert-surv{border-left-color:#9ca3af!important;background:#202837;color:#cbd5e1;}
+.alert-val{border-left-color:#facc15!important;background:#2a2535;color:#fde68a;}
+.alert-conf{border-left-color:#22d3ee!important;background:#11263f;color:#bae6fd;}
+.banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
+.premium-box{background:#11203a;border:1px solid #4fc3f7;border-radius:10px;padding:14px;margin-top:25px;text-align:center;}
+.premium-box a{color:#4fc3f7;text-decoration:none;font-weight:bold;}
+.premium-box a:hover{text-decoration:underline;}
+footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:.9em;}
+footer a{color:#4fc3f7;text-decoration:none;}
+footer a:hover{text-decoration:underline;}
+select{padding:8px;margin:10px 0;border-radius:6px;border:1px solid #4fc3f7;background:#11203a;color:#f5faff;}
+.btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,.6);font-size:18px;transition:transform .3s ease;z-index:999;}
+.btn-ai:hover{transform:scale(1.1);}
+.chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:320px;height:420px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,.5);z-index:999;}
+.chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
+.chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
+.chat-input{display:flex;border-top:1px solid #333;}
+.chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
+.chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
+#lock{position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;}
+#lock input{padding:8px;border-radius:6px;border:1px solid #4fc3f7;background:#11203a;color:#f5faff;margin-top:8px}
+#lock button{margin-top:8px;background:#1b2b44;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+</style>
 </head>
-
 <body>
-  <!-- 🔐 Accès protégé -->
-  <div id="lock">
-    <h2 style="color:#4fc3f7;margin:0 0 6px">🔒 Dôme IA Floreffe</h2>
-    <div style="color:#7dd3fc">Accès réservé (services communaux)</div>
-    <input type="password" id="pwd" placeholder="Mot de passe" />
-    <button onclick="unlock()">Entrer</button>
-    <div id="err" style="display:none;color:#ff8080;margin-top:8px;">Mot de passe incorrect.</div>
-  </div>
+<div id="lock">
+<h2 style="color:#4fc3f7;margin:0 0 6px">🔒 Dôme IA Floreffe</h2>
+<div style="color:#7dd3fc">Accès réservé (services communaux)</div>
+<input type="password" id="pwd" placeholder="Mot de passe" />
+<button onclick="unlock()">Entrer</button>
+<div id="err" style="display:none;color:#ff8080;margin-top:8px;">Mot de passe incorrect.</div>
+</div>
 
-  <header>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</header>
-  <div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Analyse humaine combinée</div>
+<header>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</header>
+<div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Analyse humaine combinée</div>
+<div class="video-container">
+<video autoplay muted loop playsinline id="introVideo"><source src="intro-jean.mp4" type="video/mp4"/></video>
+<div class="video-overlay"></div><button class="sound-btn" id="soundToggle">🔇</button>
+</div>
 
-  <div class="video-container">
-    <video autoplay muted loop playsinline id="introVideo">
-      <source src="intro-jean.mp4" type="video/mp4" />
-    </video>
-    <div class="video-overlay"></div>
-    <button class="sound-btn" id="soundToggle">🔇</button>
-  </div>
+<main id="app" style="display:none;">
+<h2 class="intro-title">Présentation du système TINSFLASH IA J.E.A.N.</h2>
+<div class="intro-block">
+<img src="avatars/jean-default.png" alt="Avatar J.E.A.N"/><div class="intro-text">
+<p>Le moteur <strong>TINSFLASH IA J.E.A.N.</strong> surveille en temps réel la commune de <b>Floreffe</b> et ses zones sensibles.</p>
+<p>Objectif : <b>anticiper verglas, ruissellements et inondations</b> pour les services communaux.</p>
+<p>Les analyses combinent données satellites, modèles météo et IA locale J.E.A.N., pondérées par le relief et l’altitude.</p>
+</div></div>
 
-  <main id="app" style="display:none;">
-    <h2 class="intro-title">Présentation du système TINSFLASH IA J.E.A.N.</h2>
-    <div class="intro-block">
-      <img src="avatars/jean-default.png" alt="Avatar J.E.A.N" />
-      <div class="intro-text">
-        <p>Le moteur <strong>TINSFLASH IA J.E.A.N.</strong> surveille en temps réel la commune de <b>Floreffe</b> et ses zones sensibles (phase de test).</p>
-        <p>Objectif : <b>anticiper verglas, ruissellements et inondations</b> pour les services communaux et la voirie.</p>
-        <p>Les analyses combinent données satellites, modèles météo et IA locale J.E.A.N., pondérées par le relief et l’altitude.</p>
-      </div>
-    </div>
+<h2>Météo locale — Maison communale (aujourd’hui)</h2>
+<div id="forecast-today" class="forecast-grid">Chargement…</div>
 
-    <h2>Météo locale — Maison communale (aujourd’hui)</h2>
-    <div id="forecast-today" class="forecast-grid">Chargement…</div>
+<h2>Prévisions 7 jours — Maison communale</h2>
+<div id="forecast-week" class="forecast-grid">Chargement…</div>
 
-    <h2>Prévisions 7 jours — Maison communale</h2>
-    <div id="forecast-week" class="forecast-grid">Chargement…</div>
+<h2>Prévisions par zone</h2>
+<select id="zoneSelect"></select>
+<div id="zoneForecast" class="forecast-grid"></div>
 
-    <h2>Prévisions par zone</h2>
-    <select id="zoneSelect"></select>
-    <div id="zoneForecast" class="forecast-grid"></div>
+<h2>Alertes locales et nationales</h2>
+<div id="alerts-local" class="alert-section">Chargement…</div>
 
-    <h2>Alertes locales et nationales</h2>
-    <div id="alerts-local" class="alert-section">Chargement…</div>
+<h2>Carte communale — Prévisions et alertes actives</h2>
+<div id="map-alerts" class="map-container"></div>
 
-    <h2>Carte communale — Prévisions et alertes actives</h2>
-    <div id="map-alerts" class="map-container"></div>
+<h2>Radar météo Windy (IA)</h2>
+<iframe width="100%" height="450" src="https://embed.windy.com/embed2.html?lat=50.45&lon=4.76&zoom=11&level=surface&overlay=rain&menu=true&message=true&type=map&location=coordinates" frameborder="0"></iframe>
+<div class="banner">🌀 Radar 3D/4D interne bientôt disponible</div>
 
-    <h2>Radar météo Windy</h2>
-    <iframe width="100%" height="450" src="https://embed.windy.com/embed2.html?lat=50.45&lon=4.76&zoom=11&level=surface&overlay=rain&menu=true" frameborder="0"></iframe>
+<div class="premium-box">
+☎️ Service & Helpdesk : <b>TINSFLASH – Patrick Pynnaert</b><br/>
+📞 <a href="tel:+32473264477">0473 26 44 77</a> – 💬 WhatsApp<br/>
+🔧 Partenaire diagnostics : <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
+</div>
+</main>
 
-    <div class="banner">🌀 Radar 3D/4D — version interne en préparation</div>
+<footer>© 2025 TINSFLASH – Tous droits réservés | <a href="rgpd.html">Politique RGPD</a><br/>
+📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp (contact Patrick)</a></footer>
 
-    <div class="premium-box">
-      ☎️ Service & Helpdesk : <b>TINSFLASH – Pynnaert Patrick</b><br/>
-      📞 <a href="tel:+32473264477" style="color:#4fc3f7;">0473 26 44 77</a> – 💬 WhatsApp<br/>
-      🔧 Partenaire diagnostics : <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
-    </div>
-  </main>
+<button class="btn-ai" id="btnAI">🤖</button>
+<div class="chat-box" id="chatJean"><div class="chat-header">Assistant météo J.E.A.N.</div>
+<div class="chat-messages" id="chatMessages">
+<div style="color:#4fc3f7;padding:5px;">Pour discuter avec J.E.A.N., achetez vos crédits IA (5,90 €/100 questions).<br/>
+<a href="https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02" target="_blank" style="color:#7dd3fc;">👉 Acheter des crédits</a></div></div>
+<div class="chat-input"><input type="text" id="chatInput" placeholder="Posez votre question météo…" disabled/>
+<button disabled>Envoyer</button></div></div>
 
-  <footer>
-    © 2025 TINSFLASH – Tous droits réservés |
-    <a href="rgpd.html">Politique RGPD</a><br/>
-    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
-    💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp (contact Patrick)</a>
-  </footer>
+<script>
+const PASSWORD="5150PV";
+function unlock(){const v=document.getElementById("pwd").value.trim();if(v===PASSWORD){document.getElementById("lock").style.display="none";document.getElementById("app").style.display="block";sessionStorage.setItem("floreffeAccess","ok");initFloreffe();}else document.getElementById("err").style.display="block";}
+if(sessionStorage.getItem("floreffeAccess")==="ok"){document.getElementById("lock").style.display="none";document.getElementById("app").style.display="block";initFloreffe();}
+const video=document.getElementById("introVideo"),soundToggle=document.getElementById("soundToggle");
+soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
+document.getElementById("btnAI").onclick=()=>{const c=document.getElementById("chatJean");c.style.display=c.style.display==="flex"?"none":"flex";};
 
-  <!-- 💬 Chat IA -->
-  <button class="btn-ai" id="btnAI">🤖</button>
-  <div class="chat-box" id="chatJean">
-    <div class="chat-header">Assistant météo J.E.A.N.</div>
-    <div class="chat-messages" id="chatMessages">
-      <div style="color:#4fc3f7;padding:5px;">
-        Pour discuter avec J.E.A.N., achetez vos crédits IA (5,90 €/100 questions).<br/>
-        <a href="https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02" target="_blank" style="color:#7dd3fc;">👉 Acheter des crédits</a>
-      </div>
-    </div>
-    <div class="chat-input">
-      <input type="text" id="chatInput" placeholder="Posez votre question météo..." disabled />
-      <button disabled>Envoyer</button>
-    </div>
-  </div>
+async function initFloreffe(){
+try{
+const forecastsObj=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
+const alertsRaw=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
+const general=forecastsObj?.general||{};const zones=Array.isArray(forecastsObj?.zones)?forecastsObj.zones:[];
+renderForecastToday(general);renderForecastWeek(general);
+const sel=document.getElementById("zoneSelect");sel.innerHTML="";
+zones.forEach(z=>{const o=document.createElement("option");o.value=z.name;o.textContent=z.name;sel.appendChild(o);});
+sel.onchange=()=>renderZone(zones.find(x=>x.name===sel.value),alertsRaw);
+if(zones.length)renderZone(zones[0],alertsRaw);
+renderAlerts(alertsRaw,true);renderMap(zones,alertsRaw);
+}catch(e){console.error(e);}
+}
 
-  <script>
-    const PASSWORD="5150PV";
-    function unlock(){
-      const val=document.getElementById("pwd").value.trim();
-      if(val===PASSWORD){
-        document.getElementById("lock").style.display="none";
-        document.getElementById("app").style.display="block";
-        sessionStorage.setItem("floreffeAccess","ok");
-        initFloreffe();
-      }else document.getElementById("err").style.display="block";
+function renderForecastToday(g){const c=document.getElementById("forecast-today");if(!g||g.temp_min==null){c.textContent="Aucune donnée";return;}
+const r=normalizeReliability(g.reliability);c.innerHTML=`<div class='forecast-card'>🌡️ <b>${g.temp_min}° / ${g.temp_max}°</b><br>🌦️ ${g.condition||"—"}<br>🔹 Fiabilité ${(r*100).toFixed(0)} %</div>`;}
+function renderForecastWeek(g){const c=document.getElementById("forecast-week");c.innerHTML='';const w=Array.isArray(g?.week)?g.week:[];if(!w.length){c.innerHTML="<div class='forecast-card'>Données 7 jours non disponibles</div>";return;}
+w.forEach(j=>{const d=document.createElement('div');d.className='forecast-card';d.innerHTML=`${j.day}<br><b>${j.temp_min}° / ${j.temp_max}°</b><br><small>${j.condition}</small>`;c.appendChild(d);});}
+function renderZone(z,alerts){const c=document.getElementById("zoneForecast");c.innerHTML="";if(!z){c.textContent="Aucune donnée";return;}
+const r=normalizeReliability(z.reliability);const card=document.createElement("div");card.className="forecast-card";
+card.innerHTML=`<b>${z.name}</b><br>${z.temperature??`${z.temp_min??"?"}° / ${z.temp_max??"?"}°`}<br><small>Fiabilité ${(r*100).toFixed(0)} %</small>`;c.appendChild(card);
+const zoneAlerts=(alerts||[]).filter(a=>(a.zone||"").toLowerCase().includes((z.name||"").toLowerCase()));if(zoneAlerts.length){const wrap=document.createElement("div");wrap.style.marginTop="8px";wrap.innerHTML=`<div class='alert-box' style='border-left-color:#7dd3fc'><b>Alertes pour ${z.name}</b></div>`;c.appendChild(wrap);renderAlerts(zoneAlerts,false,wrap);}}
+function renderAlerts(list,showNational=false,container=null){
+const c=container||document.getElementById("alerts-local");c.innerHTML="";
+const items=Array.isArray(list)?list:[];if(!items.length){c.innerHTML="<div class='alert-box'>Aucune alerte active</div>";return;}
+const norm=a=>{let r=a.reliability??a.confidence;if(typeof r!=="number")return null;return r>1?Math.max(0,Math.min(1,r/100)):Math.max(0,Math.min(1,r));};
+const makeSection=(title,cls,arr)=>{if(!arr.length)return"";let h=`<h3 style='margin-top:10px;'>${title}</h3>`;arr.forEach(a=>{const r=norm(a);const cclass=cls==="conf"?"alert-conf":cls==="val"?"alert-val":"alert-surv";
+h+=`<div class='alert-box ${cclass}'>
+<b>${a.type||"Alerte"}</b> – ${a.zone||"Zone ?"}<br>
+${a.description?`<small>${a.description}</small><br>`:""}<small>Confiance ${(r*100).toFixed(0)} %</small>
+${cls==="surv"?" 👁‍🗨 <small>En surveillance</small>":""}</div>`;});return h;};
+const isLocal=a=>(a.zone||"").toLowerCase().includes("floreffe");
+const loc=items.filter(isLocal);
+let html=makeSection("⚠️ Alertes confirmées (≥90 %)","conf",loc.filter(a=>norm(a)>=0.9));
+html+=makeSection("🟠 À valider (70 – 89 %)","val",loc.filter(a=>{const r=norm(a);return r!=null&&r>=0.7&&r<0.9;}));
+html+=makeSection("🟡 En surveillance (<70 %)","surv",loc.filter(a=>{const r=norm(a);return r!=null&&r<0.7;}));
+
+let htmlNational="";
+if(showNational){
+  const nat=items.filter(a=>!isLocal(a));
+  if(nat.length){
+    htmlNational=`<details style="margin-top:15px;">
+      <summary style="cursor:pointer;color:#7dd3fc;">🌍 Consulter les alertes nationales (${nat.length})</summary>
+      ${makeSection("Alertes nationales confirmées (≥90 %)","conf",nat.filter(a=>norm(a)>=0.9))}
+      ${makeSection("À valider (70 – 89 %)","val",nat.filter(a=>{const r=norm(a);return r!=null&&r>=0.7&&r<0.9;}))}
+      ${makeSection("En surveillance (<70 %)","surv",nat.filter(a=>{const r=norm(a);return r!=null&&r<0.7;}))}
+    </details>`;
+  }
+}
+c.innerHTML=(html.trim()?html:"<div class='alert-box'>Aucune alerte locale</div>")+htmlNational;
+}
+
+// ================== 🗺️ Carte Communale ==================
+function renderMap(zones,alerts){
+  const map=L.map("map-alerts").setView([50.44,4.76],12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
+
+  // Points de prévision (bleus)
+  (zones||[]).forEach(f=>{
+    if(f.lat!=null&&f.lon!=null){
+      const marker=L.circleMarker([f.lat,f.lon],{radius:6,color:"#3b82f6"}).addTo(map);
+      const temp=f.temperature!=null?`${Number(f.temperature).toFixed(1)}°C`:`${f.temp_min??"?"}° / ${f.temp_max??"?"}°`;
+      marker.bindPopup(`<b>${f.name}</b><br>${temp}<br>${f.precipitation!=null?`${Number(f.precipitation).toFixed(1)} mm/h`:""}`);
     }
-    if(sessionStorage.getItem("floreffeAccess")==="ok"){
-      document.getElementById("lock").style.display="none";
-      document.getElementById("app").style.display="block";
-      initFloreffe();
+  });
+
+  // Alertes (rouges / oranges / jaunes / grises)
+  (alerts||[]).forEach(a=>{
+    const rel=a.reliability??a.confidence;
+    const r=typeof rel==="number"?(rel>1?rel/100:rel):null;
+    if(a.lat!=null&&a.lon!=null&&r!=null){
+      let color="#f87171";
+      if(r>=0.9) color="#ef4444";
+      else if(r>=0.7) color="#f59e0b";
+      else color="#9ca3af";
+      const marker=L.circleMarker([a.lat,a.lon],{radius:8,color}).addTo(map);
+      marker.bindPopup(`<b>${a.type||"Alerte"}</b><br>${a.zone||""}<br><small>${a.description||""}</small><br><small>Confiance ${Math.round(r*100)}%</small>`);
     }
+  });
+}
 
-    const video=document.getElementById("introVideo");
-    const soundToggle=document.getElementById("soundToggle");
-    soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
-    document.getElementById("btnAI").onclick=()=>{const c=document.getElementById("chatJean");c.style.display=c.style.display==="flex"?"none":"flex";};
-
-    // ================== 🔥 Initialisation du Dôme Floreffe ==================
-    async function initFloreffe(){
-      try{
-        const forecasts = await fetch("floreffe_forecasts.json?" + Date.now()).then(r=>r.json());
-        const alerts = await fetch("floreffe_alerts.json?" + Date.now()).then(r=>r.json());
-
-        const maison = forecasts.find(f=>f.name.includes("Maison communale"));
-        renderForecastToday(maison);
-        renderForecastWeek(maison);
-
-        const sel=document.getElementById("zoneSelect");
-        forecasts.forEach(z=>{
-          const o=document.createElement("option");
-          o.value=z.name;
-          o.textContent=z.name;
-          sel.appendChild(o);
-        });
-        sel.onchange=()=>renderZone(forecasts.find(x=>x.name===sel.value),alerts);
-        renderZone(forecasts[0],alerts);
-
-        renderAlerts(alerts,true);
-        renderMap(forecasts,alerts);
-      }catch(e){console.error(e);}
-    }
-
-    // ================== 🔹 Rendu Prévisions ==================
-    function renderForecastToday(data){
-      const c=document.getElementById("forecast-today");
-      if(!data){c.textContent="Aucune donnée";return;}
-      c.innerHTML=`<div class='forecast-card'>
-        🌡️ <b>${data.temp_min}° / ${data.temp_max}°</b><br>
-        🌦️ ${data.condition}<br>
-        🔹 Fiabilité ${(data.reliability*100).toFixed(0)}%
-      </div>`;
-    }
-
-    function renderForecastWeek(data){
-      const c=document.getElementById("forecast-week");
-      c.innerHTML='';
-      data.week.forEach(j=>{
-        const d=document.createElement('div');
-        d.className='forecast-card';
-        d.innerHTML=`${j.day}<br><b>${j.temp_min}° / ${j.temp_max}°</b><br><small>${j.condition}</small>`;
-        c.appendChild(d);
-      });
-    }
-
-    function renderZone(z,alerts){
-      const c=document.getElementById("zoneForecast");
-      c.innerHTML="";
-      if(!z){c.textContent="Aucune donnée";return;}
-      const d=document.createElement("div");
-      d.className="forecast-card";
-      d.innerHTML=`<b>${z.name}</b><br>${z.temperature?.toFixed(1)}°C<br>${z.precipitation?.toFixed(1)} mm/h<br><small>Fiabilité ${(z.reliability*100).toFixed(0)}%</small>`;
-      c.appendChild(d);
-      const zoneAlerts=alerts.filter(a=>a.zone===z.name);
-      if(zoneAlerts.length>0) renderAlerts(zoneAlerts,false);
-    }
-
-    // ================== 🔸 Rendu Alertes (classées par fiabilité) ==================
-    // ================== 🔸 Rendu Alertes (classées par fiabilité) ==================
-    function renderAlerts(list, showNational = false){
-      const c = document.getElementById("alerts-local");
-      c.innerHTML = "";
-
-      if(!list || !list.length){
-        c.innerHTML = "<div class='alert-box'>Aucune alerte active</div>";
-        return;
-      }
-
-      const makeSection = (title, color, arr) => {
-        if(!arr.length) return "";
-        let html = `<h3 style='color:${color};margin-top:10px;'>${title}</h3>`;
-        arr.forEach(a => {
-          html += `<div class='alert-box' style='border-left-color:${color};'>
-            <b>${a.type}</b> – ${a.zone || "Zone inconnue"}<br>
-            <small>Confiance ${(a.confidence*100).toFixed(0)}%</small><br>
-            ${a.description ? `<i>${a.description}</i><br>` : ""}
-          </div>`;
-        });
-        return html;
-      };
-
-      // 🔹 Locales
-      const locales = list.filter(a => a.zone?.toLowerCase().includes("floreffe"));
-      const localesHTML =
-        makeSection("⚠️ Alertes confirmées (≥90 %)", "#4fc3f7", locales.filter(a => a.confidence >= 0.9)) +
-        makeSection("🟠 À valider (70 – 89 %)", "#facc15", locales.filter(a => a.confidence >= 0.7 && a.confidence < 0.9)) +
-        makeSection("🟡 En surveillance (<70 %)", "#f97316", locales.filter(a => a.confidence < 0.7));
-
-      // 🔸 Nationales
-      let nationalHTML = "";
-      if(showNational){
-        const nationales = list.filter(a => !a.zone?.toLowerCase().includes("floreffe"));
-        if(nationales.length){
-          nationalHTML = `<details style="margin-top:15px;">
-            <summary style="cursor:pointer;color:#7dd3fc;">🌍 Consulter les alertes nationales (${nationales.length})</summary>
-            ${makeSection("Alertes nationales confirmées", "#22d3ee", nationales.filter(a => a.confidence >= 0.9))}
-            ${makeSection("À valider", "#facc15", nationales.filter(a => a.confidence >= 0.7 && a.confidence < 0.9))}
-            ${makeSection("En surveillance", "#f97316", nationales.filter(a => a.confidence < 0.7))}
-          </details>`;
-        }
-      }
-
-      // 🔹 Rendu final
-      c.innerHTML = localesHTML + nationalHTML;
-    }
-
-    // ================== 🗺️ Carte Communale ==================
-    function renderMap(forecasts, alerts){
-      const map = L.map("map-alerts").setView([50.44, 4.76], 12);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-
-      // 📍 Prévisions (points bleus)
-      forecasts.forEach(f=>{
-        if(f.lat && f.lon){
-          const marker = L.circleMarker([f.lat, f.lon], {
-            radius: 6,
-            color: "#3b82f6"
-          }).addTo(map);
-          marker.bindPopup(`<b>${f.name}</b><br>
-            🌡️ ${f.temperature?.toFixed(1)}°C<br>
-            🌧️ ${f.precipitation?.toFixed(1)} mm/h<br>
-            🔹 Fiabilité ${(f.reliability*100).toFixed(0)}%`);
-        }
-      });
-
-      // ⚠️ Alertes (points rouges / jaunes selon confiance)
-      alerts.forEach(a=>{
-        if(a.lat && a.lon){
-          let color = "#ef4444";
-          if(a.confidence >= 0.9) color = "#ef4444";
-          else if(a.confidence >= 0.7) color = "#facc15";
-          else color = "#f97316";
-
-          const marker = L.circleMarker([a.lat, a.lon], {
-            radius: 8,
-            color
-          }).addTo(map);
-          marker.bindPopup(`<b>${a.type}</b><br>
-            ${a.zone || "Zone inconnue"}<br>
-            <small>Confiance ${(a.confidence*100).toFixed(0)}%</small><br>
-            ${a.description || ""}`);
-        }
-      });
-    }
-  </script>
+// ================== utilitaires ==================
+function normalizeReliability(r){
+  if(typeof r!=="number")return null;
+  return r>1?Math.max(0,Math.min(1,r/100)):Math.max(0,Math.min(1,r));
+}
+function fmt(v,unit){return(v==null||isNaN(v))?null:`${Number(v).toFixed(1)}${unit||""}`;}
+</script>
 </body>
 </html>
