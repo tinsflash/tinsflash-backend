@@ -1,0 +1,27 @@
+{
+  "general": {
+    "location": "Maison communale de Floreffe",
+    "temp_min": 8,
+    "temp_max": 14,
+    "condition": "Pluie faible intermittente",
+    "icon": "61",
+    "reliability": 0.94,
+    "week": [
+      {"day":"Lun","temp_min":7,"temp_max":15,"condition":"Nuageux","icon":"3"},
+      {"day":"Mar","temp_min":6,"temp_max":14,"condition":"Averses","icon":"61"},
+      {"day":"Mer","temp_min":5,"temp_max":12,"condition":"Pluie modérée","icon":"65"},
+      {"day":"Jeu","temp_min":6,"temp_max":13,"condition":"Eclaircies","icon":"1"},
+      {"day":"Ven","temp_min":5,"temp_max":11,"condition":"Pluie faible","icon":"61"},
+      {"day":"Sam","temp_min":7,"temp_max":13,"condition":"Couvert","icon":"3"},
+      {"day":"Dim","temp_min":8,"temp_max":14,"condition":"Vent fort","icon":"80"}
+    ]
+  },
+  "zones": [
+    {"id":"FLO_01","name":"Maison communale","temp_min":8,"temp_max":14,"condition":"Pluie faible","icon":"61"},
+    {"id":"FLO_05","name":"Hall omnisport","temp_min":7,"temp_max":13,"condition":"Verglas possible","icon":"71"},
+    {"id":"FLO_16","name":"Floriffoux colline","temp_min":6,"temp_max":12,"condition":"Vent modéré","icon":"80"},
+    {"id":"FLO_19","name":"Franière Gare","temp_min":9,"temp_max":14,"condition":"Risque inondation","icon":"65"},
+    {"id":"FLO_23","name":"Usine Materne","temp_min":8,"temp_max":13,"condition":"Pluie faible","icon":"61"},
+    {"id":"FLO_51","name":"Camping sommet","temp_min":5,"temp_max":11,"condition":"Verglas matin","icon":"71"}
+  ]
+}
