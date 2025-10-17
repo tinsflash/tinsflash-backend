@@ -378,4 +378,4 @@ async function runFloreffe() {
   }
 }
 
-module.exports = { runFloreffe };
+export default = { runFloreffe };
