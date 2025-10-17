@@ -1,0 +1,26 @@
+[
+  {
+    "type": "Alerte Verglas",
+    "zone": "Hall omnisport – Rue du Séminaire",
+    "description": "Risque de verglas entre 03h00 et 07h00, températures au sol prévues <0°C.",
+    "reliability": 0.92,
+    "lat": 50.4359,
+    "lon": 4.7578
+  },
+  {
+    "type": "Alerte Pluie forte",
+    "zone": "Franière – Gare SNCB",
+    "description": "Cumul horaire >20 mm/h attendu entre 18h00 et 23h00. Risque ruissellement rapide.",
+    "reliability": 0.95,
+    "lat": 50.4545,
+    "lon": 4.7583
+  },
+  {
+    "type": "Alerte Vent fort",
+    "zone": "Floriffoux – Colline exposée",
+    "description": "Rafales jusqu’à 80 km/h prévues vers 22h00.",
+    "reliability": 0.91,
+    "lat": 50.4530,
+    "lon": 4.7650
+  }
+]
