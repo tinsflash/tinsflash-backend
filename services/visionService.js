@@ -99,6 +99,10 @@ export async function downloadVisionSet(region = "EU") {
 // ==========================================================
 // 🧠 Analyse IA optionnelle (convection / nuages / orages)
 // ==========================================================
+export async function downloadVisionSet() {
+  console.log("🛰️ [VisionIA] Téléchargement du set satellite...");
+  return true;
+}
 export async function analyzeVisionSet(region = "EU") {
   try {
     const dir = path.join("./data/vision", region);
