@@ -110,7 +110,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
         url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
         headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0" },
       }
-
+];
     for (const m of models) {
       try {
         const options = { timeout: 15000 };
@@ -182,10 +182,10 @@ const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
       country
     );
   } catch (err) {
-    await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
-  },
-  return { success: true, phase1Results: results };
-];
+  await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
+}
+
+return { success: true, phase1Results: results };
 // ==========================================================
 // 🌍 (Ici tu réintègres les coordonnées géographiques FLOREFFE_POINTS)
 // ==========================================================
