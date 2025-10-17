@@ -7,8 +7,7 @@
 // ==========================================================
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { fetchVisionCaptures } from "./visionFetchers.js";
-import visionService from "./visionService.js";
-const { analyzeVision, downloadVisionSet } = visionService;
+import { analyzeVision, downloadVisionSet } from "./visionService.js";
 import mongoose from "mongoose";
 
 // ----------------------------------------------------------
