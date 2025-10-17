@@ -9,13 +9,14 @@
 import dotenv from "dotenv";
 import fs from "fs";
 import axios from "axios";
+import path from "path";
+import { fileURLToPath } from "url";
 import { MongoClient } from "mongodb";
 import OpenAI from "openai";
 import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
-
 
 dotenv.config();
 
@@ -63,6 +64,9 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
   await addEngineLog(`📡 [${runType}] Lancement extraction physique locale`, "info");
 
   const results = [];
+  const sources = [];
+  const push = (x) => sources.push(x);
+  const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
 
   for (const z of zones) {
     try {
@@ -77,10 +81,6 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
         {
           name: "ECMWF ERA5",
           url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
-        },
-        {
-          name: "ECMWF Open-Meteo",
-          url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
         },
         {
           name: "AROME MeteoFrance",
@@ -99,19 +99,11 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
           url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
         },
         {
-          name: "Open-Meteo Forecast",
-          url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-        },
-        {
           name: "MET Norway – LocationForecast",
           url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
           headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0" },
         },
       ];
-
-      const sources = [];
-      const push = (x) => sources.push(x);
-      const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
 
       for (const m of models) {
         try {
@@ -121,7 +113,6 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
 
           const d =
             r.data?.current ||
-            r.data?.parameters ||
             (r.data?.hourly
               ? {
                   temperature_2m: r.data.hourly.temperature_2m?.slice(-1)[0],
@@ -152,24 +143,15 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
         }
       }
 
-      // --- HRRR (USA only) ---
-      if (lon < -60 && lon > -130 && lat > 20 && lat < 55) {
-        try {
-          const hrrr = await fetchHRRR(lat, lon);
-          if (!hrrr.error) {
-            push(hrrr);
-            log("HRRR NOAA (Microsoft PC)", true);
-          } else log("HRRR NOAA (Microsoft PC)", false);
-        } catch (e) {
-          log("HRRR NOAA (Microsoft PC)", false);
-        }
-      }
-
       const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
       const reliability = +(valid.length / (models.length || 1)).toFixed(2);
 
       const result = {
+        id: z.id,
+        name: z.name,
+        lat,
+        lon,
         temperature: avg(valid.map((s) => s.temperature)),
         precipitation: avg(valid.map((s) => s.precipitation)),
         wind: avg(valid.map((s) => s.wind)),
@@ -190,8 +172,11 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
   }
 
   return { success: true, phase1Results: results };
-} // ✅ FERMETURE OK de superForecastLocal()
-// 🌍 (Ici tu réintègres les coordonnées géographiques FLOREFFE_POINTS)
+}
+
+// ==========================================================
+// ---------- 60 POINTS GÉOGRAPHIQUES — FLOREFFE
+// ==========================================================
 // ==========================================================
 // ---------- 60 POINTS GÉOGRAPHIQUES — Couverture complète du territoire
 // lat/lon approximatifs réalistes (à affiner au besoin). altitude ~ indicative (m).
@@ -286,6 +271,9 @@ async function runFloreffe() {
   const mongo = new MongoClient(process.env.MONGO_URI);
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
   try {
     await mongo.connect();
     const db = mongo.db("tinsflash");
@@ -300,12 +288,8 @@ async function runFloreffe() {
     await db.collection("floreffe_phase1").deleteMany({});
     await db.collection("floreffe_phase1").insertMany(result.phase1Results);
 
-    await addEngineLog("✅ Phase 1 terminée – satellites sauvegardés", "success");
-
     // === PHASE 2 – IA J.E.A.N. locale ===
-    const sampleData = JSON.stringify(result.phase1Results.slice(0, 10));
-    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nDonnées d’entrée : ${sampleData}`;
-
+    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nDonnées : ${JSON.stringify(result.phase1Results.slice(0, 10))}`;
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [{ role: "user", content: aiPrompt }],
@@ -322,9 +306,7 @@ async function runFloreffe() {
     await db.collection("floreffe_phase2").deleteMany({});
     await db.collection("floreffe_phase2").insertMany(phase2Results);
 
-    const conf = phase2Results.reduce((a, b) => a + (b.confidence || 0), 0) / phase2Results.length;
-
-    // === PHASE 5 – Fusion + export Mongo global ===
+    // === PHASE 5 – Fusion + Export ===
     const enriched = phase2Results.map((x) => ({
       ...x,
       origin: "Floreffe_dome",
@@ -333,32 +315,38 @@ async function runFloreffe() {
     }));
 
     const alerts = enriched
-      .filter(
-        (x) =>
-          (x.risk?.pluie && x.risk.pluie >= ALERT_THRESHOLDS.rain.alert) ||
-          (x.risk?.verglas && x.risk.verglas >= ALERT_THRESHOLDS.cold.alert)
+      .filter((x) =>
+        (x.risk?.pluie && x.risk.pluie >= ALERT_THRESHOLDS.rain.alert) ||
+        (x.risk?.verglas && x.risk.verglas >= ALERT_THRESHOLDS.cold.alert)
       )
       .map((x) => ({
-        point: x.point || x.name,
+        name: x.name,
+        lat: x.lat,
+        lon: x.lon,
         type: x.risk?.pluie ? "pluie" : "verglas",
-        level:
-          x.risk?.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange",
-        confidence: x.confidence,
+        level: x.risk?.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange",
+        confidence: x.confidence ?? 0.9,
+        description: x.resume || "Alerte détectée localement",
         timestamp: new Date(),
       }));
 
     await db.collection("alerts_floreffe").deleteMany({});
     await db.collection("alerts_floreffe").insertMany(alerts);
 
-    fs.writeFileSync("./public/floreffe_forecasts.json", JSON.stringify(enriched, null, 2));
-    fs.writeFileSync("./public/floreffe_alerts.json", JSON.stringify(alerts, null, 2));
+    // === EXPORT PUBLIC AUTO JSON ===
+    const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
+    const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
 
-    await addEngineLog(
-      `🏁 [Floreffe] Export terminé – ${alerts.length} alertes / confiance ${(conf * 100).toFixed(1)} %`,
-      "success"
-    );
+    await fs.promises.writeFile(forecastsPath, JSON.stringify({
+      general: enriched.find(x => x.name.includes("Maison communale")) || enriched[0],
+      zones: enriched
+    }, null, 2));
 
-    // === Enregistrement global Mongo ===
+    await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
+
+    await addEngineLog(`🏁 [Floreffe] Export public JSON terminé (${alerts.length} alertes)`, "success");
+
+    // === Synchronisation Mongo Cloud global ===
     const dbName = mongo.db("tinsflash");
     await dbName
       .collection("forecasts")
