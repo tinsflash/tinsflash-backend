@@ -282,7 +282,23 @@ app.post("/api/run-global-canada", safeRun(runGlobalCanada, "Canada"));
 app.post("/api/run-global-caribbean", safeRun(runGlobalCaribbean, "Caraïbes"));
 app.post("/api/run-belgique", safeRun(runBelgique, "Belgique"));
 app.post("/api/run-bouke", safeRun(runBouke, "Bouke"));
+// ==========================================================
+// 🏛️ RUN FLOREFFE – Dôme de protection local (100 % réel)
+// ==========================================================
+import { runFloreffe } from "./services/runFloreffe.js";
 
+app.post("/api/run-floreffe", async (req, res) => {
+  try {
+    await addEngineLog("🏛️ Dôme Floreffe – Lancement du run complet (Phase 1→5)", "info", "Floreffe");
+    const result = await runFloreffe("manual");
+    await addEngineLog("✅ Dôme Floreffe – Run terminé avec succès", "success", "Floreffe");
+    res.json({ success: true, result });
+  } catch (e) {
+    const msg = `❌ Erreur Run Floreffe : ${e.message}`;
+    await addEngineError(msg, "Floreffe");
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 // ==========================================================
 // 🧠 PHASES 2 à 5 (IA J.E.A.N.)
 // ==========================================================
