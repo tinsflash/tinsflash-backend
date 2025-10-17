@@ -13,6 +13,11 @@ import { MongoClient } from "mongodb";
 import OpenAI from "openai";
 import { addEngineLog, addEngineError } from "./engineState.js";
 dotenv.config();
+import { applyGeoFactors } from "./geoFactors.js";
+import { applyLocalFactors } from "./localFactors.js";
+import { fetchHRRR } from "./hrrrAdapter.js";
+
+
 
 
 // ==========================================================
@@ -56,7 +61,7 @@ Tâches :
 // 🧩 Objectif : même algorithme que superForecast.js du moteur global
 // mais isolé ici pour le dôme Floreffe uniquement.
 // ==========================================================
-
+const country = "BE";
 async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
   await addEngineLog(`📡 [${runType}] Lancement extraction physique locale`, "info");
 
@@ -67,7 +72,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
       const [lat, lon] = [z.lat, z.lon];
 
       // 🌦️ Appel multi-modèles (réels, sans IA)
-      const urls = 
+      const urls = [
       {
         name: "GFS NOAA",
         url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
@@ -112,7 +117,9 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
         const options = { timeout: 15000 };
         if (m.headers) options.headers = m.headers;
         const r = await axios.get(m.url, options);
-
+const sources = [];
+const push = (x) => sources.push(x);
+const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
         const d =
           r.data?.current ||
           r.data?.parameters ||
@@ -177,9 +184,9 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
     );
   } catch (err) {
     await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
-    return { error: err.message };
-  }
-}
+  },
+  return { success: true, phase1Results: results };
+];
 // ==========================================================
 // 🌍 (Ici tu réintègres les coordonnées géographiques FLOREFFE_POINTS)
 // ==========================================================
