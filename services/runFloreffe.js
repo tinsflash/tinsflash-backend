@@ -14,40 +14,6 @@ import OpenAI from "openai";
 import { addEngineLog, addEngineError } from "./engineState.js";
 dotenv.config();
 
-// ==========================================================
-// 🛰️ Captures satellite Phase 1 — sources fixes NASA
-// ==========================================================
-const SAT_SOURCES = {
-  key: "geocolor_global",
-    name: "Vue couleur naturelle (GOES-19)",
-    url: "https://cdn.star.nesdis.noaa.gov/GOES19/ABI/FD/GEOCOLOR/latest.jpg",
-    type: "jpg",
-  },
-  {
-    key: "airmass_global",
-    name: "Masse d’air (GOES-19)",
-    url: "https://cdn.star.nesdis.noaa.gov/GOES19/ABI/FD/AirMass/latest.jpg",
-    type: "jpg",
-  },
-  {
-    key: "sandwich_global",
-    name: "Fusion visible + IR (GOES-19)",
-    url: "https://cdn.star.nesdis.noaa.gov/GOES19/ABI/FD/Sandwich/latest.jpg",
-    type: "jpg",
-  },
-  {
-    key: "glm_lightning",
-    name: "Activité électrique (GLM – GOES-19)",
-    url: "https://cdn.star.nesdis.noaa.gov/GOES19/GLM/FD/EXTENT3/latest.png",
-    type: "png",
-  },
-  {
-    key: "geocolor_pacific",
-    name: "Vue couleur naturelle (GOES-18 – Pacifique/Océanie)",
-    url: "https://cdn.star.nesdis.noaa.gov/GOES18/ABI/FD/GEOCOLOR/latest.jpg",
-    type: "jpg",
-  },
-};
 
 // ==========================================================
 // ⚙️ Seuils d’alerte calibrés Floreffe (anticipatifs réels)
@@ -326,12 +292,7 @@ export async function runFloreffe() {
     await db.collection("floreffe_phase1").deleteMany({});
     await db.collection("floreffe_phase1").insertMany(result.phase1Results);
 
-    // === SAUVEGARDE SATELLITES ===
-    const img1 = await axios.get(SAT_SOURCES.europeZoom, { responseType: "arraybuffer" });
-    const img2 = await axios.get(SAT_SOURCES.zoomFloreffe, { responseType: "arraybuffer" });
-    fs.writeFileSync("./public/sat_floreffe_europe.png", img1.data);
-    fs.writeFileSync("./public/sat_floreffe_zoom.png", img2.data);
-
+  
     await addEngineLog("✅ Phase 1 terminée – satellites sauvegardés", "success");
 
     // === PHASE 2 – IA J.E.A.N. locale ===
