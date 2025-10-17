@@ -26,7 +26,7 @@
     .intro-text{flex:1;max-height:200px;overflow-y:auto;background:#131a2b;padding:12px;border-radius:10px;color:#e0e8f9;line-height:1.5;}
     .forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
     .forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,0.3);}
-    .map-container{height:480px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
+    .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,0.4);}
     .alert-section .alert-box{background:#1b2439;border-left:4px solid #4fc3f7;padding:8px;margin-bottom:8px;border-radius:8px;}
     .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
     .premium-box{background:#11203a;border:1px solid #4fc3f7;border-radius:10px;padding:14px;margin-top:25px;text-align:center;}
@@ -49,108 +49,205 @@
     #lock button{margin-top:8px;background:#1b2b44;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
   </style>
 </head>
+
 <body>
-
-<!-- 🔐 Accès protégé -->
-<div id="lock">
-  <h2 style="color:#4fc3f7;margin:0 0 6px">🔒 Dôme IA Floreffe</h2>
-  <div style="color:#7dd3fc">Accès réservé (services communaux)</div>
-  <input type="password" id="pwd" placeholder="Mot de passe" />
-  <button onclick="unlock()">Entrer</button>
-  <div id="err" style="display:none;color:#ff8080;margin-top:8px;">Mot de passe incorrect.</div>
-</div>
-
-<header>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</header>
-<div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Analyse humaine combinée</div>
-
-<div class="video-container">
-  <video autoplay muted loop playsinline id="introVideo">
-    <source src="intro-jean.mp4" type="video/mp4" />
-  </video>
-  <div class="video-overlay"></div>
-  <button class="sound-btn" id="soundToggle">🔇</button>
-</div>
-
-<main id="app" style="display:none;">
-  <h2 class="intro-title">Carte dynamique des prévisions et alertes communales</h2>
-  <div id="map-floreffe" class="map-container"></div>
-
-  <div class="banner">🔵 Prévisions météo (points bleus) – 🔴 Alertes (≥90%)</div>
-
-  <div class="premium-box">
-    ☎️ Service & Helpdesk : <b>TINSFLASH – Pynnaert Patrick</b><br/>
-    📞 <a href="tel:+32473264477" style="color:#4fc3f7;">0473 26 44 77</a> – 💬 WhatsApp<br/>
-    🔧 Partenaire diagnostics : <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
+  <!-- 🔐 Accès protégé -->
+  <div id="lock">
+    <h2 style="color:#4fc3f7;margin:0 0 6px">🔒 Dôme IA Floreffe</h2>
+    <div style="color:#7dd3fc">Accès réservé (services communaux)</div>
+    <input type="password" id="pwd" placeholder="Mot de passe" />
+    <button onclick="unlock()">Entrer</button>
+    <div id="err" style="display:none;color:#ff8080;margin-top:8px;">Mot de passe incorrect.</div>
   </div>
-</main>
 
-<footer>
-  © 2025 TINSFLASH – Tous droits réservés |
-  <a href="rgpd.html">Politique RGPD</a><br/>
-  📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
-  💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp (contact Patrick)</a>
-</footer>
+  <header>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</header>
+  <div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Analyse humaine combinée</div>
 
-<script>
-const PASSWORD="5150PV";
-function unlock(){
-  const val=document.getElementById("pwd").value.trim();
-  if(val===PASSWORD){
-    document.getElementById("lock").style.display="none";
-    document.getElementById("app").style.display="block";
-    sessionStorage.setItem("floreffeAccess","ok");
-    initMap();
-  }else document.getElementById("err").style.display="block";
-}
-if(sessionStorage.getItem("floreffeAccess")==="ok"){
-  document.getElementById("lock").style.display="none";
-  document.getElementById("app").style.display="block";
-  initMap();
-}
+  <div class="video-container">
+    <video autoplay muted loop playsinline id="introVideo">
+      <source src="intro-jean.mp4" type="video/mp4" />
+    </video>
+    <div class="video-overlay"></div>
+    <button class="sound-btn" id="soundToggle">🔇</button>
+  </div>
 
-const video=document.getElementById("introVideo");
-const soundToggle=document.getElementById("soundToggle");
-soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
+  <main id="app" style="display:none;">
+    <h2 class="intro-title">Présentation du système TINSFLASH IA J.E.A.N.</h2>
+    <div class="intro-block">
+      <img src="avatars/jean-default.png" alt="Avatar J.E.A.N" />
+      <div class="intro-text">
+        <p>Le moteur <strong>TINSFLASH IA J.E.A.N.</strong> surveille en temps réel la commune de <b>Floreffe</b> et ses zones sensibles (phase de test).</p>
+        <p>Objectif : <b>anticiper verglas, ruissellements et inondations</b> pour les services communaux et la voirie.</p>
+        <p>Les analyses combinent données satellites, modèles météo et IA locale J.E.A.N., pondérées par le relief et l’altitude.</p>
+      </div>
+    </div>
 
-// =======================================================
-// 🗺️ Carte interactive des prévisions & alertes Floreffe
-// =======================================================
-async function initMap(){
-  const map=L.map("map-floreffe").setView([50.44,4.76],12);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    <h2>Météo locale — Maison communale (aujourd’hui)</h2>
+    <div id="forecast-today" class="forecast-grid">Chargement…</div>
 
-  const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
-  const alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
+    <h2>Prévisions 7 jours — Maison communale</h2>
+    <div id="forecast-week" class="forecast-grid">Chargement…</div>
 
-  // 🔵 Points prévisions
-  forecasts.forEach(pt=>{
-    if(pt.lat&&pt.lon){
-      const marker=L.circleMarker([pt.lat,pt.lon],{
-        radius:7,color:"#4fc3f7",fillColor:"#4fc3f7",fillOpacity:0.8
-      }).addTo(map);
-      marker.bindPopup(
-        `<b>${pt.name}</b><br>
-        🌡️ ${pt.temperature?.toFixed(1)}°C<br>
-        🌧️ ${pt.precipitation?.toFixed(1)} mm/h<br>
-        💨 ${pt.wind?.toFixed(1)} km/h<br>
-        🔹 Fiabilité ${(pt.reliability*100).toFixed(0)}%`
-      );
+    <h2>Prévisions par zone</h2>
+    <select id="zoneSelect"></select>
+    <div id="zoneForecast" class="forecast-grid"></div>
+
+    <h2>Alertes locales (≥90%)</h2>
+    <div id="alerts-local" class="alert-section">Chargement…</div>
+
+    <h2>Carte communale — Prévisions et alertes actives</h2>
+    <div id="map-alerts" class="map-container"></div>
+
+    <h2>Radar météo Windy</h2>
+    <iframe width="100%" height="450" src="https://embed.windy.com/embed2.html?lat=50.45&lon=4.76&zoom=11&level=surface&overlay=rain&menu=true" frameborder="0"></iframe>
+
+    <div class="banner">🌀 Radar 3D/4D — version interne en préparation</div>
+
+    <div class="premium-box">
+      ☎️ Service & Helpdesk : <b>TINSFLASH – Pynnaert Patrick</b><br/>
+      📞 <a href="tel:+32473264477" style="color:#4fc3f7;">0473 26 44 77</a> – 💬 WhatsApp<br/>
+      🔧 Partenaire diagnostics : <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
+    </div>
+  </main>
+
+  <footer>
+    © 2025 TINSFLASH – Tous droits réservés |
+    <a href="rgpd.html">Politique RGPD</a><br/>
+    📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> |
+    💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp (contact Patrick)</a>
+  </footer>
+
+  <!-- 💬 Chat IA -->
+  <button class="btn-ai" id="btnAI">🤖</button>
+  <div class="chat-box" id="chatJean">
+    <div class="chat-header">Assistant météo J.E.A.N.</div>
+    <div class="chat-messages" id="chatMessages">
+      <div style="color:#4fc3f7;padding:5px;">
+        Pour discuter avec J.E.A.N., achetez vos crédits IA (5,90 €/100 questions).<br/>
+        <a href="https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02" target="_blank" style="color:#7dd3fc;">👉 Acheter des crédits</a>
+      </div>
+    </div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="Posez votre question météo..." disabled />
+      <button disabled>Envoyer</button>
+    </div>
+  </div>
+
+  <script>
+    const PASSWORD="5150PV";
+    function unlock(){
+      const val=document.getElementById("pwd").value.trim();
+      if(val===PASSWORD){
+        document.getElementById("lock").style.display="none";
+        document.getElementById("app").style.display="block";
+        sessionStorage.setItem("floreffeAccess","ok");
+        initFloreffe();
+      }else document.getElementById("err").style.display="block";
     }
-  });
-
-  // 🔴 Points alertes (≥90 %)
-  alerts.filter(a=>a.confidence>=0.9).forEach(a=>{
-    if(a.lat&&a.lon){
-      const marker=L.circleMarker([a.lat,a.lon],{
-        radius:9,color:"#ff3b3b",fillColor:"#ff3b3b",fillOpacity:0.9
-      }).addTo(map);
-      marker.bindPopup(
-        `<b>${a.type?.toUpperCase()}</b><br>${a.zone||a.point||''}<br>
-        <small>Confiance ${(a.confidence*100).toFixed(0)}%</small>`
-      );
+    if(sessionStorage.getItem("floreffeAccess")==="ok"){
+      document.getElementById("lock").style.display="none";
+      document.getElementById("app").style.display="block";
+      initFloreffe();
     }
-  });
-}
-</script>
+
+    const video=document.getElementById("introVideo");
+    const soundToggle=document.getElementById("soundToggle");
+    soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
+    document.getElementById("btnAI").onclick=()=>{const c=document.getElementById("chatJean");c.style.display=c.style.display==="flex"?"none":"flex";};
+
+    // ================== 🔥 Initialisation du Dôme Floreffe ==================
+    async function initFloreffe(){
+      try{
+        const forecasts = await fetch("/api/forecast/floreffe").then(r=>r.json());
+        const alerts = await fetch("/api/alerts/floreffe").then(r=>r.json());
+
+        const maison = forecasts.find(f=>f.name.includes("Maison communale"));
+        renderForecastToday(maison);
+        renderForecastWeek(maison);
+
+        const sel=document.getElementById("zoneSelect");
+        forecasts.forEach(z=>{
+          const o=document.createElement("option");
+          o.value=z.name;
+          o.textContent=z.name;
+          sel.appendChild(o);
+        });
+        sel.onchange=()=>renderZone(forecasts.find(x=>x.name===sel.value),alerts);
+        renderZone(forecasts[0],alerts);
+
+        renderAlerts(alerts);
+        renderMap(forecasts,alerts);
+      }catch(e){console.error(e);}
+    }
+
+    // ================== 🔹 Rendu Prévisions ==================
+    function renderForecastToday(data){
+      const c=document.getElementById("forecast-today");
+      if(!data){c.textContent="Aucune donnée";return;}
+      c.innerHTML=`<div class='forecast-card'>
+        🌡️ <b>${data.temperature?.toFixed(1)}°C</b><br>
+        🌧️ ${data.precipitation?.toFixed(1)} mm/h<br>
+        💨 ${data.wind?.toFixed(1)} km/h<br>
+        🔹 Fiabilité ${(data.reliability*100).toFixed(0)}%
+      </div>`;
+    }
+
+    function renderForecastWeek(data){
+      const c=document.getElementById("forecast-week");
+      c.innerHTML="";
+      for(let i=1;i<=7;i++){
+        const d=document.createElement("div");
+        d.className="forecast-card";
+        d.innerHTML=`Jour ${i}<br><b>${data.temperature?.toFixed(1)}°C</b><br><small>tendance stable</small>`;
+        c.appendChild(d);
+      }
+    }
+
+    function renderZone(z,alerts){
+      const c=document.getElementById("zoneForecast");
+      c.innerHTML="";
+      if(!z){c.textContent="Aucune donnée";return;}
+      const d=document.createElement("div");
+      d.className="forecast-card";
+      d.innerHTML=`<b>${z.name}</b><br>${z.temperature?.toFixed(1)}°C<br>${z.precipitation?.toFixed(1)} mm/h<br><small>Fiabilité ${(z.reliability*100).toFixed(0)}%</small>`;
+      c.appendChild(d);
+      const zoneAlerts=alerts.filter(a=>a.zone===z.name);
+      if(zoneAlerts.length>0) renderAlerts(zoneAlerts);
+    }
+
+    // ================== 🔸 Rendu Alertes ==================
+    function renderAlerts(list){
+      const c=document.getElementById("alerts-local");
+      c.innerHTML="";
+      list.filter(a=>a.confidence>=0.9).forEach(a=>{
+        const box=document.createElement("div");
+        box.className="alert-box";
+        box.innerHTML=`<b>${a.type}</b> – ${a.zone}<br><small>Confiance ${(a.confidence*100).toFixed(0)}%</small>`;
+        c.appendChild(box);
+      });
+    }
+
+    // ================== 🗺️ Carte Communale ==================
+    function renderMap(forecasts,alerts){
+      const map=L.map("map-alerts").setView([50.44,4.76],12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+      // Prévisions (points bleus)
+      forecasts.forEach(f=>{
+        if(f.lat&&f.lon){
+          const marker=L.circleMarker([f.lat,f.lon],{radius:6,color:"#3b82f6"}).addTo(map);
+          marker.bindPopup(`<b>${f.name}</b><br>${f.temperature?.toFixed(1)}°C<br>${f.precipitation?.toFixed(1)} mm/h`);
+        }
+      });
+
+      // Alertes (points rouges)
+      alerts.filter(a=>a.confidence>=0.9).forEach(a=>{
+        if(a.lat&&a.lon){
+          const marker=L.circleMarker([a.lat,a.lon],{radius:8,color:"#ef4444"}).addTo(map);
+          marker.bindPopup(`<b>${a.type}</b><br>${a.zone}<br><small>${a.description||''}</small>`);
+        }
+      });
+    }
+  </script>
 </body>
 </html>
