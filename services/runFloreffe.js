@@ -298,86 +298,125 @@ const cleanResultsWithTime = cleanResults.map(p => ({
 
 await db.collection("floreffe_phase1").deleteMany({});
 await db.collection("floreffe_phase1").insertMany(cleanResultsWithTime);
-    
+// Petite pause pour laisser Mongo se stabiliser
+await new Promise(resolve => setTimeout(resolve, 120000)); // 2 minutes
+
+// Vérif avant insertion Phase 1
+if (cleanResultsWithTime.length) {
+  await db.collection("floreffe_phase1").deleteMany({});
+  await db.collection("floreffe_phase1").insertMany(cleanResultsWithTime);
+  await addEngineLog(`[Floreffe] Phase 1 stockée (${cleanResultsWithTime.length} points)`, "info");
+} else {
+  await addEngineError("[Floreffe] Phase 1 vide – aucune donnée insérée", "floreffe");
+}    
     // === PHASE 2 – IA J.E.A.N. locale ===
     // === PHASE 2 – IA J.E.A.N. locale ===
-const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nRéponds STRICTEMENT en JSON pur, sans texte, sous la forme [{...},{...}] uniquement.\n\nDonnées : ${JSON.stringify(result.phase1Results.slice(0, 10))}`;
-
-const ai = await openai.chat.completions.create({
-  model: "gpt-5",
-  messages: [{ role: "user", content: aiPrompt }],
-  temperature: 1, // ou supprime cette ligne
-});
-
-let phase2Results;
+let phase2Results = [];
 try {
-  phase2Results = JSON.parse(ai.choices[0].message.content.trim());
-} catch (e) {
-  await addEngineError(`[Floreffe] Erreur Phase 2 : Réponse IA non-JSON (${e.message})`, "floreffe");
-  throw new Error("Réponse IA non-JSON");
-}
+  const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nRéponds STRICTEMENT en JSON pur, sans texte, sous la forme [{...},{...}] uniquement.\n\nDonnées : ${JSON.stringify(result.phase1Results.slice(0, 10))}`;
+  const ai = await openai.chat.completions.create({
+    model: "gpt-5",
+    messages: [{ role: "user", content: aiPrompt }],
+  });
 
-    const cleanPhase2 = phase2Results.map(x => ({ ...x, _id: undefined }));
-await db.collection("floreffe_phase2").deleteMany({});
-await db.collection("floreffe_phase2").insertMany(cleanPhase2);
-    // === PHASE 5 – Fusion + Export ===
-    const enriched = phase2Results.map((x) => ({
+  const raw = ai.choices?.[0]?.message?.content?.trim() || "[]";
+  phase2Results = JSON.parse(raw);
+
+  if (!Array.isArray(phase2Results) || !phase2Results.length) {
+    await addEngineError("[Floreffe] IA J.E.A.N. a renvoyé un tableau vide", "floreffe");
+  } else {
+    await db.collection("floreffe_phase2").deleteMany({});
+    await db.collection("floreffe_phase2").insertMany(phase2Results);
+  }
+} catch (e) {
+  await addEngineError(`[Floreffe] Erreur Phase 2 : ${e.message}`, "floreffe");
+}
+    
+// === PHASE 5 – Fusion + Export ===
+await addEngineLog("[Floreffe] 🧩 Phase 5 – Fusion + Export en cours...", "info");
+
+// Fusion et enrichissement des résultats IA J.E.A.N.
+const enriched = Array.isArray(phase2Results) && phase2Results.length
+  ? phase2Results.map(x => ({
       ...x,
       origin: "Floreffe_dome",
       timestamp: new Date(),
       thresholds: ALERT_THRESHOLDS,
-    }));
+    }))
+  : [];
 
-    const alerts = enriched
-      .filter((x) =>
-        (x.risk?.pluie && x.risk.pluie >= ALERT_THRESHOLDS.rain.alert) ||
-        (x.risk?.verglas && x.risk.verglas >= ALERT_THRESHOLDS.cold.alert)
-      )
-      .map((x) => ({
-        name: x.name,
-        lat: x.lat,
-        lon: x.lon,
-        type: x.risk?.pluie ? "pluie" : "verglas",
-        level: x.risk?.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange",
-        confidence: x.confidence ?? 0.9,
-        description: x.resume || "Alerte détectée localement",
-        timestamp: new Date(),
-      }));
+if (!enriched.length) {
+  await addEngineError("[Floreffe] Aucun résultat enrichi – Phase 2 vide", "floreffe");
+  return { success: false, error: "Phase 2 vide" };
+}
 
-    const cleanAlerts = alerts.map(x => ({ ...x, _id: undefined }));
-await db.collection("alerts_floreffe").deleteMany({});
-await db.collection("alerts_floreffe").insertMany(cleanAlerts);
-    
-    // === EXPORT PUBLIC AUTO JSON ===
-    const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
-    const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
+// === Génération des alertes locales ===
+const alerts = enriched
+  .filter(x =>
+    (x.risk?.pluie && x.risk.pluie >= ALERT_THRESHOLDS.rain.alert) ||
+    (x.risk?.verglas && x.risk.verglas >= ALERT_THRESHOLDS.cold.alert)
+  )
+  .map(x => ({
+    name: x.name,
+    lat: x.lat,
+    lon: x.lon,
+    type: x.risk?.pluie ? "pluie" : "verglas",
+    level: x.risk?.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange",
+    confidence: x.confidence ?? 0.9,
+    description: x.resume || "Alerte détectée localement",
+    timestamp: new Date(),
+  }));
 
-    await fs.promises.writeFile(forecastsPath, JSON.stringify({
-      general: enriched.find(x => x.name.includes("Maison communale")) || enriched[0],
-      zones: enriched
-    }, null, 2));
+const cleanAlerts = alerts.map(x => ({ ...x, _id: undefined }));
 
-    await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
+if (cleanAlerts.length) {
+  await db.collection("alerts_floreffe").deleteMany({});
+  await db.collection("alerts_floreffe").insertMany(cleanAlerts);
+  await addEngineLog(`[Floreffe] 💾 ${cleanAlerts.length} alertes enregistrées dans Mongo local`, "success");
+} else {
+  await addEngineError("[Floreffe] Aucun événement d’alerte détecté – Phase 5 terminée sans alerte", "floreffe");
+}
 
-    await addEngineLog(`🏁 [Floreffe] Export public JSON terminé (${alerts.length} alertes)`, "success");
+// === EXPORT PUBLIC AUTO JSON ===
+const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
+const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
 
-    // === Synchronisation Mongo Cloud global ===
-    const dbName = mongo.db("tinsflash");
-    await dbName
-      .collection("forecasts")
-      .updateOne({ zone: "Floreffe" }, { $set: { zone: "Floreffe", data: enriched } }, { upsert: true });
-    await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
-    await dbName
-      .collection("alerts")
-      .insertMany(alerts.map((a) => ({ ...a, zone: "Floreffe", reliability: a.confidence })));
+await fs.promises.writeFile(
+  forecastsPath,
+  JSON.stringify(
+    {
+      general: enriched.find(x => x.name?.includes("Maison communale")) || enriched[0],
+      zones: enriched,
+    },
+    null,
+    2
+  )
+);
 
-    await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success");
+await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
 
-    return { success: true, alerts: alerts.length };
-  } catch (e) {
-    await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
-  // ==========================================================
-// 🗺️ EXPORT COMPLET POUR LE DÔME FLOREFFE (HTML PUBLIC)
+await addEngineLog(`🏁 [Floreffe] Export public JSON terminé (${alerts.length} alertes)`, "success");
+
+// === Synchronisation Mongo Cloud global ===
+const dbName = mongo.db("tinsflash");
+await dbName
+  .collection("forecasts")
+  .updateOne({ zone: "Floreffe" }, { $set: { zone: "Floreffe", data: enriched } }, { upsert: true });
+
+await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
+if (alerts.length) {
+  await dbName.collection("alerts").insertMany(
+    alerts.map(a => ({ ...a, zone: "Floreffe", reliability: a.confidence }))
+  );
+}
+
+await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success");
+
+return { success: true, alerts: alerts.length };
+} catch (e) {
+  await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");  // ==========================================================
+
+    // 🗺️ EXPORT COMPLET POUR LE DÔME FLOREFFE (HTML PUBLIC)
 // ==========================================================
 
 const makeDay = (i) => ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"][i % 7];
