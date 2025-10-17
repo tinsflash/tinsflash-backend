@@ -64,6 +64,8 @@ import { generateForecast } from "./services/forecastService.js";
 import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
+import visionRoutes from "./routes/visionRoutes.js";
+app.use("/api", visionRoutes);
 
 // ==========================================================
 // ⚙️ CONFIG ENV
