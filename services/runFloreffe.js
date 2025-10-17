@@ -223,7 +223,74 @@ export async function runFloreffe() {
       `🏁 Export terminé – ${alerts.length} alertes / confiance ${(conf * 100).toFixed(1)} %`,
       "success"
     );
+// ==========================================================
+// 💾 Enregistrement MongoDB global – Forecasts & Alerts Floreffe
+// ==========================================================
+try {
+  const dbName = mongo.db("tinsflash");
 
+  // 🧠 Prévision moyenne sur les 60 points
+  if (result?.phase1Results?.length) {
+    const moyenneTempMin =
+      result.phase1Results.reduce((s, z) => s + (z.temp_min || 0), 0) /
+      result.phase1Results.length;
+    const moyenneTempMax =
+      result.phase1Results.reduce((s, z) => s + (z.temp_max || 0), 0) /
+      result.phase1Results.length;
+    const moyenneVent =
+      result.phase1Results.reduce((s, z) => s + (z.wind || 0), 0) /
+      result.phase1Results.length;
+
+    const forecastDoc = {
+      zone: "Floreffe",
+      timestamp: new Date(),
+      general: {
+        temp_min: Math.round(moyenneTempMin),
+        temp_max: Math.round(moyenneTempMax),
+        wind: Math.round(moyenneVent),
+        condition: "Analyse IA J.E.A.N.",
+        reliability: conf || 0.85,
+        week: result.phase1Results.slice(0, 7).map((z, i) => ({
+          day: `Jour ${i + 1}`,
+          temp_min: z.temp_min,
+          temp_max: z.temp_max,
+          condition: z.condition || "Variable",
+          icon: z.icon || "sun",
+        })),
+      },
+      zones: enriched.map((z) => ({
+        id: z.id,
+        name: z.name,
+        temp_min: z.temp_min,
+        temp_max: z.temp_max,
+        condition: z.condition || "N/A",
+        reliability: z.confidence || 0.8,
+        icon: z.icon || "sun",
+      })),
+    };
+
+    await dbName
+      .collection("forecasts")
+      .updateOne({ zone: "Floreffe" }, { $set: forecastDoc }, { upsert: true });
+  }
+
+  // 🚨 Sauvegarde des alertes locales
+  if (alerts?.length) {
+    await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
+    await dbName.collection("alerts").insertMany(
+      alerts.map((a) => ({
+        ...a,
+        zone: "Floreffe",
+        reliability: a.confidence || conf || 0.85,
+        validated: a.confidence >= 0.9,
+      }))
+    );
+  }
+
+  await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success");
+} catch (err) {
+  await addEngineError(`Erreur Mongo export global Floreffe : ${err.message}`, "mongo");
+}
     return { success: true, alerts: alerts.length };
   } catch (e) {
     await addEngineError(`Erreur Floreffe : ${e.message}`, "floreffe");
