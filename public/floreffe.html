@@ -158,9 +158,8 @@
     // ================== 🔥 Initialisation du Dôme Floreffe ==================
     async function initFloreffe(){
       try{
-        const forecasts = await fetch("/api/forecast/floreffe").then(r=>r.json());
-        const alerts = await fetch("/api/alerts/floreffe").then(r=>r.json());
-
+        const forecasts = await fetch("floreffe_forecasts.json?" + Date.now()).then(r=>r.json());
+const alerts = await fetch("floreffe_alerts.json?" + Date.now()).then(r=>r.json());
         const maison = forecasts.find(f=>f.name.includes("Maison communale"));
         renderForecastToday(maison);
         renderForecastWeek(maison);
