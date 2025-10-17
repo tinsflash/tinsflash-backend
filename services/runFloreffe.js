@@ -285,9 +285,9 @@ async function runFloreffe() {
     if (!result?.success || !result.phase1Results?.length)
       throw new Error("Extraction Floreffe : aucune donnée valide");
 
-    await db.collection("floreffe_phase1").deleteMany({});
-    await db.collection("floreffe_phase1").insertMany(result.phase1Results);
-
+    const cleanResults = result.phase1Results.map(x => ({ ...x, _id: undefined }));
+await db.collection("floreffe_phase1").deleteMany({});
+await db.collection("floreffe_phase1").insertMany(cleanResults);
     // === PHASE 2 – IA J.E.A.N. locale ===
     const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nDonnées : ${JSON.stringify(result.phase1Results.slice(0, 10))}`;
     const ai = await openai.chat.completions.create({
@@ -303,9 +303,9 @@ async function runFloreffe() {
       throw new Error("Réponse IA non-JSON");
     }
 
-    await db.collection("floreffe_phase2").deleteMany({});
-    await db.collection("floreffe_phase2").insertMany(phase2Results);
-
+    const cleanPhase2 = phase2Results.map(x => ({ ...x, _id: undefined }));
+await db.collection("floreffe_phase2").deleteMany({});
+await db.collection("floreffe_phase2").insertMany(cleanPhase2);
     // === PHASE 5 – Fusion + Export ===
     const enriched = phase2Results.map((x) => ({
       ...x,
@@ -330,9 +330,10 @@ async function runFloreffe() {
         timestamp: new Date(),
       }));
 
-    await db.collection("alerts_floreffe").deleteMany({});
-    await db.collection("alerts_floreffe").insertMany(alerts);
-
+    const cleanAlerts = alerts.map(x => ({ ...x, _id: undefined }));
+await db.collection("alerts_floreffe").deleteMany({});
+await db.collection("alerts_floreffe").insertMany(cleanAlerts);
+    
     // === EXPORT PUBLIC AUTO JSON ===
     const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
     const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
