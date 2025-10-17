@@ -3,7 +3,7 @@
 // ==========================================================
 // 🔸 Commune pilote : Floreffe (Belgique)
 // 🔸 Phases intégrées et autonomes : 1 (Extraction) + 2 (IA locale) + 5 (Fusion / Export)
-// 🔸 Totalement indépendant du moteur principal
+// 🔸 Horizon prévisionnel : J+0 → J+7 (multi-jours) 100% réel
 // ==========================================================
 
 import dotenv from "dotenv";
@@ -20,6 +20,12 @@ import { fetchHRRR } from "./hrrrAdapter.js";
 
 dotenv.config();
 
+// ==========================================================
+// 🧮 utilitaires
+// ==========================================================
+const country = "BE";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const toISODate = (d) => d.toISOString().slice(0, 10);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -27,11 +33,11 @@ const __dirname = path.dirname(__filename);
 // ⚙️ Seuils d’alerte calibrés Floreffe (anticipatifs réels)
 // ==========================================================
 const ALERT_THRESHOLDS = {
-  rain:     { prealert: 5,  alert: 15, extreme: 35, unit: "mm/h" },
-  snow:     { prealert: 0.8, alert: 2,  extreme: 6,  unit: "cm/h" },
-  wind:     { prealert: 55, alert: 70, extreme: 95, unit: "km/h" },
-  heat:     { prealert: 29, alert: 34, extreme: 38, unit: "°C" },
-  cold:     { prealert: -3, alert: -7, extreme: -12, unit: "°C" },
+  rain: { prealert: 5, alert: 15, extreme: 35, unit: "mm/h" },
+  snow: { prealert: 0.8, alert: 2, extreme: 6, unit: "cm/h" },
+  wind: { prealert: 55, alert: 70, extreme: 95, unit: "km/h" },
+  heat: { prealert: 29, alert: 34, extreme: 38, unit: "°C" },
+  cold: { prealert: -3, alert: -7, extreme: -12, unit: "°C" },
   humidity: { prealert: 93, alert: 97, extreme: 100, unit: "%" },
   visionia: { prealert: 70, alert: 82, extreme: 90, unit: "%" },
 };
@@ -40,39 +46,34 @@ const ALERT_THRESHOLDS = {
 // 🧠 IA J.E.A.N. locale – Prompt contextuel Floreffe
 // ==========================================================
 const FLOREFFE_IA_PROMPT = `
-Tu es J.E.A.N., IA météo-hydrologique locale dédiée à la commune de Floreffe (Belgique).
-Mission : produire des prévisions hyper-locales fiables et des alertes précises pour voiries, habitants et infrastructures.
+Tu es J.E.A.N., IA météo-hydrologique locale, le meilleur météorologue,  le meilleur
+climatologue,  une expert en geologie, un expert mathématicien, dédiée à la commune de Floreffe (Belgique).
+Mission : produire des prévisions hyper-locales les plus fiables au monde pour ce territoire communal 
+et des alertes précises et avant les organismes officiels idéalement pour les voiries, habitants et infrastructures.
 
-Contexte géographique (extraits) :
-- Collines (Floriffoux, Sovimont, Soye) : exposition vent/givre/verglas.
-- Vallée de la Sambre (Franière) : humidité, brouillard, inondations éclair.
-- Zoning Franière / Materne : surfaces imperméables → ruissellement rapide.
-- Réseau pluvial : bassins Sovimont & Pêcherie sensibles.
+Contexte :
+- Collines (Floriffoux, Sovimont, Soye) : vent, givre/verglas.
+- Vallée de la Sambre (Franière) : humidité, brouillard, crues éclairs.
+- Zoning Franière/Materne : surfaces imperméables → ruissellement rapide.
+- Réseau pluvial/égouttage : bassins Sovimont & Pêcherie sensibles.
 - Points critiques : écoles, hall, routes pentues, ponts, halage, camping.
 - Seuils : ≥90 % auto-publié ; 70–89 % validation humaine ; <70 % surveillance.
 
 Tâches :
-1) Pondère les sorties multi-modèles (Phase 1) avec relief, pente, sol, vent.
-2) Évalue risques : verglas (temp sol), ruissellement (pluie × pente), inondation (S > 1),
-   brouillard (HR > 90 % & vent < 5 km/h), rafales.
-3) Calcule un score de cohérence [0..1] et un résumé exploitable par zone et par jour.
-4) Ne produis que du réel — pas de simulation. Retourne STRICTEMENT du JSON pur.
+1) Pondère les sorties multi-modèles (Phase 1) par relief/pente/sol/vent.
+2) Évalue risques : verglas, ruissellement, inondation, brouillard, rafales.
+3) Score de cohérence [0..1] + résumé actionnable par point/jour.
+4) Seulement du réel, expliquant « pourquoi ». 
+Réponds STRICTEMENT en **JSON pur** sous forme d’un tableau \`[{...},{...}]\` sans aucun texte. 
 `;
 
 // ==========================================================
-// 🧮 utilitaires
+// ⚙️ SUPERFORECAST INTÉGRÉ
 // ==========================================================
-const country = "BE";
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const toISODate = (d) => d.toISOString().slice(0, 10);
-
-// Trouve la valeur horaire la plus proche de 12:00 locale pour une date cible
 function pickHourlyAtNoon(hourlyObj, targetDate, times) {
   if (!hourlyObj || !times || !times.length) return null;
-  // cherche un timestamp le plus proche de 12:00
   const target = new Date(`${targetDate}T12:00:00Z`).getTime();
-  let bestIdx = 0;
-  let bestDiff = Number.MAX_SAFE_INTEGER;
+  let bestIdx = 0, bestDiff = Number.MAX_SAFE_INTEGER;
   times.forEach((t, i) => {
     const diff = Math.abs(new Date(t).getTime() - target);
     if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
@@ -84,12 +85,8 @@ function pickHourlyAtNoon(hourlyObj, targetDate, times) {
   };
 }
 
-// ==========================================================
-// ⚙️ FONCTION SUPERFORECAST INTÉGRÉE (indépendante, J+offset)
-// ==========================================================
 async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset = 0 }) {
   await addEngineLog(`📡 [${runType}] Extraction physique locale J+${dayOffset}`, "info", "superForecast");
-
   const results = [];
 
   for (const z of zones) {
@@ -99,47 +96,16 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
 
     try {
       const [lat, lon] = [z.lat, z.lon];
-      const base = new Date();
-      base.setUTCDate(base.getUTCDate() + dayOffset);
+      const base = new Date(); base.setUTCDate(base.getUTCDate() + dayOffset);
       const ymd = toISODate(base);
 
       const models = [
-        // Open-Meteo GFS (avec forecast_days)
-        {
-          name: "GFS NOAA",
-          url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        },
-        // Copernicus ERA5-Land (archive) — on prend proche de midi UTC
-        {
-          name: "Copernicus ERA5-Land",
-          url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&start_date=${ymd}&end_date=${ymd}&timezone=UTC`
-        },
-        // MET Norway
-        {
-          name: "MET Norway – LocationForecast",
-          url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
-          headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: skysnapia@gmail.com)" }
-        },
-        // ICON DWD
-        {
-          name: "ICON DWD",
-          url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        },
-        // AROME Météo-France
-        {
-          name: "AROME MeteoFrance",
-          url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        },
-        // NASA POWER (horaire)
-        {
-          name: "NASA POWER",
-          url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`
-        },
-        // ECMWF ERA5 (via Open-Meteo aggregate approx)
-        {
-          name: "ECMWF ERA5",
-          url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        }
+        { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC` },
+        { name: "Copernicus ERA5-Land", url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&start_date=${ymd}&end_date=${ymd}&timezone=UTC` },
+        { name: "MET Norway – LocationForecast", url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: meteo@tinsflash)" } },
+        { name: "ICON DWD", url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=UTC` },
+        { name: "AROME MeteoFrance", url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=UTC` },
+        { name: "NASA POWER", url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON` }
       ];
 
       for (const m of models) {
@@ -149,45 +115,20 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
           const r = await axios.get(m.url, options);
 
           let T = null, P = 0, W = null;
-
-          if (r.data?.hourly?.time) {
-            // Open-Meteo family
-            const picked = pickHourlyAtNoon(
-              {
-                temperature_2m: r.data.hourly.temperature_2m,
-                precipitation: r.data.hourly.precipitation,
-                wind_speed_10m: r.data.hourly.wind_speed_10m
-              },
-              ymd,
-              r.data.hourly.time
-            );
-            T = picked.temperature_2m;
-            P = picked.precipitation;
-            W = picked.wind_speed_10m;
-          } else if (r.data?.properties?.timeseries?.length) {
-            // MET Norway compact
-            // Cherche la tranche la plus proche de ymd 12:00Z
-            const target = new Date(`${ymd}T12:00:00Z`).getTime();
-            let best = r.data.properties.timeseries[0];
-            let diff = Math.abs(new Date(best.time).getTime() - target);
-            for (const ts of r.data.properties.timeseries) {
-              const d = Math.abs(new Date(ts.time).getTime() - target);
-              if (d < diff) { diff = d; best = ts; }
-            }
-            T = best?.data?.instant?.details?.air_temperature ?? null;
-            P = best?.data?.next_1_hours?.details?.precipitation_amount ?? 0;
-            W = best?.data?.instant?.details?.wind_speed ?? null;
-          } else if (r.data?.properties?.parameter) {
-            // NASA POWER hourly format alternatif
-            const h = r.data?.properties?.parameter || {};
-            // POWER fournit arrays d'heures locales → moyenne simple
-            const arrT = Array.isArray(h.T2M) ? h.T2M : [];
-            const arrP = Array.isArray(h.PRECTOTCORR) ? h.PRECTOTCORR : [];
-            const arrW = Array.isArray(h.WS10M) ? h.WS10M : [];
-            const avg = (a) => (a.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
-            T = avg(arrT);
-            P = avg(arrP) ?? 0;
-            W = avg(arrW);
+          if (r.data?.hourly?.time?.length) {
+            const pick = pickHourlyAtNoon(r.data.hourly, ymd, r.data.hourly.time);
+            T = pick?.temperature_2m ?? null; P = pick?.precipitation ?? 0; W = pick?.wind_speed_10m ?? null;
+          }
+          else if (r.data?.properties?.timeseries?.length) {
+            const d = r.data.properties.timeseries[0]?.data;
+            T = d?.instant?.details?.air_temperature ?? null;
+            P = d?.next_1_hours?.details?.precipitation_amount ?? 0;
+            W = d?.instant?.details?.wind_speed ?? null;
+          }
+          else if (r.data?.properties?.parameter) {
+            const h = r.data.properties.parameter;
+            const avg = (a) => (a?.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
+            T = avg(h.T2M); P = avg(h.PRECTOTCORR) ?? 0; W = avg(h.WS10M);
           }
 
           push({ source: m.name, temperature: T, precipitation: P, wind: W });
@@ -198,42 +139,26 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
         }
       }
 
-      const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+      const avg = (a) => (a.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
       const reliability = +(valid.length / (models.length || 1)).toFixed(2);
-
       const merged = {
-        id: z.id,
-        name: z.name,
-        lat,
-        lon,
-        dayOffset,
-        temperature: avg(valid.map((s) => s.temperature)),
-        precipitation: avg(valid.map((s) => s.precipitation)),
-        wind: avg(valid.map((s) => s.wind)),
-        reliability,
-        sources: valid.map((s) => s.source),
+        id: z.id, name: z.name, lat, lon, dayOffset,
+        temperature: avg(valid.map((s)=>s.temperature)),
+        precipitation: avg(valid.map((s)=>s.precipitation)),
+        wind: avg(valid.map((s)=>s.wind)),
+        reliability, sources: valid.map((s)=>s.source)
       };
 
-      const final = await applyLocalFactors(
-        await applyGeoFactors(merged, lat, lon, country),
-        lat,
-        lon,
-        country
-      );
-
+      const final = await applyLocalFactors(await applyGeoFactors(merged, lat, lon, country), lat, lon, country);
       results.push(final);
-    } catch (err) {
-      await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
-    }
+    } catch (err) { await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast"); }
   }
-
   return { success: true, phase1Results: results };
 }
 
 // ==========================================================
-// ---------- 60 POINTS GÉOGRAPHIQUES — Couverture complète du territoire
-// (LISTE INTÉGRALE CONSERVÉE)
+// 🌍 Points géographiques Floreffe (version complète enregistrée)
 // ==========================================================
 const FLOREFFE_POINTS = [
   { id:'FLO_01', name:'Maison communale', lat:50.4368, lon:4.7562, alt:92,  type:'urbain',   risk:{flood:true, verglas:true, wind:false},    sensor:false, prio:'high' },
@@ -298,8 +223,9 @@ const FLOREFFE_POINTS = [
   { id:'FLO_60', name:'Rue du Parc – zone résidentielle',    lat:50.4330, lon:4.7662, alt:164, type:'urbain', risk:{flood:false, verglas:true, wind:true}, sensor:false, prio:'med' },
 ];
 
+
 // ==========================================================
-// 🚀 Fonction principale – 100 % autonome
+// 🚀 Fonction principale — Run Floreffe autonome
 // ==========================================================
 async function runFloreffe() {
   const mongo = new MongoClient(process.env.MONGO_URI);
@@ -309,35 +235,19 @@ async function runFloreffe() {
     await mongo.connect();
     const db = mongo.db("tinsflash");
 
-    // === PHASE 1 – Extraction multi-modèles locale sur 7 jours ===
+    // === PHASE 1 — Extraction multi-modèles locale sur 7 jours ===
     const forecastDays = 7;
     let phase1Results = [];
-
     await addEngineLog(`[Floreffe] Phase 1 — Extraction J+0→J+${forecastDays}`, "info", "floreffe");
 
     for (let day = 0; day <= forecastDays; day++) {
       try {
-        const res = await superForecastLocal({
-          zones: FLOREFFE_POINTS,
-          runType: "Floreffe",
-          dayOffset: day
-        });
-
+        const res = await superForecastLocal({ zones: FLOREFFE_POINTS, runType: "Floreffe", dayOffset: day });
         if (res?.success && res.phase1Results?.length) {
           const now = new Date();
-          const stamped = res.phase1Results.map(p => ({
-            ...p,
-            timestamp: now,
-            hour: now.toISOString().split("T")[1].slice(0,5),
-          }));
-          phase1Results.push(...stamped);
-        } else {
-          await addEngineError(`[Floreffe] Aucun résultat valide pour J+${day}`, "floreffe");
-        }
-      } catch (e) {
-        await addEngineError(`[Floreffe] Erreur extraction J+${day} : ${e.message}`, "floreffe");
-      }
-      // temporisation douce entre jours pour soulager API et Mongo
+          phase1Results.push(...res.phase1Results.map(p => ({ ...p, timestamp: now })));
+        } else await addEngineError(`[Floreffe] Aucun résultat valide pour J+${day}`, "floreffe");
+      } catch (e) { await addEngineError(`[Floreffe] Erreur extraction J+${day} : ${e.message}`, "floreffe"); }
       await sleep(800);
     }
 
@@ -347,145 +257,78 @@ async function runFloreffe() {
     await db.collection("floreffe_phase1").insertMany(phase1Results);
     await addEngineLog(`[Floreffe] ✅ Phase 1 stockée (${phase1Results.length} lignes)`, "success", "floreffe");
 
-    // === PHASE 2 – IA J.E.A.N. locale (multi-jours) ===
+    await addEngineLog("[Floreffe] Pause 2 min avant Phase 2 (stabilisation Mongo)", "info", "floreffe");
+    await sleep(120000);
+
+    // === PHASE 2 — IA J.E.A.N. locale ===
     await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
-
-    // On limite le prompt JSON pour rester robuste (découpage par paquets si besoin)
-    const sliceForPrompt = phase1Results.slice(0, 250);
-    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nDonnées (échantillon robuste):\n${JSON.stringify(sliceForPrompt)}`;
-
+    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\n${JSON.stringify(phase1Results.slice(0, 250))}`;
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [{ role: "user", content: aiPrompt }],
-      temperature: 0.2
+      temperature: 1
     });
 
-    let phase2Results;
-    try {
-      phase2Results = JSON.parse(ai.choices[0].message.content.trim());
-    } catch (e) {
+    let phase2Results = [];
+    try { phase2Results = JSON.parse(ai.choices?.[0]?.message?.content || "[]"); }
+    catch (e) {
       await addEngineError(`[Floreffe] Erreur Phase 2 : Réponse IA non-JSON (${e.message})`, "floreffe");
-      throw new Error("Réponse IA non-JSON");
+      return { success: false };
     }
 
     await db.collection("floreffe_phase2").deleteMany({});
-    if (Array.isArray(phase2Results) && phase2Results.length) {
-      await db.collection("floreffe_phase2").insertMany(phase2Results);
-    }
-    await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results?.length || 0} objets)`, "success", "floreffe");
+    if (phase2Results.length) await db.collection("floreffe_phase2").insertMany(phase2Results);
+    await addEngineLog(`[Floreffe] ✅ Phase 2 (IA J.E.A.N.) terminée – ${phase2Results.length} lignes`, "success", "floreffe");
 
-    // === PHASE 5 – Fusion + Export (multi-jour) ===
-    // === PHASE 5 – Fusion + Export (multi-jour complet avec coordonnées) ===
-const enriched = Array.isArray(phase2Results) && phase2Results.length
-  ? phase2Results.map((x) => {
-      const point = FLOREFFE_POINTS.find(p => p.name === x.name);
+    // 🕒 Pause 2 min avant fusion/export (Phase 5)
+    await addEngineLog("[Floreffe] Pause 2 min pour stabilisation avant Phase 5", "info", "floreffe");
+    await sleep(120000);
+
+    // === PHASE 5 — Fusion + Export ===
+    const enriched = Array.isArray(phase2Results) && phase2Results.length
+      ? phase2Results.map(x => ({ ...x, origin: "Floreffe_dome", timestamp: new Date(), thresholds: ALERT_THRESHOLDS }))
+      : [];
+    if (!enriched.length) return { success: false, error: "Phase 2 vide" };
+
+    const alerts = enriched.map(x => {
+      const rainHit = x.risk?.pluie >= ALERT_THRESHOLDS.rain.alert;
+      const iceHit = x.risk?.verglas >= ALERT_THRESHOLDS.cold.alert;
+      if (!rainHit && !iceHit) return null;
+      const type = rainHit ? "pluie" : "verglas";
+      const level = rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
+      const confidence = x.confidence ?? x.reliability ?? 0.9;
       return {
-        ...x,
-        lat: point?.lat ?? null,
-        lon: point?.lon ?? null,
-        altitude: point?.alt ?? null,
-        type: point?.type ?? "inconnu",
-        risk: point?.risk ?? {},
-        origin: "Floreffe_dome",
-        timestamp: new Date(),
-        thresholds: ALERT_THRESHOLDS,
+        name: x.name, zone: "Floreffe", lat: x.lat, lon: x.lon,
+        type, level, reliability: confidence,
+        description: confidence >= 0.9 ? "Alerte confirmée"
+          : confidence >= 0.7 ? "Alerte à valider"
+          : "En surveillance – pas encore confirmée",
+        timestamp: new Date()
       };
-    })
-  : [];
+    }).filter(Boolean);
 
-if (!enriched.length) {
-  await addEngineError("[Floreffe] Aucun résultat enrichi – Phase 2 vide", "floreffe");
-  return { success: false, error: "Phase 2 vide" };
-}
+    await db.collection("alerts_floreffe").deleteMany({});
+    if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 
-// Génération des alertes (toutes fiabilités visibles)
-const alerts = enriched.map((x) => {
-  const pluie = x.risk?.pluie ?? 0;
-  const verglas = x.risk?.verglas ?? 0;
-  const confidence = x.confidence ?? x.reliability ?? 0.8;
-  let type = null, level = null;
+    const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
+    const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
+    await fs.promises.writeFile(forecastsPath, JSON.stringify({ generated: new Date(), zones: enriched }, null, 2));
+    await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
 
-  if (pluie >= ALERT_THRESHOLDS.rain.alert) type = "pluie";
-  else if (verglas <= ALERT_THRESHOLDS.cold.alert) type = "verglas";
+    await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-  if (!type) return null;
+    const dbName = mongo.db("tinsflash");
+    await dbName.collection("forecasts").updateOne({ zone: "Floreffe" }, { $set: { zone: "Floreffe", data: enriched } }, { upsert: true });
+    await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
+    if (alerts.length) await dbName.collection("alerts").insertMany(alerts);
+    await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
 
-  if (pluie >= ALERT_THRESHOLDS.rain.extreme || verglas <= ALERT_THRESHOLDS.cold.extreme)
-    level = "rouge";
-  else if (confidence >= 0.9)
-    level = "orange";
-  else if (confidence >= 0.7)
-    level = "jaune";
-  else level = "gris";
+    return { success: true, alerts: alerts.length };
 
-  return {
-    name: x.name,
-    zone: "Floreffe",
-    lat: x.lat,
-    lon: x.lon,
-    altitude: x.altitude,
-    type,
-    level,
-    reliability: confidence,
-    description:
-      confidence >= 0.9
-        ? "Alerte confirmée"
-        : confidence >= 0.7
-        ? "Alerte à valider"
-        : "En surveillance – pas encore confirmée",
-    timestamp: new Date(),
-  };
-}).filter(Boolean);
-
-// Sauvegarde Mongo locales
-await db.collection("alerts_floreffe").deleteMany({});
-if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
-
-// === EXPORT PUBLIC AUTO JSON ===
-const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
-const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
-
-await fs.promises.writeFile(
-  forecastsPath,
-  JSON.stringify(
-    {
-      generated: new Date(),
-      general:
-        enriched.find((x) => (x.name || "").toLowerCase().includes("maison communale")) ||
-        enriched[0],
-      zones: enriched, // ⚠️ structure corrigée
-    },
-    null,
-    2
-  )
-);
-
-await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
-
-await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes générées)`, "success", "floreffe");
-
-// Synchro Mongo Cloud global
-const dbName = mongo.db("tinsflash");
-await dbName.collection("forecasts").updateOne(
-  { zone: "Floreffe" },
-  { $set: { zone: "Floreffe", data: enriched } },
-  { upsert: true }
-);
-await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
-if (alerts.length)
-  await dbName.collection("alerts").insertMany(
-    alerts.map((a) => ({
-      ...a,
-      zone: "Floreffe",
-      reliability: a.reliability,
-    }))
-  );
-
-await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
-return { success: true, alerts: alerts.length };
-
+  } catch (e) {
+    await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
+    return { success: false, error: e.message };
   } finally {
-    // sécurité : laisse Mongo respirer un peu avant close si lourds writes
     await sleep(150);
     await mongo.close();
   }
