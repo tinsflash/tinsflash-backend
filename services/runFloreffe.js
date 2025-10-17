@@ -12,13 +12,11 @@ import axios from "axios";
 import { MongoClient } from "mongodb";
 import OpenAI from "openai";
 import { addEngineLog, addEngineError } from "./engineState.js";
-dotenv.config();
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
 
-
-
+dotenv.config();
 
 // ==========================================================
 // ⚙️ Seuils d’alerte calibrés Floreffe (anticipatifs réels)
@@ -58,10 +56,8 @@ Tâches :
 // ==========================================================
 // ⚙️ FONCTION SUPERFORECAST INTÉGRÉE (indépendante)
 // ==========================================================
-// 🧩 Objectif : même algorithme que superForecast.js du moteur global
-// mais isolé ici pour le dôme Floreffe uniquement.
-// ==========================================================
 const country = "BE";
+
 async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
   await addEngineLog(`📡 [${runType}] Lancement extraction physique locale`, "info");
 
@@ -70,123 +66,130 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
   for (const z of zones) {
     try {
       const [lat, lon] = [z.lat, z.lon];
+      const ymd = new Date().toISOString().split("T")[0];
 
-      // 🌦️ Appel multi-modèles (réels, sans IA)
-      const urls = [
-      {
-        name: "GFS NOAA",
-        url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "ECMWF ERA5",
-        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
-      },
-      {
-        name: "ECMWF Open-Meteo",
-        url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "AROME MeteoFrance",
-        url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "ICON DWD",
-        url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "NASA POWER",
-        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
-      },
-      {
-        name: "Copernicus ERA5-Land",
-        url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "Open-Meteo Forecast",
-        url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
-      },
-      {
-        name: "MET Norway – LocationForecast",
-        url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
-        headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0" },
+      const models = [
+        {
+          name: "GFS NOAA",
+          url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+        },
+        {
+          name: "ECMWF ERA5",
+          url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
+        },
+        {
+          name: "ECMWF Open-Meteo",
+          url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
+        },
+        {
+          name: "AROME MeteoFrance",
+          url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+        },
+        {
+          name: "ICON DWD",
+          url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+        },
+        {
+          name: "NASA POWER",
+          url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`,
+        },
+        {
+          name: "Copernicus ERA5-Land",
+          url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`,
+        },
+        {
+          name: "Open-Meteo Forecast",
+          url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
+        },
+        {
+          name: "MET Norway – LocationForecast",
+          url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
+          headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0" },
+        },
+      ];
+
+      const sources = [];
+      const push = (x) => sources.push(x);
+      const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
+
+      for (const m of models) {
+        try {
+          const options = { timeout: 15000 };
+          if (m.headers) options.headers = m.headers;
+          const r = await axios.get(m.url, options);
+
+          const d =
+            r.data?.current ||
+            r.data?.parameters ||
+            (r.data?.hourly
+              ? {
+                  temperature_2m: r.data.hourly.temperature_2m?.slice(-1)[0],
+                  precipitation: r.data.hourly.precipitation?.slice(-1)[0],
+                  wind_speed_10m: r.data.hourly.wind_speed_10m?.slice(-1)[0],
+                }
+              : r.data?.properties?.timeseries?.[0]?.data?.instant?.details
+              ? {
+                  temperature_2m:
+                    r.data.properties.timeseries[0].data.instant.details.air_temperature,
+                  precipitation:
+                    r.data.properties.timeseries[0].data.next_1_hours?.details
+                      ?.precipitation_amount ?? 0,
+                  wind_speed_10m:
+                    r.data.properties.timeseries[0].data.instant.details.wind_speed ?? null,
+                }
+              : {});
+
+          const T = d.temperature_2m ?? d.air_temperature ?? null;
+          const P = d.precipitation ?? d.PRECTOTCORR ?? 0;
+          const W = d.wind_speed_10m ?? d.wind_speed ?? d.WS10M ?? null;
+
+          push({ source: m.name, temperature: T, precipitation: P, wind: W });
+          log(m.name, true);
+        } catch (e) {
+          log(m.name, false);
+          await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
+        }
       }
-];
-    for (const m of models) {
-      try {
-        const options = { timeout: 15000 };
-        if (m.headers) options.headers = m.headers;
-        const r = await axios.get(m.url, options);
-const sources = [];
-const push = (x) => sources.push(x);
-const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
-        const d =
-          r.data?.current ||
-          r.data?.parameters ||
-          (r.data?.hourly
-            ? {
-                temperature_2m: r.data.hourly.temperature_2m?.slice(-1)[0],
-                precipitation: r.data.hourly.precipitation?.slice(-1)[0],
-                wind_speed_10m: r.data.hourly.wind_speed_10m?.slice(-1)[0],
-              }
-            : r.data?.properties?.timeseries?.[0]?.data?.instant?.details
-            ? {
-                temperature_2m: r.data.properties.timeseries[0].data.instant.details.air_temperature,
-                precipitation:
-                  r.data.properties.timeseries[0].data.next_1_hours?.details?.precipitation_amount ?? 0,
-                wind_speed_10m:
-                  r.data.properties.timeseries[0].data.instant.details.wind_speed ?? null,
-              }
-            : {});
 
-        const T = d.temperature_2m ?? d.air_temperature ?? null;
-        const P = d.precipitation ?? d.PRECTOTCORR ?? 0;
-        const W = d.wind_speed_10m ?? d.wind_speed ?? d.WS10M ?? null;
-
-        push({ source: m.name, temperature: T, precipitation: P, wind: W });
-        log(m.name, true);
-      } catch (e) {
-        log(m.name, false);
-        await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
+      // --- HRRR (USA only) ---
+      if (lon < -60 && lon > -130 && lat > 20 && lat < 55) {
+        try {
+          const hrrr = await fetchHRRR(lat, lon);
+          if (!hrrr.error) {
+            push(hrrr);
+            log("HRRR NOAA (Microsoft PC)", true);
+          } else log("HRRR NOAA (Microsoft PC)", false);
+        } catch (e) {
+          log("HRRR NOAA (Microsoft PC)", false);
+        }
       }
+
+      const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+      const valid = sources.filter((s) => s.temperature !== null);
+      const reliability = +(valid.length / (models.length || 1)).toFixed(2);
+
+      const result = {
+        temperature: avg(valid.map((s) => s.temperature)),
+        precipitation: avg(valid.map((s) => s.precipitation)),
+        wind: avg(valid.map((s) => s.wind)),
+        reliability,
+        sources: valid.map((s) => s.source),
+      };
+
+      const final = await applyLocalFactors(
+        await applyGeoFactors(result, lat, lon, country),
+        lat,
+        lon,
+        country
+      );
+      results.push(final);
+    } catch (err) {
+      await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
     }
+  }
 
-    // --- HRRR (USA only) ---
-    if (lon < -60 && lon > -130 && lat > 20 && lat < 55) {
-      try {
-        const hrrr = await fetchHRRR(lat, lon);
-        if (!hrrr.error) {
-          push(hrrr);
-          log("HRRR NOAA (Microsoft PC)", true);
-        } else log("HRRR NOAA (Microsoft PC)", false);
-      } catch (e) {
-        log("HRRR NOAA (Microsoft PC)", false);
-      }
-    }
-
-    const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
-    const valid = sources.filter((s) => s.temperature !== null);
-    const reliability = +(valid.length / (models.length || 1)).toFixed(2);
-
-    const result = {
-      temperature: avg(valid.map((s) => s.temperature)),
-      precipitation: avg(valid.map((s) => s.precipitation)),
-      wind: avg(valid.map((s) => s.wind)),
-      reliability,
-      sources: valid.map((s) => s.source),
-    };
-
-    return await applyLocalFactors(
-      await applyGeoFactors(result, lat, lon, country),
-      lat,
-      lon,
-      country
-    );
-  } catch (err) {
-  await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
-}
-
-return { success: true, phase1Results: results };
-// ==========================================================
+  return { success: true, phase1Results: results };
+} // ✅ FERMETURE OK de superForecastLocal()
 // 🌍 (Ici tu réintègres les coordonnées géographiques FLOREFFE_POINTS)
 // ==========================================================
 // ---------- 60 POINTS GÉOGRAPHIQUES — Couverture complète du territoire
@@ -275,7 +278,6 @@ const FLOREFFE_POINTS = [
 ];
 
 
-
 // ==========================================================
 // 🚀 Fonction principale – 100 % autonome
 // ==========================================================
@@ -297,7 +299,6 @@ async function runFloreffe() {
     await db.collection("floreffe_phase1").deleteMany({});
     await db.collection("floreffe_phase1").insertMany(result.phase1Results);
 
-  
     await addEngineLog("✅ Phase 1 terminée – satellites sauvegardés", "success");
 
     // === PHASE 2 – IA J.E.A.N. locale ===
@@ -361,9 +362,7 @@ async function runFloreffe() {
     await dbName
       .collection("forecasts")
       .updateOne({ zone: "Floreffe" }, { $set: { zone: "Floreffe", data: enriched } }, { upsert: true });
-    await dbName
-      .collection("alerts")
-      .deleteMany({ zone: /Floreffe/i });
+    await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
     await dbName
       .collection("alerts")
       .insertMany(alerts.map((a) => ({ ...a, zone: "Floreffe", reliability: a.confidence })));
@@ -371,12 +370,12 @@ async function runFloreffe() {
     await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success");
 
     return { success: true, alerts: alerts.length };
-      } 
   } catch (e) {
     await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
     return { success: false, error: e.message };
   } finally {
     await mongo.close();
   }
-}}
+}
+
 module.exports = { runFloreffe };
