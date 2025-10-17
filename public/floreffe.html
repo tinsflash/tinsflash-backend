@@ -92,7 +92,7 @@
     <select id="zoneSelect"></select>
     <div id="zoneForecast" class="forecast-grid"></div>
 
-    <h2>Alertes locales (≥90%)</h2>
+    <h2>Alertes locales et nationales</h2>
     <div id="alerts-local" class="alert-section">Chargement…</div>
 
     <h2>Carte communale — Prévisions et alertes actives</h2>
@@ -159,7 +159,8 @@
     async function initFloreffe(){
       try{
         const forecasts = await fetch("floreffe_forecasts.json?" + Date.now()).then(r=>r.json());
-const alerts = await fetch("floreffe_alerts.json?" + Date.now()).then(r=>r.json());
+        const alerts = await fetch("floreffe_alerts.json?" + Date.now()).then(r=>r.json());
+
         const maison = forecasts.find(f=>f.name.includes("Maison communale"));
         renderForecastToday(maison);
         renderForecastWeek(maison);
@@ -174,32 +175,33 @@ const alerts = await fetch("floreffe_alerts.json?" + Date.now()).then(r=>r.json(
         sel.onchange=()=>renderZone(forecasts.find(x=>x.name===sel.value),alerts);
         renderZone(forecasts[0],alerts);
 
-        renderAlerts(alerts);
+        renderAlerts(alerts,true);
         renderMap(forecasts,alerts);
       }catch(e){console.error(e);}
     }
 
     // ================== 🔹 Rendu Prévisions ==================
     function renderForecastToday(data){
-  const c=document.getElementById("forecast-today");
-  if(!data){c.textContent="Aucune donnée";return;}
-  c.innerHTML=`<div class='forecast-card'>
-    🌡️ <b>${data.temp_min}° / ${data.temp_max}°</b><br>
-    🌦️ ${data.condition}<br>
-    🔹 Fiabilité ${(data.reliability*100).toFixed(0)}%
-  </div>`;
-}
+      const c=document.getElementById("forecast-today");
+      if(!data){c.textContent="Aucune donnée";return;}
+      c.innerHTML=`<div class='forecast-card'>
+        🌡️ <b>${data.temp_min}° / ${data.temp_max}°</b><br>
+        🌦️ ${data.condition}<br>
+        🔹 Fiabilité ${(data.reliability*100).toFixed(0)}%
+      </div>`;
+    }
 
-function renderForecastWeek(data){
-  const c=document.getElementById("forecast-week");
-  c.innerHTML='';
-  data.week.forEach(j=>{
-    const d=document.createElement('div');
-    d.className='forecast-card';
-    d.innerHTML=`${j.day}<br><b>${j.temp_min}° / ${j.temp_max}°</b><br><small>${j.condition}</small>`;
-    c.appendChild(d);
-  });
-}
+    function renderForecastWeek(data){
+      const c=document.getElementById("forecast-week");
+      c.innerHTML='';
+      data.week.forEach(j=>{
+        const d=document.createElement('div');
+        d.className='forecast-card';
+        d.innerHTML=`${j.day}<br><b>${j.temp_min}° / ${j.temp_max}°</b><br><small>${j.condition}</small>`;
+        c.appendChild(d);
+      });
+    }
+
     function renderZone(z,alerts){
       const c=document.getElementById("zoneForecast");
       c.innerHTML="";
@@ -209,39 +211,93 @@ function renderForecastWeek(data){
       d.innerHTML=`<b>${z.name}</b><br>${z.temperature?.toFixed(1)}°C<br>${z.precipitation?.toFixed(1)} mm/h<br><small>Fiabilité ${(z.reliability*100).toFixed(0)}%</small>`;
       c.appendChild(d);
       const zoneAlerts=alerts.filter(a=>a.zone===z.name);
-      if(zoneAlerts.length>0) renderAlerts(zoneAlerts);
+      if(zoneAlerts.length>0) renderAlerts(zoneAlerts,false);
     }
 
-    // ================== 🔸 Rendu Alertes ==================
-    function renderAlerts(list){
-      const c=document.getElementById("alerts-local");
-      c.innerHTML="";
-      list.filter(a=>a.confidence>=0.9).forEach(a=>{
-        const box=document.createElement("div");
-        box.className="alert-box";
-        box.innerHTML=`<b>${a.type}</b> – ${a.zone}<br><small>Confiance ${(a.confidence*100).toFixed(0)}%</small>`;
-        c.appendChild(box);
-      });
+    // ================== 🔸 Rendu Alertes (classées par fiabilité) ==================
+    // ================== 🔸 Rendu Alertes (classées par fiabilité) ==================
+    function renderAlerts(list, showNational = false){
+      const c = document.getElementById("alerts-local");
+      c.innerHTML = "";
+
+      if(!list || !list.length){
+        c.innerHTML = "<div class='alert-box'>Aucune alerte active</div>";
+        return;
+      }
+
+      const makeSection = (title, color, arr) => {
+        if(!arr.length) return "";
+        let html = `<h3 style='color:${color};margin-top:10px;'>${title}</h3>`;
+        arr.forEach(a => {
+          html += `<div class='alert-box' style='border-left-color:${color};'>
+            <b>${a.type}</b> – ${a.zone || "Zone inconnue"}<br>
+            <small>Confiance ${(a.confidence*100).toFixed(0)}%</small><br>
+            ${a.description ? `<i>${a.description}</i><br>` : ""}
+          </div>`;
+        });
+        return html;
+      };
+
+      // 🔹 Locales
+      const locales = list.filter(a => a.zone?.toLowerCase().includes("floreffe"));
+      const localesHTML =
+        makeSection("⚠️ Alertes confirmées (≥90 %)", "#4fc3f7", locales.filter(a => a.confidence >= 0.9)) +
+        makeSection("🟠 À valider (70 – 89 %)", "#facc15", locales.filter(a => a.confidence >= 0.7 && a.confidence < 0.9)) +
+        makeSection("🟡 En surveillance (<70 %)", "#f97316", locales.filter(a => a.confidence < 0.7));
+
+      // 🔸 Nationales
+      let nationalHTML = "";
+      if(showNational){
+        const nationales = list.filter(a => !a.zone?.toLowerCase().includes("floreffe"));
+        if(nationales.length){
+          nationalHTML = `<details style="margin-top:15px;">
+            <summary style="cursor:pointer;color:#7dd3fc;">🌍 Consulter les alertes nationales (${nationales.length})</summary>
+            ${makeSection("Alertes nationales confirmées", "#22d3ee", nationales.filter(a => a.confidence >= 0.9))}
+            ${makeSection("À valider", "#facc15", nationales.filter(a => a.confidence >= 0.7 && a.confidence < 0.9))}
+            ${makeSection("En surveillance", "#f97316", nationales.filter(a => a.confidence < 0.7))}
+          </details>`;
+        }
+      }
+
+      // 🔹 Rendu final
+      c.innerHTML = localesHTML + nationalHTML;
     }
 
     // ================== 🗺️ Carte Communale ==================
-    function renderMap(forecasts,alerts){
-      const map=L.map("map-alerts").setView([50.44,4.76],12);
+    function renderMap(forecasts, alerts){
+      const map = L.map("map-alerts").setView([50.44, 4.76], 12);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-      // Prévisions (points bleus)
+      // 📍 Prévisions (points bleus)
       forecasts.forEach(f=>{
-        if(f.lat&&f.lon){
-          const marker=L.circleMarker([f.lat,f.lon],{radius:6,color:"#3b82f6"}).addTo(map);
-          marker.bindPopup(`<b>${f.name}</b><br>${f.temperature?.toFixed(1)}°C<br>${f.precipitation?.toFixed(1)} mm/h`);
+        if(f.lat && f.lon){
+          const marker = L.circleMarker([f.lat, f.lon], {
+            radius: 6,
+            color: "#3b82f6"
+          }).addTo(map);
+          marker.bindPopup(`<b>${f.name}</b><br>
+            🌡️ ${f.temperature?.toFixed(1)}°C<br>
+            🌧️ ${f.precipitation?.toFixed(1)} mm/h<br>
+            🔹 Fiabilité ${(f.reliability*100).toFixed(0)}%`);
         }
       });
 
-      // Alertes (points rouges)
-      alerts.filter(a=>a.confidence>=0.9).forEach(a=>{
-        if(a.lat&&a.lon){
-          const marker=L.circleMarker([a.lat,a.lon],{radius:8,color:"#ef4444"}).addTo(map);
-          marker.bindPopup(`<b>${a.type}</b><br>${a.zone}<br><small>${a.description||''}</small>`);
+      // ⚠️ Alertes (points rouges / jaunes selon confiance)
+      alerts.forEach(a=>{
+        if(a.lat && a.lon){
+          let color = "#ef4444";
+          if(a.confidence >= 0.9) color = "#ef4444";
+          else if(a.confidence >= 0.7) color = "#facc15";
+          else color = "#f97316";
+
+          const marker = L.circleMarker([a.lat, a.lon], {
+            radius: 8,
+            color
+          }).addTo(map);
+          marker.bindPopup(`<b>${a.type}</b><br>
+            ${a.zone || "Zone inconnue"}<br>
+            <small>Confiance ${(a.confidence*100).toFixed(0)}%</small><br>
+            ${a.description || ""}`);
         }
       });
     }
