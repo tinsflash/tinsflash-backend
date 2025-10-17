@@ -375,6 +375,51 @@ app.get("/api/alerts", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ==========================================================
+// 🌦️ ROUTES API - Dôme de protection Floreffe (réel et connecté)
+// ==========================================================
+
+app.get("/api/forecast/floreffe", async (req, res) => {
+  try {
+    const client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const db = client.db();
+    const data = await db.collection("forecasts").findOne({ zone: "Floreffe" });
+    await client.close();
+
+    if (!data) {
+      return res.json({ error: "Aucune donnée disponible pour Floreffe" });
+    }
+
+    res.json(data);
+  } catch (e) {
+    console.error("Erreur API forecast Floreffe:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/alerts/floreffe", async (req, res) => {
+  try {
+    const client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const db = client.db();
+    const alerts = await db
+      .collection("alerts")
+      .find({ zone: /Floreffe/i })
+      .toArray();
+    await client.close();
+
+    res.json(alerts || []);
+  } catch (e) {
+    console.error("Erreur API alerts Floreffe:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 🛰️ Log de confirmation au démarrage
+console.log("✅ Routes TINSFLASH Floreffe actives : /api/forecast/floreffe & /api/alerts/floreffe");
+
 // ==========================================================
 // 🔭 TINSFLASH – Vision automatique (Phase 1B autonome)
 // ==========================================================
