@@ -279,7 +279,7 @@ const FLOREFFE_POINTS = [
 // ==========================================================
 // 🚀 Fonction principale – 100 % autonome
 // ==========================================================
-export async function runFloreffe() {
+async function runFloreffe() {
   const mongo = new MongoClient(process.env.MONGO_URI);
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -378,3 +378,4 @@ export async function runFloreffe() {
     await mongo.close();
   }
 }
+module.exports = { runFloreffe };
