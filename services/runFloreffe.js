@@ -67,8 +67,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
       const [lat, lon] = [z.lat, z.lon];
 
       // 🌦️ Appel multi-modèles (réels, sans IA)
-      const urls = {
-        const models = [
+      const urls = 
       {
         name: "GFS NOAA",
         url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`,
@@ -105,8 +104,8 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
         name: "MET Norway – LocationForecast",
         url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
         headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0" },
-      },
-    ];
+      }
+    };
 
     for (const m of models) {
       try {
