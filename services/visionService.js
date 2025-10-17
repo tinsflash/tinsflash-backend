@@ -139,3 +139,4 @@ export async function analyzeVisionSet(region = "EU") {
     return { success: false, error: err.message };
   }
 }
+export default { analyzeVision, downloadVisionSet };
