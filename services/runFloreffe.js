@@ -300,19 +300,22 @@ await db.collection("floreffe_phase1").deleteMany({});
 await db.collection("floreffe_phase1").insertMany(cleanResultsWithTime);
     
     // === PHASE 2 – IA J.E.A.N. locale ===
-    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nDonnées : ${JSON.stringify(result.phase1Results.slice(0, 10))}`;
-    const ai = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [{ role: "user", content: aiPrompt }],
-      temperature: 1,
-    });
+    // === PHASE 2 – IA J.E.A.N. locale ===
+const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nRéponds STRICTEMENT en JSON pur, sans texte, sous la forme [{...},{...}] uniquement.\n\nDonnées : ${JSON.stringify(result.phase1Results.slice(0, 10))}`;
 
-    let phase2Results;
-    try {
-      phase2Results = JSON.parse(ai.choices[0].message.content);
-    } catch {
-      throw new Error("Réponse IA non-JSON");
-    }
+const ai = await openai.chat.completions.create({
+  model: "gpt-5",
+  messages: [{ role: "user", content: aiPrompt }],
+  temperature: 1, // ou supprime cette ligne
+});
+
+let phase2Results;
+try {
+  phase2Results = JSON.parse(ai.choices[0].message.content.trim());
+} catch (e) {
+  await addEngineError(`[Floreffe] Erreur Phase 2 : Réponse IA non-JSON (${e.message})`, "floreffe");
+  throw new Error("Réponse IA non-JSON");
+}
 
     const cleanPhase2 = phase2Results.map(x => ({ ...x, _id: undefined }));
 await db.collection("floreffe_phase2").deleteMany({});
