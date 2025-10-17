@@ -377,5 +377,5 @@ async function runFloreffe() {
   } finally {
     await mongo.close();
   }
-}
+}}
 module.exports = { runFloreffe };
