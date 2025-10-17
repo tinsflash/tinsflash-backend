@@ -281,13 +281,24 @@ async function runFloreffe() {
     await addEngineLog("🚀 [Floreffe] Phase 1 – Extraction multi-modèles locale", "info");
 
     // === PHASE 1 ===
-    const result = await superForecastLocal({ zones: FLOREFFE_POINTS, runType: "Floreffe" });
-    if (!result?.success || !result.phase1Results?.length)
-      throw new Error("Extraction Floreffe : aucune donnée valide");
+    // === PHASE 1 ===
+const result = await superForecastLocal({ zones: FLOREFFE_POINTS, runType: "Floreffe" });
+if (!result?.success || !result.phase1Results?.length)
+  throw new Error("Extraction Floreffe : aucune donnée valide");
 
-    const cleanResults = result.phase1Results.map(x => ({ ...x, _id: undefined }));
+const cleanResults = result.phase1Results.map(x => ({ ...x, _id: undefined }));
+
+// 🕓 Ajout du timestamp ISO et heure locale pour chaque point
+const now = new Date();
+const cleanResultsWithTime = cleanResults.map(p => ({
+  ...p,
+  timestamp: now,
+  hour: now.toISOString().split("T")[1].slice(0,5)
+}));
+
 await db.collection("floreffe_phase1").deleteMany({});
-await db.collection("floreffe_phase1").insertMany(cleanResults);
+await db.collection("floreffe_phase1").insertMany(cleanResultsWithTime);
+    
     // === PHASE 2 – IA J.E.A.N. locale ===
     const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nDonnées : ${JSON.stringify(result.phase1Results.slice(0, 10))}`;
     const ai = await openai.chat.completions.create({
