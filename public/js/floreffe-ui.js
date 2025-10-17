@@ -1,5 +1,5 @@
 // ==============================================
-// 🌦️ Dôme de Protection Floreffe – JS Principal
+// 🌦️ Dôme de Protection Floreffe – JS Connecté (LIVE)
 // ==============================================
 
 // 🔐 Mot de passe d’accès
@@ -18,8 +18,11 @@ if (!sessionStorage.getItem("access")) {
   content.style.display = "block";
 }
 
-const API_FORECAST = "/floreffe_forecasts.json";
-const API_ALERTS = "/floreffe_alerts.json";
+// ===============================
+// 🔗 Connexions API réelles
+// ===============================
+const API_FORECAST = "/api/forecast/floreffe"; // route Express réelle
+const API_ALERTS = "/api/alerts/floreffe";     // idem, Mongo connecté
 
 // ===============================
 // 🔹 Chargement des prévisions
@@ -28,33 +31,43 @@ async function loadForecasts() {
   try {
     const r = await fetch(API_FORECAST);
     const data = await r.json();
+    if (!data || data.error) {
+      document.getElementById("forecast-today").textContent = "Aucune donnée disponible (moteur en attente).";
+      return;
+    }
+
     renderToday(data.general);
-    renderWeek(data.general.week);
-    populateZones(data.zones);
+    renderWeek(data.general.week || []);
+    populateZones(data.zones || []);
   } catch (e) {
-    console.error("Erreur chargement prévisions", e);
+    console.error("Erreur prévisions Floreffe :", e);
   }
 }
 
 function renderToday(f) {
   const el = document.getElementById("forecast-today");
+  if (!f) { el.textContent = "Aucune donnée du jour."; return; }
   el.innerHTML = `
     <div class="forecast-card">
-      <img src="https://open-meteo.com/images/weather-icons/${f.icon}.svg">
-      <div><b>${f.temp_min}° / ${f.temp_max}°</b></div>
-      <small>${f.condition}</small>
-      <div>Fiabilité : ${(f.reliability*100).toFixed(0)}%</div>
+      <img src="https://open-meteo.com/images/weather-icons/${f.icon||'3'}.svg">
+      <div><b>${f.temp_min ?? '?'}° / ${f.temp_max ?? '?'}°</b></div>
+      <small>${f.condition || 'Analyse en cours...'}</small><br>
+      <div>Fiabilité : ${(f.reliability*100||80).toFixed(0)}%</div>
     </div>`;
 }
 
 function renderWeek(days) {
   const el = document.getElementById("forecast-week");
   el.innerHTML = "";
+  if (!days.length) {
+    el.textContent = "Pas encore de projections disponibles.";
+    return;
+  }
   days.forEach(d => {
     const card = document.createElement("div");
     card.className = "forecast-card";
     card.innerHTML = `
-      <img src="https://open-meteo.com/images/weather-icons/${d.icon}.svg">
+      <img src="https://open-meteo.com/images/weather-icons/${d.icon||'3'}.svg">
       <div><b>${d.day}</b></div>
       <div>${d.temp_min}° / ${d.temp_max}°</div>
       <small>${d.condition}</small>`;
@@ -65,6 +78,7 @@ function renderWeek(days) {
 function populateZones(zones) {
   const select = document.getElementById("zoneSelect");
   const zoneBox = document.getElementById("zoneForecast");
+  select.innerHTML = "";
   zones.forEach(z => {
     const opt = document.createElement("option");
     opt.value = z.id;
@@ -78,7 +92,7 @@ function populateZones(zones) {
       <div class="forecast-card">
         <b>${z.name}</b><br>
         ${z.temp_min}° / ${z.temp_max}°<br>
-        <img src="https://open-meteo.com/images/weather-icons/${z.icon}.svg">
+        <img src="https://open-meteo.com/images/weather-icons/${z.icon||'3'}.svg">
         <small>${z.condition}</small>
       </div>`;
   };
@@ -91,10 +105,14 @@ async function loadAlerts() {
   try {
     const r = await fetch(API_ALERTS);
     const alerts = await r.json();
+    if (!alerts.length) {
+      document.getElementById("alerts-local").textContent = "Aucune alerte active.";
+      return;
+    }
     renderAlerts(alerts);
     initMap(alerts);
   } catch (e) {
-    console.error("Erreur alertes", e);
+    console.error("Erreur alertes Floreffe :", e);
   }
 }
 
@@ -138,7 +156,7 @@ document.getElementById("btnAI").onclick = () => {
   chatBox.style.display = chatBox.style.display === "flex" ? "none" : "flex";
 };
 
-// Démarrage
+// 🚀 Démarrage
 document.addEventListener("DOMContentLoaded", () => {
   loadForecasts();
   loadAlerts();
