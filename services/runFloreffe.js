@@ -540,10 +540,10 @@ await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.",
 
     await mongo.close();
     return { success: true, alerts: alerts.length };
-  } catch (e) {
+   catch (e) {
     await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
     return { success: false, error: e.message };
-  } finally {
+   finally {
     await sleep(150);
   }
 }  // ← ferme bien la fonction runFloreffe
