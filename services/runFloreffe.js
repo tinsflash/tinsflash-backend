@@ -556,7 +556,6 @@ await addEngineLog(
 );
 
 // --- Fermeture propre ---
-// --- Fermeture propre ---
 await mongo.close();
 await addEngineLog(`[Floreffe] Connexion Mongo fermée proprement`, "info", "floreffe");
 
@@ -564,6 +563,7 @@ await addEngineLog(`[Floreffe] Connexion Mongo fermée proprement`, "info", "flo
 await sleep(250);
 
 return { success: true, alerts: alerts.length };
+} // ← ferme le try interne
 } // ← ferme la fonction runFloreffe proprement
 
 // ==========================================================
