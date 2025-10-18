@@ -293,6 +293,14 @@ async function runFloreffe() {
   await mongo.connect();
   const db = mongo.db("tinsflash");
 
+ // ==========================================================
+// 🚀 Fonction principale — Phases 2 et 5 (IA J.E.A.N. + Export)
+// ==========================================================
+async function runFloreffe() {
+  const mongo = new MongoClient(process.env.MONGO_URI);
+  await mongo.connect();
+  const db = mongo.db("tinsflash");
+
   try {
     // === PHASE 2 — IA J.E.A.N. locale ===
     await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
@@ -304,8 +312,9 @@ async function runFloreffe() {
     });
 
     let phase2Results = [];
-    try { phase2Results = JSON.parse(ai.choices?.[0]?.message?.content || "[]"); }
-    catch (e) {
+    try {
+      phase2Results = JSON.parse(ai.choices?.[0]?.message?.content || "[]");
+    } catch (e) {
       await addEngineError(`[Floreffe] Erreur Phase 2 : Réponse IA non-JSON (${e.message})`, "floreffe");
       return { success: false };
     }
@@ -314,13 +323,18 @@ async function runFloreffe() {
     if (phase2Results.length) await db.collection("floreffe_phase2").insertMany(phase2Results);
     await addEngineLog(`[Floreffe] ✅ Phase 2 (IA J.E.A.N.) terminée – ${phase2Results.length} lignes`, "success", "floreffe");
 
-    // 🕒 Pause 2 min avant fusion/export (Phase 5)
-    await addEngineLog("[Floreffe] Pause 2 min pour stabilisation avant Phase 5", "info", "floreffe");
+    // 🕒 Pause 2 min avant la Phase 5
+    await addEngineLog("[Floreffe] Pause 2 min avant Phase 5 (stabilisation)", "info", "floreffe");
     await sleep(120000);
 
     // === PHASE 5 — Fusion + Export ===
     const enriched = Array.isArray(phase2Results) && phase2Results.length
-      ? phase2Results.map(x => ({ ...x, origin: "Floreffe_dome", timestamp: new Date(), thresholds: ALERT_THRESHOLDS }))
+      ? phase2Results.map(x => ({
+          ...x,
+          origin: "Floreffe_dome",
+          timestamp: new Date(),
+          thresholds: ALERT_THRESHOLDS
+        }))
       : [];
     if (!enriched.length) return { success: false, error: "Phase 2 vide" };
 
@@ -332,11 +346,17 @@ async function runFloreffe() {
       const level = rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
       const confidence = x.confidence ?? x.reliability ?? 0.9;
       return {
-        name: x.name, zone: "Floreffe", lat: x.lat, lon: x.lon,
-        type, level, reliability: confidence,
-        description: confidence >= 0.9 ? "Alerte confirmée"
-          : confidence >= 0.7 ? "Alerte à valider"
-          : "En surveillance – pas encore confirmée",
+        name: x.name,
+        zone: "Floreffe",
+        lat: x.lat,
+        lon: x.lon,
+        type,
+        level,
+        reliability: confidence,
+        description:
+          confidence >= 0.9 ? "Alerte confirmée" :
+          confidence >= 0.7 ? "Alerte à valider" :
+          "En surveillance – pas encore confirmée",
         timestamp: new Date()
       };
     }).filter(Boolean);
@@ -352,13 +372,17 @@ async function runFloreffe() {
     await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
     const dbName = mongo.db("tinsflash");
-    await dbName.collection("forecasts").updateOne({ zone: "Floreffe" }, { $set: { zone: "Floreffe", data: enriched } }, { upsert: true });
+    await dbName.collection("forecasts").updateOne(
+      { zone: "Floreffe" },
+      { $set: { zone: "Floreffe", data: enriched } },
+      { upsert: true }
+    );
     await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
     if (alerts.length) await dbName.collection("alerts").insertMany(alerts);
     await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+
     await mongo.close();
     return { success: true, alerts: alerts.length };
-
   } catch (e) {
     await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
     return { success: false, error: e.message };
@@ -367,4 +391,7 @@ async function runFloreffe() {
   }
 }
 
-module.exports = { runFloreffe };
+// ==========================================================
+// 🔚 Export compatible CommonJS pour Render
+// ==========================================================
+module.exports = { runFloreffe }; 
