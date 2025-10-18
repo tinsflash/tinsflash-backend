@@ -20,6 +20,7 @@ import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
 import superForecastModule from "./superForecast.js";
 const { superForecast } = superForecastModule;
+import { mergeMultiModels } from "./superForecast.js"; // déjà présent dans 1runFloreffe
 import { correlateTopoHydro } from "./correlateTopoHydro.js";
 import { fetchLiveHydroData } from "./fetchLiveHydroData.js";
 
@@ -240,7 +241,6 @@ const forecastDays = 5; // Horizon stable J+5 pour Floreffe
         }
       }
     }
-import { mergeMultiModels } from "./superForecast.js"; // déjà présent dans 1runFloreffe
 
 // ==========================================================
 // 🌦️ Phase 1 — Extraction réelle des modèles météo
