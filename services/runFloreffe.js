@@ -154,95 +154,96 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       }
       ];
 
-      for (const m of models) {
-        try {
-          const options = { timeout: 15000 };
-          if (m.headers) options.headers = m.headers;
-          const r = await axios.get(m.url, options);
+for (const m of models) {
+  try {
+    const options = { timeout: 15000 };
+    if (m.headers) options.headers = m.headers;
+    const r = await axios.get(m.url, options);
 
-          let T = null, P = 0, W = null;
+    let T = null, P = 0, W = null;
 
-          if (r.data?.hourly?.time) {
-            // Open-Meteo family
-            const picked = pickHourlyAtNoon(
-              {
-                temperature_2m: r.data.hourly.temperature_2m,
-                precipitation: r.data.hourly.precipitation,
-                wind_speed_10m: r.data.hourly.wind_speed_10m
-              },
-              ymd,
-              r.data.hourly.time
-            );
-            T = picked.temperature_2m;
-            P = picked.precipitation;
-            W = picked.wind_speed_10m;
-          } else if (r.data?.properties?.timeseries?.length) {
-            // MET Norway compact
-            // Cherche la tranche la plus proche de ymd 12:00Z
-            const target = new Date(`${ymd}T12:00:00Z`).getTime();
-            let best = r.data.properties.timeseries[0];
-            let diff = Math.abs(new Date(best.time).getTime() - target);
-            for (const ts of r.data.properties.timeseries) {
-              const d = Math.abs(new Date(ts.time).getTime() - target);
-              if (d < diff) { diff = d; best = ts; }
-            }
-            T = best?.data?.instant?.details?.air_temperature ?? null;
-            P = best?.data?.next_1_hours?.details?.precipitation_amount ?? 0;
-            W = best?.data?.instant?.details?.wind_speed ?? null;
-          } else if (r.data?.properties?.parameter) {
-            // NASA POWER hourly format alternatif
-            const h = r.data?.properties?.parameter || {};
-            // POWER fournit arrays d'heures locales → moyenne simple
-            const arrT = Array.isArray(h.T2M) ? h.T2M : [];
-            const arrP = Array.isArray(h.PRECTOTCORR) ? h.PRECTOTCORR : [];
-            const arrW = Array.isArray(h.WS10M) ? h.WS10M : [];
-            const avg = (a) => (a.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
-            T = avg(arrT);
-            P = avg(arrP) ?? 0;
-            W = avg(arrW);
-          }
-
-          push({ source: m.name, temperature: T, precipitation: P, wind: W });
-          log(m.name, true);
-        } catch (e) {
-          log(m.name, false);
-          await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
-        }
-      }
-
-      const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
-      const valid = sources.filter((s) => s.temperature !== null);
-      const reliability = +(valid.length / (models.length || 1)).toFixed(2);
-
-      const merged = {
-        id: z.id,
-        name: z.name,
-        lat,
-        lon,
-        dayOffset,
-        temperature: avg(valid.map((s) => s.temperature)),
-        precipitation: avg(valid.map((s) => s.precipitation)),
-        wind: avg(valid.map((s) => s.wind)),
-        reliability,
-        sources: valid.map((s) => s.source),
-      };
-
-      const final = await applyLocalFactors(
-        await applyGeoFactors(merged, lat, lon, country),
-        lat,
-        lon,
-        country
+    if (r.data?.hourly?.time) {
+      // Open-Meteo family
+      const picked = pickHourlyAtNoon(
+        {
+          temperature_2m: r.data.hourly.temperature_2m,
+          precipitation: r.data.hourly.precipitation,
+          wind_speed_10m: r.data.hourly.wind_speed_10m
+        },
+        ymd,
+        r.data.hourly.time
       );
-
-      results.push(final);
-    } catch (err) {
-      await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
+      T = picked.temperature_2m;
+      P = picked.precipitation;
+      W = picked.wind_speed_10m;
+    } else if (r.data?.properties?.timeseries?.length) {
+      // MET Norway compact
+      // Cherche la tranche la plus proche de ymd 12:00Z
+      const target = new Date(`${ymd}T12:00:00Z`).getTime();
+      let best = r.data.properties.timeseries[0];
+      let diff = Math.abs(new Date(best.time).getTime() - target);
+      for (const ts of r.data.properties.timeseries) {
+        const d = Math.abs(new Date(ts.time).getTime() - target);
+        if (d < diff) { diff = d; best = ts; }
+      }
+      T = best?.data?.instant?.details?.air_temperature ?? null;
+      P = best?.data?.next_1_hours?.details?.precipitation_amount ?? 0;
+      W = best?.data?.instant?.details?.wind_speed ?? null;
+    } else if (r.data?.properties?.parameter) {
+      // NASA POWER hourly format alternatif
+      const h = r.data?.properties?.parameter || {};
+      // POWER fournit arrays d'heures locales → moyenne simple
+      const arrT = Array.isArray(h.T2M) ? h.T2M : [];
+      const arrP = Array.isArray(h.PRECTOTCORR) ? h.PRECTOTCORR : [];
+      const arrW = Array.isArray(h.WS10M) ? h.WS10M : [];
+      const avg = (a) => (a.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
+      T = avg(arrT);
+      P = avg(arrP) ?? 0;
+      W = avg(arrW);
     }
+
+    push({ source: m.name, temperature: T, precipitation: P, wind: W });
+    log(m.name, true);
+  } catch (e) {
+    log(m.name, false);
+    await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
   }
 
-  return { success: true, phase1Results: results };
+  // 🕒 Pause courte entre chaque modèle pour éviter les erreurs 429 (limites API NASA/ECMWF)
+  await sleep(200);
 }
 
+const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+const valid = sources.filter((s) => s.temperature !== null);
+const reliability = +(valid.length / (models.length || 1)).toFixed(2);
+
+const merged = {
+  id: z.id,
+  name: z.name,
+  lat,
+  lon,
+  dayOffset,
+  temperature: avg(valid.map((s) => s.temperature)),
+  precipitation: avg(valid.map((s) => s.precipitation)),
+  wind: avg(valid.map((s) => s.wind)),
+  reliability,
+  sources: valid.map((s) => s.source),
+};
+
+const final = await applyLocalFactors(
+  await applyGeoFactors(merged, lat, lon, country),
+  lat,
+  lon,
+  country
+);
+
+results.push(final);
+} catch (err) {
+  await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
+}
+
+return { success: true, phase1Results: results };
+}
 // ==========================================================
 // ---------- 60 POINTS GÉOGRAPHIQUES — Couverture complète du territoire
 // (LISTE INTÉGRALE CONSERVÉE)
@@ -358,6 +359,9 @@ const phase1Results = [];
       } catch (e) {
         await addEngineError(`[Floreffe] Erreur extraction J+${day} : ${e.message}`, "floreffe");
       }
+      // 🕓 Temporisation douce entre jours pour soulager API et Mongo
+await sleep(120000); // 2 minutes entre chaque jour (120 000 ms)
+      
     // ==========================================================
   // 🌄 PHASE 1bis — Corrélation topographique & hydrologique
   // ==========================================================
@@ -392,103 +396,150 @@ const phase1Results = [];
     await addEngineLog(`[Floreffe] ✅ Phase 1 stockée (${phase1Results.length} lignes)`, "success", "floreffe");
 
     // === PHASE 2 – IA J.E.A.N. locale (multi-jours) ===
-    await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
+await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
 
-    // On limite le prompt JSON pour rester robuste (découpage par paquets si besoin)
-    const sliceForPrompt = phase1Results.slice(0, 250);
-    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nDonnées (échantillon robuste):\n${JSON.stringify(sliceForPrompt)}`;
+let phase1Data = phase1Results;
 
+// 🔄 Recharge Phase 1 depuis Mongo si tableau vide
+if (!phase1Data?.length) {
+  const reload = await db.collection("floreffe_phase1").find({}).toArray();
+  if (reload?.length) {
+    phase1Data = reload;
+    await addEngineLog(`[Floreffe] 🔁 Données Phase 1 rechargées depuis Mongo (${reload.length} points)`, "info", "floreffe");
+  } else {
+    await addEngineError(`[Floreffe] ⚠️ Aucune donnée Phase 1 disponible pour IA J.E.A.N.`, "floreffe");
+    phase1Data = [];
+  }
+}
+
+// 🧩 Gestion de la taille des prompts — découpés en chunks pour GPT-5
+const chunkSize = 200;
+const chunks = [];
+for (let i = 0; i < phase1Data.length; i += chunkSize) {
+  chunks.push(phase1Data.slice(i, i + chunkSize));
+}
+
+let phase2Results = [];
+const startPhase2 = Date.now();
+
+for (const [index, chunk] of chunks.entries()) {
+  const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nAnalyse locale J.E.A.N. — paquet ${index + 1}/${chunks.length} (${chunk.length} points) :\n${JSON.stringify(chunk)}`;
+  try {
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [{ role: "user", content: aiPrompt }],
-      temperature: 1
+      temperature: 0.8,
     });
 
-    let phase2Results;
-    try {
-      phase2Results = JSON.parse(ai.choices[0].message.content.trim());
-    } catch (e) {
-      await addEngineError(`[Floreffe] Erreur Phase 2 : Réponse IA non-JSON (${e.message})`, "floreffe");
-      throw new Error("Réponse IA non-JSON");
-    }
+    const raw = ai.choices?.[0]?.message?.content?.trim() || "";
+    // Extraction stricte du JSON même si l'IA ajoute du texte explicatif
+    const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error("Aucune structure JSON détectée");
 
-    await db.collection("floreffe_phase2").deleteMany({});
-    if (Array.isArray(phase2Results) && phase2Results.length) {
-      await db.collection("floreffe_phase2").insertMany(phase2Results);
-    }
-    await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results?.length || 0} objets)`, "success", "floreffe");
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (Array.isArray(parsed)) phase2Results.push(...parsed);
+    else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
 
+    await addEngineLog(`[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length} traité (${Array.isArray(parsed) ? parsed.length : 1} objets)`, "success", "floreffe");
+
+    // Temporisation douce pour éviter le code 429 (surcharge API)
+    await sleep(2000);
+  } catch (err) {
+    await addEngineError(`[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1}/${chunks.length} : ${err.message}`, "floreffe");
+    await sleep(1000);
+  }
+}
+
+// Sauvegarde Mongo Phase 2
+await db.collection("floreffe_phase2").deleteMany({});
+if (phase2Results.length) {
+  await db.collection("floreffe_phase2").insertMany(phase2Results);
+}
+
+const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
+await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, durée ${duration}s)`, "success", "floreffe");
 
     // === PHASE 5 — Fusion + Export ===
-    const enriched = Array.isArray(phase2Results) && phase2Results.length
-      ? phase2Results.map(x => ({
-          ...x,
-          origin: "Floreffe_dome",
-          timestamp: new Date(),
-          thresholds: ALERT_THRESHOLDS
-        }))
-      : [];
-    if (!enriched.length) return { success: false, error: "Phase 2 vide" };
+    // === PHASE 5 — Fusion + Export ===
+const enriched = Array.isArray(phase2Results) && phase2Results.length
+  ? phase2Results.map(x => ({
+      ...x,
+      origin: "Floreffe_dome",
+      timestamp: new Date(),
+      thresholds: ALERT_THRESHOLDS
+    }))
+  : [];
 
-    const alerts = enriched.map(x => {
-      const rainHit = x.risk?.pluie >= ALERT_THRESHOLDS.rain.alert;
-      const iceHit = x.risk?.verglas >= ALERT_THRESHOLDS.cold.alert;
-      if (!rainHit && !iceHit) return null;
-      const type = rainHit ? "pluie" : "verglas";
-      const level = rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
-      const confidence = x.confidence ?? x.reliability ?? 0.9;
-      return {
-        name: x.name,
-        zone: "Floreffe",
-        lat: x.lat,
-        lon: x.lon,
-        type,
-        level,
-        reliability: confidence,
-        description:
-          confidence >= 0.9 ? "Alerte confirmée" :
-          confidence >= 0.7 ? "Alerte à valider" :
-          "En surveillance – pas encore confirmée",
-        timestamp: new Date()
-      };
-    }).filter(Boolean);
+if (!enriched.length) {
+  await addEngineError("[Floreffe] ⚠️ Phase 2 vide – aucun enrichissement possible", "floreffe");
+  return { success: false, error: "Phase 2 vide" };
+}
 
-    await db.collection("alerts_floreffe").deleteMany({});
-    if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
+// --- Génération des alertes locales ---
+const alerts = enriched.map(x => {
+  const rainHit = x.risk?.pluie >= ALERT_THRESHOLDS.rain.alert;
+  const iceHit = x.risk?.verglas >= ALERT_THRESHOLDS.cold.alert;
+  if (!rainHit && !iceHit) return null;
 
-    const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
-    const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
-   const forecastRange = "J+0 → J+5";
-    await fs.promises.writeFile(
+  const type = rainHit ? "pluie" : "verglas";
+  const level =
+    rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme
+      ? "rouge"
+      : "orange";
+  const confidence = x.confidence ?? x.reliability ?? 0.9;
+
+  return {
+    name: x.name,
+    zone: "Floreffe",
+    lat: x.lat,
+    lon: x.lon,
+    type,
+    level,
+    reliability: confidence,
+    description:
+      confidence >= 0.9
+        ? "Alerte confirmée"
+        : confidence >= 0.7
+        ? "Alerte à valider"
+        : "En surveillance – pas encore confirmée",
+    timestamp: new Date()
+  };
+}).filter(Boolean);
+
+// --- Sauvegardes Mongo locales ---
+await db.collection("alerts_floreffe").deleteMany({});
+if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
+
+// --- Export JSON local pour interface publique ---
+const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
+const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
+const forecastRange = "J+0 → J+5";
+
+await fs.promises.writeFile(
   forecastsPath,
   JSON.stringify({ generated: new Date(), range: forecastRange, zones: enriched }, null, 2)
 );
-    await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
+await fs.promises.writeFile(
+  alertsPath,
+  JSON.stringify(alerts, null, 2)
+);
 
-    await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
+await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-    await db.collection("forecasts").updateOne(
+// --- Synchronisation Mongo Cloud global ---
+await db.collection("forecasts").updateOne(
   { zone: "Floreffe" },
   { $set: { zone: "Floreffe", data: enriched } },
   { upsert: true }
 );
+
 await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
-    
-    if (alerts.length) await dbName.collection("alerts").insertMany(alerts);
-    await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+if (alerts.length) await db.collection("alerts").insertMany(alerts);
 
-    await mongo.close();
-    return { success: true, alerts: alerts.length };
-  } 
-  } 
-  } catch (e) {
-    await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
-    return { success: false, error: e.message };
-  } finally {
-    await sleep(150);
-  }
-}
+await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
 
+// --- Fermeture propre ---
+return { success: true, alerts: alerts.length };
 // ==========================================================
 // 🔚 Export compatible CommonJS pour Render
 // ==========================================================
