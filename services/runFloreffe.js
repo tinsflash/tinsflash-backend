@@ -481,5 +481,5 @@ const phase1Results = [];
     await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
     return { success: false, error: e.message };
 }
-
+  }
 export { runFloreffe };
