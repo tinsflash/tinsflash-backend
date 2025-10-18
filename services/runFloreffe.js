@@ -411,75 +411,82 @@ const phase1Results = [];
     }
     await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results?.length || 0} objets)`, "success", "floreffe");
 
-    // === PHASE 5 – Fusion + Export (multi-jour) ===
+
+    // === PHASE 5 — Fusion + Export ===
     const enriched = Array.isArray(phase2Results) && phase2Results.length
       ? phase2Results.map(x => ({
           ...x,
           origin: "Floreffe_dome",
           timestamp: new Date(),
-          thresholds: ALERT_THRESHOLDS,
+          thresholds: ALERT_THRESHOLDS
         }))
       : [];
+    if (!enriched.length) return { success: false, error: "Phase 2 vide" };
 
-    if (!enriched.length) {
-      await addEngineError("[Floreffe] Aucun résultat enrichi – Phase 2 vide", "floreffe");
-      return { success: false, error: "Phase 2 vide" };
-    }
-
-    const alerts = enriched
-      .filter(x =>
-        (x.risk?.pluie && x.risk.pluie >= ALERT_THRESHOLDS.rain.alert) ||
-        (x.risk?.verglas && x.risk.verglas >= ALERT_THRESHOLDS.cold.alert)
-      )
-      .map(x => ({
+    const alerts = enriched.map(x => {
+      const rainHit = x.risk?.pluie >= ALERT_THRESHOLDS.rain.alert;
+      const iceHit = x.risk?.verglas >= ALERT_THRESHOLDS.cold.alert;
+      if (!rainHit && !iceHit) return null;
+      const type = rainHit ? "pluie" : "verglas";
+      const level = rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
+      const confidence = x.confidence ?? x.reliability ?? 0.9;
+      return {
         name: x.name,
+        zone: "Floreffe",
         lat: x.lat,
         lon: x.lon,
-        type: x.risk?.pluie ? "pluie" : "verglas",
-        dayOffset: x.dayOffset ?? 0,
-        level: x.risk?.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange",
-        confidence: x.confidence ?? 0.9,
-        description: x.resume || "Alerte détectée localement",
-        timestamp: new Date(),
-      }));
+        type,
+        level,
+        reliability: confidence,
+        description:
+          confidence >= 0.9 ? "Alerte confirmée" :
+          confidence >= 0.7 ? "Alerte à valider" :
+          "En surveillance – pas encore confirmée",
+        timestamp: new Date()
+      };
+    }).filter(Boolean);
 
     await db.collection("alerts_floreffe").deleteMany({});
     if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 
-    // === EXPORT PUBLIC AUTO JSON ===
     const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
     const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
-
+   const forecastRange = "J+0 → J+5";
     await fs.promises.writeFile(
-      forecastsPath,
-      JSON.stringify(
-        {
-          generated: new Date(),
-          general: enriched.find(x => (x.name || "").toLowerCase().includes("maison communale")) || enriched[0],
-          forecasts: enriched, // conserve chaque zone avec dayOffset pour J+0..7
-        },
-        null,
-        2
-      )
-    );
-
+  forecastsPath,
+  JSON.stringify({ generated: new Date(), range: forecastRange, zones: enriched }, null, 2)
+);
     await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
-    await addEngineLog(`🏁 [Floreffe] Export public JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-    // === Synchronisation Mongo Cloud global ===
-    const dbName = mongo.db("tinsflash");
-    await dbName.collection("forecasts").updateOne(
-      { zone: "Floreffe" },
-      { $set: { zone: "Floreffe", data: enriched } },
-      { upsert: true }
-    );
-    await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
-    if (alerts.length)
-      await dbName.collection("alerts").insertMany(alerts.map(a => ({ ...a, zone: "Floreffe", reliability: a.confidence })));
+    await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
+    await db.collection("forecasts").updateOne(
+  { zone: "Floreffe" },
+  { $set: { zone: "Floreffe", data: enriched } },
+  { upsert: true }
+);
+await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
+    
+    if (alerts.length) await dbName.collection("alerts").insertMany(alerts);
     await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+
+    await mongo.close();
+    return { success: true, alerts: alerts.length };
+  } catch (e) {
     await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
     return { success: false, error: e.message };
-}
+  } finally {
+    await sleep(150);
   }
-export { runFloreffe };
+}
+
+// ==========================================================
+// 🔚 Export compatible CommonJS pour Render
+// ==========================================================
+// ==========================================================
+// 🔚 Export standard ESM + compatibilité CommonJS pour Render
+// ==========================================================
+export { runFloreffe, superForecastLocal };
+
+// (optionnel : si tu veux aussi compat CJS)
+export default { runFloreffe, superForecastLocal };
