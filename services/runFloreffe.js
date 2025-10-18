@@ -107,60 +107,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       const base = new Date(); base.setUTCDate(base.getUTCDate() + dayOffset);
       const ymd = toISODate(base);
 
-      const models = [
-  {
-        name: "GFS NOAA",
-        url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-      },
-      {
-        name: "ECMWF ERA5",
-        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
-      },
-      {
-        name: "ECMWF Open-Meteo",
-        url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
-      },
-      {
-        name: "AROME Météo-France",
-        url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-      },
-      {
-        name: "ICON DWD",
-        url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-      },
-      {
-        name: "NASA POWER",
-        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
-      },
-      {
-        name: "Copernicus ERA5-Land",
-        url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
-      },
-      {
-        name: "Open-Meteo Forecast",
-        url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-      },
-      {
-        name: "MET Norway LocationForecast",
-        url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
-        headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: meteo@tinsflash)" }
-      }
-      ];
 
-      for (const m of models) {
-        try {
-          const options = { timeout: 15000 };
-          if (m.headers) options.headers = m.headers;
-          const r = await axios.get(m.url, options);
-
-          let T = null, P = 0, W = null;
-          if (r.data?.hourly?.time?.length) {
-            const pick = pickHourlyAtNoon(r.data.hourly, ymd, r.data.hourly.time);
-            T = pick?.temperature_2m ?? null; P = pick?.precipitation ?? 0; W = pick?.wind_speed_10m ?? null;
-          }
-          else if (r.data?.properties?.timeseries?.length) {
-            const d = r.data.properties.timeseries[0]?.data;
-            T = d?.instant?.details?.air_temperature ?? null;
 
 // ==========================================================
 // 🌍 Points géographiques Floreffe (version complète enregistrée)
@@ -338,17 +285,6 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
   await new Promise(r => setTimeout(r, 120000));
 
 
-// ==========================================================
-  // ▶️ LANCEMENT AUTOMATIQUE DE LA PHASE 2
-  // ==========================================================
-  try {
-    await addEngineLog(`▶ Lancement automatique de la Phase 2 (Floreffe)`, "info", runType);
-    await runPhase2Floreffe(phase1bisResults); // ta fonction IA J.E.A.N. locale
-    await addEngineLog(`✅ Phase 2 exécutée automatiquement avec succès`, "success", runType);
-  } catch (err) {
-    await addEngineError(`Erreur lancement Phase 2 : ${err.message}`, "Phase2");
-  }
-
   // ==========================================================
   // 🔚 CLÔTURE DE LA PHASE 1 + PHASE 1bis
   // ==========================================================
@@ -362,14 +298,16 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
 } // ← fin de la fonction superForecastLocal
 
 
-
+const mongo = new MongoClient(process.env.MONGO_URI);
+await mongo.connect();
+const db = mongo.db("tinsflash");
 
   
 
   
     // === PHASE 2 — IA J.E.A.N. locale ===
     await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
-    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\n${JSON.stringify(phase1Results.slice(0, 250))}`;
+    const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\n${JSON.stringify(phase1bisResults.slice(0, 250))}`;
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [{ role: "user", content: aiPrompt }],
@@ -429,7 +367,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
     await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
     if (alerts.length) await dbName.collection("alerts").insertMany(alerts);
     await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
-
+await mongo.close();
     return { success: true, alerts: alerts.length };
 
   } catch (e) {
@@ -437,7 +375,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
     return { success: false, error: e.message };
   } finally {
     await sleep(150);
-    await mongo.close();
+    
   }
 }
 
