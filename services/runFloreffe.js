@@ -390,4 +390,4 @@ async function runFloreffe() {
 // ==========================================================
 // 🔚 Export compatible CommonJS pour Render
 // ==========================================================
-module.exports = { runFloreffe, superForecastLocal };
+module.exports = { runfloreffe, superForecastLocal };
