@@ -380,4 +380,4 @@ await mongo.close();
   }
 }
 
-export default superForecastLocal;
+export { superForecastLocal as runFloreffe };
