@@ -17,7 +17,8 @@ import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
-
+import { correlateTopoHydro } from "./correlateTopoHydro.js";
+import { fetchLiveHydroData } from "./fetchLiveHydroData.js";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
