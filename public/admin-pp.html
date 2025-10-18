@@ -75,6 +75,17 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <hr style="width:100%;border:0;border-top:1px solid #1e293b;margin:10px 0"/>
 <button onclick="run('/api/runAIAnalysis')">🧠 Phase 2 – IA J.E.A.N.</button>
 <button onclick="run('/api/runPhase5')">🚨 Phase 5 – Fusion mondiale alertes</button>
+ <button id="btnVisionAlerts" class="btn btn-warning">
+  ⚡ Analyse VisionIA (captures PNG)
+</button>
+
+<script>
+document.getElementById("btnVisionAlerts").addEventListener("click", async () => {
+  const res = await fetch("/api/runVisionAlerts");
+  const data = await res.json();
+  alert(`Analyse VisionIA terminée : ${data.count || 0} alertes détectées`);
+});
+</script>
 <button onclick="run('/api/runVisionIA')">🌐 VisionIA – NOAA / GOES</button>
 <div class="cmd">curl -X POST /api/runVisionIA</div>
 </nav>
