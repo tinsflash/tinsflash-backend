@@ -478,7 +478,7 @@ const phase1Results = [];
       await dbName.collection("alerts").insertMany(alerts.map(a => ({ ...a, zone: "Floreffe", reliability: a.confidence })));
 
     await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
-
+      }
     return { success: true, alerts: alerts.length };
   } catch (e) {
     await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
