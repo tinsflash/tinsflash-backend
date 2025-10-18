@@ -472,8 +472,8 @@ await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
 
     await mongo.close();
     return { success: true, alerts: alerts.length };
-    } 
-    
+  } 
+  } 
   } catch (e) {
     await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
     return { success: false, error: e.message };
