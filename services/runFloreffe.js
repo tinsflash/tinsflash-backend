@@ -242,9 +242,10 @@ const forecastDays = 5; // Horizon stable J+5 pour Floreffe
     }
 
     // --- Fusion multi-modèles (moyenne pondérée) ---
-    const merged = await superForecast({ zones: [{ lat, lon, country: "BE" }], runType: "Floreffe", phaseMode: "phase1" });
+    const merged = await superForecastModule.mergeMultiModels(lat, lon, "BE");
+phase1Results.push({ ...merged, id, name, lat, lon, date: dateStr });
+    
   
-  }
 } // fin boucle zones
 } // fin boucle jours
   await saveExtractionToMongo("Floreffe", "BE", phase1Results);
@@ -285,7 +286,9 @@ const forecastDays = 5; // Horizon stable J+5 pour Floreffe
   await addEngineLog(
     `🏁 [${runType}] Phases 1 et 1bis terminées – données synchronisées Mongo et prêtes pour l’IA J.E.A.N.`,
     "success",
-    runType
+    runType;
+   await db.collection("floreffe_phase1bis").deleteMany({});
+await db.collection("floreffe_phase1bis").insertMany(phase1bisResults); 
   );
 
   return { success: true, phase1Results: phase1bisResults };
@@ -306,6 +309,7 @@ async function runFloreffe() {
   try {
     // === PHASE 2 — IA J.E.A.N. locale ===
     await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
+  const phase1bisResults = await db.collection("floreffe_phase1bis").find({}).toArray();
     const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\n${JSON.stringify(phase1bisResults.slice(0, 250))}`;
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
@@ -377,13 +381,13 @@ async function runFloreffe() {
 
     await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-    const dbName = mongo.db("tinsflash");
-    await dbName.collection("forecasts").updateOne(
-      { zone: "Floreffe" },
-      { $set: { zone: "Floreffe", data: enriched } },
-      { upsert: true }
-    );
-    await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
+    await db.collection("forecasts").updateOne(
+  { zone: "Floreffe" },
+  { $set: { zone: "Floreffe", data: enriched } },
+  { upsert: true }
+);
+await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
+    
     if (alerts.length) await dbName.collection("alerts").insertMany(alerts);
     await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
 
