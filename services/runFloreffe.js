@@ -106,41 +106,43 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
 
       const models = [
         // Open-Meteo GFS (avec forecast_days)
-        {
-          name: "GFS NOAA",
-          url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        },
-        // Copernicus ERA5-Land (archive) — on prend proche de midi UTC
-        {
-          name: "Copernicus ERA5-Land",
-          url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&start_date=${ymd}&end_date=${ymd}&timezone=UTC`
-        },
-        // MET Norway
-        {
-          name: "MET Norway – LocationForecast",
-          url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
-          headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: skysnapia@gmail.com)" }
-        },
-        // ICON DWD
-        {
-          name: "ICON DWD",
-          url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        },
-        // AROME Météo-France
-        {
-          name: "AROME MeteoFrance",
-          url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        },
-        // NASA POWER (horaire)
-        {
-          name: "NASA POWER",
-          url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON`
-        },
-        // ECMWF ERA5 (via Open-Meteo aggregate approx)
-        {
-          name: "ECMWF ERA5",
-          url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC`
-        }
+             {
+     name: "GFS NOAA",
+        url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "ECMWF ERA5",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
+      },
+      {
+        name: "ECMWF Open-Meteo",
+        url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "AROME Météo-France",
+        url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "ICON DWD",
+        url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "NASA POWER",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
+      },
+      {
+        name: "Copernicus ERA5-Land",
+        url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "Open-Meteo Forecast",
+        url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "MET Norway LocationForecast",
+        url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
+        headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: meteo@tinsflash)" }
+      }
       ];
 
       for (const m of models) {
@@ -311,9 +313,18 @@ async function runFloreffe() {
     const db = mongo.db("tinsflash");
 
     // === PHASE 1 – Extraction multi-modèles locale sur 7 jours ===
-    const forecastDays = 7;
-    let phase1Results = [];
-
+  
+const phase1Results = [];
+    const forecastDays = 5; // Horizon stable J+5 pour Floreffe
+  for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + dayOffset);
+  const dateStr = targetDate.toISOString().slice(0, 10);
+  
+  for (const z of zones) {
+    const { id, name, lat, lon } = z;
+    const sources = [];
+    
     await addEngineLog(`[Floreffe] Phase 1 — Extraction J+0→J+${forecastDays}`, "info", "floreffe");
 
     for (let day = 0; day <= forecastDays; day++) {
@@ -358,7 +369,7 @@ async function runFloreffe() {
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [{ role: "user", content: aiPrompt }],
-      temperature: 0.2
+      temperature: 1
     });
 
     let phase2Results;
