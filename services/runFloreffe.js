@@ -107,7 +107,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       const models = [
         // Open-Meteo GFS (avec forecast_days)
              {
-        {
+        
      name: "GFS NOAA",
         url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
       },
