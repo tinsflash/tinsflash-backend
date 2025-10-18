@@ -286,7 +286,8 @@ phase1Results.push({ ...merged, id, name, lat, lon, date: dateStr });
   await addEngineLog(
     `🏁 [${runType}] Phases 1 et 1bis terminées – données synchronisées Mongo et prêtes pour l’IA J.E.A.N.`,
     "success",
-    runType;)
+    runType
+    ;)
    await db.collection("floreffe_phase1bis").deleteMany({});
 await db.collection("floreffe_phase1bis").insertMany(phase1bisResults); 
   );
