@@ -3,7 +3,7 @@
 // ==========================================================
 // 🔸 Commune pilote : Floreffe (Belgique)
 // 🔸 Phases intégrées et autonomes : 1 (Extraction) + 2 (IA locale) + 5 (Fusion / Export)
-// 🔸 Horizon prévisionnel : J+0 → J+7 (multi-jours) 100% réel
+// 🔸 Horizon prévisionnel : J+0 → J+5 (multi-jours stables) 100% réel
 // ==========================================================
 // @ts-check
 
@@ -173,7 +173,12 @@ const FLOREFFE_POINTS = [
 async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
   await addEngineLog(`🎬 [${runType}] Phase 1 — Extraction physique locale lancée`, "info", runType);
   const phase1Results = [];
-
+const forecastDays = 5; // Horizon stable J+5 pour Floreffe
+  for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + dayOffset);
+  const dateStr = targetDate.toISOString().slice(0, 10);
+  
   for (const z of zones) {
     const { id, name, lat, lon } = z;
     const sources = [];
@@ -240,9 +245,10 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
     const merged = await superForecast({ zones: [{ lat, lon, country: "BE" }], runType: "Floreffe", phaseMode: "phase1" });
   
   }
-
+} // fin boucle zones
+} // fin boucle jours
   await saveExtractionToMongo("Floreffe", "BE", phase1Results);
-  await addEngineLog(`✅ Phase 1 terminée : ${phase1Results.length} points extraits`, "success", runType);
+  await addEngineLog(`✅ Phase 1 terminée : ${phase1Results.length} points extraits sur horizon J+0 → J+5`, "success", runType);
 
 // ==========================================================
   // 🌄 PHASE 1bis — Corrélation topographique & hydrologique
@@ -362,7 +368,11 @@ async function runFloreffe() {
 
     const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
     const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
-    await fs.promises.writeFile(forecastsPath, JSON.stringify({ generated: new Date(), zones: enriched }, null, 2));
+   const forecastRange = "J+0 → J+5";
+    await fs.promises.writeFile(
+  forecastsPath,
+  JSON.stringify({ generated: new Date(), range: forecastRange, zones: enriched }, null, 2)
+);
     await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
 
     await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
