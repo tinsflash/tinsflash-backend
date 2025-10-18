@@ -556,6 +556,7 @@ await addEngineLog(
 );
 
 // --- Fermeture propre ---
+// --- Fermeture propre ---
 await mongo.close();
 await addEngineLog(`[Floreffe] Connexion Mongo fermée proprement`, "info", "floreffe");
 
@@ -563,10 +564,10 @@ await addEngineLog(`[Floreffe] Connexion Mongo fermée proprement`, "info", "flo
 await sleep(250);
 
 return { success: true, alerts: alerts.length };
-  }
-  }
-  
+} // ← ferme le try principal
+} // ← ferme la fonction runFloreffe
+
 // ==========================================================
-// 🔚 Export compatible ESM (Render + Node 22.x)
+// 🔚 Export compatible CommonJS (Render + Node 22.x)
 // ==========================================================
 module.exports = { runFloreffe, superForecastLocal };
