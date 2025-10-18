@@ -94,20 +94,6 @@ function pickHourlyAtNoon(hourlyObj, targetDate, times) {
   };
 }
 
-async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset = 0 }) {
-  await addEngineLog(`📡 [${runType}] Extraction physique locale J+${dayOffset}`, "info", "superForecast");
-  const results = [];
-
-  for (const z of zones) {
-    const sources = [];
-    const push = (x) => sources.push(x);
-    const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
-
-    try {
-      const [lat, lon] = [z.lat, z.lon];
-      const base = new Date(); base.setUTCDate(base.getUTCDate() + dayOffset);
-      const ymd = toISODate(base);
-
 
 
 // ==========================================================
