@@ -184,9 +184,14 @@ let map = L.map("map").setView([20,0],2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:8,minZoom:2}).addTo(map);
 let markers = [];
 let selectedAlert = null;
-const sources = ["/api/alerts","/api/alerts-detected","/api/alerts-primeur"];
-
-/* ========= Fetch + render ========= */
+const sources = [
+  "/api/alerts",
+  "/api/alerts-detected",
+  "/api/alerts-primeur",
+  "/api/alerts-vision"
+];
+  
+  /* ========= Fetch + render ========= */
 async function refreshAll(){
   try{
     const results = await Promise.all(sources.map(u => fetch(u).then(r=>r.json()).catch(()=>[])));
