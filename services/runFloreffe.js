@@ -107,6 +107,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       const models = [
         // Open-Meteo GFS (avec forecast_days)
              {
+        {
      name: "GFS NOAA",
         url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
       },
@@ -118,6 +119,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
         name: "ECMWF Open-Meteo",
         url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
       },
+
       {
         name: "AROME Météo-France",
         url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
@@ -321,31 +323,10 @@ const phase1Results = [];
   targetDate.setDate(targetDate.getDate() + dayOffset);
   const dateStr = targetDate.toISOString().slice(0, 10);
   
-  for (const z of zones) {
+  for (const z of FLOREFFE_POINTS) {
     const { id, name, lat, lon } = z;
     const sources = [];
-    // ==========================================================
-  // 🌄 PHASE 1bis — Corrélation topographique & hydrologique
-  // ==========================================================
-  await addEngineLog(`🌄 [${runType}] Corrélation topographique/hydrologique en cours`, "info", runType);
-
-  const datasetsPath = path.resolve("./services/datasets");
-  const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
-  const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
-  const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
-  const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
-
-  // --- mise à jour hydrométrique "live" (préparée) ---
-  const liveHydro = await fetchLiveHydroData(); // bascule automatique vers hydro local si null
-
-  const phase1bisResults = phase1Results.map(pt => {
-    const topo = correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro });
-    return { ...pt, topo };
-  });
-
-  await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
-  await addEngineLog(`✅ Corrélation topographique/hydrologique appliquée`, "success", runType);
-
+    const runType = "Floreffe";
     await addEngineLog(`[Floreffe] Phase 1 — Extraction J+0→J+${forecastDays}`, "info", "floreffe");
 
     for (let day = 0; day <= forecastDays; day++) {
@@ -370,6 +351,29 @@ const phase1Results = [];
       } catch (e) {
         await addEngineError(`[Floreffe] Erreur extraction J+${day} : ${e.message}`, "floreffe");
       }
+    // ==========================================================
+  // 🌄 PHASE 1bis — Corrélation topographique & hydrologique
+  // ==========================================================
+  await addEngineLog(`🌄 [${runType}] Corrélation topographique/hydrologique en cours`, "info", runType);
+
+  const datasetsPath = path.resolve("./services/datasets");
+  const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
+  const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
+  const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
+  const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
+
+  // --- mise à jour hydrométrique "live" (préparée) ---
+  const liveHydro = await fetchLiveHydroData(); // bascule automatique vers hydro local si null
+
+  const phase1bisResults = phase1Results.map(pt => {
+    const topo = correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro });
+    return { ...pt, topo };
+  });
+
+  await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
+  await addEngineLog(`✅ Corrélation topographique/hydrologique appliquée`, "success", runType);
+
+    
       // temporisation douce entre jours pour soulager API et Mongo
       await sleep(800);
     }
