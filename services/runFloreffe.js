@@ -5,6 +5,7 @@
 // 🔸 Phases intégrées et autonomes : 1 (Extraction) + 2 (IA locale) + 5 (Fusion / Export)
 // 🔸 Horizon prévisionnel : J+0 → J+7 (multi-jours) 100% réel
 // ==========================================================
+// @ts-check
 
 import dotenv from "dotenv";
 import fs from "fs";
@@ -379,4 +380,4 @@ await mongo.close();
   }
 }
 
-export { superForecastLocal as runFloreffe };
+export default superForecastLocal;
