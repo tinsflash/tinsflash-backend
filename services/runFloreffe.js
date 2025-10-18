@@ -101,12 +101,43 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       const ymd = toISODate(base);
 
       const models = [
-        { name: "GFS NOAA", url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&forecast_days=${Math.max(1, dayOffset+1)}&timezone=UTC` },
-        { name: "Copernicus ERA5-Land", url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&start_date=${ymd}&end_date=${ymd}&timezone=UTC` },
-        { name: "MET Norway – LocationForecast", url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: meteo@tinsflash)" } },
-        { name: "ICON DWD", url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=UTC` },
-        { name: "AROME MeteoFrance", url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=UTC` },
-        { name: "NASA POWER", url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${ymd}&end=${ymd}&format=JSON` }
+  {
+        name: "GFS NOAA",
+        url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "ECMWF ERA5",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
+      },
+      {
+        name: "ECMWF Open-Meteo",
+        url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "AROME Météo-France",
+        url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "ICON DWD",
+        url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "NASA POWER",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
+      },
+      {
+        name: "Copernicus ERA5-Land",
+        url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "Open-Meteo Forecast",
+        url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "MET Norway LocationForecast",
+        url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
+        headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: meteo@tinsflash)" }
+      }
       ];
 
       for (const m of models) {
