@@ -240,7 +240,25 @@ const forecastDays = 5; // Horizon stable J+5 pour Floreffe
         }
       }
     }
+import { mergeMultiModels } from "./superForecast.js"; // déjà présent dans 1runFloreffe
 
+// ==========================================================
+// 🌦️ Phase 1 — Extraction réelle des modèles météo
+// ==========================================================
+const phase1Results = [];
+for (const point of FLOREFFE_POINTS) {
+  try {
+    const data = await mergeMultiModels(point.lat, point.lon, "EU");
+    phase1Results.push({ ...point, ...data });
+    await addEngineLog(`[Floreffe] ✅ Modèles OK pour ${point.name} (${point.id})`, "success", "floreffe");
+    await new Promise(r => setTimeout(r, 1200)); // temporisation douce
+  } catch (err) {
+    await addEngineError(`[Floreffe] ❌ Erreur modèles pour ${point.name}: ${err.message}`, "floreffe");
+  }
+}
+
+// sauvegarde phase 1 sur Mongo
+await saveExtractionToMongo("Floreffe", "EU", phase1Results);
     // --- Fusion multi-modèles (moyenne pondérée) ---
     const merged = await superForecastModule.mergeMultiModels(lat, lon, "BE");
 phase1Results.push({ ...merged, id, name, lat, lon, date: dateStr });
