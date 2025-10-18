@@ -390,4 +390,10 @@ async function runFloreffe() {
 // ==========================================================
 // 🔚 Export compatible CommonJS pour Render
 // ==========================================================
-module.exports = { runfloreffe, runFloreffe, superForecastLocal };
+// ==========================================================
+// 🔚 Export standard ESM + compatibilité CommonJS pour Render
+// ==========================================================
+export { runFloreffe, superForecastLocal };
+
+// (optionnel : si tu veux aussi compat CJS)
+export default { runFloreffe, superForecastLocal };
