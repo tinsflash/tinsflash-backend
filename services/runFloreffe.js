@@ -18,8 +18,11 @@ import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
 import { mergeMultiModels } from "./superForecast.js";
+import { correlateTopoHydro } from "./correlateTopoHydro.js";
+import { fetchLiveHydroData } from "./fetchLiveHydroData.js";
 
 dotenv.config();
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ==========================================================
 // 🧮 utilitaires
@@ -29,6 +32,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const toISODate = (d) => d.toISOString().slice(0, 10);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+function getDateYMD() {
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
 
 // ==========================================================
 // ⚙️ Seuils d’alerte calibrés Floreffe (anticipatifs réels)
@@ -154,40 +161,6 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
           else if (r.data?.properties?.timeseries?.length) {
             const d = r.data.properties.timeseries[0]?.data;
             T = d?.instant?.details?.air_temperature ?? null;
-            P = d?.next_1_hours?.details?.precipitation_amount ?? 0;
-            W = d?.instant?.details?.wind_speed ?? null;
-          }
-          else if (r.data?.properties?.parameter) {
-            const h = r.data.properties.parameter;
-            const avg = (a) => (a?.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
-            T = avg(h.T2M); P = avg(h.PRECTOTCORR) ?? 0; W = avg(h.WS10M);
-          }
-
-          push({ source: m.name, temperature: T, precipitation: P, wind: W });
-          log(m.name, true);
-        } catch (e) {
-          log(m.name, false);
-          await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
-        }
-      }
-
-      const avg = (a) => (a.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
-      const valid = sources.filter((s) => s.temperature !== null);
-      const reliability = +(valid.length / (models.length || 1)).toFixed(2);
-      const merged = {
-        id: z.id, name: z.name, lat, lon, dayOffset,
-        temperature: avg(valid.map((s)=>s.temperature)),
-        precipitation: avg(valid.map((s)=>s.precipitation)),
-        wind: avg(valid.map((s)=>s.wind)),
-        reliability, sources: valid.map((s)=>s.source)
-      };
-
-      const final = await applyLocalFactors(await applyGeoFactors(merged, lat, lon, country), lat, lon, country);
-      results.push(final);
-    } catch (err) { await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast"); }
-  }
-  return { success: true, phase1Results: results };
-}
 
 // ==========================================================
 // 🌍 Points géographiques Floreffe (version complète enregistrée)
