@@ -383,11 +383,11 @@ await sleep(120000); // 2 minutes entre chaque jour (120 000 ms)
     
       // temporisation douce entre jours pour soulager API et Mongo
       await sleep(800);
-    }
+    } // <- ferme la boucle "for (let day = 0; ...)"
+  }   // <- ferme la boucle "for (const z of FLOREFFE_POINTS)"
+}     // <- ferme la boucle "for (let dayOffset = 0; ...)"
 
-    if (!phase1Results.length) throw new Error("Aucune donnée valide sur l’horizon 7 jours.");
-
-    await db.collection("floreffe_phase1").deleteMany({});
+if (!phase1Results.length) throw new Error("Aucune donnée valide sur l’horizon 7 jours.");    await db.collection("floreffe_phase1").deleteMany({});
     await db.collection("floreffe_phase1").insertMany(phase1Results);
     await addEngineLog(`[Floreffe] ✅ Phase 1 stockée (${phase1Results.length} lignes)`, "success", "floreffe");
 
