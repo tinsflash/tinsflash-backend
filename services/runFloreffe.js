@@ -541,6 +541,7 @@ await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.",
 // --- Fermeture propre ---
 return { success: true, alerts: alerts.length };
   }
+  }
 // 
 // ==========================================================
 // 🔚 Export compatible CommonJS pour Render
