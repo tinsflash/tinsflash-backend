@@ -546,7 +546,7 @@ return { success: true, alerts: alerts.length };
 // ==========================================================
 // 🔚 Export standard ESM + compatibilité CommonJS pour Render
 // ==========================================================
-export { runFloreffe, superForecastLocal };
+module.exports = { runFloreffe, superForecastLocal };
 
 // (optionnel : si tu veux aussi compat CJS)
 export default { runFloreffe, superForecastLocal };
