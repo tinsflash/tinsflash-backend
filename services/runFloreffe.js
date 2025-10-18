@@ -564,6 +564,8 @@ await sleep(250);
 
 return { success: true, alerts: alerts.length };
   }
+  }
+  
 // ==========================================================
 // 🔚 Export compatible ESM (Render + Node 22.x)
 // ==========================================================
