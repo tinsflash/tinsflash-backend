@@ -285,13 +285,15 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
 } // ← fin de la fonction superForecastLocal
 
 
-const mongo = new MongoClient(process.env.MONGO_URI);
-await mongo.connect();
-const db = mongo.db("tinsflash");
+// ==========================================================
+// 🚀 Fonction principale d’exécution complète (Phases 2 et 5)
+// ==========================================================
+async function runFloreffe() {
+  const mongo = new MongoClient(process.env.MONGO_URI);
+  await mongo.connect();
+  const db = mongo.db("tinsflash");
 
-  
-
-  
+  try {
     // === PHASE 2 — IA J.E.A.N. locale ===
     await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
     const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\n${JSON.stringify(phase1bisResults.slice(0, 250))}`;
@@ -354,7 +356,7 @@ const db = mongo.db("tinsflash");
     await dbName.collection("alerts").deleteMany({ zone: /Floreffe/i });
     if (alerts.length) await dbName.collection("alerts").insertMany(alerts);
     await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
-await mongo.close();
+    await mongo.close();
     return { success: true, alerts: alerts.length };
 
   } catch (e) {
@@ -362,8 +364,7 @@ await mongo.close();
     return { success: false, error: e.message };
   } finally {
     await sleep(150);
-    
   }
 }
 
-module.exports = { runFloreffe: superForecastLocal };
+module.exports = { runFloreffe };
