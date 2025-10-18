@@ -294,7 +294,26 @@ try {
   const mongo = new MongoClient(process.env.MONGO_URI);
   await mongo.connect();
   const db = mongo.db("tinsflash");
+// ==========================================================
+// 🚀 Phase 1 + 1bis — Extraction locale avant IA J.E.A.N.
+// ==========================================================
+await addEngineLog(`[Floreffe] Phase 1+1bis — Lancement complet avant IA`, "info", "floreffe");
 
+const zones = FLOREFFE_POINTS;
+const runType = "Floreffe";
+const phase1Run = await superForecastLocal({ zones, runType });
+
+if (!phase1Run?.success) {
+  await addEngineError(`[Floreffe] Erreur pendant Phase 1/1bis : ${phase1Run?.error || "inconnue"}`, "floreffe");
+  return { success: false, error: "Phase 1 échouée" };
+}
+
+await addEngineLog(`[Floreffe] ✅ Phase 1+1bis terminée (${phase1Run.phase1Results?.length || 0} points)`, "success", "floreffe");
+
+// Petite temporisation avant IA
+await addEngineLog(`[Floreffe] ⏳ Pause 2 min avant IA J.E.A.N.`, "info", "floreffe");
+await sleep(120000);
+  
   await db.collection("floreffe_phase1bis").deleteMany({});
   await db.collection("floreffe_phase1bis").insertMany(phase1bisResults);
 
