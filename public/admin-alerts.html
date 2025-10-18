@@ -231,10 +231,21 @@ function renderAlerts(data){
     const isPrimeur = !!(a.isPrimeur || a.primeur);
 
     let color="gray", cat="low";
-    if(isPrimeur){ color="blue"; cat="primeur"; cP++; }
-    else if(conf>=0.9){ color="green"; cat="high"; cH++; }
-    else if(conf>=0.7){ color="orange"; cat="mid"; cM++; }
-    else { color="red"; cat="low"; cB++; }
+    if (isPrimeur) { 
+      color = "blue"; cat = "primeur"; cP++; 
+    }
+    else if (a.source === "VisionIA" || a._source === "VisionIA") { 
+      color = "cyan"; cat = "vision"; 
+    }
+    else if (conf >= 0.9) { 
+      color = "green"; cat = "high"; cH++; 
+    }
+    else if (conf >= 0.7) { 
+      color = "orange"; cat = "mid"; cM++; 
+    }
+    else { 
+      color = "red"; cat = "low"; cB++; 
+    }
 
     // list item
     const div = document.createElement("div");
