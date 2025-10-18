@@ -87,6 +87,12 @@ app.use(
 // ==========================================================
 import visionRoutes from "./routes/visionRoutes.js";
 app.use("/api", visionRoutes);
+import { runVisionAlerts } from "./services/visionAlerts.js";
+
+app.get("/api/runVisionAlerts", async (req, res) => {
+  const result = await runVisionAlerts();
+  res.json(result);
+});
 // ==========================================================
 // ✅ Nouvelle route : Vérifier la fiabilité IA J.E.A.N.
 // ==========================================================
