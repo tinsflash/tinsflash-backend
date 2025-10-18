@@ -288,12 +288,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
 // ==========================================================
 // 🚀 Fonction principale d’exécution complète (Phases 2 et 5)
 // ==========================================================
-async function runFloreffe() {
-  const mongo = new MongoClient(process.env.MONGO_URI);
-  await mongo.connect();
-  const db = mongo.db("tinsflash");
-
- // ==========================================================
+// ==========================================================
 // 🚀 Fonction principale — Phases 2 et 5 (IA J.E.A.N. + Export)
 // ==========================================================
 async function runFloreffe() {
@@ -394,4 +389,4 @@ async function runFloreffe() {
 // ==========================================================
 // 🔚 Export compatible CommonJS pour Render
 // ==========================================================
-module.exports = { runFloreffe }; 
+module.exports = { runFloreffe, superForecastLocal };
