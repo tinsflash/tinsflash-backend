@@ -227,39 +227,142 @@ const FLOREFFE_POINTS = [
 // ==========================================================
 // 🚀 Fonction principale — Run Floreffe autonome
 // ==========================================================
-async function runFloreffe() {
-  const mongo = new MongoClient(process.env.MONGO_URI);
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// ==========================================================
+// 🌍 PHASE 1 — Extraction multi-modèles météo (Floreffe)
+// ==========================================================
+async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
+  await addEngineLog(`🎬 [${runType}] Phase 1 — Extraction physique locale lancée`, "info", runType);
+  const phase1Results = [];
 
-  try {
-    await mongo.connect();
-    const db = mongo.db("tinsflash");
+  for (const z of zones) {
+    const { id, name, lat, lon } = z;
+    const sources = [];
 
-    // === PHASE 1 — Extraction multi-modèles locale sur 7 jours ===
-    const forecastDays = 7;
-    let phase1Results = [];
-    await addEngineLog(`[Floreffe] Phase 1 — Extraction J+0→J+${forecastDays}`, "info", "floreffe");
+    // --- 9 modèles météo officiels validés (inchangés) ---
+    const models = [
+      {
+        name: "GFS NOAA",
+        url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "ECMWF ERA5",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
+      },
+      {
+        name: "ECMWF Open-Meteo",
+        url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "AROME Météo-France",
+        url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "ICON DWD",
+        url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "NASA POWER",
+        url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
+      },
+      {
+        name: "Copernicus ERA5-Land",
+        url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "Open-Meteo Forecast",
+        url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
+      },
+      {
+        name: "MET Norway LocationForecast",
+        url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
+        headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: meteo@tinsflash)" }
+      }
+    ];
 
-    for (let day = 0; day <= forecastDays; day++) {
-      try {
-        const res = await superForecastLocal({ zones: FLOREFFE_POINTS, runType: "Floreffe", dayOffset: day });
-        if (res?.success && res.phase1Results?.length) {
-          const now = new Date();
-          phase1Results.push(...res.phase1Results.map(p => ({ ...p, timestamp: now })));
-        } else await addEngineError(`[Floreffe] Aucun résultat valide pour J+${day}`, "floreffe");
-      } catch (e) { await addEngineError(`[Floreffe] Erreur extraction J+${day} : ${e.message}`, "floreffe"); }
-      await sleep(800);
+    // --- Appels séquentiels avec retry x2 ---
+    for (const m of models) {
+      let attempt = 0, success = false;
+      while (attempt < 2 && !success) {
+        try {
+          const opt = { timeout: 15000 };
+          if (m.headers) opt.headers = m.headers;
+          const r = await axios.get(m.url, opt);
+          const parsed = parseModelResponse(r.data);
+          if (parsed) { sources.push({ source: m.name, ...parsed }); success = true; }
+        } catch (err) {
+          attempt++;
+          if (attempt >= 2) await addEngineError(`${m.name} échec permanent : ${err.message}`, "Phase1");
+        }
+      }
     }
 
-    if (!phase1Results.length) throw new Error("Aucune donnée valide sur l’horizon 7 jours.");
+    // --- Fusion multi-modèles (moyenne pondérée) ---
+    const merged = mergeModels(sources);
+    merged.id = id; merged.name = name; merged.lat = lat; merged.lon = lon;
+    phase1Results.push(merged);
+  }
 
-    await db.collection("floreffe_phase1").deleteMany({});
-    await db.collection("floreffe_phase1").insertMany(phase1Results);
-    await addEngineLog(`[Floreffe] ✅ Phase 1 stockée (${phase1Results.length} lignes)`, "success", "floreffe");
+  await saveExtractionToMongo("Floreffe", "BE", phase1Results);
+  await addEngineLog(`✅ Phase 1 terminée : ${phase1Results.length} points extraits`, "success", runType);
 
-    await addEngineLog("[Floreffe] Pause 2 min avant Phase 2 (stabilisation Mongo)", "info", "floreffe");
-    await sleep(120000);
+// ==========================================================
+  // 🌄 PHASE 1bis — Corrélation topographique & hydrologique
+  // ==========================================================
+  await addEngineLog(`🌄 [${runType}] Corrélation topographique/hydrologique en cours`, "info", runType);
 
+  const datasetsPath = path.resolve("./services/datasets");
+  const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
+  const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
+  const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
+  const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
+
+  // --- mise à jour hydrométrique "live" (préparée) ---
+  const liveHydro = await fetchLiveHydroData(); // bascule automatique vers hydro local si null
+
+  const phase1bisResults = phase1Results.map(pt => {
+    const topo = correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro });
+    return { ...pt, topo };
+  });
+
+  await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
+  await addEngineLog(`✅ Corrélation topographique/hydrologique appliquée`, "success", runType);
+
+  // ==========================================================
+  // ⏱️ TEMPORISATION — 2 minutes avant Phase 2
+  // ==========================================================
+  await addEngineLog(`⏳ Attente 2 minutes avant Phase 2 (Stabilisation des modèles)`, "info", runType);
+  await new Promise(r => setTimeout(r, 120000));
+
+
+// ==========================================================
+  // ▶️ LANCEMENT AUTOMATIQUE DE LA PHASE 2
+  // ==========================================================
+  try {
+    await addEngineLog(`▶ Lancement automatique de la Phase 2 (Floreffe)`, "info", runType);
+    await runPhase2Floreffe(phase1bisResults); // ta fonction IA J.E.A.N. locale
+    await addEngineLog(`✅ Phase 2 exécutée automatiquement avec succès`, "success", runType);
+  } catch (err) {
+    await addEngineError(`Erreur lancement Phase 2 : ${err.message}`, "Phase2");
+  }
+
+  // ==========================================================
+  // 🔚 CLÔTURE DE LA PHASE 1 + PHASE 1bis
+  // ==========================================================
+  await addEngineLog(
+    `🏁 [${runType}] Phases 1 et 1bis terminées – données synchronisées Mongo et prêtes pour l’IA J.E.A.N.`,
+    "success",
+    runType
+  );
+
+  return { success: true, phase1Results: phase1bisResults };
+} // ← fin de la fonction superForecastLocal
+
+
+
+
+  
+
+  
     // === PHASE 2 — IA J.E.A.N. locale ===
     await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
     const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\n${JSON.stringify(phase1Results.slice(0, 250))}`;
