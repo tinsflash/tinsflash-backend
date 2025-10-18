@@ -324,7 +324,28 @@ const phase1Results = [];
   for (const z of zones) {
     const { id, name, lat, lon } = z;
     const sources = [];
-    
+    // ==========================================================
+  // 🌄 PHASE 1bis — Corrélation topographique & hydrologique
+  // ==========================================================
+  await addEngineLog(`🌄 [${runType}] Corrélation topographique/hydrologique en cours`, "info", runType);
+
+  const datasetsPath = path.resolve("./services/datasets");
+  const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
+  const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
+  const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
+  const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
+
+  // --- mise à jour hydrométrique "live" (préparée) ---
+  const liveHydro = await fetchLiveHydroData(); // bascule automatique vers hydro local si null
+
+  const phase1bisResults = phase1Results.map(pt => {
+    const topo = correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro });
+    return { ...pt, topo };
+  });
+
+  await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
+  await addEngineLog(`✅ Corrélation topographique/hydrologique appliquée`, "success", runType);
+
     await addEngineLog(`[Floreffe] Phase 1 — Extraction J+0→J+${forecastDays}`, "info", "floreffe");
 
     for (let day = 0; day <= forecastDays; day++) {
