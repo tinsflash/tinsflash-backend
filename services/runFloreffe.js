@@ -391,7 +391,6 @@ await sleep(120000); // 2 minutes entre chaque jour (120 000 ms)
     await db.collection("floreffe_phase1").insertMany(phase1Results);
     await addEngineLog(`[Floreffe] ✅ Phase 1 stockée (${phase1Results.length} lignes)`, "success", "floreffe");
 
-    // === PHASE 2 – IA J.E.A.N. locale (multi-jours) ===
 // === PHASE 2 – IA J.E.A.N. locale (multi-jours) ===
 await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
 
