@@ -1,9 +1,9 @@
 // ==========================================================
-// 🌍 TINSFLASH — runFloreffe.js  (Everest Protocol v6.5 PRO+++ AUTONOME)
+// 🌍 TINSFLASH — runFloreffe.js  (Everest Protocol v6.5.1 PRO+++ AUTONOME)
 // ==========================================================
 // 🔸 Commune pilote : Floreffe (Belgique)
 // 🔸 Phases intégrées et autonomes : 1 (Extraction) + 2 (IA locale) + 5 (Fusion / Export)
-// 🔸 Totalement indépendant du moteur principal
+// 🔸 Correction : suppression double boucle (dayOffset/day) – version stable Render
 // ==========================================================
 
 import dotenv from "dotenv";
@@ -16,7 +16,6 @@ import OpenAI from "openai";
 import { addEngineLog, addEngineError, saveExtractionToMongo } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
-import { fetchHRRR } from "./hrrrAdapter.js";
 import { correlateTopoHydro } from "./correlateTopoHydro.js";
 import { fetchLiveHydroData } from "./fetchLiveHydroData.js";
 
@@ -25,7 +24,6 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Petit utilitaire pour formater les dates YYYY-MM-DD
 function getDateYMD(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -34,7 +32,7 @@ function getDateYMD(date = new Date()) {
 }
 
 // ==========================================================
-// ⚙️ Seuils d’alerte calibrés Floreffe (anticipatifs réels)
+// ⚙️ Seuils d’alerte calibrés Floreffe
 // ==========================================================
 const ALERT_THRESHOLDS = {
   rain:     { prealert: 5,  alert: 15, extreme: 35, unit: "mm/h" },
@@ -53,7 +51,7 @@ const FLOREFFE_IA_PROMPT = `
 Tu es J.E.A.N., IA météo-hydrologique locale dédiée à la commune de Floreffe (Belgique).
 Mission : produire des prévisions hyper-locales fiables et des alertes précises pour voiries, habitants et infrastructures.
 
-Contexte géographique (extraits) :
+Contexte géographique :
 - Collines (Floriffoux, Sovimont, Soye) : exposition vent/givre/verglas.
 - Vallée de la Sambre (Franière) : humidité, brouillard, inondations éclair.
 - Zoning Franière / Materne : surfaces imperméables → ruissellement rapide.
@@ -69,29 +67,9 @@ Tâches :
 4) Ne produis que du réel — pas de simulation. Retourne STRICTEMENT du JSON pur.
 `;
 
-// ==========================================================
-// 🧮 utilitaires
-// ==========================================================
 const country = "BE";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const toISODate = (d) => d.toISOString().slice(0, 10);
-
-// Trouve la valeur horaire la plus proche de 12:00 locale pour une date cible
-function pickHourlyAtNoon(hourlyObj, targetDate, times) {
-  if (!hourlyObj || !times || !times.length) return null;
-  const target = new Date(`${targetDate}T12:00:00Z`).getTime();
-  let bestIdx = 0;
-  let bestDiff = Number.MAX_SAFE_INTEGER;
-  times.forEach((t, i) => {
-    const diff = Math.abs(new Date(t).getTime() - target);
-    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-  });
-  return {
-    temperature_2m: hourlyObj.temperature_2m?.[bestIdx] ?? null,
-    precipitation:  hourlyObj.precipitation?.[bestIdx] ?? 0,
-    wind_speed_10m: hourlyObj.wind_speed_10m?.[bestIdx] ?? null
-  };
-}
 
 // ==========================================================
 // ⚙️ FONCTION SUPERFORECAST INTÉGRÉE (indépendante, J+offset)
@@ -104,7 +82,6 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
   for (const z of zones) {
     const sources = [];
     const push = (x) => sources.push(x);
-    const log = (n, ok) => console.log(`${ok ? "✅" : "⚠️"} ${n}`);
 
     try {
       const [lat, lon] = [z.lat, z.lon];
@@ -161,47 +138,17 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
           let T = null, P = 0, W = null;
 
           if (r.data?.hourly?.time) {
-            const picked = pickHourlyAtNoon(
-              {
-                temperature_2m: r.data.hourly.temperature_2m,
-                precipitation: r.data.hourly.precipitation,
-                wind_speed_10m: r.data.hourly.wind_speed_10m
-              },
-              ymd,
-              r.data.hourly.time
-            );
-            T = picked.temperature_2m;
-            P = picked.precipitation;
-            W = picked.wind_speed_10m;
-          } else if (r.data?.properties?.timeseries?.length) {
-            const target = new Date(`${ymd}T12:00:00Z`).getTime();
-            let best = r.data.properties.timeseries[0];
-            let diff = Math.abs(new Date(best.time).getTime() - target);
-            for (const ts of r.data.properties.timeseries) {
-              const d = Math.abs(new Date(ts.time).getTime() - target);
-              if (d < diff) { diff = d; best = ts; }
-            }
-            T = best?.data?.instant?.details?.air_temperature ?? null;
-            P = best?.data?.next_1_hours?.details?.precipitation_amount ?? 0;
-            W = best?.data?.instant?.details?.wind_speed ?? null;
-          } else if (r.data?.properties?.parameter) {
-            const h = r.data?.properties?.parameter || {};
-            const arrT = Array.isArray(h.T2M) ? h.T2M : [];
-            const arrP = Array.isArray(h.PRECTOTCORR) ? h.PRECTOTCORR : [];
-            const arrW = Array.isArray(h.WS10M) ? h.WS10M : [];
-            const avg = (a) => (a.length ? a.reduce((x,y)=>x+y,0)/a.length : null);
-            T = avg(arrT);
-            P = avg(arrP) ?? 0;
-            W = avg(arrW);
+            const times = r.data.hourly.time;
+            const idx = times.findIndex((t) => t.includes("12:00"));
+            T = r.data.hourly.temperature_2m?.[idx] ?? null;
+            P = r.data.hourly.precipitation?.[idx] ?? 0;
+            W = r.data.hourly.wind_speed_10m?.[idx] ?? null;
           }
 
           push({ source: m.name, temperature: T, precipitation: P, wind: W });
-          log(m.name, true);
         } catch (e) {
-          log(m.name, false);
           await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
         }
-
         await sleep(200);
       }
 
@@ -228,8 +175,8 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
         lon,
         country
       );
-
       results.push(final);
+
     } catch (err) {
       await addEngineError(`mergeMultiModels : ${err.message}`, "superForecast");
     }
@@ -237,6 +184,10 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
 
   return { success: true, phase1Results: results };
 }
+
+// ==========================================================
+// 🗺️ === Ici s’insère ton tableau FLOREFFE_POINTS complet ===
+// ==========================================================
 // ==========================================================
 // ---------- 60 POINTS GÉOGRAPHIQUES — Couverture complète du territoire
 // (LISTE INTÉGRALE CONSERVÉE)
@@ -304,10 +255,7 @@ const FLOREFFE_POINTS = [
   { id:'FLO_60', name:'Rue du Parc – zone résidentielle',    lat:50.4330, lon:4.7662, alt:164, type:'urbain', risk:{flood:false, verglas:true, wind:true}, sensor:false, prio:'med' },
 ];
 
-// ==========================================================
-// 🚀 Fonction principale – 100 % autonome
-// ==========================================================
-// ==========================================================
+   // ==========================================================
 // 🚀 Fonction principale – 100 % autonome
 // ==========================================================
 async function runFloreffe() {
@@ -318,27 +266,18 @@ async function runFloreffe() {
     await mongo.connect();
     const db = mongo.db("tinsflash");
 
-    // === PHASE 1 – Extraction multi-modèles locale sur 7 jours ===
-  
-const phase1Results = [];
-    const forecastDays = 5; // Horizon stable J+5 pour Floreffe
-  for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() + dayOffset);
-  const dateStr = targetDate.toISOString().slice(0, 10);
-  
-  for (const z of FLOREFFE_POINTS) {
-    const { id, name, lat, lon } = z;
-    const sources = [];
-    const runType = "Floreffe";
-    await addEngineLog(`[Floreffe] Phase 1 — Extraction J+0→J+${forecastDays}`, "info", "floreffe");
+    console.log("✅ [TINSFLASH] Démarrage Floreffe — Everest Protocol v6.5.1 (Fix DoubleLoop)");
 
-    for (let day = 0; day <= forecastDays; day++) {
+    // === PHASE 1 – Extraction multi-modèles locale sur 7 jours ===
+    const phase1Results = [];
+    const forecastDays = 5;
+
+    for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
       try {
         const res = await superForecastLocal({
           zones: FLOREFFE_POINTS,
           runType: "Floreffe",
-          dayOffset: day
+          dayOffset
         });
 
         if (res?.success && res.phase1Results?.length) {
@@ -350,230 +289,166 @@ const phase1Results = [];
           }));
           phase1Results.push(...stamped);
         } else {
-          await addEngineError(`[Floreffe] Aucun résultat valide pour J+${day}`, "floreffe");
+          await addEngineError(`[Floreffe] Aucun résultat valide pour J+${dayOffset}`, "floreffe");
         }
+        await sleep(120000); // pause entre J+n
       } catch (e) {
-        await addEngineError(`[Floreffe] Erreur extraction J+${day} : ${e.message}`, "floreffe");
+        await addEngineError(`[Floreffe] Erreur extraction J+${dayOffset} : ${e.message}`, "floreffe");
       }
-      // 🕓 Temporisation douce entre jours pour soulager API et Mongo
-await sleep(120000); // 2 minutes entre chaque jour (120 000 ms)
-      
-    // ==========================================================
-  // 🌄 PHASE 1bis — Corrélation topographique & hydrologique
-  // ==========================================================
-  await addEngineLog(`🌄 [${runType}] Corrélation topographique/hydrologique en cours`, "info", runType);
-
-  const datasetsPath = path.resolve("./services/datasets");
-  const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
-  const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
-  const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
-  const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
-
-  // --- mise à jour hydrométrique "live" (préparée) ---
-  const liveHydro = await fetchLiveHydroData(); // bascule automatique vers hydro local si null
-
-  const phase1bisResults = phase1Results.map(pt => {
-    const topo = correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro });
-    return { ...pt, topo };
-  });
-
-  await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
-  await addEngineLog(`✅ Corrélation topographique/hydrologique appliquée`, "success", runType);
-
-    
-      // temporisation douce entre jours pour soulager API et Mongo
-      await sleep(800);
-    } // <- ferme la boucle "for (let day = 0; ...)"
-  }   // <- ferme la boucle "for (const z of FLOREFFE_POINTS)"
-}     // <- ferme la boucle "for (let dayOffset = 0; ...)"
-
-if (!phase1Results.length) throw new Error("Aucune donnée valide sur l’horizon 7 jours.");    await db.collection("floreffe_phase1").deleteMany({});
-    await db.collection("floreffe_phase1").insertMany(phase1Results);
-    await addEngineLog(`[Floreffe] ✅ Phase 1 stockée (${phase1Results.length} lignes)`, "success", "floreffe");
-
-// === PHASE 2 – IA J.E.A.N. locale (multi-jours) ===
-await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
-
-let phase1Data = phase1Results;
-
-// 🔄 Recharge Phase 1 depuis Mongo si tableau vide
-if (!phase1Data?.length) {
-  const reload = await db.collection("floreffe_phase1").find({}).toArray();
-  if (reload?.length) {
-    phase1Data = reload;
-    await addEngineLog(`[Floreffe] 🔁 Données Phase 1 rechargées depuis Mongo (${reload.length} points)`, "info", "floreffe");
-  } else {
-    await addEngineError(`[Floreffe] ⚠️ Aucune donnée Phase 1 disponible pour IA J.E.A.N.`, "floreffe");
-    phase1Data = [];
-  }
-}
-
-// 🧩 Gestion de la taille des prompts — découpés en chunks pour GPT-5
-const chunkSize = 200;
-const chunks = [];
-for (let i = 0; i < phase1Data.length; i += chunkSize) {
-  chunks.push(phase1Data.slice(i, i + chunkSize));
-}
-
-let phase2Results = [];
-const startPhase2 = Date.now();
-
-for (const [index, chunk] of chunks.entries()) {
-  const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nAnalyse locale J.E.A.N. — paquet ${index + 1}/${chunks.length} (${chunk.length} points) :\n${JSON.stringify(chunk)}`;
-
-  try {
-    const ai = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [{ role: "user", content: aiPrompt }],
-      temperature: 0.8,
-    });
-
-    const raw = ai.choices?.[0]?.message?.content?.trim() || "";
-
-    // Extraction stricte du JSON même si l'IA ajoute du texte explicatif
-    const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error("Aucune structure JSON détectée");
-
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    if (Array.isArray(parsed)) {
-      phase2Results.push(...parsed);
-    } else if (parsed && typeof parsed === "object") {
-      phase2Results.push(parsed);
     }
 
-    await addEngineLog(
-      `[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length} traité (${Array.isArray(parsed) ? parsed.length : 1} objets)`,
-      "success",
-      "floreffe"
-    );
+    // 🌄 PHASE 1bis — Corrélation topographique / hydrologique
+    await addEngineLog("🌄 [Floreffe] Corrélation topographique / hydrologique en cours", "info", "floreffe");
 
-    // Temporisation douce pour éviter le code 429 (surcharge API)
-    await sleep(2000);
+    const datasetsPath = path.resolve("./services/datasets");
+    const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
+    const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
+    const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
+    const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
+    const liveHydro = await fetchLiveHydroData();
 
-  } catch (err) {
-    await addEngineError(
-      `[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1}/${chunks.length} : ${err.message}`,
-      "floreffe"
-    );
-    await sleep(1000);
-  }
-}
+    const phase1bisResults = phase1Results.map(pt => ({
+      ...pt,
+      topo: correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro })
+    }));
 
-// Sauvegarde Mongo Phase 2
-await db.collection("floreffe_phase2").deleteMany({});
-if (phase2Results.length) {
-  await db.collection("floreffe_phase2").insertMany(phase2Results);
-}
+    await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
+    await addEngineLog("✅ Corrélation topographique / hydrologique appliquée", "success", "floreffe");
 
-const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
-await addEngineLog(
-  `[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, durée ${duration}s)`,
-  "success",
-  "floreffe"
-  
-);   
+    // === PHASE 2 — IA J.E.A.N. locale (multi-jours)
+    await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
+
+    let phase1Data = phase1Results;
+
+    if (!phase1Data?.length) {
+      const reload = await db.collection("floreffe_phase1").find({}).toArray();
+      if (reload?.length) {
+        phase1Data = reload;
+        await addEngineLog(`[Floreffe] 🔁 Données Phase 1 rechargées (${reload.length})`, "info", "floreffe");
+      } else {
+        await addEngineError("[Floreffe] ⚠️ Aucune donnée Phase 1 pour IA J.E.A.N.", "floreffe");
+        phase1Data = [];
+      }
+    }
+
+    const chunkSize = 200;
+    const chunks = [];
+    for (let i = 0; i < phase1Data.length; i += chunkSize)
+      chunks.push(phase1Data.slice(i, i + chunkSize));
+
+    let phase2Results = [];
+    const startPhase2 = Date.now();
+
+    for (const [index, chunk] of chunks.entries()) {
+      const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nAnalyse locale J.E.A.N. — paquet ${index + 1}/${chunks.length} (${chunk.length} points) :\n${JSON.stringify(chunk)}`;
+      try {
+        const ai = await openai.chat.completions.create({
+          model: "gpt-5",
+          messages: [{ role: "user", content: aiPrompt }],
+          temperature: 0.8,
+        });
+
+        const raw = ai.choices?.[0]?.message?.content?.trim() || "";
+        const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+        if (!jsonMatch) throw new Error("Aucune structure JSON détectée");
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(parsed)) phase2Results.push(...parsed);
+        else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
+
+        await addEngineLog(`[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length}`, "success", "floreffe");
+        await sleep(2000);
+      } catch (err) {
+        await addEngineError(`[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1} : ${err.message}`, "floreffe");
+        await sleep(1000);
+      }
+    }
+
+    await db.collection("floreffe_phase2").deleteMany({});
+    if (phase2Results.length) await db.collection("floreffe_phase2").insertMany(phase2Results);
+
+    const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
+    await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
+
     // === PHASE 5 — Fusion + Export ===
-    
-const enriched = Array.isArray(phase2Results) && phase2Results.length
-  ? phase2Results.map(x => ({
-      ...x,
-      origin: "Floreffe_dome",
-      timestamp: new Date(),
-      thresholds: ALERT_THRESHOLDS
-    }))
-  : [];
+    const enriched = Array.isArray(phase2Results) && phase2Results.length
+      ? phase2Results.map(x => ({
+          ...x,
+          origin: "Floreffe_dome",
+          timestamp: new Date(),
+          thresholds: ALERT_THRESHOLDS
+        }))
+      : [];
 
-if (!enriched.length) {
-  await addEngineError("[Floreffe] ⚠️ Phase 2 vide – aucun enrichissement possible", "floreffe");
-  return { success: false, error: "Phase 2 vide" };
-}
+    if (!enriched.length) {
+      await addEngineError("[Floreffe] ⚠️ Phase 2 vide – aucun enrichissement", "floreffe");
+      return { success: false, error: "Phase 2 vide" };
+    }
 
-// --- Génération des alertes locales ---
-const alerts = enriched.map(x => {
-  const rainHit = x.risk?.pluie >= ALERT_THRESHOLDS.rain.alert;
-  const iceHit = x.risk?.verglas >= ALERT_THRESHOLDS.cold.alert;
-  if (!rainHit && !iceHit) return null;
+    const alerts = enriched.map(x => {
+      const rainHit = x.risk?.pluie >= ALERT_THRESHOLDS.rain.alert;
+      const iceHit = x.risk?.verglas >= ALERT_THRESHOLDS.cold.alert;
+      if (!rainHit && !iceHit) return null;
 
-  const type = rainHit ? "pluie" : "verglas";
-  const level =
-    rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme
-      ? "rouge"
-      : "orange";
-  const confidence = x.confidence ?? x.reliability ?? 0.9;
+      const type = rainHit ? "pluie" : "verglas";
+      const level = rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
+      const confidence = x.confidence ?? x.reliability ?? 0.9;
 
-  return {
-    name: x.name,
-    zone: "Floreffe",
-    lat: x.lat,
-    lon: x.lon,
-    type,
-    level,
-    reliability: confidence,
-    description:
-      confidence >= 0.9
-        ? "Alerte confirmée"
-        : confidence >= 0.7
-        ? "Alerte à valider"
-        : "En surveillance – pas encore confirmée",
-    timestamp: new Date()
-  };
-}).filter(Boolean);
+      return {
+        name: x.name,
+        zone: "Floreffe",
+        lat: x.lat,
+        lon: x.lon,
+        type,
+        level,
+        reliability: confidence,
+        description:
+          confidence >= 0.9
+            ? "Alerte confirmée"
+            : confidence >= 0.7
+            ? "Alerte à valider"
+            : "En surveillance",
+        timestamp: new Date()
+      };
+    }).filter(Boolean);
 
-// --- Sauvegardes Mongo locales ---
-await db.collection("alerts_floreffe").deleteMany({});
-if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
+    await db.collection("alerts_floreffe").deleteMany({});
+    if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 
-await addEngineLog(`[Floreffe] Sauvegarde Mongo locale effectuée (${alerts.length} alertes)`, "success", "floreffe");
+    await addEngineLog(`[Floreffe] Sauvegarde Mongo locale (${alerts.length} alertes)`, "success", "floreffe");
 
-// --- Export JSON local pour interface publique ---
-const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
-const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
-const forecastRange = "J+0 → J+5";
+    // --- Export JSON local
+    const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
+    const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
+    const forecastRange = "J+0 → J+5";
 
-await fs.promises.writeFile(
-  forecastsPath,
-  JSON.stringify(
-    { generated: new Date(), range: forecastRange, zones: enriched },
-    null,
-    2
-  )
-);
+    await fs.promises.writeFile(
+      forecastsPath,
+      JSON.stringify({ generated: new Date(), range: forecastRange, zones: enriched }, null, 2)
+    );
+    await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
 
-await fs.promises.writeFile(
-  alertsPath,
-  JSON.stringify(alerts, null, 2)
-);
+    await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-await addEngineLog(
-  `🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`,
-  "success",
-  "floreffe"
-);
+    // --- Synchronisation Mongo Cloud global
+    await addEngineLog("[Floreffe] Synchronisation Mongo Cloud en cours...", "info", "floreffe");
 
-// --- Synchronisation Mongo Cloud global ---
-await addEngineLog(`[Floreffe] Synchronisation Mongo Cloud en cours...`, "info", "floreffe");
+    await db.collection("forecasts").updateOne(
+      { zone: "Floreffe" },
+      { $set: { zone: "Floreffe", data: enriched } },
+      { upsert: true }
+    );
 
-await db.collection("forecasts").updateOne(
-  { zone: "Floreffe" },
-  { $set: { zone: "Floreffe", data: enriched } },
-  { upsert: true }
-);
+    await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
+    if (alerts.length) await db.collection("alerts").insertMany(alerts);
 
-await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
-if (alerts.length) await db.collection("alerts").insertMany(alerts);
+    await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
 
-await addEngineLog(
-  "💾 Données Floreffe exportées vers Mongo Cloud global.",
-  "success",
-  "floreffe"
-);
-
-    // --- Fermeture propre ---
     await mongo.close();
-    await addEngineLog(`[Floreffe] Connexion Mongo fermée proprement`, "info", "floreffe");
+    await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
     await sleep(250);
     return { success: true, alerts: alerts.length };
+
   } catch (err) {
     await addEngineError(`[Floreffe] ❌ Erreur critique : ${err.message}`, "floreffe");
     await mongo.close();
@@ -584,4 +459,4 @@ await addEngineLog(
 // ==========================================================
 // 🔚 Export compatible ESM (Render + Node 22.x)
 // ==========================================================
-export { runFloreffe, superForecastLocal };
+export { runFloreffe, superForecastLocal }; 
