@@ -17,6 +17,7 @@ import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
+import { mergeMultiModels } from "./superForecast.js";
 
 dotenv.config();
 
@@ -297,9 +298,8 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
     }
 
     // --- Fusion multi-modèles (moyenne pondérée) ---
-    const merged = mergeModels(sources);
-    merged.id = id; merged.name = name; merged.lat = lat; merged.lon = lon;
-    phase1Results.push(merged);
+    const merged = await mergeMultiModels(lat, lon, "BE");
+  
   }
 
   await saveExtractionToMongo("Floreffe", "BE", phase1Results);
