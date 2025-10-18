@@ -17,13 +17,20 @@ import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
+import { saveExtractionToMongo } from "./engineState.js";
 import { correlateTopoHydro } from "./correlateTopoHydro.js";
 import { fetchLiveHydroData } from "./fetchLiveHydroData.js";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
+// Petit utilitaire pour formater les dates YYYY-MM-DD
+function getDateYMD(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 // ==========================================================
 // ⚙️ Seuils d’alerte calibrés Floreffe (anticipatifs réels)
 // ==========================================================
