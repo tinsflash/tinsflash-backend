@@ -510,6 +510,8 @@ const alerts = enriched.map(x => {
 await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 
+await addEngineLog(`[Floreffe] Sauvegarde Mongo locale effectuée (${alerts.length} alertes)`, "success", "floreffe");
+
 // --- Export JSON local pour interface publique ---
 const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
 const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
@@ -517,16 +519,27 @@ const forecastRange = "J+0 → J+5";
 
 await fs.promises.writeFile(
   forecastsPath,
-  JSON.stringify({ generated: new Date(), range: forecastRange, zones: enriched }, null, 2)
+  JSON.stringify(
+    { generated: new Date(), range: forecastRange, zones: enriched },
+    null,
+    2
+  )
 );
+
 await fs.promises.writeFile(
   alertsPath,
   JSON.stringify(alerts, null, 2)
 );
 
-await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
+await addEngineLog(
+  `🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`,
+  "success",
+  "floreffe"
+);
 
 // --- Synchronisation Mongo Cloud global ---
+await addEngineLog(`[Floreffe] Synchronisation Mongo Cloud en cours...`, "info", "floreffe");
+
 await db.collection("forecasts").updateOne(
   { zone: "Floreffe" },
   { $set: { zone: "Floreffe", data: enriched } },
@@ -536,19 +549,22 @@ await db.collection("forecasts").updateOne(
 await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
 if (alerts.length) await db.collection("alerts").insertMany(alerts);
 
-await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+await addEngineLog(
+  "💾 Données Floreffe exportées vers Mongo Cloud global.",
+  "success",
+  "floreffe"
+);
 
-    await mongo.close();
-    return { success: true, alerts: alerts.length };
-   catch (e) {
-    await addEngineError(`Erreur Floreffe autonome : ${e.message}`, "floreffe");
-    return { success: false, error: e.message };
-   finally {
-    await sleep(150);
-  }
-}  // ← ferme bien la fonction runFloreffe
+// --- Fermeture propre ---
+await mongo.close();
+await addEngineLog(`[Floreffe] Connexion Mongo fermée proprement`, "info", "floreffe");
+
+// --- Temporisation finale pour laisser le flux se vider (sécurité Render) ---
+await sleep(250);
+
+return { success: true, alerts: alerts.length };
 
 // ==========================================================
-// 🔚 Export compatible CommonJS pour Render
+// 🔚 Export compatible ESM (Render + Node 22.x)
 // ==========================================================
-module.exports = { runFloreffe, superForecastLocal };
+export { runFloreffe, superForecastLocal };
