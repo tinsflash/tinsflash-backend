@@ -443,7 +443,22 @@ app.get("/api/alerts/floreffe", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
+// ==========================================================
+// 🌫️ ROUTE VisionIA — Alertes détectées par analyse d’images
+// ==========================================================
+app.get("/api/alerts-vision", async (req, res) => {
+  try {
+    const client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const db = client.db();
+    const alerts = await db.collection("alerts_vision").find({}).toArray();
+    await client.close();
+    res.json(alerts || []);
+  } catch (err) {
+    console.error("Erreur /api/alerts-vision:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 // 🛰️ Log de confirmation au démarrage
 console.log("✅ Routes TINSFLASH Floreffe actives : /api/forecast/floreffe & /api/alerts/floreffe");
 
