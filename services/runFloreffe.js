@@ -567,4 +567,4 @@ return { success: true, alerts: alerts.length };
 // ==========================================================
 // 🔚 Export compatible ESM (Render + Node 22.x)
 // ==========================================================
-export { runFloreffe, superForecastLocal };
+module.exports = { runFloreffe, superForecastLocal };
