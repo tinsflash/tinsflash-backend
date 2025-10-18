@@ -284,17 +284,28 @@ phase1Results.push({ ...merged, id, name, lat, lon, date: dateStr });
   // 🔚 CLÔTURE DE LA PHASE 1 + PHASE 1bis
   // ==========================================================
   await addEngineLog(
-    `🏁 [${runType}] Phases 1 et 1bis terminées – données synchronisées Mongo et prêtes pour l’IA J.E.A.N.`,
-    "success",
-    runType
-    ;)
-   await db.collection("floreffe_phase1bis").deleteMany({});
-await db.collection("floreffe_phase1bis").insertMany(phase1bisResults); 
-  );
+  `🏁 [${runType}] Phases 1 et 1bis terminées – données synchronisées Mongo et prêtes pour l’IA J.E.A.N.`,
+  "success",
+  runType
+);
 
-  return { success: true, phase1Results: phase1bisResults };
+// 🔒 Sauvegarde Phase 1bis dans Mongo (base commune)
+try {
+  const mongo = new MongoClient(process.env.MONGO_URI);
+  await mongo.connect();
+  const db = mongo.db("tinsflash");
+
+  await db.collection("floreffe_phase1bis").deleteMany({});
+  await db.collection("floreffe_phase1bis").insertMany(phase1bisResults);
+
+  await mongo.close();
+  await addEngineLog(`💾 Phase 1bis sauvegardée dans Mongo Cloud`, "success", runType);
+} catch (err) {
+  await addEngineError(`Erreur Mongo sauvegarde Phase1bis : ${err.message}`, runType);
+}
+
+return { success: true, phase1Results: phase1bisResults };
 } // ← fin de la fonction superForecastLocal
-
 
 // ==========================================================
 // 🚀 Fonction principale d’exécution complète (Phases 2 et 5)
