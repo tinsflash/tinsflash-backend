@@ -540,13 +540,8 @@ await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.",
 
 // --- Fermeture propre ---
 return { success: true, alerts: alerts.length };
+// 
 // ==========================================================
 // 🔚 Export compatible CommonJS pour Render
 // ==========================================================
-// ==========================================================
-// 🔚 Export standard ESM + compatibilité CommonJS pour Render
-// ==========================================================
 module.exports = { runFloreffe, superForecastLocal };
-
-// (optionnel : si tu veux aussi compat CJS)
-export default { runFloreffe, superForecastLocal };
