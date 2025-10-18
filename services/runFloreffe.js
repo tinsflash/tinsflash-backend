@@ -392,6 +392,7 @@ await sleep(120000); // 2 minutes entre chaque jour (120 000 ms)
     await addEngineLog(`[Floreffe] ✅ Phase 1 stockée (${phase1Results.length} lignes)`, "success", "floreffe");
 
     // === PHASE 2 – IA J.E.A.N. locale (multi-jours) ===
+// === PHASE 2 – IA J.E.A.N. locale (multi-jours) ===
 await addEngineLog(`[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)`, "info", "floreffe");
 
 let phase1Data = phase1Results;
@@ -420,6 +421,7 @@ const startPhase2 = Date.now();
 
 for (const [index, chunk] of chunks.entries()) {
   const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nAnalyse locale J.E.A.N. — paquet ${index + 1}/${chunks.length} (${chunk.length} points) :\n${JSON.stringify(chunk)}`;
+
   try {
     const ai = await openai.chat.completions.create({
       model: "gpt-5",
@@ -428,20 +430,33 @@ for (const [index, chunk] of chunks.entries()) {
     });
 
     const raw = ai.choices?.[0]?.message?.content?.trim() || "";
+
     // Extraction stricte du JSON même si l'IA ajoute du texte explicatif
     const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
     if (!jsonMatch) throw new Error("Aucune structure JSON détectée");
 
     const parsed = JSON.parse(jsonMatch[0]);
-    if (Array.isArray(parsed)) phase2Results.push(...parsed);
-    else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
 
-    await addEngineLog(`[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length} traité (${Array.isArray(parsed) ? parsed.length : 1} objets)`, "success", "floreffe");
+    if (Array.isArray(parsed)) {
+      phase2Results.push(...parsed);
+    } else if (parsed && typeof parsed === "object") {
+      phase2Results.push(parsed);
+    }
+
+    await addEngineLog(
+      `[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length} traité (${Array.isArray(parsed) ? parsed.length : 1} objets)`,
+      "success",
+      "floreffe"
+    );
 
     // Temporisation douce pour éviter le code 429 (surcharge API)
     await sleep(2000);
+
   } catch (err) {
-    await addEngineError(`[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1}/${chunks.length} : ${err.message}`, "floreffe");
+    await addEngineError(
+      `[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1}/${chunks.length} : ${err.message}`,
+      "floreffe"
+    );
     await sleep(1000);
   }
 }
@@ -453,10 +468,14 @@ if (phase2Results.length) {
 }
 
 const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
-await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, durée ${duration}s)`, "success", "floreffe");
-
+await addEngineLog(
+  `[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, durée ${duration}s)`,
+  "success",
+  "floreffe"
+  
+);   
     // === PHASE 5 — Fusion + Export ===
-    // === PHASE 5 — Fusion + Export ===
+    
 const enriched = Array.isArray(phase2Results) && phase2Results.length
   ? phase2Results.map(x => ({
       ...x,
