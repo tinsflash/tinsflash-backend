@@ -18,7 +18,8 @@ import { addEngineLog, addEngineError } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
 import { applyLocalFactors } from "./localFactors.js";
 import { fetchHRRR } from "./hrrrAdapter.js";
-import { mergeMultiModels } from "./superForecast.js";
+import superForecastModule from "./superForecast.js";
+const { superForecast } = superForecastModule;
 import { correlateTopoHydro } from "./correlateTopoHydro.js";
 import { fetchLiveHydroData } from "./fetchLiveHydroData.js";
 
@@ -236,7 +237,7 @@ async function superForecastLocal({ zones = [], runType = "Floreffe" }) {
     }
 
     // --- Fusion multi-modèles (moyenne pondérée) ---
-    const merged = await mergeMultiModels(lat, lon, "BE");
+    const merged = await superForecast({ zones: [{ lat, lon, country: "BE" }], runType: "Floreffe", phaseMode: "phase1" });
   
   }
 
