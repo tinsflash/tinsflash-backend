@@ -9,21 +9,31 @@
 <style>
 html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial}
 #info{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.4);padding:8px 12px;border-radius:6px;font-size:14px;}
-#angleBtn,#resBtn{position:fixed;top:10px;right:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
-padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s;margin-left:6px;}
+#angleBtn,#resBtn{position:fixed;top:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
+padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s}
 #angleBtn:hover,#resBtn:hover{background:#7de0ff;color:#000;}
+#angleBtn{right:10px;}
 #resBtn{right:120px;}
+#loader{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:80px;height:80px;border:4px solid rgba(0,183,255,0.3);
+  border-top:4px solid #00c8ff;border-radius:50%;animation:spin 1s linear infinite;
+  display:none;z-index:10;
+}
+@keyframes spin{0%{transform:translate(-50%,-50%) rotate(0deg)}100%{transform:translate(-50%,-50%) rotate(360deg)}}
 </style>
 </head>
 <body>
 <div id="info">🌍 Dôme Floreffe – Données locales (relief + alertes météo)</div>
 <button id="resBtn">Relief HR</button>
 <button id="angleBtn">Vue 45°</button>
+<div id="loader"></div>
 <canvas id="scene"></canvas>
 
 <script>
 let scene,camera,renderer,controls,terrainMesh,alertGroup,angleMode=false;
-let currentRes = "std";
+let currentRes="std";
+let loader=document.getElementById("loader");
 
 init();
 animate();
@@ -53,18 +63,16 @@ async function init(){
   scene.add(light);
   scene.add(new THREE.AmbientLight(0x447799,0.4));
 
-  // Charger relief standard au départ
-  const altStd = await fetch("floreffe_altitudes.json").then(r=>r.json());
+  // Relief standard
+  const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
   createTerrain(altStd);
 
-  // Charger alertes
+  // Alertes météo
   const alerts=await fetch("floreffe_alertes.json").then(r=>r.json());
   renderAlerts(alerts);
 
-  // Boutons
   document.getElementById("angleBtn").onclick=()=>switchAngle();
   document.getElementById("resBtn").onclick=()=>switchResolution();
-
   window.addEventListener("resize",onResize);
 }
 
@@ -110,18 +118,27 @@ function renderAlerts(list){
 
 async function switchResolution(){
   const btn=document.getElementById("resBtn");
-  if(currentRes==="std"){
-    btn.textContent="Relief STD";
-    currentRes="hr";
-    const altHR = await fetch("floreffe_altitudes_hr.json").then(r=>r.json());
-    createTerrain(altHR);
-    console.log("🔁 Relief haute résolution chargé !");
-  } else {
-    btn.textContent="Relief HR";
-    currentRes="std";
-    const altStd = await fetch("floreffe_altitudes.json").then(r=>r.json());
-    createTerrain(altStd);
-    console.log("🔁 Relief standard rechargé !");
+  loader.style.display="block"; // affiche le halo pendant le chargement
+  await sleep(300);
+
+  try{
+    if(currentRes==="std"){
+      btn.textContent="Relief STD";
+      currentRes="hr";
+      const altHR=await fetch("floreffe_altitudes_hr.json").then(r=>r.json());
+      createTerrain(altHR);
+      console.log("🔁 Relief haute résolution chargé !");
+    }else{
+      btn.textContent="Relief HR";
+      currentRes="std";
+      const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
+      createTerrain(altStd);
+      console.log("🔁 Relief standard rechargé !");
+    }
+  }catch(err){
+    console.error("Erreur chargement relief :",err);
+  }finally{
+    loader.style.display="none"; // cache le halo
   }
 }
 
@@ -140,11 +157,8 @@ function animate(){
 
 function switchAngle(){
   angleMode=!angleMode;
-  if(angleMode){
-    camera.position.set(200,200,200);
-  }else{
-    camera.position.set(0,150,250);
-  }
+  if(angleMode){camera.position.set(200,200,200);}
+  else{camera.position.set(0,150,250);}
 }
 
 function onResize(){
@@ -152,6 +166,8 @@ function onResize(){
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth,window.innerHeight);
 }
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 </script>
 </body>
 </html>
