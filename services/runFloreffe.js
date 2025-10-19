@@ -434,9 +434,9 @@ if (!enriched.length) {
 // 🔔 Détection d’alertes pluie / verglas
 const alerts = enriched.map(x => {
   const rain = Number(x?.risk?.pluie ?? 0);
-  const ice  = Number(x?.risk?.verglas ?? 999);
-  const rainHit = rain >= ALERT_THRESHOLDS.rain.alert;
-  const iceHit  = ice <= ALERT_THRESHOLDS.cold.alert;
+  const ice  = Number(x?.risk?.verglas ?? 0);
+const rainHit = rain >= ALERT_THRESHOLDS.rain.alert;
+const iceHit  = ice <= ALERT_THRESHOLDS.cold.prealert; // -3 par défaut
   if (!rainHit && !iceHit) return null;
 
   const type = rainHit ? "Alerte Pluie" : "Alerte Verglas";
@@ -458,7 +458,9 @@ const alerts = enriched.map(x => {
     timestamp: new Date(),
   };
 }).filter(Boolean);
-
+if (!alerts.length) {
+  await addEngineError("[Floreffe] Aucun signal d’alerte détecté (alertes vides)", "floreffe");
+}
 // --- Sauvegarde Mongo locale
 await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
