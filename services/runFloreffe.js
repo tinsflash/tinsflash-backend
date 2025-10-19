@@ -68,7 +68,6 @@ Tâches :
 `;
 
 const country = "BE";
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const toISODate = (d) => d.toISOString().slice(0, 10);
 
 // ==========================================================
