@@ -450,7 +450,28 @@ if (Array.isArray(phase2Results) && phase2Results.length) {
     }));
   }
 }
+// === Renforcement intelligent des commentaires Phase 2 avant fusion ===
+function renforcerCommentaire(p) {
+  let c = p.commentaire || "";
+  const t = Number(p.temperature ?? 0);
+  const r = Number(p.precipitation ?? 0);
+  const w = Number(p.wind ?? 0);
+  const rel = Number(p.reliability ?? 0.8);
 
+  if (r > 5) c += " 🌧️ Pluie significative; sols probablement humides.";
+  if (t < 0) c += " ❄️ Risque de verglas localisé.";
+  if (w > 40) c += " 🌬️ Vent fort; prudence sur les hauteurs.";
+  if (rel < 0.7) c += " 🔎 Fiabilité moyenne, confirmation nécessaire.";
+  return c.trim();
+}
+
+// Application du renforcement local sur la Phase 2
+phase2ResultsSafe = phase2ResultsSafe.map(p => ({
+  ...p,
+  commentaire_fusionné: renforcerCommentaire(p),
+  reliability_finale: Math.min(1, (p.reliability ?? 0.8) * (p.confidence ?? 0.9)),
+}));
+    
 // 🧠 Analyse IA globale (fusion des risques + validation)
 const fusionPrompt = `
 Tu es J.E.A.N., intelligence météorologique globale de TINSFLASH.
@@ -542,7 +563,14 @@ await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 
 await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées (Mongo locale)`, "success", "floreffe");
-
+// --- Sauvegarde renforcée Phase 5
+await db.collection("forecasts_ai_points").insertMany(phase2ResultsSafe);
+await fs.promises.writeFile(
+  path.join(__dirname, "../public/floreffe_analysis.json"),
+  JSON.stringify({ generated: new Date(), data: phase2ResultsSafe }, null, 2)
+);
+await addEngineLog("🧩 Phase 5 : commentaires renforcés et analyses détaillées exportés", "success", "floreffe");
+    
 // --- Export JSON local
 const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
 const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
