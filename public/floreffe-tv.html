@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex,nofollow" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>TINSFLASH • Floreffe TV</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+body{margin:0;background:#0a1224;color:#cde8ff;font-family:"Segoe UI",sans-serif;overflow:hidden;}
+header{text-align:center;background:linear-gradient(90deg,#051021,#15335c);color:#4fc3f7;font-size:2em;font-weight:bold;padding:10px;text-shadow:0 0 20px #4fc3f7;}
+#container{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto;gap:10px;padding:10px;height:calc(100vh - 60px);}
+.box{background:#101a33;border-radius:10px;padding:10px;box-shadow:0 0 20px rgba(0,0,0,.4);}
+#summary{grid-column:span 2;text-align:center;font-size:1.4em;background:#14294e;}
+#map{height:100%;border-radius:10px;}
+#alerts{overflow-y:auto;font-size:1em;}
+.alert{margin-bottom:6px;padding:8px;border-radius:6px;}
+.alert.red{background:#3a1111;color:#ffbaba;}
+.alert.orange{background:#3a2a11;color:#ffe9a0;}
+.alert.grey{background:#2a2a2a;color:#ccc;}
+iframe{width:100%;height:100%;border:none;border-radius:10px;}
+footer{text-align:center;font-size:.9em;color:#7dd3fc;background:#081021;padding:6px;}
+</style>
+</head>
+<body>
+<header>🌍 TINSFLASH – Dôme Floreffe (Mode TV)</header>
+
+<div id="container">
+  <div id="summary" class="box">Chargement des données...</div>
+  <div id="map" class="box"></div>
+  <div id="alerts" class="box">Chargement des alertes...</div>
+  <iframe src="hologram-floreffe.html" class="box"></iframe>
+</div>
+
+<footer>🛰 IA J.E.A.N. – Données réelles Floreffe • Actualisation automatique toutes les 15 min</footer>
+
+<script>
+async function loadData(){
+ try{
+  const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
+  const alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
+  renderSummary(forecasts.zones||[]);
+  renderMap(forecasts.zones||[],alerts||[]);
+  renderAlerts(alerts||[]);
+ }catch(e){console.error(e);}
+}
+
+function renderSummary(zones){
+ const avg=(arr,k)=>arr.length?arr.reduce((a,b)=>a+(b[k]??0),0)/arr.length:0;
+ const t=avg(zones,"temperature").toFixed(1);
+ const p=avg(zones,"precipitation").toFixed(1);
+ const w=avg(zones,"wind").toFixed(1);
+ const r=(avg(zones,"reliability")*100).toFixed(0);
+ document.getElementById("summary").innerHTML=
+ `<b>Commune de Floreffe</b> – 🌡 ${t}°C • 💧 ${p} mm/h • 🌬 ${w} km/h<br>Fiabilité IA : ${r}% – Points actifs : ${zones.length}/60`;
+}
+
+function renderMap(zones,alerts){
+ const map=L.map("map",{zoomControl:false,attributionControl:false}).setView([50.44,4.76],12);
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(map);
+ (zones||[]).forEach(z=>{
+  const m=L.circleMarker([z.lat,z.lon],{radius:5,color:"#3b82f6"}).addTo(map);
+  m.bindPopup(`<b>${z.name}</b><br>🌡 ${z.temperature?.toFixed(1)}°C<br>💧 ${z.precipitation?.toFixed(1)} mm/h<br>Fiabilité ${(z.reliability*100).toFixed(0)}%`);
+ });
+ (alerts||[]).forEach(a=>{
+  const r=a.reliability??a.confidence??0.8;
+  let color="#9ca3af";if(r>=0.9)color="#ef4444";else if(r>=0.7)color="#f59e0b";
+  L.circleMarker([a.lat,a.lon],{radius:7,color}).addTo(map);
+ });
+}
+
+function renderAlerts(list){
+ const c=document.getElementById("alerts");c.innerHTML="";
+ if(!list.length){c.innerHTML="<div>Aucune alerte active</div>";return;}
+ list.forEach(a=>{
+  const r=a.reliability??a.confidence??0.8;
+  let cls="grey";if(r>=0.9)cls="red";else if(r>=0.7)cls="orange";
+  const d=document.createElement("div");
+  d.className=`alert ${cls}`;
+  d.innerHTML=`<b>${a.type}</b> – ${a.zone||""}<br>${a.description||""}<br>Confiance ${(r*100).toFixed(0)}%`;
+  c.appendChild(d);
+ });
+}
+
+// refresh automatique
+loadData();
+setInterval(loadData,15*60*1000);
+</script>
+</body>
+</html>
