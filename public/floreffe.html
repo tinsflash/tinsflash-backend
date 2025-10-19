@@ -24,7 +24,8 @@ p{color:#e0e8f9;line-height:1.5;text-align:justify;}
 .intro-block img{border-radius:10px;width:140px;max-height:220px;object-fit:contain;box-shadow:0 0 18px rgba(0,0,0,.4);}
 .intro-text{flex:1;max-height:200px;overflow-y:auto;background:#131a2b;padding:12px;border-radius:10px;color:#e0e8f9;line-height:1.5;}
 .forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
-.forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:110px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.3);}
+.forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:130px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.3);}
+.forecast-card small{color:#9ca3af;}
 .map-container{height:360px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,.4);}
 .alert-section .alert-box{background:#1b2439;border-left:4px solid #4fc3f7;padding:8px;margin-bottom:8px;border-radius:8px;}
 .alert-surv{border-left-color:#9ca3af!important;background:#202837;color:#cbd5e1;}
@@ -33,33 +34,16 @@ p{color:#e0e8f9;line-height:1.5;text-align:justify;}
 .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
 .premium-box{background:#11203a;border:1px solid #4fc3f7;border-radius:10px;padding:14px;margin-top:25px;text-align:center;}
 .premium-box a{color:#4fc3f7;text-decoration:none;font-weight:bold;}
-.premium-box a:hover{text-decoration:underline;}
 footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:.9em;}
 footer a{color:#4fc3f7;text-decoration:none;}
-footer a:hover{text-decoration:underline;}
 select{padding:8px;margin:10px 0;border-radius:6px;border:1px solid #4fc3f7;background:#11203a;color:#f5faff;}
 .btn-ai{position:fixed;bottom:25px;right:25px;background:#4fc3f7;color:#000;font-weight:bold;border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;box-shadow:0 0 15px rgba(79,195,247,.6);font-size:18px;transition:transform .3s ease;z-index:999;}
 .btn-ai:hover{transform:scale(1.1);}
-.chat-box{position:fixed;bottom:90px;right:20px;background:#1b2439;border:2px solid #4fc3f7;border-radius:12px;width:320px;height:420px;display:none;flex-direction:column;box-shadow:0 0 15px rgba(0,0,0,.5);z-index:999;}
-.chat-header{background:#4fc3f7;color:#000;text-align:center;padding:6px;font-weight:bold;}
-.chat-messages{flex:1;padding:8px;overflow-y:auto;font-size:14px;background:#0e1423;}
-.chat-input{display:flex;border-top:1px solid #333;}
-.chat-input input{flex:1;padding:8px;border:none;background:#1b2339;color:#eee;}
-.chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
-#lock{position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;}
-#lock input{padding:8px;border-radius:6px;border:1px solid #4fc3f7;background:#11203a;color:#f5faff;margin-top:8px}
-#lock button{margin-top:8px;background:#1b2b44;color:#4fc3f7;border:1px solid #4fc3f7;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+#update-info{text-align:right;color:#7dd3fc;font-size:.85em;margin-bottom:10px;}
 </style>
 </head>
-<body>
-<div id="lock">
-<h2 style="color:#4fc3f7;margin:0 0 6px">🔒 Dôme IA Floreffe</h2>
-<div style="color:#7dd3fc">Accès réservé (services communaux)</div>
-<input type="password" id="pwd" placeholder="Mot de passe" />
-<button onclick="unlock()">Entrer</button>
-<div id="err" style="display:none;color:#ff8080;margin-top:8px;">Mot de passe incorrect.</div>
-</div>
 
+<body>
 <header>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</header>
 <div class="subheader">🛰 Données satellites • Modèles IA multi-sources • Analyse humaine combinée</div>
 <div class="video-container">
@@ -67,16 +51,19 @@ select{padding:8px;margin:10px 0;border-radius:6px;border:1px solid #4fc3f7;back
 <div class="video-overlay"></div><button class="sound-btn" id="soundToggle">🔇</button>
 </div>
 
-<main id="app" style="display:none;">
+<main id="app">
 <h2 class="intro-title">Présentation du système TINSFLASH IA J.E.A.N.</h2>
 <div class="intro-block">
-<img src="avatars/jean-default.png" alt="Avatar J.E.A.N"/><div class="intro-text">
+<img src="avatars/jean-default.png" alt="Avatar J.E.A.N"/>
+<div class="intro-text">
 <p>Le moteur <strong>TINSFLASH IA J.E.A.N.</strong> surveille en temps réel la commune de <b>Floreffe</b> et ses zones sensibles.</p>
 <p>Objectif : <b>anticiper verglas, ruissellements et inondations</b> pour les services communaux.</p>
-<p>Les analyses combinent données satellites, modèles météo et IA locale J.E.A.N., pondérées par le relief et l’altitude.</p>
-</div></div>
+<p>Les analyses combinent données satellites, modèles météo et IA locale J.E.A.N., pondérées par le relief, l’altitude et l’humidité du sol.</p>
+</div>
+</div>
 
 <h2>Météo locale — Maison communale (aujourd’hui)</h2>
+<div id="update-info">Mise à jour IA J.E.A.N. : <span id="updateTime">–</span></div>
 <div id="forecast-today" class="forecast-grid">Chargement…</div>
 
 <h2>Prévisions 7 jours — Maison communale</h2>
@@ -97,118 +84,125 @@ select{padding:8px;margin:10px 0;border-radius:6px;border:1px solid #4fc3f7;back
 <div class="banner">🌀 Radar 3D/4D interne bientôt disponible</div>
 
 <div class="premium-box">
-☎️ Service & Helpdesk : <b>TINSFLASH – Patrick Pynnaert</b><br/>
+☎️ <b>TINSFLASH – Patrick Pynnaert</b><br/>
 📞 <a href="tel:+32473264477">0473 26 44 77</a> – 💬 WhatsApp<br/>
 🔧 Partenaire diagnostics : <a href="https://www.uman-detect.com" target="_blank">Uman-Detect.com</a>
 </div>
 </main>
 
 <footer>© 2025 TINSFLASH – Tous droits réservés | <a href="rgpd.html">Politique RGPD</a><br/>
-📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a> | 💬 <a href="https://wa.me/32473264477" target="_blank">WhatsApp (contact Patrick)</a></footer>
-
-<button class="btn-ai" id="btnAI">🤖</button>
-<div class="chat-box" id="chatJean"><div class="chat-header">Assistant météo J.E.A.N.</div>
-<div class="chat-messages" id="chatMessages">
-<div style="color:#4fc3f7;padding:5px;">Pour discuter avec J.E.A.N., achetez vos crédits IA (5,90 €/100 questions).<br/>
-<a href="https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02" target="_blank" style="color:#7dd3fc;">👉 Acheter des crédits</a></div></div>
-<div class="chat-input"><input type="text" id="chatInput" placeholder="Posez votre question météo…" disabled/>
-<button disabled>Envoyer</button></div></div>
+📧 <a href="mailto:skysnapia@gmail.com">skysnapia@gmail.com</a></footer>
 
 <script>
-const PASSWORD="5150PV";
-function unlock(){const v=document.getElementById("pwd").value.trim();if(v===PASSWORD){document.getElementById("lock").style.display="none";document.getElementById("app").style.display="block";sessionStorage.setItem("floreffeAccess","ok");initFloreffe();}else document.getElementById("err").style.display="block";}
-if(sessionStorage.getItem("floreffeAccess")==="ok"){document.getElementById("lock").style.display="none";document.getElementById("app").style.display="block";initFloreffe();}
 const video=document.getElementById("introVideo"),soundToggle=document.getElementById("soundToggle");
 soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
-document.getElementById("btnAI").onclick=()=>{const c=document.getElementById("chatJean");c.style.display=c.style.display==="flex"?"none":"flex";};
 
 async function initFloreffe(){
-try{
-const forecastsObj=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
-const alertsRaw=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
-const general=forecastsObj?.general||{};const zones=Array.isArray(forecastsObj?.zones)?forecastsObj.zones:[];
-renderForecastToday(general);renderForecastWeek(general);
-const sel=document.getElementById("zoneSelect");sel.innerHTML="";
-zones.forEach(z=>{const o=document.createElement("option");o.value=z.name;o.textContent=z.name;sel.appendChild(o);});
-sel.onchange=()=>renderZone(zones.find(x=>x.name===sel.value),alertsRaw);
-if(zones.length)renderZone(zones[0],alertsRaw);
-renderAlerts(alertsRaw,true);renderMap(zones,alertsRaw);
-}catch(e){console.error(e);}
+ try{
+  const f=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
+  const a=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
+  document.getElementById("updateTime").textContent=new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+  renderForecastToday(f.general);
+  renderForecastWeek(f.general);
+  renderZones(f.zones||[],a);
+  renderAlerts(a,true);
+  renderMap(f.zones||[],a);
+ }catch(e){console.error(e);}
+}
+document.addEventListener("DOMContentLoaded",initFloreffe);
+
+// ===== Bloc météo locale détaillé =====
+function renderForecastToday(g){
+ const c=document.getElementById("forecast-today");
+ if(!g||!g.temp_min){c.textContent="Aucune donnée";return;}
+ const fiab=normalize(g.reliability);
+ const icon=getIcon(g.condition);
+ c.innerHTML=`
+ <div class='forecast-card'>
+   ${icon}<br>
+   <b>${g.temp_min}° / ${g.temp_max}°</b><br>
+   ${g.condition||"—"}<br>
+   🌡 Ressentie : ${fmt(g.feels_like,"°")}<br>
+   💧 Précip. : ${fmt(g.precipitation," mm/h")}<br>
+   🌬 Vent : ${fmt(g.wind_speed," km/h")}<br>
+   🔹 Fiabilité ${(fiab*100).toFixed(0)} %
+ </div>`;
 }
 
-function renderForecastToday(g){const c=document.getElementById("forecast-today");if(!g||g.temp_min==null){c.textContent="Aucune donnée";return;}
-const r=normalizeReliability(g.reliability);c.innerHTML=`<div class='forecast-card'>🌡️ <b>${g.temp_min}° / ${g.temp_max}°</b><br>🌦️ ${g.condition||"—"}<br>🔹 Fiabilité ${(r*100).toFixed(0)} %</div>`;}
-function renderForecastWeek(g){const c=document.getElementById("forecast-week");c.innerHTML='';const w=Array.isArray(g?.week)?g.week:[];if(!w.length){c.innerHTML="<div class='forecast-card'>Données 7 jours non disponibles</div>";return;}
-w.forEach(j=>{const d=document.createElement('div');d.className='forecast-card';d.innerHTML=`${j.day}<br><b>${j.temp_min}° / ${j.temp_max}°</b><br><small>${j.condition}</small>`;c.appendChild(d);});}
-function renderZone(z,alerts){const c=document.getElementById("zoneForecast");c.innerHTML="";if(!z){c.textContent="Aucune donnée";return;}
-const r=normalizeReliability(z.reliability);const card=document.createElement("div");card.className="forecast-card";
-card.innerHTML=`<b>${z.name}</b><br>${z.temperature??`${z.temp_min??"?"}° / ${z.temp_max??"?"}°`}<br><small>Fiabilité ${(r*100).toFixed(0)} %</small>`;c.appendChild(card);
-const zoneAlerts=(alerts||[]).filter(a=>(a.zone||"").toLowerCase().includes((z.name||"").toLowerCase()));if(zoneAlerts.length){const wrap=document.createElement("div");wrap.style.marginTop="8px";wrap.innerHTML=`<div class='alert-box' style='border-left-color:#7dd3fc'><b>Alertes pour ${z.name}</b></div>`;c.appendChild(wrap);renderAlerts(zoneAlerts,false,wrap);}}
-function renderAlerts(list,showNational=false,container=null){
-const c=container||document.getElementById("alerts-local");c.innerHTML="";
-const items=Array.isArray(list)?list:[];if(!items.length){c.innerHTML="<div class='alert-box'>Aucune alerte active</div>";return;}
-const norm=a=>{let r=a.reliability??a.confidence;if(typeof r!=="number")return null;return r>1?Math.max(0,Math.min(1,r/100)):Math.max(0,Math.min(1,r));};
-const makeSection=(title,cls,arr)=>{if(!arr.length)return"";let h=`<h3 style='margin-top:10px;'>${title}</h3>`;arr.forEach(a=>{const r=norm(a);const cclass=cls==="conf"?"alert-conf":cls==="val"?"alert-val":"alert-surv";
-h+=`<div class='alert-box ${cclass}'>
-<b>${a.type||"Alerte"}</b> – ${a.zone||"Zone ?"}<br>
-${a.description?`<small>${a.description}</small><br>`:""}<small>Confiance ${(r*100).toFixed(0)} %</small>
-${cls==="surv"?" 👁‍🗨 <small>En surveillance</small>":""}</div>`;});return h;};
-const isLocal=a=>(a.zone||"").toLowerCase().includes("floreffe");
-const loc=items.filter(isLocal);
-let html=makeSection("⚠️ Alertes confirmées (≥90 %)","conf",loc.filter(a=>norm(a)>=0.9));
-html+=makeSection("🟠 À valider (70 – 89 %)","val",loc.filter(a=>{const r=norm(a);return r!=null&&r>=0.7&&r<0.9;}));
-html+=makeSection("🟡 En surveillance (<70 %)","surv",loc.filter(a=>{const r=norm(a);return r!=null&&r<0.7;}));
-
-let htmlNational="";
-if(showNational){
-  const nat=items.filter(a=>!isLocal(a));
-  if(nat.length){
-    htmlNational=`<details style="margin-top:15px;">
-      <summary style="cursor:pointer;color:#7dd3fc;">🌍 Consulter les alertes nationales (${nat.length})</summary>
-      ${makeSection("Alertes nationales confirmées (≥90 %)","conf",nat.filter(a=>norm(a)>=0.9))}
-      ${makeSection("À valider (70 – 89 %)","val",nat.filter(a=>{const r=norm(a);return r!=null&&r>=0.7&&r<0.9;}))}
-      ${makeSection("En surveillance (<70 %)","surv",nat.filter(a=>{const r=norm(a);return r!=null&&r<0.7;}))}
-    </details>`;
-  }
-}
-c.innerHTML=(html.trim()?html:"<div class='alert-box'>Aucune alerte locale</div>")+htmlNational;
+// ===== Bloc semaine =====
+function renderForecastWeek(g){
+ const c=document.getElementById("forecast-week");c.innerHTML="";
+ const w=g?.week||[];
+ if(!w.length){c.innerHTML="<div class='forecast-card'>Données indisponibles</div>";return;}
+ w.forEach(j=>{
+  const ic=getIcon(j.condition);
+  c.innerHTML+=`<div class='forecast-card'>
+  ${ic}<br><b>${j.day}</b><br>${j.temp_min}° / ${j.temp_max}°<br><small>${j.condition}</small><br>
+  <small>Fiabilité ${(normalize(j.reliability)*100).toFixed(0)} %</small></div>`;
+ });
 }
 
-// ================== 🗺️ Carte Communale ==================
-function renderMap(zones,alerts){
-  const map=L.map("map-alerts").setView([50.44,4.76],12);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
-
-  // Points de prévision (bleus)
-  (zones||[]).forEach(f=>{
-    if(f.lat!=null&&f.lon!=null){
-      const marker=L.circleMarker([f.lat,f.lon],{radius:6,color:"#3b82f6"}).addTo(map);
-      const temp=f.temperature!=null?`${Number(f.temperature).toFixed(1)}°C`:`${f.temp_min??"?"}° / ${f.temp_max??"?"}°`;
-      marker.bindPopup(`<b>${f.name}</b><br>${temp}<br>${f.precipitation!=null?`${Number(f.precipitation).toFixed(1)} mm/h`:""}`);
-    }
-  });
-
-  // Alertes (rouges / oranges / jaunes / grises)
-  (alerts||[]).forEach(a=>{
-    const rel=a.reliability??a.confidence;
-    const r=typeof rel==="number"?(rel>1?rel/100:rel):null;
-    if(a.lat!=null&&a.lon!=null&&r!=null){
-      let color="#f87171";
-      if(r>=0.9) color="#ef4444";
-      else if(r>=0.7) color="#f59e0b";
-      else color="#9ca3af";
-      const marker=L.circleMarker([a.lat,a.lon],{radius:8,color}).addTo(map);
-      marker.bindPopup(`<b>${a.type||"Alerte"}</b><br>${a.zone||""}<br><small>${a.description||""}</small><br><small>Confiance ${Math.round(r*100)}%</small>`);
-    }
-  });
+// ===== Bloc par zone =====
+function renderZones(z,a){
+ const sel=document.getElementById("zoneSelect"),zoneDiv=document.getElementById("zoneForecast");
+ sel.innerHTML="";(z||[]).forEach(v=>{const o=document.createElement("option");o.value=v.name;o.textContent=v.name;sel.appendChild(o);});
+ sel.onchange=()=>renderZone(z.find(x=>x.name===sel.value),a);
+ if(z.length)renderZone(z[0],a);
+}
+function renderZone(z,alerts){
+ const c=document.getElementById("zoneForecast");c.innerHTML="";
+ if(!z){c.textContent="Aucune donnée";return;}
+ const fiab=normalize(z.reliability);
+ const ic=getIcon(z.condition);
+ c.innerHTML=`<div class='forecast-card'>
+ ${ic}<br><b>${z.name}</b><br>${z.temp_min}° / ${z.temp_max}°<br>
+ 💧 ${fmt(z.precipitation," mm/h")}<br>
+ 🌬 ${fmt(z.wind_speed," km/h")}<br>
+ 💨 Humidité ${fmt(z.humidity,"%")}<br>
+ 🔹 Fiabilité ${(fiab*100).toFixed(0)} %</div>`;
 }
 
-// ================== utilitaires ==================
-function normalizeReliability(r){
-  if(typeof r!=="number")return null;
-  return r>1?Math.max(0,Math.min(1,r/100)):Math.max(0,Math.min(1,r));
+// ===== Alertes =====
+function renderAlerts(list,showNational=false){
+ const c=document.getElementById("alerts-local");c.innerHTML="";
+ const l=Array.isArray(list)?list:[];if(!l.length){c.innerHTML="<div class='alert-box'>Aucune alerte active</div>";return;}
+ const norm=x=>normalize(x.confidence||x.reliability);
+ const sec=(t,cls,arr)=>arr.map(a=>`<div class='alert-box ${cls}'>⚠️ <b>${a.type}</b> – ${a.zone}<br><small>${a.description||""}</small><br><small>Confiance ${(norm(a)*100).toFixed(0)} %</small></div>`).join("");
+ let html=sec("conf","alert-conf",l.filter(a=>norm(a)>=.9));
+ html+=sec("val","alert-val",l.filter(a=>norm(a)>=.7&&norm(a)<.9));
+ html+=sec("surv","alert-surv",l.filter(a=>norm(a)<.7));
+ c.innerHTML=html||"<div class='alert-box'>Aucune alerte locale</div>";
 }
-function fmt(v,unit){return(v==null||isNaN(v))?null:`${Number(v).toFixed(1)}${unit||""}`;}
+
+// ===== Carte =====
+function renderMap(z,a){
+ const m=L.map("map-alerts").setView([50.44,4.76],12);
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(m);
+ (z||[]).forEach(f=>{
+  if(f.lat&&f.lon)L.circleMarker([f.lat,f.lon],{radius:6,color:"#3b82f6"}).addTo(m)
+   .bindPopup(`<b>${f.name}</b><br>${f.temp_min}° / ${f.temp_max}°<br>${f.condition||""}`);
+ });
+ (a||[]).forEach(x=>{
+  const r=normalize(x.confidence),clr=r>=.9?"#ef4444":r>=.7?"#f59e0b":"#9ca3af";
+  if(x.lat&&x.lon)L.circleMarker([x.lat,x.lon],{radius:8,color:clr}).addTo(m)
+   .bindPopup(`<b>${x.type}</b><br>${x.zone}<br><small>${x.description}</small><br><small>Confiance ${(r*100).toFixed(0)} %</small>`);
+ });
+}
+
+// ===== Utils =====
+function normalize(r){return typeof r!=="number"?0:r>1?r/100:r;}
+function fmt(v,u){return v==null||isNaN(v)?"—":`${Number(v).toFixed(1)}${u||""}`;}
+function getIcon(cond){
+ const c=(cond||"").toLowerCase();
+ if(c.includes("pluie"))return"🌧️";
+ if(c.includes("averse"))return"🌦️";
+ if(c.includes("soleil"))return"☀️";
+ if(c.includes("éclair"))return"⛅";
+ if(c.includes("vent"))return"🌬️";
+ if(c.includes("neige"))return"❄️";
+ if(c.includes("brouillard"))return"🌫️";
+ return"🌡️";
+}
 </script>
 </body>
 </html>
