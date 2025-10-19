@@ -9,14 +9,18 @@
 <style>
 html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial}
 #info{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.4);padding:8px 12px;border-radius:6px;font-size:14px;}
+#angleBtn{position:fixed;top:10px;right:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
+padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s}
+#angleBtn:hover{background:#7de0ff;color:#000;}
 </style>
 </head>
 <body>
-<div id="info">🌍 Dôme Floreffe – Mode test local (JSON)</div>
+<div id="info">🌍 Dôme Floreffe – Données locales (relief + alertes météo)</div>
+<button id="angleBtn">Vue 45°</button>
 <canvas id="scene"></canvas>
 
 <script>
-let scene,camera,renderer,controls,terrainMesh,alertGroup;
+let scene,camera,renderer,controls,terrainMesh,alertGroup,angleMode=false;
 
 init();
 animate();
@@ -40,39 +44,37 @@ async function init(){
   halo.rotation.x=Math.PI/2;
   scene.add(halo);
 
-  // Lumière
+  // Lumières
   const light=new THREE.PointLight(0x66ccff,1.5,600);
   light.position.set(0,200,0);
   scene.add(light);
-
   scene.add(new THREE.AmbientLight(0x447799,0.4));
 
-  // Charger relief
+  // Charger relief (simplifié en test)
   const alt=await fetch("floreffe_altitudes.json").then(r=>r.json());
   createTerrain(alt);
 
-  // Charger alertes
-  const alerts=await fetch("floreffe_alerts.json").then(r=>r.json());
+  // Charger alertes réelles
+  const alerts=await fetch("floreffe_alertes.json").then(r=>r.json());
   renderAlerts(alerts);
 
   window.addEventListener("resize",onResize);
+  document.getElementById("angleBtn").onclick=()=>switchAngle();
 }
 
 function createTerrain(points){
   const geometry=new THREE.PlaneGeometry(240,240,30,30);
   geometry.rotateX(-Math.PI/2);
-  // Interpolation simple : hauteur par proximité
-  geometry.verticesNeedUpdate=true;
   const pos=geometry.attributes.position;
   for(let i=0;i<pos.count;i++){
-    const vx=pos.getX(i)/2+50.44; // approx centre Floreffe
+    const vx=pos.getX(i)/2+50.44;
     const vz=pos.getZ(i)/2+4.76;
     const closest=points.reduce((a,b)=>{
       const da=(vx-b.lat)**2+(vz-b.lon)**2;
       const db=(vx-a.lat)**2+(vz-a.lon)**2;
       return da<db?b:a;
     });
-    const h=(closest.alt-80)/2; // élévation relative
+    const h=(closest.alt-80)/2;
     pos.setY(i,h);
   }
   pos.needsUpdate=true;
@@ -86,11 +88,14 @@ function createTerrain(points){
 function renderAlerts(list){
   alertGroup=new THREE.Group();
   list.forEach(a=>{
-    const geom=new THREE.SphereGeometry(2,12,12);
-    const col=a.level==="rouge"?0xff3333:0xff9900;
+    const geom=new THREE.SphereGeometry(2.5,12,12);
+    const col=a.type.includes("Verglas")?0x66ccff:
+              a.type.includes("Pluie")?0x33aaff:
+              a.type.includes("Vent")?0xff9900:0xff0000;
     const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9});
     const s=new THREE.Mesh(geom,mat);
-    s.position.set((a.lat-50.44)*2,(a.alt-80)/2,(a.lon-4.76)*2);
+    s.position.set((a.lat-50.44)*200,(a.reliability*100)/2,(a.lon-4.76)*200);
+    s.userData={zone:a.zone,type:a.type,desc:a.description};
     alertGroup.add(s);
   });
   scene.add(alertGroup);
@@ -102,11 +107,20 @@ function animate(){
   if(alertGroup){
     const t=Date.now()*0.003;
     alertGroup.children.forEach((s,i)=>{
-      s.scale.setScalar(1+0.2*Math.sin(t+i));
+      s.scale.setScalar(1+0.25*Math.sin(t+i));
       s.material.opacity=0.5+0.4*Math.abs(Math.sin(t+i));
     });
   }
   renderer.render(scene,camera);
+}
+
+function switchAngle(){
+  angleMode=!angleMode;
+  if(angleMode){
+    camera.position.set(200,200,200);
+  }else{
+    camera.position.set(0,150,250);
+  }
 }
 
 function onResize(){
