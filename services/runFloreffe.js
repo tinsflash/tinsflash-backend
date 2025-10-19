@@ -498,16 +498,8 @@ return { success: true, alerts: alerts.length };
 // ==========================================================
 // 🔚 Export compatible ESM (Render + Node 22.x)
 // ==========================================================
-// ==========================================================
-// 🔚 Export compatible Render (ESM forcé Node 22)
-// ==========================================================
 
-// Ce petit test force Render à reconnaître le module comme ESM
-// même si le cache ou package-lock est resté bloqué en CommonJS.
-try {
-  // @ts-ignore
-  export { runFloreffe, superForecastLocal };
-} catch {
-  // Fallback CJS silencieux pour Render
-  module.exports = { runFloreffe, superForecastLocal };
-}
+// ==========================================================
+// ✅ Export ESM standard et propre (compatible Node 22 / Render)
+// ==========================================================
+export { runFloreffe, superForecastLocal };
