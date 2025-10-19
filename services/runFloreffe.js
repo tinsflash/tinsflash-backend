@@ -381,89 +381,120 @@ for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
     await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
 
     // === PHASE 5 — Fusion + Export ===
-    const enriched = Array.isArray(phase2Results) && phase2Results.length
-      ? phase2Results.map(x => ({
-          ...x,
-          origin: "Floreffe_dome",
-          timestamp: new Date(),
-          thresholds: ALERT_THRESHOLDS
-        }))
-      : [];
 
-    if (!enriched.length) {
-      await addEngineError("[Floreffe] ⚠️ Phase 2 vide – aucun enrichissement", "floreffe");
-      return { success: false, error: "Phase 2 vide" };
-    }
+    // ==========================================================
+// 🌍 PHASE 5 — FUSION COMPLÈTE + EXPORT FINAL (Everest Protocol v6.5.1 PRO+++ AUTONOME)
+// ==========================================================
+try {
+  await addEngineLog("🧠 [Floreffe] Phase 5 — Fusion IA + physique + export global en cours...", "info", "floreffe");
 
-    const alerts = enriched.map(x => {
-      const rainHit = x.risk?.pluie >= ALERT_THRESHOLDS.rain.alert;
-      const iceHit = x.risk?.verglas >= ALERT_THRESHOLDS.cold.alert;
-      if (!rainHit && !iceHit) return null;
+  // 🔹 Charger les données réelles précédentes
+  const phase1 = await db.collection("floreffe_phase1").find({}).toArray();
+  const phase2 = await db.collection("floreffe_phase2").find({}).toArray();
 
-      const type = rainHit ? "pluie" : "verglas";
-      const level = rainHit && x.risk.pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
-      const confidence = x.confidence ?? x.reliability ?? 0.9;
+  // 🔹 Fusion intelligente
+  const fused = [];
+  for (const p1 of phase1) {
+    const p2 = phase2.find(p =>
+      Math.abs(p1.lat - p.lat) < 0.01 &&
+      Math.abs(p1.lon - p.lon) < 0.01
+    );
+
+    const fusedObj = {
+      zone: "Floreffe",
+      lat: p1.lat,
+      lon: p1.lon,
+      name: p1.name || p2?.name,
+      temperature: p2?.temperature ?? p1.temperature,
+      precipitation: p2?.precipitation ?? p1.precipitation,
+      wind: p2?.wind ?? p1.wind,
+      reliability: +((
+        (p1.reliability ?? 0.5) +
+        (p2?.reliability ?? 0.5)
+      ) / 2).toFixed(2),
+      risk: p2?.risk ?? {},
+      origin: "Floreffe_dome",
+      timestamp: new Date(),
+      thresholds: ALERT_THRESHOLDS
+    };
+    fused.push(fusedObj);
+  }
+
+  // 🔹 Calcul de moyennes locales pour monitoring
+  const avg = arr => (arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0);
+  const meanTemp = avg(fused.map(f => f.temperature ?? 0)).toFixed(1);
+  const meanRain = avg(fused.map(f => f.precipitation ?? 0)).toFixed(1);
+  const meanWind = avg(fused.map(f => f.wind ?? 0)).toFixed(1);
+  await addEngineLog(`🌡️ Moyennes locales : T=${meanTemp}°C / P=${meanRain} mm / W=${meanWind} km/h`, "info", "floreffe");
+
+  // 🔹 Génération des alertes locales fusionnées
+  const alerts = fused
+    .map(x => {
+      const rainHit = x.precipitation >= ALERT_THRESHOLDS.rain.alert;
+      const iceHit = x.temperature <= ALERT_THRESHOLDS.cold.alert;
+      const windHit = x.wind >= ALERT_THRESHOLDS.wind.alert;
+      if (!rainHit && !iceHit && !windHit) return null;
+
+      let type = rainHit ? "Alerte Pluie forte" :
+                 iceHit ? "Alerte Verglas" :
+                 "Alerte Vent fort";
+      let desc =
+        rainHit
+          ? `Cumul horaire > ${ALERT_THRESHOLDS.rain.alert} mm/h`
+          : iceHit
+            ? `Températures < ${ALERT_THRESHOLDS.cold.alert} °C → verglas possible`
+            : `Rafales ≥ ${ALERT_THRESHOLDS.wind.alert} km/h`;
+      const level =
+        (rainHit && x.precipitation >= ALERT_THRESHOLDS.rain.extreme) ||
+        (windHit && x.wind >= ALERT_THRESHOLDS.wind.extreme)
+          ? "rouge" : "orange";
 
       return {
-        name: x.name,
-        zone: "Floreffe",
+        type,
+        zone: x.name || "Floreffe",
+        description: desc,
+        reliability: x.reliability ?? 0.9,
         lat: x.lat,
         lon: x.lon,
-        type,
         level,
-        reliability: confidence,
-        description:
-          confidence >= 0.9
-            ? "Alerte confirmée"
-            : confidence >= 0.7
-            ? "Alerte à valider"
-            : "En surveillance",
         timestamp: new Date()
       };
-    }).filter(Boolean);
+    })
+    .filter(Boolean);
 
-    await db.collection("alerts_floreffe").deleteMany({});
-    if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
+  // 🔹 Sauvegarde Mongo locale
+  await db.collection("floreffe_phase5").deleteMany({});
+  await db.collection("floreffe_phase5").insertMany(fused);
+  await db.collection("alerts_floreffe").deleteMany({});
+  if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 
-    await addEngineLog(`[Floreffe] Sauvegarde Mongo locale (${alerts.length} alertes)`, "success", "floreffe");
+  await addEngineLog(`✅ [Floreffe] Fusion/Export local OK (${fused.length} points, ${alerts.length} alertes)`, "success", "floreffe");
 
-    // --- Export JSON local
-    const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
-    const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
-    const forecastRange = "J+0 → J+5";
+  // 🔹 Export JSON public
+  const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
+  const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
+  const forecastRange = "J+0 → J+5";
 
-    await fs.promises.writeFile(
-      forecastsPath,
-      JSON.stringify({ generated: new Date(), range: forecastRange, zones: enriched }, null, 2)
-    );
-    await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
+  await fs.promises.writeFile(
+    forecastsPath,
+    JSON.stringify({ generated: new Date(), range: forecastRange, zones: fused }, null, 2)
+  );
+  await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
 
-    await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
+  await addEngineLog(`📤 [Floreffe] Export JSON public terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-    // --- Synchronisation Mongo Cloud global
-    await addEngineLog("[Floreffe] Synchronisation Mongo Cloud en cours...", "info", "floreffe");
+  // 🔹 Synchronisation Mongo Cloud Global
+  await db.collection("forecasts").updateOne(
+    { zone: "Floreffe" },
+    { $set: { zone: "Floreffe", data: fused } },
+    { upsert: true }
+  );
+  await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
+  if (alerts.length) await db.collection("alerts").insertMany(alerts);
 
-    await db.collection("forecasts").updateOne(
-      { zone: "Floreffe" },
-      { $set: { zone: "Floreffe", data: enriched } },
-      { upsert: true }
-    );
-
-    await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
-    if (alerts.length) await db.collection("alerts").insertMany(alerts);
-
-    await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
-
-    await mongo.close();
-    await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
-    await sleep(250);
-    return { success: true, alerts: alerts.length };
-
-  } catch (err) {
-    await addEngineError(`[Floreffe] ❌ Erreur critique : ${err.message}`, "floreffe");
-    await mongo.close();
-    return { success: false, error: err.message };
-  }
+  await addEngineLog("💾 [Floreffe] Synchronisation Mongo Cloud terminée.", "success", "floreffe");
+} catch (err) {
+  await addEngineError(`[Floreffe] ❌ Erreur Phase 5 — Fusion/Export : ${err.message}`, "floreffe");
 }
 
 // ==========================================================
