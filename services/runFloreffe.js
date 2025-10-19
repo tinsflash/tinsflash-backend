@@ -23,7 +23,7 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 function getDateYMD(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -39,7 +39,7 @@ const ALERT_THRESHOLDS = {
   snow:     { prealert: 0.8, alert: 2,  extreme: 6,  unit: "cm/h" },
   wind:     { prealert: 55, alert: 70, extreme: 95, unit: "km/h" },
   heat:     { prealert: 29, alert: 34, extreme: 38, unit: "°C" },
-  cold:     { prealert: -3, alert: -7, extreme: -12, unit: "°C" },
+  cold:     { prealert: -1, alert: -7, extreme: -12, unit: "°C" },
   humidity: { prealert: 93, alert: 97, extreme: 100, unit: "%" },
   visionia: { prealert: 70, alert: 82, extreme: 90, unit: "%" },
 };
@@ -299,8 +299,8 @@ for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
       await addEngineError(`[Floreffe] ⚠️ Aucun résultat valide pour J+${dayOffset}`, "floreffe");
     }
 
-    // courte pause (30 s au lieu de 2 min)
-    await sleep(30000);
+    // courte pause (2 min)
+    await sleep(120000);
   } catch (e) {
     await addEngineError(`[Floreffe] ❌ Erreur extraction J+${dayOffset} : ${e.message}`, "floreffe");
   }
@@ -330,6 +330,11 @@ await addEngineLog(
     await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
     await addEngineLog("✅ Corrélation topographique / hydrologique appliquée", "success", "floreffe");
 
+    // ⏳ Temporisation avant Phase 2
+await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
+await sleep(120000); // 2 minutes
+
+    
     // === PHASE 2 — IA J.E.A.N. locale (multi-jours)
     await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
 
@@ -385,6 +390,10 @@ await addEngineLog(
     const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
     await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
 
+    // ⏳ Temporisation avant Phase 5
+await addEngineLog("⏳ Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
+await sleep(120000); // 2 min
+    
     // === PHASE 5 — Fusion + Export ===
  // === PHASE 5 — Fusion + Export (sécurisée & auto-déclenchement) ===
 await addEngineLog("[Floreffe] Phase 5 — Fusion IA + Export global en cours...", "info", "floreffe");
