@@ -267,7 +267,7 @@ async function runFloreffe() {
 
     console.log("✅ [TINSFLASH] Démarrage Floreffe — Everest Protocol v6.5.1 (Fix DoubleLoop)");
 
-    // === PHASE 1 – Extraction multi-modèles locale sur 7 jours ===
+    
     // === PHASE 1 – Extraction multi-modèles locale sur 7 jours (intégration progressive) ===
 const phase1Results = [];
 const forecastDays = 5;
@@ -334,66 +334,100 @@ await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "flo
 await sleep(120000); // 2 minutes
 
     
-    // === PHASE 2 — IA J.E.A.N. locale (multi-jours)
-    await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
+    
+    // === PHASE 2 — IA J.E.A.N. locale (multi-jours, compatible GPT-5) ===
+await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
 
-    let phase1Data = phase1Results;
+let phase1Data = phase1Results;
 
-    if (!phase1Data?.length) {
-      const reload = await db.collection("floreffe_phase1").find({}).toArray();
-      if (reload?.length) {
-        phase1Data = reload;
-        await addEngineLog(`[Floreffe] 🔁 Données Phase 1 rechargées (${reload.length})`, "info", "floreffe");
-      } else {
-        await addEngineError("[Floreffe] ⚠️ Aucune donnée Phase 1 pour IA J.E.A.N.", "floreffe");
-        phase1Data = [];
-      }
-    }
+// 🔁 Recharge de secours si Phase 1 vide
+if (!phase1Data?.length) {
+  const reload = await db.collection("floreffe_phase1").find({}).toArray();
+  if (reload?.length) {
+    phase1Data = reload;
+    await addEngineLog(`[Floreffe] 🔁 Données Phase 1 rechargées (${reload.length})`, "info", "floreffe");
+  } else {
+    await addEngineError("[Floreffe] ⚠️ Aucune donnée Phase 1 disponible pour IA J.E.A.N.", "floreffe");
+    phase1Data = [];
+  }
+}
 
-    const chunkSize = 200;
-    const chunks = [];
-    for (let i = 0; i < phase1Data.length; i += chunkSize)
-      chunks.push(phase1Data.slice(i, i + chunkSize));
+const chunkSize = 200;
+const chunks = [];
+for (let i = 0; i < phase1Data.length; i += chunkSize)
+  chunks.push(phase1Data.slice(i, i + chunkSize));
 
-    let phase2Results = [];
-    const startPhase2 = Date.now();
+let phase2Results = [];
+const startPhase2 = Date.now();
 
-    for (const [index, chunk] of chunks.entries()) {
-      const aiPrompt = `${FLOREFFE_IA_PROMPT}\n\nAnalyse locale J.E.A.N. — paquet ${index + 1}/${chunks.length} (${chunk.length} points) :\n${JSON.stringify(chunk)}`;
-      try {
-        const ai = await openai.chat.completions.create({
-          model: "gpt-5",
-          messages: [{ role: "user", content: aiPrompt }],
-          temperature: 0.8,
-        });
+for (const [index, chunk] of chunks.entries()) {
+  // 🧠 Construction du prompt détaillé
+  const aiPrompt = `
+${FLOREFFE_IA_PROMPT}
 
-        const raw = ai.choices?.[0]?.message?.content?.trim() || "";
-        const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-        if (!jsonMatch) throw new Error("Aucune structure JSON détectée");
+Analyse locale J.E.A.N. — paquet ${index + 1}/${chunks.length} (${chunk.length} points) :
 
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (Array.isArray(parsed)) phase2Results.push(...parsed);
-        else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
+Voici les données physiques extraites en Phase 1 (réelles, non simulées) pour analyse :
+${JSON.stringify(chunk, null, 2)}
 
-        await addEngineLog(`[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length}`, "success", "floreffe");
-        await sleep(2000);
-      } catch (err) {
-        await addEngineError(`[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1} : ${err.message}`, "floreffe");
-        await sleep(1000);
-      }
-    }
+Retourne STRICTEMENT un tableau JSON où chaque entrée contient :
+{
+  "id": "FLO_01",
+  "name": "Maison communale",
+  "dayOffset": 0,
+  "temperature": 7.5,
+  "precipitation": 2.3,
+  "wind": 18.2,
+  "risk": {
+    "pluie": 0.7,
+    "verglas": 0.2,
+    "vent": 0.4,
+    "brouillard": 0.6,
+    "inondation": 0.5
+  },
+  "reliability": 0.92,
+  "commentaire": "Risque de bruine faible avec vent modéré, vigilance ruissellement",
+  "confidence": 0.9
+}
+Ne commente rien hors JSON.
+  `;
 
-    await db.collection("floreffe_phase2").deleteMany({});
-    if (phase2Results.length) await db.collection("floreffe_phase2").insertMany(phase2Results);
+  try {
+    const ai = await openai.responses.create({
+      model: "gpt-5",
+      input: [
+        { role: "system", content: "Tu es J.E.A.N., IA météo-hydrologique locale experte de Floreffe (Belgique)." },
+        { role: "user", content: aiPrompt }
+      ],
+    });
 
-    const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
-    await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
+    const raw = ai.output_text?.trim() || "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error("Aucune structure JSON détectée dans la réponse IA");
 
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (Array.isArray(parsed)) phase2Results.push(...parsed);
+    else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
+
+    await addEngineLog(`[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length}`, "success", "floreffe");
+    await sleep(120000);
+  } catch (err) {
+    await addEngineError(`[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1} : ${err.message}`, "floreffe");
+    await sleep(120000);
+  }
+}
+
+// 💾 Sauvegarde Mongo Phase 2
+await db.collection("floreffe_phase2").deleteMany({});
+if (phase2Results.length) await db.collection("floreffe_phase2").insertMany(phase2Results);
+
+const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
+await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
     // ⏳ Temporisation avant Phase 5
 await addEngineLog("⏳ Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(120000); // 2 min
     
-    // === PHASE 5 — Fusion + Export ===
+    
  // === PHASE 5 — Fusion + Export (sécurisée & auto-déclenchement) ===
 await addEngineLog("[Floreffe] Phase 5 — Fusion IA + Export global en cours...", "info", "floreffe");
 
