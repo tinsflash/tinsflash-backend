@@ -130,28 +130,36 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       ];
 
       for (const m of models) {
-        try {
-          const options = { timeout: 15000 };
-          if (m.headers) options.headers = m.headers;
-          const r = await axios.get(m.url, options);
+  try {
+    await addEngineLog(`📡 [SuperForecast] Test du modèle ${m.name}`, "info", "superForecast");
 
-          let T = null, P = 0, W = null;
+    const options = { timeout: 15000 };
+    if (m.headers) options.headers = m.headers;
+    const r = await axios.get(m.url, options);
 
-          if (r.data?.hourly?.time) {
-            const times = r.data.hourly.time;
-            const idx = times.findIndex((t) => t.includes("12:00"));
-            T = r.data.hourly.temperature_2m?.[idx] ?? null;
-            P = r.data.hourly.precipitation?.[idx] ?? 0;
-            W = r.data.hourly.wind_speed_10m?.[idx] ?? null;
-          }
+    let T = null, P = 0, W = null;
 
-          push({ source: m.name, temperature: T, precipitation: P, wind: W });
-        } catch (e) {
-          await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
-        }
-        await sleep(200);
-      }
+    if (r.data?.hourly?.time) {
+      const times = r.data.hourly.time;
+      const idx = times.findIndex((t) => t.includes("12:00"));
+      T = r.data.hourly.temperature_2m?.[idx] ?? null;
+      P = r.data.hourly.precipitation?.[idx] ?? 0;
+      W = r.data.hourly.wind_speed_10m?.[idx] ?? null;
+    }
 
+    push({ source: m.name, temperature: T, precipitation: P, wind: W });
+
+    await addEngineLog(
+      `✅ [SuperForecast] ${m.name} OK → T=${T ?? "?"}°C, P=${P ?? "?"}mm, W=${W ?? "?"}km/h`,
+      "success",
+      "superForecast"
+    );
+  } catch (e) {
+    await addEngineError(`💥 [SuperForecast] ${m.name} indisponible : ${e.message}`, "superForecast");
+  }
+
+  await sleep(200);
+}
       const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
       const reliability = +(valid.length / (models.length || 1)).toFixed(2);
