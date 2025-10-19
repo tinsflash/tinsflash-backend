@@ -3,26 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>TINSFLASH – Dôme 3D Floreffe</title>
+<title>TINSFLASH – Dôme holographique Floreffe</title>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial}
 #info{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.4);padding:8px 12px;border-radius:6px;font-size:14px;}
-#angleBtn{position:fixed;top:10px;right:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
-padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s}
-#angleBtn:hover{background:#7de0ff;color:#000;}
+#angleBtn,#resBtn{position:fixed;top:10px;right:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
+padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s;margin-left:6px;}
+#angleBtn:hover,#resBtn:hover{background:#7de0ff;color:#000;}
+#resBtn{right:120px;}
 </style>
 </head>
 <body>
-<div id="info">🌍 Dôme Floreffe – relief réel + alertes TINSFLASH</div>
+<div id="info">🌍 Dôme Floreffe – Données locales (relief + alertes météo)</div>
+<button id="resBtn">Relief HR</button>
 <button id="angleBtn">Vue 45°</button>
 <canvas id="scene"></canvas>
 
 <script>
 let scene,camera,renderer,controls,terrainMesh,alertGroup,angleMode=false;
+let currentRes = "std";
 
-init(); animate();
+init();
+animate();
 
 async function init(){
   const canvas=document.getElementById("scene");
@@ -30,29 +34,43 @@ async function init(){
   renderer.setSize(window.innerWidth,window.innerHeight);
   scene=new THREE.Scene();
   camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,1,2000);
-  camera.position.set(0,200,280);
+  camera.position.set(0,150,250);
   controls=new THREE.OrbitControls(camera,renderer.domElement);
-  controls.autoRotate=true; controls.autoRotateSpeed=0.5; controls.enableDamping=true;
+  controls.autoRotate=true;
+  controls.autoRotateSpeed=0.6;
+  controls.enableDamping=true;
 
   // Halo
   const haloGeom=new THREE.RingGeometry(120,130,64);
-  const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.25});
-  const halo=new THREE.Mesh(haloGeom,haloMat); halo.rotation.x=Math.PI/2; scene.add(halo);
+  const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.2});
+  const halo=new THREE.Mesh(haloGeom,haloMat);
+  halo.rotation.x=Math.PI/2;
+  scene.add(halo);
 
   // Lumières
-  scene.add(new THREE.PointLight(0x66ccff,1.4,600));
-  scene.add(new THREE.AmbientLight(0x335577,0.5));
+  const light=new THREE.PointLight(0x66ccff,1.5,600);
+  light.position.set(0,200,0);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x447799,0.4));
 
-  const topo=await fetch("floreffe_topoMeteo.json").then(r=>r.json());
-  createTerrain(topo.zones);
-  renderAlerts(topo.zones.flatMap(z=>z.alerts.map(a=>({...a,lat:z.lat,lon:z.lon}))));
+  // Charger relief standard au départ
+  const altStd = await fetch("floreffe_altitudes.json").then(r=>r.json());
+  createTerrain(altStd);
+
+  // Charger alertes
+  const alerts=await fetch("floreffe_alertes.json").then(r=>r.json());
+  renderAlerts(alerts);
+
+  // Boutons
+  document.getElementById("angleBtn").onclick=()=>switchAngle();
+  document.getElementById("resBtn").onclick=()=>switchResolution();
 
   window.addEventListener("resize",onResize);
-  document.getElementById("angleBtn").onclick=()=>switchAngle();
 }
 
 function createTerrain(points){
-  const geometry=new THREE.PlaneGeometry(240,240,60,60);
+  if(terrainMesh) scene.remove(terrainMesh);
+  const geometry=new THREE.PlaneGeometry(240,240,30,30);
   geometry.rotateX(-Math.PI/2);
   const pos=geometry.attributes.position;
   for(let i=0;i<pos.count;i++){
@@ -63,11 +81,13 @@ function createTerrain(points){
       const db=(vx-a.lat)**2+(vz-a.lon)**2;
       return da<db?b:a;
     });
-    const h=(closest.alt-70)*1.5;
+    const h=(closest.alt-80)/2;
     pos.setY(i,h);
   }
   pos.needsUpdate=true;
-  const mat=new THREE.MeshBasicMaterial({color:0x33ccff,wireframe:true,transparent:true,opacity:0.7});
+  const mat=new THREE.MeshBasicMaterial({
+    color:0x33ccff,wireframe:true,transparent:true,opacity:0.6
+  });
   terrainMesh=new THREE.Mesh(geometry,mat);
   scene.add(terrainMesh);
 }
@@ -75,16 +95,34 @@ function createTerrain(points){
 function renderAlerts(list){
   alertGroup=new THREE.Group();
   list.forEach(a=>{
-    const geom=new THREE.SphereGeometry(3,12,12);
+    const geom=new THREE.SphereGeometry(2.5,12,12);
     const col=a.type.includes("Verglas")?0x66ccff:
               a.type.includes("Pluie")?0x33aaff:
               a.type.includes("Vent")?0xff9900:0xff0000;
     const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9});
     const s=new THREE.Mesh(geom,mat);
-    s.position.set((a.lat-50.44)*200,(a.reliability*100)/1.5,(a.lon-4.76)*200);
+    s.position.set((a.lat-50.44)*200,(a.reliability*100)/2,(a.lon-4.76)*200);
+    s.userData={zone:a.zone,type:a.type,desc:a.description};
     alertGroup.add(s);
   });
   scene.add(alertGroup);
+}
+
+async function switchResolution(){
+  const btn=document.getElementById("resBtn");
+  if(currentRes==="std"){
+    btn.textContent="Relief STD";
+    currentRes="hr";
+    const altHR = await fetch("floreffe_altitudes_hr.json").then(r=>r.json());
+    createTerrain(altHR);
+    console.log("🔁 Relief haute résolution chargé !");
+  } else {
+    btn.textContent="Relief HR";
+    currentRes="std";
+    const altStd = await fetch("floreffe_altitudes.json").then(r=>r.json());
+    createTerrain(altStd);
+    console.log("🔁 Relief standard rechargé !");
+  }
 }
 
 function animate(){
@@ -102,8 +140,13 @@ function animate(){
 
 function switchAngle(){
   angleMode=!angleMode;
-  camera.position.set(angleMode?200:0,150,angleMode?200:250);
+  if(angleMode){
+    camera.position.set(200,200,200);
+  }else{
+    camera.position.set(0,150,250);
+  }
 }
+
 function onResize(){
   camera.aspect=window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
