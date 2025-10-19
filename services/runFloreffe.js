@@ -497,6 +497,7 @@ await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "flo
 await sleep(250);
 return { success: true, alerts: alerts.length }; 
   }
+}
 // ==========================================================
 // 🔚 Export universel compatible Node 22 / Render (CommonJS)
 // ==========================================================
