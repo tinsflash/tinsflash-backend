@@ -490,7 +490,10 @@ await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
 if (alerts.length) await db.collection("alerts").insertMany(alerts);
 
 await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
-
+// Génération relief NGI + fusion météo
+import { exec } from "child_process";
+exec("node ./services/generateFloreffeAltitudes.js && node ./services/fuseTopoMeteo.js");
+    
 // --- Clôture propre
 await mongo.close();
 await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
