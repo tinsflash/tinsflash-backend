@@ -269,52 +269,54 @@ async function runFloreffe() {
     console.log("✅ [TINSFLASH] Démarrage Floreffe — Everest Protocol v6.5.1 (Fix DoubleLoop)");
 
     // === PHASE 1 – Extraction multi-modèles locale sur 7 jours ===
-    const phase1Results = [];
-    const forecastDays = 5;
+    // === PHASE 1 – Extraction multi-modèles locale sur 7 jours ===
+const phase1Results = [];
+const forecastDays = 5;
 
-    for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
+for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
+  try {
+    await addEngineLog(`🌀 [Floreffe] Phase 1 — Extraction physique J+${dayOffset}`, "info", "floreffe");
+
+    const res = await superForecastLocal({
+      zones: FLOREFFE_POINTS,
+      runType: "Floreffe",
+      dayOffset
+    });
+
+    if (res?.success && res.phase1Results?.length) {
+      const now = new Date();
+      const stamped = res.phase1Results.map(p => ({
+        ...p,
+        timestamp: now,
+        hour: now.toISOString().split("T")[1].slice(0,5),
+      }));
+      phase1Results.push(...stamped);
+
+      await addEngineLog(
+        `✅ [Floreffe] Extraction J+${dayOffset} terminée (${FLOREFFE_POINTS.length} points)`,
+        "success",
+        "floreffe"
+      );
+
+      // 🌄 Corrélation topographique/hydrologique par J+N (non imbriquée)
       try {
-        const res = await superForecastLocal({
-          zones: FLOREFFE_POINTS,
-          runType: "Floreffe",
-          dayOffset
-        });
-
-        if (res?.success && res.phase1Results?.length) {
-          const now = new Date();
-          const stamped = res.phase1Results.map(p => ({
-            ...p,
-            timestamp: now,
-            hour: now.toISOString().split("T")[1].slice(0,5),
-          }));
-          phase1Results.push(...stamped);
-        } else {
-          await addEngineError(`[Floreffe] Aucun résultat valide pour J+${dayOffset}`, "floreffe");
-        }
-        await sleep(120000); // pause entre J+n
-      } catch (e) {
-        await addEngineError(`[Floreffe] Erreur extraction J+${dayOffset} : ${e.message}`, "floreffe");
+        await addEngineLog(`🌄 [Floreffe] Corrélation topo/hydro J+${dayOffset}`, "info", "floreffe");
+        await correlateTopoHydro(`Floreffe_J${dayOffset}`, dayOffset);
+        await addEngineLog(`✅ Corrélation J+${dayOffset} terminée`, "success", "floreffe");
+      } catch (corrErr) {
+        await addEngineError(`⚠️ Corrélation J+${dayOffset} : ${corrErr.message}`, "floreffe");
       }
+    } else {
+      await addEngineError(`[Floreffe] Aucun résultat valide pour J+${dayOffset}`, "floreffe");
     }
 
-    // 🌄 PHASE 1bis — Corrélation topographique / hydrologique
-    await addEngineLog("🌄 [Floreffe] Corrélation topographique / hydrologique en cours", "info", "floreffe");
+    // 🕐 Temporisation de stabilité entre J+N (2 minutes)
+    await sleep(120000);
 
-    const datasetsPath = path.resolve("./services/datasets");
-    const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
-    const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
-    const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
-    const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
-    const liveHydro = await fetchLiveHydroData();
-
-    const phase1bisResults = phase1Results.map(pt => ({
-      ...pt,
-      topo: correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro })
-    }));
-
-    await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
-    await addEngineLog("✅ Corrélation topographique / hydrologique appliquée", "success", "floreffe");
-
+  } catch (e) {
+    await addEngineError(`[Floreffe] Erreur extraction J+${dayOffset} : ${e.message}`, "floreffe");
+  }
+}
     // === PHASE 2 — IA J.E.A.N. locale (multi-jours)
     await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
 
