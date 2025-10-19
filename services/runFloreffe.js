@@ -500,8 +500,11 @@ return { success: true, alerts: alerts.length };
 // ==========================================================
 // 🔚 Export compatible ESM (Render + Node 22.x)
 // ==========================================================
-
 // ==========================================================
-// ✅ Export ESM standard et propre (compatible Node 22 / Render)
+// 🔚 Export universel compatible (ESM + CommonJS)
 // ==========================================================
-export { runFloreffe, superForecastLocal };
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { runFloreffe, superForecastLocal };
+} else {
+  export { runFloreffe, superForecastLocal };
+}
