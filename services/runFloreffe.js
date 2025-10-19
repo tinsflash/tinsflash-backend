@@ -333,8 +333,6 @@ await addEngineLog(
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
 await sleep(120000); // 2 minutes
 
-    
-    
     // === PHASE 2 — IA J.E.A.N. locale (multi-jours, compatible GPT-5) ===
 await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
 
@@ -410,10 +408,10 @@ Ne commente rien hors JSON.
     else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
 
     await addEngineLog(`[Floreffe] ✅ IA J.E.A.N. — paquet ${index + 1}/${chunks.length}`, "success", "floreffe");
-    await sleep(120000);
+    await sleep(2000);
   } catch (err) {
     await addEngineError(`[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1} : ${err.message}`, "floreffe");
-    await sleep(120000);
+    await sleep(1000);
   }
 }
 
@@ -423,12 +421,13 @@ if (phase2Results.length) await db.collection("floreffe_phase2").insertMany(phas
 
 const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
 await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
+    
     // ⏳ Temporisation avant Phase 5
 await addEngineLog("⏳ Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(120000); // 2 min
     
     
- // === PHASE 5 — Fusion + Export (sécurisée & auto-déclenchement) ===
+// === PHASE 5 — Fusion + Export (avec IA J.E.A.N. globale) ===
 await addEngineLog("[Floreffe] Phase 5 — Fusion IA + Export global en cours...", "info", "floreffe");
 
 let phase2ResultsSafe = [];
@@ -452,61 +451,97 @@ if (Array.isArray(phase2Results) && phase2Results.length) {
   }
 }
 
-const enriched = phase2ResultsSafe.map(x => ({
+// 🧠 Analyse IA globale (fusion des risques + validation)
+const fusionPrompt = `
+Tu es J.E.A.N., intelligence météorologique globale de TINSFLASH.
+Ta mission : fusionner et valider les résultats IA locaux de Floreffe pour produire des alertes fiables et explicites.
+
+Rappels :
+- Commune : Floreffe (Belgique)
+- Période : J+0 à J+5
+- Données : issues de la Phase 2 (risques pluie, verglas, vent, brouillard, inondation, fiabilité, commentaire)
+- Seuils d’alerte : ${JSON.stringify(ALERT_THRESHOLDS, null, 2)}
+
+Tâches :
+1️⃣ Regroupe les zones à risque similaires (mêmes tendances météo/hydrologiques).
+2️⃣ Pour chaque zone, indique le ou les phénomènes dominants (pluie, verglas, inondation, vent, brouillard).
+3️⃣ Calcule un niveau de vigilance (vert, jaune, orange, rouge) selon l’intensité.
+4️⃣ Génère un tableau JSON clair du type :
+[
+  {
+    "name": "Rue du Pont (bas du centre)",
+    "risques": ["pluie", "inondation"],
+    "niveau": "orange",
+    "commentaire": "Risque d’inondation localisée lié à ruissellement rapide.",
+    "reliability": 0.88
+  }
+]
+Ne produis aucun texte hors JSON.
+Voici les données sources :
+${JSON.stringify(phase2ResultsSafe.slice(0, 400), null, 2)}
+`;
+
+let fusionResults = [];
+try {
+  const aiFusion = await openai.responses.create({
+    model: "gpt-5",
+    input: [
+      { role: "system", content: "Tu es J.E.A.N., moteur météo global TINSFLASH, chargé de la synthèse finale." },
+      { role: "user", content: fusionPrompt }
+    ]
+  });
+
+  const rawFusion = aiFusion.output_text?.trim() || "";
+  const match = rawFusion.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+  if (match) fusionResults = JSON.parse(match[0]);
+
+  await addEngineLog(`[Floreffe] 🌐 Fusion IA globale réussie (${fusionResults.length} zones synthétisées)`, "success", "floreffe");
+} catch (err) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur Fusion IA globale : ${err.message}`, "floreffe");
+  fusionResults = [];
+}
+
+// 🧩 Si l’IA n’a rien renvoyé, fallback sur les données enrichies locales
+const enriched = (fusionResults.length ? fusionResults : phase2ResultsSafe).map(x => ({
   ...x,
   origin: "Floreffe_dome",
   timestamp: new Date(),
   thresholds: ALERT_THRESHOLDS,
 }));
 
-// ⚠️ Si malgré tout aucun enrichissement, crée un jeu minimal de sécurité
 if (!enriched.length) {
-  await addEngineError("[Floreffe] ⚠️ Phase 2 et fallback vides — génération d'un set vide", "floreffe");
+  await addEngineError("[Floreffe] ⚠️ Phase 5 — aucune donnée à exporter (fallback vide)", "floreffe");
   enriched.push({
     name: "Fallback Floreffe",
     lat: 50.4368,
     lon: 4.7562,
-    risk: { pluie: 0, verglas: 0 },
+    risques: ["aucun"],
+    niveau: "vert",
     reliability: 0.1,
-    description: "Fallback de sécurité",
+    commentaire: "Fallback de sécurité sans données IA",
     timestamp: new Date(),
   });
 }
 
-// 🔔 Détection d’alertes pluie / verglas
-const alerts = enriched.map(x => {
-  const rain = Number(x?.risk?.pluie ?? 0);
-  const ice  = Number(x?.risk?.verglas ?? 0);
-const rainHit = rain >= ALERT_THRESHOLDS.rain.alert;
-const iceHit  = ice <= ALERT_THRESHOLDS.cold.prealert; // -3 par défaut
-  if (!rainHit && !iceHit) return null;
-
-  const type = rainHit ? "Alerte Pluie" : "Alerte Verglas";
-  const level = rainHit && rain >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
-  const confidence = Math.min(1, Math.max(0, x.confidence ?? x.reliability ?? 0.9));
-
-  return {
-    name: x.name ?? "Point inconnu",
+// 🔔 Détection automatique d’alertes fortes
+const alerts = enriched
+  .filter(x => ["orange", "rouge"].includes(x.niveau))
+  .map(x => ({
+    name: x.name,
     zone: "Floreffe",
-    lat: x.lat,
-    lon: x.lon,
-    type,
-    level,
-    reliability: confidence,
-    description:
-      type === "Alerte Pluie"
-        ? `Cumul > ${ALERT_THRESHOLDS.rain.alert} mm/h`
-        : `Température au sol ≤ ${ALERT_THRESHOLDS.cold.alert} °C`,
+    lat: x.lat ?? null,
+    lon: x.lon ?? null,
+    type: (x.risques || []).join(", "),
+    level: x.niveau,
+    reliability: x.reliability ?? 0.8,
+    description: x.commentaire ?? "Phénomène à surveiller",
     timestamp: new Date(),
-  };
-}).filter(Boolean);
-if (!alerts.length) {
-  await addEngineError("[Floreffe] Aucun signal d’alerte détecté (alertes vides)", "floreffe");
-}
-// --- Sauvegarde Mongo locale
+  }));
+
 await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
-await addEngineLog(`[Floreffe] Sauvegarde Mongo locale (${alerts.length} alertes)`, "success", "floreffe");
+
+await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées (Mongo locale)`, "success", "floreffe");
 
 // --- Export JSON local
 const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
@@ -517,9 +552,10 @@ await fs.promises.writeFile(
   JSON.stringify({ generated: new Date(), range: "J+0 → J+5", zones: enriched }, null, 2)
 );
 await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
+
 await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-// --- Synchronisation Mongo Cloud global
+// --- Synchronisation Mongo Cloud
 await addEngineLog("[Floreffe] Synchronisation Mongo Cloud en cours...", "info", "floreffe");
 
 await db.collection("forecasts").updateOne(
