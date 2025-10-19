@@ -7,10 +7,11 @@
 <title>TINSFLASH • Dôme Floreffe (IA J.E.A.N. – Version complète)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <style>
 body{margin:0;font-family:"Segoe UI",sans-serif;background:#0f172a;color:#f5faff;}
-header{text-align:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
+header{display:flex;justify-content:space-between;align-items:center;padding:15px;background:linear-gradient(90deg,#08101f,#15294d);color:#4fc3f7;font-size:1.6em;font-weight:bold;text-shadow:0 0 12px #4fc3f7;}
+header button{background:#11263f;color:#7dd3fc;border:1px solid #4fc3f7;border-radius:6px;padding:6px 12px;font-size:.9em;cursor:pointer;transition:.3s;}
+header button:hover{background:#4fc3f7;color:#000;}
 .subheader{text-align:center;background:#0d1528;color:#7dd3fc;padding:6px;font-size:.9em;}
 .video-container{position:relative;overflow:hidden;}
 video{width:100%;max-height:180px;object-fit:cover;display:block;filter:brightness(.95);}
@@ -25,7 +26,7 @@ p{color:#e0e8f9;line-height:1.5;text-align:justify;}
 .intro-text{flex:1;max-height:200px;overflow-y:auto;background:#131a2b;padding:12px;border-radius:10px;color:#e0e8f9;line-height:1.5;}
 .map-container{height:420px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,.4);}
 #summary-box{background:#16233a;border-radius:10px;padding:12px;margin-top:15px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.3);}
-.forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+.forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;justify-content:center;}
 .forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:120px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.3);}
 table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.9em;}
 th,td{border-bottom:1px solid #22304e;padding:6px;text-align:center;}
@@ -50,19 +51,28 @@ footer a:hover{text-decoration:underline;}
 .chat-input button{background:#4fc3f7;border:none;color:#000;padding:8px 12px;font-weight:bold;cursor:pointer;}
 </style>
 </head>
+
 <body>
-<header>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</header>
+<header>
+  <span>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</span>
+  <button id="castBtn">🎬 Caster vers écran</button>
+</header>
 <div class="subheader">🛰 Données satellites • IA locale multi-sources • Corrélation topographique</div>
+
 <div class="video-container">
-<video autoplay muted loop playsinline id="introVideo"><source src="intro-jean.mp4" type="video/mp4"/></video>
-<div class="video-overlay"></div><button class="sound-btn" id="soundToggle">🔇</button>
+  <video autoplay muted loop playsinline id="introVideo">
+    <source src="intro-jean.mp4" type="video/mp4"/>
+  </video>
+  <div class="video-overlay"></div>
+  <button class="sound-btn" id="soundToggle">🔇</button>
 </div>
 
 <main>
 <h2 class="intro-title">Présentation du système TINSFLASH IA J.E.A.N.</h2>
 <div class="intro-block">
-<img src="avatars/jean-default.png" alt="Avatar J.E.A.N"/><div class="intro-text">
-<p><strong>TINSFLASH IA J.E.A.N.</strong> analyse en continu la commune de <b>Floreffe</b> via 60 points de mesure, intégrant topographie, vent, humidité et données hydrologiques.</p>
+<img src="avatars/jean-default.png" alt="Avatar J.E.A.N"/>
+<div class="intro-text">
+<p><strong>TINSFLASH IA J.E.A.N.</strong> analyse en continu la commune de <b>Floreffe</b> via 60 points de mesure intégrant topographie, vent, humidité et données hydrologiques.</p>
 <p>Objectif : <b>anticiper verglas, ruissellement et inondations</b> avant les services officiels, avec une fiabilité IA supérieure à 90 %.</p>
 </div></div>
 
@@ -75,18 +85,18 @@ footer a:hover{text-decoration:underline;}
 <h2>📊 Détail complet des zones</h2>
 <div style="overflow-x:auto">
 <table id="zonesTable">
-<thead><tr>
-<th>Zone</th><th>Temp (°C)</th><th>Pluie (mm/h)</th><th>Vent (km/h)</th>
-<th>Humidité (%)</th><th>Altitude (m)</th><th>Fiabilité IA (%)</th>
-</tr></thead>
+<thead><tr><th>Zone</th><th>Temp (°C)</th><th>Pluie (mm/h)</th><th>Vent (km/h)</th><th>Humidité (%)</th><th>Altitude (m)</th><th>Fiabilité IA (%)</th></tr></thead>
 <tbody><tr><td colspan="7">Chargement…</td></tr></tbody>
-</table>
-</div>
+</table></div>
 
 <h2>⚠️ Alertes locales et nationales</h2>
 <div id="alertsBox">Chargement…</div>
 
+<h2>🌌 Dôme holographique Floreffe</h2>
+<iframe src="hologram-floreffe.html" style="width:100%;height:420px;border:none;border-radius:10px;"></iframe>
+
 <div class="banner">🌀 Radar 3D/4D interne bientôt disponible</div>
+
 <div class="premium-box">
 ☎️ Service & Helpdesk : <b>TINSFLASH – Patrick Pynnaert</b><br/>
 📞 <a href="tel:+32473264477">0473 26 44 77</a> – 💬 WhatsApp<br/>
@@ -102,14 +112,25 @@ footer a:hover{text-decoration:underline;}
 <div class="chat-messages" id="chatMessages">
 <div style="color:#4fc3f7;padding:5px;">Pour discuter avec J.E.A.N., achetez vos crédits IA (5,90 €/100 questions).<br/>
 <a href="https://buy.stripe.com/00w28t3Xj9h70zX0Gdgfu02" target="_blank" style="color:#7dd3fc;">👉 Acheter des crédits</a></div></div>
-<div class="chat-input"><input type="text" id="chatInput" placeholder="Posez votre question météo…" disabled/>
-<button disabled>Envoyer</button></div></div>
+<div class="chat-input"><input type="text" id="chatInput" placeholder="Posez votre question météo…" disabled/><button disabled>Envoyer</button></div></div>
 
 <script>
 const video=document.getElementById("introVideo"),soundToggle=document.getElementById("soundToggle");
 soundToggle.onclick=()=>{video.muted=!video.muted;soundToggle.textContent=video.muted?"🔇":"🔊";};
 document.getElementById("btnAI").onclick=()=>{const c=document.getElementById("chatJean");c.style.display=c.style.display==="flex"?"none":"flex";};
 
+// === 🎬 CAST VERS ÉCRAN ===
+const castBtn=document.getElementById("castBtn");
+castBtn.addEventListener("click",async()=>{
+ try{
+   const stream=await navigator.mediaDevices.getDisplayMedia({video:true});
+   const videoEl=document.createElement("video");
+   videoEl.srcObject=stream;videoEl.play();
+   alert("✅ Projection active sur votre écran.\nFermez l’onglet ou arrêtez le cast pour revenir au mode normal.");
+ }catch(err){alert("⚠️ Casting annulé ou non pris en charge : "+err.message);}
+});
+
+// === DONNÉES LOCALES ===
 async function initFloreffe(){
  try{
   const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
@@ -123,9 +144,7 @@ async function initFloreffe(){
   const r=(avg(zones,"reliability")*100).toFixed(0);
   document.getElementById("summary-box").innerHTML=
   `<b>🌍 Commune de Floreffe</b><br>🌡 ${t}°C | 💧 ${p} mm/h | 🌬 ${w} km/h | 💦 ${h}%<br>🔹 Fiabilité IA J.E.A.N. : ${r}% | Points actifs : ${zones.length}/60`;
-  renderMap(zones,alerts);
-  renderTable(zones);
-  renderAlerts(alerts);
+  renderMap(zones,alerts);renderTable(zones);renderAlerts(alerts);
  }catch(e){console.error(e);}
 }
 
@@ -139,8 +158,7 @@ function renderMap(zones,alerts){
  });
  (alerts||[]).forEach(a=>{
   const r=a.reliability??a.confidence??0.8;
-  let color="#f87171";
-  if(r>=0.9)color="#ef4444";else if(r>=0.7)color="#f59e0b";else color="#9ca3af";
+  let color="#f87171";if(r>=0.9)color="#ef4444";else if(r>=0.7)color="#f59e0b";else color="#9ca3af";
   if(a.lat&&a.lon)L.circleMarker([a.lat,a.lon],{radius:8,color}).addTo(map)
   .bindPopup(`<b>${a.type||"Alerte"}</b><br>${a.zone||""}<br><small>${a.description||""}</small><br>Confiance ${(r*100).toFixed(0)}%`);
  });
