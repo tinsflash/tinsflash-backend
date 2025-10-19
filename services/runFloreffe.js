@@ -498,13 +498,18 @@ await sleep(250);
 return { success: true, alerts: alerts.length }; 
 
 
-// ==========================================================
-// 🔚 Export universel compatible Node 22 / Render
-// ==========================================================
 
-export { runFloreffe, superForecastLocal };
+// ==========================================================
+// 🔚 Export universel (ESM + CommonJS, compatible Render)
+// ==========================================================
+const exported = { runFloreffe, superForecastLocal };
 
-// 🔁 Compatibilité CommonJS (si importé via require)
-if (typeof module !== "undefined") {
-  module.exports = { runFloreffe, superForecastLocal };
+// ✅ Si importé via ESM
+try {
+  if (typeof export !== "undefined") {
+    export { runFloreffe, superForecastLocal };
+  }
+} catch {
+  // ✅ Si exécuté via CommonJS (Render / Node server.js)
+  module.exports = exported;
 }
