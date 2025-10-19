@@ -507,11 +507,12 @@ return { success: true, alerts: alerts.length };
 } // 👈 ferme correctement la fonction runFloreffe()
 
 // ==========================================================
-// 🔚 Export universel compatible Node 22 / Render (CommonJS)
+// 🔚 Export universel compatible ESM + CommonJS
 // ==========================================================
-
-// 👉 Render et Node lisent ce fichier en CommonJS, donc pas de "export { }" ici
-module.exports = {
-  runFloreffe,
-  superForecastLocal
-};
+export { runFloreffe, superForecastLocal };
+try {
+  // @ts-ignore
+  if (typeof module !== "undefined") {
+    module.exports = { runFloreffe, superForecastLocal };
+  }
+} catch {}
