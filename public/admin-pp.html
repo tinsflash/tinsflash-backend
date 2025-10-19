@@ -77,13 +77,52 @@ if(!sessionStorage.getItem("tinsflashPIN")){
 <button onclick="run('/api/runPhase5')">🚨 Phase 5 – Fusion mondiale alertes</button>
  <button id="btnVisionAlerts" class="btn btn-warning">
   ⚡ Analyse VisionIA (captures PNG)
-</button>
+<!-- ===================================================== -->
+<!-- 📊 EXPORT PUBLIC & RELIEF FLOREFFE -->
+<!-- ===================================================== -->
+<div style="width:100%;border-top:1px solid #1e293b;margin:10px 0"></div>
+<button id="btnExportPublic">📊 Export prévisions publiques (→ /public)</button>
+
+<button id="btnReliefStd">🟦 Relief Standard (100 m)</button>
+<button id="btnReliefHR">🟩 Relief Haute Résolution (50 m)</button>
+<button id="btnFusion3D">🧩 Fusion Topo + Météo (3D)</button>
+ </button>
 
 <script>
 document.getElementById("btnVisionAlerts").addEventListener("click", async () => {
   const res = await fetch("/api/runVisionAlerts");
   const data = await res.json();
   alert(`Analyse VisionIA terminée : ${data.count || 0} alertes détectées`);
+// =====================================================
+// ⚙️ COMMANDES ADMIN COMPLÉMENTAIRES
+// =====================================================
+
+// === Export public des prévisions ===
+document.getElementById("btnExportPublic").addEventListener("click", async () => {
+  const cmd = `node -e "import('./services/exportPublicForecasts.js').then(m => m.default('Floreffe'))"`;
+  alert("📊 Exécution Render : " + cmd);
+  await fetch("/api/run-cmd?cmd=" + encodeURIComponent(cmd));
+});
+
+// === Relief standard (100 m) ===
+document.getElementById("btnReliefStd").addEventListener("click", async () => {
+  const cmd = "node services/generateFloreffeAltitudes.js";
+  alert("🟦 Génération relief standard (100 m)...");
+  await fetch("/api/run-cmd?cmd=" + encodeURIComponent(cmd));
+});
+
+// === Relief haute résolution (50 m) ===
+document.getElementById("btnReliefHR").addEventListener("click", async () => {
+  const cmd = "node services/generateFloreffeAltitudes_HR.js";
+  alert("🟩 Génération relief haute résolution (50 m)...");
+  await fetch("/api/run-cmd?cmd=" + encodeURIComponent(cmd));
+});
+
+// === Fusion Topo + Météo (3D) ===
+document.getElementById("btnFusion3D").addEventListener("click", async () => {
+  const cmd = `node -e "import('./services/fuseTopoMeteo.js').then(m => m.default('Floreffe'))"`;
+  alert("🧩 Fusion Topo + Météo en cours...");
+  await fetch("/api/run-cmd?cmd=" + encodeURIComponent(cmd));
 });
 </script>
 <button onclick="run('/api/runVisionIA')">🌐 VisionIA – NOAA / GOES</button>
