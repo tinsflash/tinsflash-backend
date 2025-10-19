@@ -497,19 +497,12 @@ await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "flo
 await sleep(250);
 return { success: true, alerts: alerts.length }; 
 
-
-
 // ==========================================================
-// 🔚 Export universel (ESM + CommonJS, compatible Render)
+// 🔚 Export universel compatible Node 22 / Render (CommonJS)
 // ==========================================================
-const exported = { runFloreffe, superForecastLocal };
 
-// ✅ Si importé via ESM
-try {
-  if (typeof export !== "undefined") {
-    export { runFloreffe, superForecastLocal };
-  }
-} catch {
-  // ✅ Si exécuté via CommonJS (Render / Node server.js)
-  module.exports = exported;
-}
+// 👉 Render et Node lisent ce fichier en CommonJS, donc pas de "export { }" ici
+module.exports = {
+  runFloreffe,
+  superForecastLocal
+};
