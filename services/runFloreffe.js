@@ -496,7 +496,7 @@ await mongo.close();
 await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
 await sleep(250);
 return { success: true, alerts: alerts.length }; 
-
+  }
 // ==========================================================
 // 🔚 Export universel compatible Node 22 / Render (CommonJS)
 // ==========================================================
