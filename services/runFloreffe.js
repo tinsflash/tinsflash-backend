@@ -385,15 +385,15 @@ for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
     // ==========================================================
 // 🌍 PHASE 5 — FUSION COMPLÈTE + EXPORT FINAL (Everest Protocol v6.5.1 PRO+++ AUTONOME)
 // ==========================================================
-
+// === PHASE 5 — Fusion + Export (version stable et simplifiée) ===
 await addEngineLog("[Floreffe] Phase 5 — Fusion IA + physique + export global en cours…", "info", "floreffe");
 
-// 1) Enrichissement final (metadata + seuils)
+// 1️⃣ Enrichissement final
 const enriched = Array.isArray(phase2Results) && phase2Results.length
   ? phase2Results.map(x => ({
       ...x,
       origin: "Floreffe_dome",
-      exportedAt: new Date(),
+      timestamp: new Date(),
       thresholds: ALERT_THRESHOLDS
     }))
   : [];
@@ -403,110 +403,58 @@ if (!enriched.length) {
   return { success: false, error: "Phase 2 vide" };
 }
 
-// 2) Construction des alertes opérationnelles (pluie / verglas / vent)
+// 2️⃣ Construction des alertes (pluie / verglas)
 const alerts = enriched.map(x => {
-  // On accepte à la fois les champs issus de l’IA (x.risk) et du physique (x.precipitation, x.temperature, x.wind)
-  const pluie = (x?.risk?.pluie ?? x?.precipitation ?? 0) * 1;        // mm/h
-  const t2m   = x?.temperature ?? x?.temp ?? null;                     // °C
-  const vent  = (x?.risk?.vent ?? x?.wind ?? 0) * 1;                   // km/h
-  const verglasRisk =
-    (t2m !== null && t2m <= ALERT_THRESHOLDS.cold.alert) ||
-    (x?.risk?.verglas === true);
+  const pluie = Number(x?.risk?.pluie ?? x?.precipitation ?? 0);
+  const temp  = Number(x?.risk?.temperature ?? x?.temperature ?? null);
+  const verglas = temp !== null && temp <= ALERT_THRESHOLDS.cold.alert;
 
   const rainHit = pluie >= ALERT_THRESHOLDS.rain.alert;
-  const windHit = vent  >= ALERT_THRESHOLDS.wind.alert;
-  const iceHit  = !!verglasRisk;
+  const iceHit  = verglas || (x?.risk?.verglas === true);
 
-  if (!rainHit && !iceHit && !windHit) return null;
+  if (!rainHit && !iceHit) return null;
 
-  let type = rainHit ? "Alerte Pluie" : (iceHit ? "Alerte Verglas" : "Alerte Vent");
-  let level = "orange";
-  if (rainHit && pluie >= ALERT_THRESHOLDS.rain.extreme) level = "rouge";
-  if (windHit && vent  >= ALERT_THRESHOLDS.wind.extreme) level = "rouge";
-
-  const confidence = Math.max(
-    0,
-    Math.min(1, (x.confidence ?? x.reliability ?? 0.9))
-  );
-
-  const description =
-    type === "Alerte Pluie"  ? `Pluie ${pluie.toFixed(1)} mm/h estimée.` :
-    type === "Alerte Vent"   ? `Rafales jusqu’à ${Math.round(vent)} km/h estimées.` :
-    /* Verglas */               `Température au sol ≤ ${ALERT_THRESHOLDS.cold.alert}°C probable.`;
+  const type = rainHit ? "Alerte Pluie" : "Alerte Verglas";
+  const level = rainHit && pluie >= ALERT_THRESHOLDS.rain.extreme ? "rouge" : "orange";
+  const confidence = Math.min(1, Math.max(0, x.confidence ?? x.reliability ?? 0.9));
 
   return {
-    type,
+    name: x.name ?? "Point inconnu",
     zone: "Floreffe",
-    name: x.name ?? "Point",
     lat: x.lat,
     lon: x.lon,
+    type,
     level,
     reliability: confidence,
-    description,
+    description:
+      type === "Alerte Pluie"
+        ? `Pluie estimée ${pluie.toFixed(1)} mm/h`
+        : `Risque de verglas (température au sol ≤ ${ALERT_THRESHOLDS.cold.alert} °C)`,
     timestamp: new Date()
   };
 }).filter(Boolean);
 
-// 3) Sauvegardes Mongo locales + globales
+// 3️⃣ Sauvegarde Mongo locale
 await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 
 await addEngineLog(`[Floreffe] Sauvegarde Mongo locale (${alerts.length} alertes)`, "success", "floreffe");
 
-// 4) Export JSON publics (consommés par floreffe.html)
+// 4️⃣ Export JSON local
 const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
-const alertsPath    = path.join(__dirname, "../public/floreffe_alerts.json");
+const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
 const forecastRange = "J+0 → J+5";
-
-// Optionnel : petit résumé "general" pour l’écran (si présent)
-let general = null;
-try {
-  const j0 = enriched.filter(e => e.dayOffset === 0);
-  if (j0.length) {
-    const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
-    general = {
-      temp_min: Math.round(Math.min(...j0.map(e => e.temperature ??  99))),
-      temp_max: Math.round(Math.max(...j0.map(e => e.temperature ?? -99))),
-      condition: "Conditions locales mixtes",
-      reliability: +(
-        (j0.reduce((s,e)=> s + (e.reliability ?? 0.8), 0) / j0.length)
-      ).toFixed(2),
-      week: Array.from({length: 6}, (_,k) => {
-        const day = enriched.filter(e => e.dayOffset === k);
-        return {
-          day: `J+${k}`,
-          temp_min: day.length ? Math.round(Math.min(...day.map(e => e.temperature ??  99))) : null,
-          temp_max: day.length ? Math.round(Math.max(...day.map(e => e.temperature ?? -99))) : null,
-          condition: "—"
-        };
-      })
-    };
-  }
-} catch { /* non bloquant */ }
 
 await fs.promises.writeFile(
   forecastsPath,
-  JSON.stringify(
-    {
-      generated: new Date(),
-      range: forecastRange,
-      general,
-      zones: enriched
-    },
-    null,
-    2
-  )
+  JSON.stringify({ generated: new Date(), range: forecastRange, zones: enriched }, null, 2)
 );
-
-await fs.promises.writeFile(
-  alertsPath,
-  JSON.stringify(alerts, null, 2)
-);
+await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
 
 await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
 
-// 5) Synchronisation Mongo Cloud global (collections partagées)
-await addEngineLog("[Floreffe] Synchronisation Mongo Cloud en cours…", "info", "floreffe");
+// 5️⃣ Synchronisation Mongo Cloud global
+await addEngineLog("[Floreffe] Synchronisation Mongo Cloud en cours...", "info", "floreffe");
 
 await db.collection("forecasts").updateOne(
   { zone: "Floreffe" },
@@ -518,6 +466,13 @@ await db.collection("alerts").deleteMany({ zone: /Floreffe/i });
 if (alerts.length) await db.collection("alerts").insertMany(alerts);
 
 await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+
+// 6️⃣ Clôture propre
+await mongo.close();
+await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
+await sleep(250);
+return { success: true, alerts: alerts.length };
+        
 // ==========================================================
 // 🔚 Export compatible ESM (Render + Node 22.x)
 // ==========================================================
