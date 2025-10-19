@@ -495,9 +495,17 @@ await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.",
 await mongo.close();
 await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
 await sleep(250);
-return { success: true, alerts: alerts.length }; 
+return { success: true, alerts: alerts.length };
 
+} catch (err) {
+  await addEngineError(`[Floreffe] ❌ Erreur critique dans runFloreffe : ${err.message}`, "floreffe");
+  try {
+    await mongo.close();
+  } catch {}
+  return { success: false, error: err.message };
 }
+} // 👈 ferme correctement la fonction runFloreffe()
+
 // ==========================================================
 // 🔚 Export universel compatible Node 22 / Render (CommonJS)
 // ==========================================================
