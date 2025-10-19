@@ -18,6 +18,7 @@
     "axios": "^1.7.2",
     "body-parser": "^1.20.2",
     "cheerio": "^1.0.0-rc.12",
+    "csvtojson": "^2.0.10",
     "cohere-ai": "^7.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
