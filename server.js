@@ -480,13 +480,55 @@ async function scheduleVisionFetch() {
   }
 }
 
-// Démarrage immédiat au boot
-scheduleVisionFetch();
+// ==========================================================
+// ⚙️ PLANIFICATION VisionIA – 1x/jour + déclenchements manuels
+// ==========================================================
+import { runVisionIA } from "./services/runVisionIA.js";
+import { runWatchdog } from "./services/watchdogService.js";
 
-// Relance toutes les 30 minutes (1 800 000 ms)
-setInterval(scheduleVisionFetch, 30 * 60 * 1000);
+// === LANCEMENTS MANUELS depuis console admin ===
+app.post("/api/runVisionIA", async (req, res) => {
+  try {
+    const code = req.headers["x-admin-code"] || req.query.code;
+    if (code !== "202679") return res.status(403).send("🔒 Accès refusé");
+    const result = await runVisionIA();
+    await addEngineLog("🚀 VisionIA lancée manuellement depuis console admin", "info", "VISIONIA");
+    res.send(`✅ VisionIA exécutée (${JSON.stringify(result)})`);
+  } catch (err) {
+    await addEngineError("Erreur VisionIA : " + err.message, "VISIONIA");
+    res.status(500).send("❌ Erreur VisionIA : " + err.message);
+  }
+});
 
-await addEngineLog("✅ Planification VisionIA active (30 min)", "server");
+app.post("/api/runWatchdog", async (req, res) => {
+  try {
+    const code = req.headers["x-admin-code"] || req.query.code;
+    if (code !== "202679") return res.status(403).send("🔒 Accès refusé");
+    const result = await runWatchdog();
+    await addEngineLog(`⚡ Watchdog lancé manuellement – ${result.count ?? 0} pré-alertes`, "info", "TOCSIN");
+    res.send(`✅ Watchdog exécuté (${result.count ?? 0} pré-alertes générées)`);
+  } catch (err) {
+    await addEngineError("Erreur Watchdog : " + err.message, "TOCSIN");
+    res.status(500).send("❌ Erreur Watchdog : " + err.message);
+  }
+});
+
+// === PLANIFICATION AUTOMATIQUE VisionIA (1x/jour) ===
+async function scheduleDailyVisionIA() {
+  try {
+    await addEngineLog("🕓 Lancement quotidien automatique VisionIA", "info", "VISIONIA.AUTO");
+    await runVisionIA();
+    await addEngineLog("✅ VisionIA automatique terminée avec succès", "success", "VISIONIA.AUTO");
+  } catch (err) {
+    await addEngineError("❌ Erreur VisionIA auto : " + err.message, "VISIONIA.AUTO");
+  }
+}
+
+// Démarrage au boot + exécution chaque 24 h (86 400 000 ms)
+scheduleDailyVisionIA();
+setInterval(scheduleDailyVisionIA, 24 * 60 * 60 * 1000);
+
+await addEngineLog("✅ Planification VisionIA active – 1x/jour + manuel console", "server");
 // ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
 // ==========================================================
