@@ -135,7 +135,13 @@ async function initFloreffe(){
  try{
   const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
   const alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
-  const zones=Array.isArray(forecasts?.zones)?forecasts.zones:[];
+  // 🔧 Lecture compatible avec toutes versions de la Phase 5
+let zones = [];
+if (Array.isArray(forecasts?.zones)) zones = forecasts.zones;
+else if (Array.isArray(forecasts?.data)) zones = forecasts.data;
+else if (Array.isArray(forecasts?.data?.zones)) zones = forecasts.data.zones;
+else if (Array.isArray(forecasts)) zones = forecasts;
+else console.warn("⚠️ Aucune zone détectée dans le JSON floreffe_forecasts.json", forecasts);
   const avg=(arr,k)=>arr.length?arr.reduce((a,b)=>a+(b[k]??0),0)/arr.length:0;
   const t=avg(zones,"temperature").toFixed(1);
   const p=avg(zones,"precipitation").toFixed(1);
@@ -147,7 +153,7 @@ async function initFloreffe(){
   renderMap(zones,alerts);renderTable(zones);renderAlerts(alerts);
  }catch(e){console.error(e);}
 }
-
+console.log(`📊 ${zones.length} zones chargées pour Floreffe`);
 function renderMap(zones,alerts){
  const map=L.map("map").setView([50.44,4.76],12);
  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
