@@ -128,29 +128,40 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
         }
       ];
 
-      for (const m of models) {
-        try {
-          const options = { timeout: 15000 };
-          if (m.headers) options.headers = m.headers;
-          const r = await axios.get(m.url, options);
+   for (const m of models) {
+  try {
+    const options = { timeout: 15000 };
+    if (m.headers) options.headers = m.headers;
+    const r = await axios.get(m.url, options);
 
-          let T = null, P = 0, W = null;
+    // --- Extraction simplifiée ---
+    let T = null, P = 0, W = null;
+    if (r.data?.hourly?.time) {
+      const times = r.data.hourly.time;
+      const idx = times.findIndex((t) => t.includes("12:00"));
+      T = r.data.hourly.temperature_2m?.[idx] ?? null;
+      P = r.data.hourly.precipitation?.[idx] ?? 0;
+      W = r.data.hourly.wind_speed_10m?.[idx] ?? null;
+    }
 
-          if (r.data?.hourly?.time) {
-            const times = r.data.hourly.time;
-            const idx = times.findIndex((t) => t.includes("12:00"));
-            T = r.data.hourly.temperature_2m?.[idx] ?? null;
-            P = r.data.hourly.precipitation?.[idx] ?? 0;
-            W = r.data.hourly.wind_speed_10m?.[idx] ?? null;
-          }
-
-          push({ source: m.name, temperature: T, precipitation: P, wind: W });
-        } catch (e) {
-          await addEngineError(`${m.name} indisponible : ${e.message}`, "superForecast");
-        }
-        await sleep(200);
-      }
-
+    // --- Log clair selon résultat ---
+    if (T !== null || P > 0 || W !== null) {
+      await addEngineLog(`✅ [${runType}] ${m.name} OK (T:${T ?? "?"}° P:${P ?? 0} mm W:${W ?? "?"} km/h)`,
+        "success",
+        "superForecast");
+      push({ source: m.name, temperature: T, precipitation: P, wind: W });
+    } else {
+      await addEngineError(`⚠️ [${runType}] ${m.name} réponse vide ou incomplète`, "superForecast");
+    }
+  } catch (e) {
+    // 422 ou autres → échec clair
+    const msg = e.response?.status
+      ? `status ${e.response.status}`
+      : e.message;
+    await addEngineError(`❌ [${runType}] ${m.name} indisponible (${msg})`, "superForecast");
+  }
+  await sleep(200);
+}
       const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
       const reliability = +(valid.length / (models.length || 1)).toFixed(2);
