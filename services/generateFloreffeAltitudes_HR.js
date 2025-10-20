@@ -1,10 +1,10 @@
 // ==========================================================
-// 🌍 generateFloreffeAltitudes_HR.js — Relief réel Floreffe (haute résolution 50 m)
+// 🌍 generateFloreffeAltitudes_HR.js — Relief réel Floreffe (haute résolution ~50 m)
 // ==========================================================
 // 🔸 Couverture : totalité de la commune (Franière → Floriffoux → Bois de Floreffe)
 // 🔸 Source : Open-Elevation (réel, gratuit)
-// 🔸 Sortie : /public/floreffe_altitudes_hr.json
-// 🔸 Sécurisé contre erreurs 429 + sauvegardes partielles
+// 🔸 Sortie finale : /public/floreffe_altitudes_hr.json
+// 🔸 Fonctionne en reprise automatique depuis floreffe_altitudes_hr_temp.json
 // ==========================================================
 
 import fs from "fs";
@@ -15,72 +15,72 @@ const endLat   = 50.46;   // nord (Bois de Floreffe)
 const startLon = 4.73;    // ouest
 const endLon   = 4.78;    // est
 const step     = 0.0005;  // ≈ 50 m
-const OUT = "./public/floreffe_altitudes_hr.json";
-const TEMP = "./public/floreffe_altitudes_hr_temp.json";
+
+const TEMP_PATH = "./public/floreffe_altitudes_hr_temp.json";
+const FINAL_PATH = "./public/floreffe_altitudes_hr.json";
 
 let points = [];
-if (fs.existsSync(TEMP)) {
-  try {
-    points = JSON.parse(fs.readFileSync(TEMP, "utf8"));
-    console.log(`🧩 Reprise sur base temporaire (${points.length} points déjà générés)`);
-  } catch {}
-}
 
-// petite pause utilitaire
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// === UTILITAIRE ===
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// fetch altitude avec relance automatique si HTTP 429
-async function fetchAltitude(lat, lon, retry = 0) {
-  try {
-    const res = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
-    if (!res.ok) {
-      if (res.status === 429 && retry < 5) {
-        const wait = 1500 + Math.random() * 1000;
-        console.warn(`⏳ HTTP 429 → pause ${wait.toFixed(0)} ms (tentative ${retry+1})`);
-        await sleep(wait);
-        return fetchAltitude(lat, lon, retry + 1);
-      }
-      throw new Error(`HTTP ${res.status}`);
+// === CHARGEMENT DES POINTS EXISTANTS ===
+function loadExisting() {
+  if (fs.existsSync(TEMP_PATH)) {
+    try {
+      points = JSON.parse(fs.readFileSync(TEMP_PATH, "utf8"));
+      console.log(`🔁 Reprise depuis ${TEMP_PATH} (${points.length} points existants)`);
+    } catch (err) {
+      console.warn("⚠️ Erreur lecture fichier temporaire :", err.message);
     }
-    const json = await res.json();
-    return json.results?.[0]?.elevation ?? null;
-  } catch (err) {
-    console.warn(`⚠️ ${lat.toFixed(4)}, ${lon.toFixed(4)} → ${err.message}`);
-    return null;
   }
 }
 
+// === SAUVEGARDE TEMPORAIRE PROGRESSIVE ===
+function saveProgress() {
+  fs.writeFileSync(TEMP_PATH, JSON.stringify(points, null, 2));
+}
+
+// === MAIN ===
 async function main() {
-  console.log("📡 Génération du relief HR (50 m pas) – Floreffe…");
+  console.log("📡 Reprise ou démarrage du relief HR de Floreffe...");
+  loadExisting();
 
-  let count = 0;
-  for (let lat = startLat; lat <= endLat; lat += step) {
-    for (let lon = startLon; lon <= endLon; lon += step) {
-      const exists = points.find(p => Math.abs(p.lat - lat) < 1e-6 && Math.abs(p.lon - lon) < 1e-6);
-      if (exists) continue; // déjà calculé
-      const alt = await fetchAltitude(lat, lon);
-      if (alt !== null) {
-        points.push({ lat, lon, alt });
-        console.log(`✅ ${lat.toFixed(4)} , ${lon.toFixed(4)} → ${alt.toFixed(1)} m`);
+  let lastLat = points.length ? points[points.length - 1].lat : startLat;
+  let lastLon = points.length ? points[points.length - 1].lon : startLon;
+
+  for (let lat = lastLat; lat <= endLat; lat += step) {
+    for (let lon = (lat === lastLat ? lastLon : startLon); lon <= endLon; lon += step) {
+      const exists = points.some(p => Math.abs(p.lat - lat) < 1e-6 && Math.abs(p.lon - lon) < 1e-6);
+      if (exists) continue;
+
+      try {
+        const res = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const alt = json.results?.[0]?.elevation ?? null;
+
+        if (alt !== null) {
+          points.push({ lat, lon, alt });
+          console.log(`✅ ${lat.toFixed(4)} , ${lon.toFixed(4)} → ${alt.toFixed(1)} m`);
+        } else {
+          console.warn(`⚠️ Aucune donnée ${lat.toFixed(4)} , ${lon.toFixed(4)}`);
+        }
+
+        if (points.length % 100 === 0) saveProgress();
+        await sleep(200); // temporisation pour éviter HTTP 429
+      } catch (err) {
+        console.error(`❌ Erreur ${lat.toFixed(4)}, ${lon.toFixed(4)} → ${err.message}`);
+        if (err.message.includes("429")) await sleep(15000); // pause longue si surcharge API
       }
-      count++;
-
-      // sauvegarde toutes les 50 requêtes
-      if (count % 50 === 0) {
-        fs.writeFileSync(TEMP, JSON.stringify(points, null, 2));
-        console.log(`💾 Sauvegarde partielle (${points.length} points)…`);
-      }
-
-      // tempo de base pour éviter surcharge API
-      await sleep(300);
     }
   }
 
-  fs.writeFileSync(OUT, JSON.stringify(points, null, 2));
-  fs.rmSync(TEMP, { force: true });
-
-  console.log(`\n✅ Relief HR Floreffe généré avec succès (${points.length} points)`);
-  console.log(`📁 Fichier final : ${OUT}`);
+  // Sauvegarde finale
+  fs.writeFileSync(FINAL_PATH, JSON.stringify(points, null, 2));
+  fs.rmSync(TEMP_PATH, { force: true });
+  console.log(`\n✅ Relief HR complet généré (${points.length} points)`);
+  console.log(`📁 Fichier final : ${FINAL_PATH}`);
 }
 
 main();
