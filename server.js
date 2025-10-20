@@ -533,6 +533,33 @@ async function scheduleDailyVisionIA() {
 await addEngineLog("🕓 Planification VisionIA désactivée temporairement (manual only)", "server");
 
 // ==========================================================
+// 🤖 API J.E.A.N. — Dialogue direct pour le Dôme holographique
+// ==========================================================
+import { askJean } from "./services/chatService.js"; // déjà présent dans tes imports plus haut
+
+app.get("/api/jean/analyse", async (req, res) => {
+  const q = req.query.prompt || "";
+  try {
+    const reply = await askJean(q);
+    res.send(reply);
+  } catch (err) {
+    res.status(500).send("❌ Erreur J.E.A.N. : " + err.message);
+  }
+});
+
+// ==========================================================
+// 🛰 Alias /api/vision/run — compatibilité avec le Dôme 4D
+// ==========================================================
+app.get("/api/vision/run", async (req, res) => {
+  try {
+    const result = await runVisionIA();
+    res.send(`✅ VisionIA exécutée : ${JSON.stringify(result)}`);
+  } catch (err) {
+    res.status(500).send("❌ Erreur VisionIA : " + err.message);
+  }
+});
+
+// ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
 // ==========================================================
 const publicPath = path.join(__dirname, "public");
