@@ -342,7 +342,7 @@ await addEngineLog(
 
     // ⏳ Temporisation avant Phase 2
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
-await sleep(120000); // 2 minutes
+await sleep(200000); // 2 minutes ou plus
 
     // === PHASE 2 — IA J.E.A.N. locale (multi-jours, compatible GPT-5) ===
 await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
@@ -435,10 +435,9 @@ await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} o
     
     // ⏳ Temporisation avant Phase 5
 await addEngineLog("⏳ Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
-await sleep(120000); // 2 min
+await sleep(200000); // 2 min ou plus
     
-    
-// === PHASE 5 — Fusion + Export (avec IA J.E.A.N. globale) ===
+// === PHASE 5 — Fusion + Export (avec IA J.E.A.N. globale + injection publique) ===
 await addEngineLog("[Floreffe] Phase 5 — Fusion IA + Export global en cours...", "info", "floreffe");
 
 let phase2ResultsSafe = [];
@@ -452,7 +451,7 @@ if (Array.isArray(phase2Results) && phase2Results.length) {
     phase2ResultsSafe = reload;
     await addEngineLog(`[Floreffe] 🔁 Données Phase 2 rechargées depuis Mongo (${reload.length})`, "info", "floreffe");
   } else {
-    await addEngineError("[Floreffe] ⚠️ Aucune donnée Phase 2 détectée, bascule sur Phase 1bis", "floreffe");
+    await addEngineError("[Floreffe] ⚠️ Aucune donnée Phase 2 détectée, fallback Phase 1", "floreffe");
     const fallback = await db.collection("floreffe_phase1").find({}).limit(200).toArray();
     phase2ResultsSafe = fallback.map(f => ({
       ...f,
@@ -461,6 +460,7 @@ if (Array.isArray(phase2Results) && phase2Results.length) {
     }));
   }
 }
+
 // === Renforcement intelligent des commentaires Phase 2 avant fusion ===
 function renforcerCommentaire(p) {
   let c = p.commentaire || "";
@@ -468,7 +468,6 @@ function renforcerCommentaire(p) {
   const r = Number(p.precipitation ?? 0);
   const w = Number(p.wind ?? 0);
   const rel = Number(p.reliability ?? 0.8);
-
   if (r > 5) c += " 🌧️ Pluie significative; sols probablement humides.";
   if (t < 0) c += " ❄️ Risque de verglas localisé.";
   if (w > 40) c += " 🌬️ Vent fort; prudence sur les hauteurs.";
@@ -476,111 +475,96 @@ function renforcerCommentaire(p) {
   return c.trim();
 }
 
-// Application du renforcement local sur la Phase 2
 phase2ResultsSafe = phase2ResultsSafe.map(p => ({
   ...p,
   commentaire_fusionné: renforcerCommentaire(p),
-  reliability_finale: Math.min(1, (p.reliability ?? 0.8) * (p.confidence ?? 0.9)),
+  reliability_finale: Math.min(1, (p.reliability ?? 0.8) * (p.confidence ?? 0.9))
 }));
-    
-// 🧠 Analyse IA globale (fusion des risques + validation)
-const fusionPrompt = `
-Tu es J.E.A.N., intelligence météorologique globale de TINSFLASH.
-Ta mission : fusionner et valider les résultats IA locaux de Floreffe pour produire des alertes fiables et explicites.
 
-Rappels :
-- Commune : Floreffe (Belgique)
-- Période : J+0 à J+5
-- Données : issues de la Phase 2 (risques pluie, verglas, vent, brouillard, inondation, fiabilité, commentaire)
-- Seuils d’alerte : ${JSON.stringify(ALERT_THRESHOLDS, null, 2)}
-
-Tâches :
-1️⃣ Regroupe les zones à risque similaires (mêmes tendances météo/hydrologiques).
-2️⃣ Pour chaque zone, indique le ou les phénomènes dominants (pluie, verglas, inondation, vent, brouillard).
-3️⃣ Calcule un niveau de vigilance (vert, jaune, orange, rouge) selon l’intensité.
-4️⃣ Génère un tableau JSON clair du type :
-[
-  {
-    "name": "Rue du Pont (bas du centre)",
-    "risques": ["pluie", "inondation"],
-    "niveau": "orange",
-    "commentaire": "Risque d’inondation localisée lié à ruissellement rapide.",
-    "reliability": 0.88
-  }
-]
-Ne produis aucun texte hors JSON.
-Voici les données sources :
-${JSON.stringify(phase2ResultsSafe.slice(0, 400), null, 2)}
-`;
-
+// === Fusion IA globale (optionnelle) ===
 let fusionResults = [];
 try {
+  const fusionPrompt = `
+Tu es J.E.A.N., intelligence météorologique globale de TINSFLASH.
+Fusionne les résultats IA locaux de Floreffe pour produire des alertes fiables et explicites.
+${JSON.stringify(phase2ResultsSafe.slice(0, 300), null, 2)}
+`;
   const aiFusion = await openai.responses.create({
     model: "gpt-5",
     input: [
-      { role: "system", content: "Tu es J.E.A.N., moteur météo global TINSFLASH, chargé de la synthèse finale." },
+      { role: "system", content: "Tu es J.E.A.N., moteur météo global TINSFLASH" },
       { role: "user", content: fusionPrompt }
     ]
   });
-
-  const rawFusion = aiFusion.output_text?.trim() || "";
-  const match = rawFusion.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+  const raw = aiFusion.output_text?.trim() || "";
+  const match = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
   if (match) fusionResults = JSON.parse(match[0]);
-
-  await addEngineLog(`[Floreffe] 🌐 Fusion IA globale réussie (${fusionResults.length} zones synthétisées)`, "success", "floreffe");
+  await addEngineLog(`[Floreffe] 🌐 Fusion IA globale réussie (${fusionResults.length} zones)`, "success", "floreffe");
 } catch (err) {
   await addEngineError(`[Floreffe] ⚠️ Erreur Fusion IA globale : ${err.message}`, "floreffe");
-  fusionResults = [];
 }
 
-// 🧩 Si l’IA n’a rien renvoyé, fallback sur les données enrichies locales
+// === Préparation finale pour export public ===
 const enriched = (fusionResults.length ? fusionResults : phase2ResultsSafe).map(x => ({
-  ...x,
-  origin: "Floreffe_dome",
-  timestamp: new Date(),
-  thresholds: ALERT_THRESHOLDS,
+  name: x.name || x.zone || "Zone inconnue",
+  lat: x.lat,
+  lon: x.lon,
+  alt: x.alt ?? 100,
+  temperature: x.temperature ?? null,
+  humidity: x.humidity ?? null,
+  wind: x.wind ?? null,
+  precipitation: x.precipitation ?? null,
+  reliability: x.reliability_finale ?? x.reliability ?? 0.8,
+  condition: x.condition || "Inconnue",
+  commentaire: x.commentaire_fusionné || x.commentaire || "",
+  niveau: x.niveau || "vert",
+  risques: x.risques || [],
+  timestamp: new Date()
 }));
 
-if (!enriched.length) {
-  await addEngineError("[Floreffe] ⚠️ Phase 5 — aucune donnée à exporter (fallback vide)", "floreffe");
-  enriched.push({
-    name: "Fallback Floreffe",
-    lat: 50.4368,
-    lon: 4.7562,
-    risques: ["aucun"],
-    niveau: "vert",
-    reliability: 0.1,
-    commentaire: "Fallback de sécurité sans données IA",
-    timestamp: new Date(),
-  });
-}
-
-// 🔔 Détection automatique d’alertes fortes
+// 🔔 Extraction des alertes (orange/rouge)
 const alerts = enriched
-  .filter(x => ["orange", "rouge"].includes(x.niveau))
-  .map(x => ({
-    name: x.name,
-    zone: "Floreffe",
-    lat: x.lat ?? null,
-    lon: x.lon ?? null,
-    type: (x.risques || []).join(", "),
-    level: x.niveau,
-    reliability: x.reliability ?? 0.8,
-    description: x.commentaire ?? "Phénomène à surveiller",
-    timestamp: new Date(),
+  .filter(z => ["orange", "rouge"].includes(z.niveau))
+  .map(z => ({
+    name: z.name,
+    lat: z.lat,
+    lon: z.lon,
+    type: (z.risques || []).join(", ") || "inconnu",
+    level: z.niveau,
+    reliability: z.reliability,
+    description: z.commentaire || "Phénomène à surveiller",
+    timestamp: new Date()
   }));
 
 await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
+await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées`, "success", "floreffe");
 
-await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées (Mongo locale)`, "success", "floreffe");
-// --- Sauvegarde renforcée Phase 5
-await db.collection("forecasts_ai_points").insertMany(phase2ResultsSafe);
+// === Export public ===
+const exportForecasts = {
+  generated: new Date(),
+  commune: "Floreffe",
+  version: "TINSFLASH-PRO+++ Phase 5",
+  zones: enriched
+};
 await fs.promises.writeFile(
-  path.join(__dirname, "../public/floreffe_analysis.json"),
-  JSON.stringify({ generated: new Date(), data: phase2ResultsSafe }, null, 2)
+  path.join(__dirname, "../public/floreffe_forecasts.json"),
+  JSON.stringify(exportForecasts, null, 2)
 );
-await addEngineLog("🧩 Phase 5 : commentaires renforcés et analyses détaillées exportés", "success", "floreffe");
+await fs.promises.writeFile(
+  path.join(__dirname, "../public/floreffe_alerts.json"),
+  JSON.stringify({ generated: new Date(), alerts }, null, 2)
+);
+await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.json terminé", "success", "floreffe");
+
+
+
+
+
+
+
+
+    
     
 // --- Export JSON local
 const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
