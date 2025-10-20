@@ -34,11 +34,7 @@ th,td{border-bottom:1px solid #22304e;padding:6px;text-align:center;}
 th{background:#16233a;color:#7dd3fc;}
 tr:hover{background:#1a2845;}
 .alert-box{background:#1b2439;border-left:4px solid #4fc3f7;padding:8px;margin-bottom:8px;border-radius:8px;}
-.alert-surv{border-left-color:#9ca3af!important;background:#202837;color:#cbd5e1;}
-.alert-val{border-left-color:#facc15!important;background:#2a2535;color:#fde68a;}
-.alert-conf{border-left-color:#22d3ee!important;background:#11263f;color:#bae6fd;}
 .banner{background:#16233a;color:#4fc3f7;padding:12px;text-align:center;font-weight:bold;margin-top:20px;border-radius:8px;}
-.premium-box{background:#11203a;border:1px solid #4fc3f7;border-radius:10px;padding:14px;margin-top:25px;text-align:center;}
 footer{text-align:center;background:#111827;color:#ccc;padding:15px;font-size:.9em;}
 footer a{color:#4fc3f7;text-decoration:none;}
 footer a:hover{text-decoration:underline;}
@@ -48,7 +44,7 @@ footer a:hover{text-decoration:underline;}
 <body>
 <header>
   <span>TINSFLASH • Dôme Floreffe (IA J.E.A.N.)</span>
-  <button id="castBtn">🎬 Caster vers écran</button>
+  <button id="refreshBtn">🔄 Rafraîchir données IA</button>
 </header>
 <div class="subheader">🛰 Données satellites • IA locale multi-sources • Corrélation topographique</div>
 
@@ -95,10 +91,36 @@ footer a:hover{text-decoration:underline;}
 <footer>© 2025 TINSFLASH – Tous droits réservés</footer>
 
 <script>
+// === Rafraîchir manuellement ===
+document.getElementById("refreshBtn").onclick = async ()=>{
+  try{
+    await fetch("/api/run-floreffe",{method:"POST"});
+    alert("✅ Données IA rafraîchies (run Floreffe complet lancé)");
+    initFloreffe();
+  }catch(e){alert("⚠️ Erreur de rafraîchissement : "+e.message);}
+};
+
+// === Lecture audio intro ===
+document.getElementById("soundToggle").onclick=()=>{
+  const v=document.getElementById("introVideo");
+  if(v.muted){v.muted=false;document.getElementById("soundToggle").innerText="🔊";}
+  else{v.muted=true;document.getElementById("soundToggle").innerText="🔇";}
+};
+
+// === Initialisation générale ===
 async function initFloreffe(){
  try{
-  const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
-  const alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
+  // 1️⃣ – lecture locale (fallback)
+  let forecasts=null, alerts=null;
+  try{forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());}catch{}
+  try{alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());}catch{}
+
+  // 2️⃣ – si vide → lecture Mongo via API
+  if(!forecasts || Object.keys(forecasts).length===0)
+    forecasts=await fetch("/api/forecast/floreffe").then(r=>r.json());
+  if(!alerts || !Array.isArray(alerts))
+    alerts=await fetch("/api/alerts/floreffe").then(r=>r.json());
+
   let zones=[];
   if(Array.isArray(forecasts?.zones)) zones=forecasts.zones;
   else if(Array.isArray(forecasts?.data)) zones=forecasts.data;
@@ -113,41 +135,61 @@ async function initFloreffe(){
       const card=document.createElement("div");
       card.className="forecast-card";
       card.innerHTML=`<b>${d.day}</b><br>🌡 ${d.temp_min}°/${d.temp_max}°<br>🌦 ${d.condition}`;
-      card.onclick=()=>renderMap(zones,alerts,i); // clic = jour sélectionné
       weekBox.appendChild(card);
     });
   }
 
   // --- moyenne actuelle ---
-  const avg=(a,k)=>a.length?a.reduce((x,y)=>x+(y[k]??0),0)/a.length:0;
+  const avg=(a,k1,k2)=>a.length?a.reduce((x,y)=>x+(y[k1]??y[k2]??0),0)/a.length:0;
   document.getElementById("summary-box").innerHTML=
-  `<b>🌍 Commune de Floreffe</b><br>🌡 ${(avg(zones,"temp_max")||0).toFixed(1)}°C | 💧 ${(avg(zones,"precipitation")||0).toFixed(1)} mm/h | 🌬 ${(avg(zones,"wind")||0).toFixed(1)} km/h | 💦 ${(avg(zones,"humidity")||0).toFixed(0)}%<br>Points actifs : ${zones.length}`;
+  `<b>🌍 Commune de Floreffe</b><br>
+  🌡 ${(avg(zones,"temp_max","temperature")||0).toFixed(1)}°C |
+  💧 ${(avg(zones,"precipitation","rain_mm")||0).toFixed(1)} mm/h |
+  🌬 ${(avg(zones,"wind","wind_speed")||0).toFixed(1)} km/h |
+  💦 ${(avg(zones,"humidity","humidite")||0).toFixed(0)}%<br>
+  Points actifs : ${zones.length}`;
 
-  renderMap(zones,alerts,0);
+  renderMap(zones);
   renderTable(zones);
   renderAlerts(alerts);
-
  }catch(e){console.error(e);}
 }
 
-function renderMap(zones,alerts,dayIndex=0){
+// === Carte ===
+function renderMap(zones){
  const map=L.map("map").setView([50.44,4.76],12);
  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
  zones.forEach(z=>{
   const t=z.temp_max??z.temperature??0;
-  const p=z.precipitation??0;
+  const p=z.precipitation??z.rain_mm??0;
   const m=L.circleMarker([z.lat||50.44,z.lon||4.76],{radius:6,color:"#4fc3f7"}).addTo(map);
-  m.bindPopup(`<b>${z.name}</b><br>🌡 ${t}°C<br>💧 ${p} mm/h`);
+  m.bindPopup(`<b>${z.name||z.id||"Point"}</b><br>🌡 ${t}°C<br>💧 ${p} mm/h`);
  });
 }
 
+// === Tableau ===
 function renderTable(zones){
  const tb=document.querySelector("#zonesTable tbody");tb.innerHTML="";
  zones.forEach(z=>{
-  tb.innerHTML+=`<tr><td>${z.name||"?"}</td><td>${fmt(z.temp_max||z.temperature,"°")}</td><td>${fmt(z.precipitation,"")}</td><td>${fmt(z.wind,"")}</td><td>${fmt(z.humidity,"")}</td><td>${z.alt??"?"}</td></tr>`;
+  const name=z.name||z.id||"?";
+  const temp=z.temp_max??z.temperature??0;
+  const rain=z.precipitation??z.rain_mm??0;
+  const wind=z.wind??z.wind_speed??0;
+  const hum=z.humidity??z.humidite??0;
+  const alt=z.alt??z.altitude??"?";
+  tb.innerHTML+=`
+    <tr>
+      <td>${name}</td>
+      <td>${fmt(temp,"°")}</td>
+      <td>${fmt(rain,"")}</td>
+      <td>${fmt(wind,"")}</td>
+      <td>${fmt(hum,"")}</td>
+      <td>${alt}</td>
+    </tr>`;
  });
 }
 
+// === Alertes ===
 function renderAlerts(list){
  const c=document.getElementById("alertsBox");
  if(!list?.length){c.innerHTML="<div class='alert-box'>🚫 Aucune alerte active</div>";return;}
