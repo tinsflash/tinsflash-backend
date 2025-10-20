@@ -9,11 +9,12 @@
 <style>
 html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial;}
 #hud{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.5);padding:8px 12px;border-radius:6px;font-size:14px;}
-button{position:fixed;top:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
-padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s;z-index:5;}
-button:hover{background:#7de0ff;color:#000;}
-#resBtn{right:220px;}
-#angleBtn{right:120px;}
+button{position:fixed;top:10px;background:rgba(10,30,40,.8);color:#7de0ff;border:1px solid #00c8ff;
+padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s;z-index:5;text-shadow:0 0 4px #00c8ff;}
+button:hover{background:#00c8ff;color:#000;}
+#resBtn{right:280px;}
+#angleBtn{right:180px;}
+#satBtn{right:80px;}
 #refreshBtn{right:10px;}
 #jeanBtn{position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:#00c8ff;color:#000;font-size:22px;font-weight:bold;box-shadow:0 0 20px rgba(0,200,255,.8);}
 #jeanPanel{display:none;position:fixed;bottom:100px;right:20px;width:320px;height:260px;background:rgba(10,20,40,.9);border:1px solid #00c8ff;border-radius:10px;padding:10px;overflow:auto;color:#9eefff;font-size:14px;}
@@ -21,22 +22,35 @@ button:hover{background:#7de0ff;color:#000;}
 #timeline::after{content:"";position:absolute;top:0;left:0;width:0;height:100%;background:#00c8ff;border-radius:6px;transition:width .3s;}
 #loader{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border:4px solid rgba(0,183,255,0.3);border-top:4px solid #00c8ff;border-radius:50%;animation:spin 1s linear infinite;display:none;z-index:10;}
 @keyframes spin{0%{transform:translate(-50%,-50%) rotate(0deg)}100%{transform:translate(-50%,-50%) rotate(360deg)}}
+/* Effet scanline vert type Hunger Games */
+@keyframes scanPulse {
+  0%,100%{opacity:.3;}
+  50%{opacity:1;}
+}
+.scanline {
+  position:fixed;left:0;top:0;width:100%;height:100%;
+  background:repeating-linear-gradient(to bottom,rgba(0,255,100,0.05) 0,rgba(0,255,100,0.1) 2px,transparent 4px);
+  mix-blend-mode:overlay;pointer-events:none;animation:scanPulse 3s infinite;
+}
 </style>
 </head>
 <body>
-<div id="hud">🌍 Dôme Floreffe – Données locales relief + satellites</div>
+<div id="hud">🌍 Dôme Floreffe – Relief holographique + satellites 4D</div>
 <button id="resBtn">Relief HR</button>
 <button id="angleBtn">Vue 45°</button>
-<button id="refreshBtn">🔄 Rafraîchir VisionIA</button>
+<button id="satBtn">🛰 Sat ON</button>
+<button id="refreshBtn">🔄 VisionIA</button>
 <div id="loader"></div>
+<div class="scanline"></div>
 <canvas id="scene"></canvas>
 <div id="timeline"></div>
 <button id="jeanBtn">🤖</button>
 <div id="jeanPanel">J.E.A.N. en attente…</div>
 
 <script>
-let scene,camera,renderer,controls,terrainMesh,alertGroup,angleMode=false;
+let scene,camera,renderer,controls,terrainMesh,alertGroup,angleMode=false,satVisible=true;
 let currentRes="std";let loader=document.getElementById("loader");let jeanPanel=document.getElementById("jeanPanel");
+let satGroup=new THREE.Group();
 init();animate();
 
 // === INITIALISATION ===
@@ -45,38 +59,41 @@ async function init(){
  renderer=new THREE.WebGLRenderer({canvas,antialias:true});
  renderer.setSize(window.innerWidth,window.innerHeight);
  scene=new THREE.Scene();
+ scene.fog=new THREE.FogExp2(0x000010,0.0012);
  camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,1,2000);
  camera.position.set(0,150,250);
  controls=new THREE.OrbitControls(camera,renderer.domElement);
- controls.autoRotate=true;controls.autoRotateSpeed=0.4;controls.enableDamping=true;
+ controls.autoRotate=true;controls.autoRotateSpeed=0.3;controls.enableDamping=true;
  scene.add(new THREE.AmbientLight(0x447799,0.5));
  const light=new THREE.PointLight(0x66ccff,1.2,800);light.position.set(0,200,0);scene.add(light);
 
- // Halo
+ // Halo tournant
  const haloGeom=new THREE.RingGeometry(120,130,64);
- const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.2});
- const halo=new THREE.Mesh(haloGeom,haloMat);halo.rotation.x=Math.PI/2;scene.add(halo);
+ const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.25});
+ const halo=new THREE.Mesh(haloGeom,haloMat);
+ halo.rotation.x=Math.PI/2;
+ halo.rotation.z=Math.PI/6;
+ scene.add(halo);
 
  // Relief STD
  const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
  createTerrain(altStd);
 
- // Chargement alertes
- const alerts=await fetch("floreffe_alerts.json").then(r=>r.json()).catch(()=>[]);
- renderAlerts(alerts);
+ // Couches satellites
+ await loadSatLayers();
 
  // Timeline
  const timeline=document.getElementById("timeline");
  timeline.addEventListener("click",e=>{
-  const pct=e.offsetX/timeline.offsetWidth;
-  timeline.style.setProperty("--pct",pct);
-  timeline.style.setProperty("width",`${pct*100}%`);
-  updateClouds(pct);
+   const pct=e.offsetX/timeline.offsetWidth;
+   timeline.style.setProperty("width",`${pct*100}%`);
+   updateSatOpacity(pct);
  });
 
  document.getElementById("angleBtn").onclick=()=>switchAngle();
  document.getElementById("resBtn").onclick=()=>switchResolution();
  document.getElementById("refreshBtn").onclick=()=>refreshVision();
+ document.getElementById("satBtn").onclick=()=>toggleSat();
  document.getElementById("jeanBtn").onclick=()=>toggleJean();
  window.addEventListener("resize",onResize);
 }
@@ -84,7 +101,7 @@ async function init(){
 // === RELIEF ===
 function createTerrain(points){
  if(terrainMesh)scene.remove(terrainMesh);
- const geometry=new THREE.PlaneGeometry(240,240,40,40);
+ const geometry=new THREE.PlaneGeometry(240,240,60,60);
  geometry.rotateX(-Math.PI/2);
  const pos=geometry.attributes.position;
  for(let i=0;i<pos.count;i++){
@@ -98,42 +115,41 @@ function createTerrain(points){
    pos.setY(i,h);
  }
  pos.needsUpdate=true;
- const mat=new THREE.MeshBasicMaterial({color:0x00ff66,wireframe:true,transparent:true,opacity:0.35});
+ const mat=new THREE.MeshBasicMaterial({
+   color:0x00ff77,wireframe:true,transparent:true,opacity:0.35
+ });
  terrainMesh=new THREE.Mesh(geometry,mat);
  scene.add(terrainMesh);
 }
 
-// === ALERTES ===
-function renderAlerts(list){
- alertGroup=new THREE.Group();
- list.forEach(a=>{
-   const geom=new THREE.SphereGeometry(3,12,12);
-   let col=a.type?.includes("inond")?0x3399ff:a.type?.includes("vent")?0xff6600:a.type?.includes("verglas")?0x66ccff:0xff0000;
-   const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9});
-   const s=new THREE.Mesh(geom,mat);
-   s.position.set((a.lat-50.44)*200,(a.reliability*100)/2,(a.lon-4.76)*200);
-   s.userData={zone:a.zone,type:a.type,desc:a.description};
-   alertGroup.add(s);
+// === SATELLITES ===
+async function loadSatLayers(){
+ const texClouds=new THREE.TextureLoader().load("sat_clouds_real.jpg");
+ const texRain=new THREE.TextureLoader().load("sat_rain_real.png");
+ const texWind=new THREE.TextureLoader().load("sat_wind.png");
+ [ {t:texClouds,y:65,o:0.45}, {t:texRain,y:70,o:0.4}, {t:texWind,y:75,o:0.3} ].forEach(d=>{
+   const geo=new THREE.PlaneGeometry(240,240);
+   const mat=new THREE.MeshBasicMaterial({map:d.t,transparent:true,opacity:d.o});
+   const m=new THREE.Mesh(geo,mat);
+   m.rotation.x=-Math.PI/2;m.position.y=d.y;
+   satGroup.add(m);
  });
- scene.add(alertGroup);
+ scene.add(satGroup);
 }
 
-// === CLOUDS DYNAMIQUES ===
-let cloudMesh;
-async function updateClouds(pct){
- try{
-   const tex=new THREE.TextureLoader().load(`sat_clouds.png?${Date.now()}`);
-   if(cloudMesh)scene.remove(cloudMesh);
-   const geo=new THREE.PlaneGeometry(240,240,1,1);
-   const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.4});
-   cloudMesh=new THREE.Mesh(geo,mat);
-   cloudMesh.rotation.x=-Math.PI/2;
-   cloudMesh.position.y=60+20*pct;
-   scene.add(cloudMesh);
- }catch(e){console.error("Erreur nuages:",e);}
+function toggleSat(){
+ satVisible=!satVisible;
+ satGroup.visible=satVisible;
+ document.getElementById("satBtn").innerText=satVisible?"🛰 Sat ON":"🛰 Sat OFF";
 }
 
-// === RAFRAÎCHIR VISIONIA ===
+function updateSatOpacity(pct){
+ satGroup.children.forEach((m,i)=>{
+   m.material.opacity=0.2+0.4*Math.abs(Math.sin(pct*Math.PI*(i+1)));
+ });
+}
+
+// === RAFRAÎCHIR ===
 async function refreshVision(){
  loader.style.display="block";
  try{
@@ -149,7 +165,6 @@ async function toggleJean(){
  if(jeanPanel.style.display==="none"){jeanPanel.style.display="block";jeanPanel.innerHTML="Analyse en cours...";await askJean();}
  else jeanPanel.style.display="none";
 }
-
 async function askJean(){
  try{
    const q=prompt("Pose ta question à J.E.A.N. :", "Quel est le risque actuel ?");
@@ -157,9 +172,7 @@ async function askJean(){
    const res=await fetch(`/api/jean/analyse?prompt=${encodeURIComponent(q)}`);
    const data=await res.text();
    jeanPanel.innerHTML=`<b>🧠 Réponse J.E.A.N. :</b><br>${data}`;
- }catch(e){
-   jeanPanel.innerHTML="⚠️ Erreur connexion IA : "+e.message;
- }
+ }catch(e){jeanPanel.innerHTML="⚠️ Erreur connexion IA : "+e.message;}
 }
 
 // === VUES ===
