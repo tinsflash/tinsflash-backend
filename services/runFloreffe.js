@@ -143,7 +143,41 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       P = r.data.hourly.precipitation?.[idx] ?? 0;
       W = r.data.hourly.wind_speed_10m?.[idx] ?? null;
     }
+// --- Fusion moyenne & fiabilité ---
+const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+const valid = sources.filter((s) => s.temperature !== null);
+const reliability = +(valid.length / (models.length || 1)).toFixed(2);
 
+const merged = {
+  id: z.id,
+  name: z.name,
+  lat,
+  lon,
+  alt: z.alt ?? 100,
+  dayOffset,
+  temperature: avg(valid.map((s) => s.temperature)),
+  precipitation: avg(valid.map((s) => s.precipitation)),
+  wind: avg(valid.map((s) => s.wind)),
+  reliability,
+  sources: valid.map((s) => s.source),
+};
+
+// === Ajustements locaux ===
+let final = await applyLocalFactors(await applyGeoFactors(merged, lat, lon, country), lat, lon, country);
+
+// 🌬️ Modulation vent selon altitude
+if (final.alt && final.wind != null) {
+  if (final.alt > 150) final.wind = +(final.wind * 1.15).toFixed(1);
+  else if (final.alt < 90) final.wind = +(final.wind * 0.85).toFixed(1);
+}
+
+// 🌧️ Pluie réaliste
+if (final.precipitation != null) {
+  if (final.precipitation < 0.05) final.precipitation = 0;
+  final.precipitation = +final.precipitation.toFixed(2);
+}
+
+results.push(final);
     // --- Log clair selon résultat ---
     if (T !== null || P > 0 || W !== null) {
       await addEngineLog(`✅ [${runType}] ${m.name} OK (T:${T ?? "?"}° P:${P ?? 0} mm W:${W ?? "?"} km/h)`,
@@ -339,7 +373,43 @@ await addEngineLog(
 
     await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
     await addEngineLog("✅ Corrélation topographique / hydrologique appliquée", "success", "floreffe");
+// 🌫️ PHASE 1bis+ — Calcul humidité et indice VisionIA local
+await addEngineLog("🌫️ [Floreffe] Début calcul humidité et VisionIA (1bis+)", "info", "floreffe");
 
+const phase1bisPlus = phase1bisResults.map((pt) => {
+  const result = { ...pt };
+
+  // === Calcul humidité relative approximée ===
+  // Basé sur température et précipitation (valeur proxy si pas de capteur)
+  const temp = Number(result.temperature ?? 0);
+  const rain = Number(result.precipitation ?? 0);
+  let humidity = 60;
+
+  if (rain > 0.5) humidity += 20;
+  if (temp < 5) humidity += 10;
+  if (temp < 0) humidity += 5;
+  if (humidity > 100) humidity = 100;
+  result.humidity = Math.round(humidity);
+
+  // === Calcul indice VisionIA local (score de confiance IA terrain) ===
+  // Combine altitude, pente et cohérence topographique
+  const alt = Number(result.alt ?? 100);
+  const topoScore = result.topo?.score ?? 0.8;
+  let visionia = topoScore;
+
+  if (alt > 160) visionia *= 1.05;
+  if (alt < 90) visionia *= 0.95;
+  if (result.reliability < 0.7) visionia *= 0.85;
+
+  result.visionia = Math.min(1, +(visionia.toFixed(2)));
+
+  return result;
+});
+
+// 💾 Sauvegarde Mongo pour traçabilité VisionIA
+await db.collection("floreffe_phase1bis").deleteMany({});
+await db.collection("floreffe_phase1bis").insertMany(phase1bisPlus);
+await addEngineLog("✅ [Floreffe] Phase 1bis+ (humidité + VisionIA) sauvegardée", "success", "floreffe");
     // ⏳ Temporisation avant Phase 2
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
 await sleep(200000); // 2 minutes ou plus
@@ -569,7 +639,44 @@ await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.
 // --- Export JSON local
 const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
 const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
+// === Création du bloc 5 jours pour page Floreffe.html ===
+const grouped = {};
+for (const z of enriched) {
+  const d = z.dayOffset ?? 0;
+  if (!grouped[d]) grouped[d] = [];
+  grouped[d].push(z);
+}
 
+const week = Object.keys(grouped).map((d) => {
+  const list = grouped[d];
+  const avg = (a, k) => (a.length ? a.reduce((x, y) => x + (y[k] ?? 0), 0) / a.length : 0);
+  const dayIdx = Number(d);
+  return {
+    day: ["Aujourd’hui", "J+1", "J+2", "J+3", "J+4", "J+5"][dayIdx] ?? `J+${dayIdx}`,
+    temp_min: +(Math.min(...list.map((z) => z.temperature ?? 0))).toFixed(1),
+    temp_max: +(Math.max(...list.map((z) => z.temperature ?? 0))).toFixed(1),
+    condition: list.some((z) => z.precipitation > 1) ? "Pluie" : "Variable",
+  };
+});
+
+// === Export public complet ===
+const exportForecasts = {
+  generated: new Date(),
+  commune: "Floreffe",
+  version: "TINSFLASH-PRO+++ Phase 5.2",
+  general: { week },
+  zones: enriched,
+};
+
+await fs.promises.writeFile(
+  path.join(__dirname, "../public/floreffe_forecasts.json"),
+  JSON.stringify(exportForecasts, null, 2)
+);
+await fs.promises.writeFile(
+  path.join(__dirname, "../public/floreffe_alerts.json"),
+  JSON.stringify({ generated: new Date(), alerts }, null, 2)
+);
+await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.json (5 jours ajoutés)", "success", "floreffe");
 await fs.promises.writeFile(
   forecastsPath,
   JSON.stringify({ generated: new Date(), range: "J+0 → J+5", zones: enriched }, null, 2)
