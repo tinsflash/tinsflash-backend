@@ -133,11 +133,15 @@ castBtn.addEventListener("click",async()=>{
 // === DONNÉES LOCALES ===
 async function initFloreffe(){
  try{
-  const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
-  const alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
-  // 🔧 Lecture compatible avec toutes versions de la Phase 5
+  // 🔧 Lecture universelle compatible toutes phases
 let zones = [];
 if (Array.isArray(forecasts?.zones)) zones = forecasts.zones;
+else if (Array.isArray(forecasts?.data)) zones = forecasts.data;
+else if (Array.isArray(forecasts?.data?.zones)) zones = forecasts.data.zones;
+else if (Array.isArray(forecasts)) zones = forecasts;
+else console.warn("⚠️ Aucune zone détectée dans le JSON floreffe_forecasts.json", forecasts);
+
+console.log(`📊 ${zones.length} zones chargées pour Floreffe`);
 else if (Array.isArray(forecasts?.data)) zones = forecasts.data;
 else if (Array.isArray(forecasts?.data?.zones)) zones = forecasts.data.zones;
 else if (Array.isArray(forecasts)) zones = forecasts;
@@ -150,6 +154,24 @@ else console.warn("⚠️ Aucune zone détectée dans le JSON floreffe_forecasts
   const r=(avg(zones,"reliability")*100).toFixed(0);
   document.getElementById("summary-box").innerHTML=
   `<b>🌍 Commune de Floreffe</b><br>🌡 ${t}°C | 💧 ${p} mm/h | 🌬 ${w} km/h | 💦 ${h}%<br>🔹 Fiabilité IA J.E.A.N. : ${r}% | Points actifs : ${zones.length}/60`;
+   // 🎯 Ajout du sélecteur de zones
+if (zones.length > 0) {
+  const selector = document.createElement("select");
+  selector.id = "zoneSelector";
+  selector.style.margin = "10px 0";
+  selector.style.background = "#11263f";
+  selector.style.color = "#7dd3fc";
+  selector.style.border = "1px solid #4fc3f7";
+  selector.style.borderRadius = "6px";
+  selector.style.padding = "4px 8px";
+  selector.innerHTML = zones.map(z => `<option>${z.name || "Zone"}</option>`).join("");
+  document.getElementById("summary-box").appendChild(selector);
+
+  selector.onchange = () => {
+    const selected = zones.find(z => z.name === selector.value);
+    if (selected) alert(`📍 Zone sélectionnée : ${selected.name}\n🌡 ${selected.temperature}°C – 💧 ${selected.precipitation} mm/h – 🌬 ${selected.wind} km/h`);
+  };
+}
   renderMap(zones,alerts);renderTable(zones);renderAlerts(alerts);
  }catch(e){console.error(e);}
 }
