@@ -197,20 +197,49 @@ function renderTable(zones){
  });
 }
 
-function renderAlerts(list){
- const c=document.getElementById("alertsBox");
- const items=Array.isArray(list)?list:[];
- if(!items.length){c.innerHTML="<div class='alert-box'>Aucune alerte active</div>";return;}
- let html="";
- const cat=(f,cls,title)=>{const arr=items.filter(f);if(!arr.length)return"";let t=`<h3>${title}</h3>`;arr.forEach(a=>{
-  const r=(a.reliability??a.confidence??0.8)*100;
-  t+=`<div class='alert-box ${cls}'><b>${a.type||"Alerte"}</b> – ${a.zone||""}<br>${a.description?`<small>${a.description}</small><br>`:""}Confiance ${r.toFixed(0)} %</div>`;});return t;};
- html+=cat(a=>(a.reliability??a.confidence)>=0.9,"alert-conf","Alertes confirmées (≥90 %)");
- html+=cat(a=>{const r=a.reliability??a.confidence;return r>=0.7&&r<0.9;},"alert-val","À valider (70–89 %)");
- html+=cat(a=>{const r=a.reliability??a.confidence;return r<0.7;},"alert-surv","En surveillance (<70 %)");
- c.innerHTML=html;
-}
+function renderAlerts(list) {
+  const c = document.getElementById("alertsBox");
+  const items = Array.isArray(list) ? list.filter(a => a && (a.type || a.description)) : [];
 
+  // ✅ Si aucune alerte du tout
+  if (!items.length) {
+    c.innerHTML = "<div class='alert-box'>🚫 Aucune alerte active pour le moment.</div>";
+    return;
+  }
+
+  let html = "";
+  const cat = (f, cls, title) => {
+    const arr = items.filter(f);
+    if (!arr.length) return "";
+    let t = `<h3>${title}</h3>`;
+    arr.forEach(a => {
+      const r = (a.reliability ?? a.confidence ?? 0.8) * 100;
+      const zone = a.zone ? ` – ${a.zone}` : "";
+      const desc = a.description ? `<small>${a.description}</small><br>` : "";
+      t += `
+        <div class='alert-box ${cls}'>
+          <b>${a.type || "Alerte"}</b>${zone}<br>
+          ${desc}Confiance ${r.toFixed(0)}%
+        </div>`;
+    });
+    return t;
+  };
+
+  // ⚙️ Construction propre (seulement si des éléments existent)
+  const conf = cat(a => (a.reliability ?? a.confidence) >= 0.9, "alert-conf", "Alertes confirmées (≥90 %)");
+  const val = cat(a => {
+    const r = a.reliability ?? a.confidence;
+    return r >= 0.7 && r < 0.9;
+  }, "alert-val", "À valider (70–89 %)");
+  const surv = cat(a => (a.reliability ?? a.confidence) < 0.7, "alert-surv", "En surveillance (<70 %)");
+
+  // 🧠 S’il n’y a aucune catégorie non vide → affiche un message unique
+  if (!conf && !val && !surv) {
+    c.innerHTML = "<div class='alert-box'>🚫 Aucune alerte active pour le moment.</div>";
+  } else {
+    c.innerHTML = conf + val + surv;
+  }
+}
 function fmt(v,unit){return(v==null||isNaN(v))?"—":`${Number(v).toFixed(1)}${unit||""}`;}
 window.onload=initFloreffe;
 </script>
