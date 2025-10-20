@@ -1,17 +1,14 @@
 // ==========================================================
-// 🛰️ TINSFLASH — generateSatLayers.js (Everest Protocol v6.5.3 PRO+++)
+// 🛰️ TINSFLASH — generateSatLayers.js (Everest Protocol v6.5.3 HYBRID)
 // ==========================================================
 // Génère les couches satellites (nuages / pluie / vent)
-// à partir des prévisions réelles de Floreffe ET des vraies
-// images satellites (Open-Meteo + RainViewer).
-// Sorties : sat_clouds.png, sat_rain.png, sat_wind.png,
-//           sat_clouds_real.jpg, sat_rain_real.png
+// à partir des prévisions réelles (Floreffe) + vraies images satellites
+// Fallback automatique : sharp → jimp
 // ==========================================================
 
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import sharp from "sharp";
 import { createCanvas } from "canvas";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
@@ -20,12 +17,27 @@ dotenv.config();
 const OUT_DIR = "./public";
 const WIDTH = 1024;
 const HEIGHT = 1024;
-
 const mongoUri = process.env.MONGO_URI;
 let forecasts = [];
 
 // ==========================================================
-// 🔹 Chargement des prévisions locales (IA / Mongo / Fichier)
+// 🔹 Chargement dynamique de sharp ou jimp
+// ==========================================================
+let imageLib = null;
+async function loadImageLib() {
+  try {
+    const sharp = (await import("sharp")).default;
+    imageLib = sharp;
+    console.log("✅ Module image actif : sharp");
+  } catch {
+    const Jimp = (await import("jimp")).default;
+    imageLib = Jimp;
+    console.log("⚠️ Module sharp indisponible → fallback sur Jimp");
+  }
+}
+
+// ==========================================================
+// 🔹 Chargement des données météo (IA / Mongo / local)
 // ==========================================================
 async function loadForecasts() {
   try {
@@ -50,16 +62,26 @@ async function loadForecasts() {
 }
 
 // ==========================================================
-// 🔹 Téléchargement des vraies images satellites
+// 🔹 Téléchargement image satellite (sharp ou jimp selon dispo)
 // ==========================================================
 async function downloadSatLayer(url, output, label) {
   try {
     const response = await axios.get(url, { responseType: "arraybuffer" });
-    const img = await sharp(response.data)
-      .resize(WIDTH, HEIGHT)
-      .modulate({ brightness: 1.2 })
-      .toBuffer();
-    fs.writeFileSync(output, img);
+
+    // Si sharp est dispo
+    if (imageLib?.constructor?.name === "Function" && imageLib.name === "sharp") {
+      const img = await imageLib(response.data)
+        .resize(WIDTH, HEIGHT)
+        .modulate({ brightness: 1.2 })
+        .toBuffer();
+      fs.writeFileSync(output, img);
+    } else {
+      // Sinon fallback Jimp
+      const Jimp = imageLib;
+      const image = await Jimp.read(response.data);
+      await image.resize(WIDTH, HEIGHT).brightness(0.1).writeAsync(output);
+    }
+
     console.log(`🛰️ Image satellite téléchargée (${label}) → ${output}`);
   } catch (err) {
     console.error(`⚠️ Échec téléchargement ${label}:`, err.message);
@@ -105,7 +127,6 @@ async function generateLayer(type) {
     ctx.fill();
   }
 
-  // effet de flou léger
   ctx.globalAlpha = 0.25;
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -117,12 +138,13 @@ async function generateLayer(type) {
 }
 
 // ==========================================================
-// 🔹 Programme principal
+// 🔹 MAIN
 // ==========================================================
 (async () => {
+  await loadImageLib();
   await loadForecasts();
 
-  // --- Téléchargement des images satellites réelles ---
+  // --- Téléchargement des vraies images satellites ---
   await downloadSatLayer(
     "https://satellite.open-meteo.com/map/clouds/Europe/latest.jpg",
     path.join(OUT_DIR, "sat_clouds_real.jpg"),
@@ -142,7 +164,6 @@ async function generateLayer(type) {
     return;
   }
 
-  // --- Génération des couches IA locales ---
   await generateLayer("clouds");
   await generateLayer("rain");
   await generateLayer("wind");
