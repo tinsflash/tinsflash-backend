@@ -7,167 +7,182 @@
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 <style>
-html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial}
-#info{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.4);padding:8px 12px;border-radius:6px;font-size:14px;}
-#angleBtn,#resBtn{position:fixed;top:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
-padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s}
-#angleBtn:hover,#resBtn:hover{background:#7de0ff;color:#000;}
-#angleBtn{right:10px;}
-#resBtn{right:120px;}
-#loader{
-  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:80px;height:80px;border:4px solid rgba(0,183,255,0.3);
-  border-top:4px solid #00c8ff;border-radius:50%;animation:spin 1s linear infinite;
-  display:none;z-index:10;
-}
+html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial;}
+#hud{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.5);padding:8px 12px;border-radius:6px;font-size:14px;}
+button{position:fixed;top:10px;background:#111;color:#7de0ff;border:1px solid #7de0ff;
+padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s;z-index:5;}
+button:hover{background:#7de0ff;color:#000;}
+#resBtn{right:220px;}
+#angleBtn{right:120px;}
+#refreshBtn{right:10px;}
+#jeanBtn{position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:#00c8ff;color:#000;font-size:22px;font-weight:bold;box-shadow:0 0 20px rgba(0,200,255,.8);}
+#jeanPanel{display:none;position:fixed;bottom:100px;right:20px;width:320px;height:260px;background:rgba(10,20,40,.9);border:1px solid #00c8ff;border-radius:10px;padding:10px;overflow:auto;color:#9eefff;font-size:14px;}
+#timeline{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:60%;height:8px;background:rgba(255,255,255,.1);border-radius:6px;cursor:pointer;}
+#timeline::after{content:"";position:absolute;top:0;left:0;width:0;height:100%;background:#00c8ff;border-radius:6px;transition:width .3s;}
+#loader{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border:4px solid rgba(0,183,255,0.3);border-top:4px solid #00c8ff;border-radius:50%;animation:spin 1s linear infinite;display:none;z-index:10;}
 @keyframes spin{0%{transform:translate(-50%,-50%) rotate(0deg)}100%{transform:translate(-50%,-50%) rotate(360deg)}}
 </style>
 </head>
 <body>
-<div id="info">🌍 Dôme Floreffe – Données locales (relief + alertes météo)</div>
+<div id="hud">🌍 Dôme Floreffe – Données locales relief + satellites</div>
 <button id="resBtn">Relief HR</button>
 <button id="angleBtn">Vue 45°</button>
+<button id="refreshBtn">🔄 Rafraîchir VisionIA</button>
 <div id="loader"></div>
 <canvas id="scene"></canvas>
+<div id="timeline"></div>
+<button id="jeanBtn">🤖</button>
+<div id="jeanPanel">J.E.A.N. en attente…</div>
 
 <script>
 let scene,camera,renderer,controls,terrainMesh,alertGroup,angleMode=false;
-let currentRes="std";
-let loader=document.getElementById("loader");
+let currentRes="std";let loader=document.getElementById("loader");let jeanPanel=document.getElementById("jeanPanel");
+init();animate();
 
-init();
-animate();
-
+// === INITIALISATION ===
 async function init(){
-  const canvas=document.getElementById("scene");
-  renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-  renderer.setSize(window.innerWidth,window.innerHeight);
-  scene=new THREE.Scene();
-  camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,1,2000);
-  camera.position.set(0,150,250);
-  controls=new THREE.OrbitControls(camera,renderer.domElement);
-  controls.autoRotate=true;
-  controls.autoRotateSpeed=0.6;
-  controls.enableDamping=true;
+ const canvas=document.getElementById("scene");
+ renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+ renderer.setSize(window.innerWidth,window.innerHeight);
+ scene=new THREE.Scene();
+ camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,1,2000);
+ camera.position.set(0,150,250);
+ controls=new THREE.OrbitControls(camera,renderer.domElement);
+ controls.autoRotate=true;controls.autoRotateSpeed=0.4;controls.enableDamping=true;
+ scene.add(new THREE.AmbientLight(0x447799,0.5));
+ const light=new THREE.PointLight(0x66ccff,1.2,800);light.position.set(0,200,0);scene.add(light);
 
-  // Halo
-  const haloGeom=new THREE.RingGeometry(120,130,64);
-  const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.2});
-  const halo=new THREE.Mesh(haloGeom,haloMat);
-  halo.rotation.x=Math.PI/2;
-  scene.add(halo);
+ // Halo
+ const haloGeom=new THREE.RingGeometry(120,130,64);
+ const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.2});
+ const halo=new THREE.Mesh(haloGeom,haloMat);halo.rotation.x=Math.PI/2;scene.add(halo);
 
-  // Lumières
-  const light=new THREE.PointLight(0x66ccff,1.5,600);
-  light.position.set(0,200,0);
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0x447799,0.4));
+ // Relief STD
+ const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
+ createTerrain(altStd);
 
-  // Relief standard
-  const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
-  createTerrain(altStd);
+ // Chargement alertes
+ const alerts=await fetch("floreffe_alerts.json").then(r=>r.json()).catch(()=>[]);
+ renderAlerts(alerts);
 
-  // Alertes météo
-  const alerts=await fetch("floreffe_alertes.json").then(r=>r.json());
-  renderAlerts(alerts);
+ // Timeline
+ const timeline=document.getElementById("timeline");
+ timeline.addEventListener("click",e=>{
+  const pct=e.offsetX/timeline.offsetWidth;
+  timeline.style.setProperty("--pct",pct);
+  timeline.style.setProperty("width",`${pct*100}%`);
+  updateClouds(pct);
+ });
 
-  document.getElementById("angleBtn").onclick=()=>switchAngle();
-  document.getElementById("resBtn").onclick=()=>switchResolution();
-  window.addEventListener("resize",onResize);
+ document.getElementById("angleBtn").onclick=()=>switchAngle();
+ document.getElementById("resBtn").onclick=()=>switchResolution();
+ document.getElementById("refreshBtn").onclick=()=>refreshVision();
+ document.getElementById("jeanBtn").onclick=()=>toggleJean();
+ window.addEventListener("resize",onResize);
 }
 
+// === RELIEF ===
 function createTerrain(points){
-  if(terrainMesh) scene.remove(terrainMesh);
-  const geometry=new THREE.PlaneGeometry(240,240,30,30);
-  geometry.rotateX(-Math.PI/2);
-  const pos=geometry.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    const vx=pos.getX(i)/2+50.44;
-    const vz=pos.getZ(i)/2+4.76;
-    const closest=points.reduce((a,b)=>{
-      const da=(vx-b.lat)**2+(vz-b.lon)**2;
-      const db=(vx-a.lat)**2+(vz-a.lon)**2;
-      return da<db?b:a;
-    });
-    const h=(closest.alt-80)/2;
-    pos.setY(i,h);
-  }
-  pos.needsUpdate=true;
-  const mat=new THREE.MeshBasicMaterial({
-    color:0x33ccff,wireframe:true,transparent:true,opacity:0.6
-  });
-  terrainMesh=new THREE.Mesh(geometry,mat);
-  scene.add(terrainMesh);
+ if(terrainMesh)scene.remove(terrainMesh);
+ const geometry=new THREE.PlaneGeometry(240,240,40,40);
+ geometry.rotateX(-Math.PI/2);
+ const pos=geometry.attributes.position;
+ for(let i=0;i<pos.count;i++){
+   const vx=pos.getX(i)/2+50.44;const vz=pos.getZ(i)/2+4.76;
+   const closest=points.reduce((a,b)=>{
+     const da=(vx-b.lat)**2+(vz-b.lon)**2;
+     const db=(vx-a.lat)**2+(vz-a.lon)**2;
+     return da<db?b:a;
+   });
+   const h=(closest.alt-80)/2;
+   pos.setY(i,h);
+ }
+ pos.needsUpdate=true;
+ const mat=new THREE.MeshBasicMaterial({color:0x00ff66,wireframe:true,transparent:true,opacity:0.35});
+ terrainMesh=new THREE.Mesh(geometry,mat);
+ scene.add(terrainMesh);
 }
 
+// === ALERTES ===
 function renderAlerts(list){
-  alertGroup=new THREE.Group();
-  list.forEach(a=>{
-    const geom=new THREE.SphereGeometry(2.5,12,12);
-    const col=a.type.includes("Verglas")?0x66ccff:
-              a.type.includes("Pluie")?0x33aaff:
-              a.type.includes("Vent")?0xff9900:0xff0000;
-    const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9});
-    const s=new THREE.Mesh(geom,mat);
-    s.position.set((a.lat-50.44)*200,(a.reliability*100)/2,(a.lon-4.76)*200);
-    s.userData={zone:a.zone,type:a.type,desc:a.description};
-    alertGroup.add(s);
-  });
-  scene.add(alertGroup);
+ alertGroup=new THREE.Group();
+ list.forEach(a=>{
+   const geom=new THREE.SphereGeometry(3,12,12);
+   let col=a.type?.includes("inond")?0x3399ff:a.type?.includes("vent")?0xff6600:a.type?.includes("verglas")?0x66ccff:0xff0000;
+   const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9});
+   const s=new THREE.Mesh(geom,mat);
+   s.position.set((a.lat-50.44)*200,(a.reliability*100)/2,(a.lon-4.76)*200);
+   s.userData={zone:a.zone,type:a.type,desc:a.description};
+   alertGroup.add(s);
+ });
+ scene.add(alertGroup);
 }
 
-async function switchResolution(){
-  const btn=document.getElementById("resBtn");
-  loader.style.display="block"; // affiche le halo pendant le chargement
-  await sleep(300);
-
-  try{
-    if(currentRes==="std"){
-      btn.textContent="Relief STD";
-      currentRes="hr";
-      const altHR=await fetch("floreffe_altitudes_hr.json").then(r=>r.json());
-      createTerrain(altHR);
-      console.log("🔁 Relief haute résolution chargé !");
-    }else{
-      btn.textContent="Relief HR";
-      currentRes="std";
-      const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
-      createTerrain(altStd);
-      console.log("🔁 Relief standard rechargé !");
-    }
-  }catch(err){
-    console.error("Erreur chargement relief :",err);
-  }finally{
-    loader.style.display="none"; // cache le halo
-  }
+// === CLOUDS DYNAMIQUES ===
+let cloudMesh;
+async function updateClouds(pct){
+ try{
+   const tex=new THREE.TextureLoader().load(`sat_clouds.png?${Date.now()}`);
+   if(cloudMesh)scene.remove(cloudMesh);
+   const geo=new THREE.PlaneGeometry(240,240,1,1);
+   const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.4});
+   cloudMesh=new THREE.Mesh(geo,mat);
+   cloudMesh.rotation.x=-Math.PI/2;
+   cloudMesh.position.y=60+20*pct;
+   scene.add(cloudMesh);
+ }catch(e){console.error("Erreur nuages:",e);}
 }
 
-function animate(){
-  requestAnimationFrame(animate);
-  controls.update();
-  if(alertGroup){
-    const t=Date.now()*0.003;
-    alertGroup.children.forEach((s,i)=>{
-      s.scale.setScalar(1+0.25*Math.sin(t+i));
-      s.material.opacity=0.5+0.4*Math.abs(Math.sin(t+i));
-    });
-  }
-  renderer.render(scene,camera);
+// === RAFRAÎCHIR VISIONIA ===
+async function refreshVision(){
+ loader.style.display="block";
+ try{
+   const res=await fetch("/api/vision/run");
+   const txt=await res.text();
+   alert("✅ VisionIA rafraîchie : "+txt.slice(0,80)+"...");
+ }catch(e){alert("⚠️ Erreur VisionIA : "+e.message);}
+ loader.style.display="none";
 }
 
+// === IA J.E.A.N. ===
+async function toggleJean(){
+ if(jeanPanel.style.display==="none"){jeanPanel.style.display="block";jeanPanel.innerHTML="Analyse en cours...";await askJean();}
+ else jeanPanel.style.display="none";
+}
+
+async function askJean(){
+ try{
+   const q=prompt("Pose ta question à J.E.A.N. :", "Quel est le risque actuel ?");
+   if(!q)return;
+   const res=await fetch(`/api/jean/analyse?prompt=${encodeURIComponent(q)}`);
+   const data=await res.text();
+   jeanPanel.innerHTML=`<b>🧠 Réponse J.E.A.N. :</b><br>${data}`;
+ }catch(e){
+   jeanPanel.innerHTML="⚠️ Erreur connexion IA : "+e.message;
+ }
+}
+
+// === VUES ===
 function switchAngle(){
-  angleMode=!angleMode;
-  if(angleMode){camera.position.set(200,200,200);}
-  else{camera.position.set(0,150,250);}
+ angleMode=!angleMode;
+ if(angleMode){camera.position.set(200,200,200);}else{camera.position.set(0,150,250);}
 }
-
-function onResize(){
-  camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth,window.innerHeight);
+async function switchResolution(){
+ loader.style.display="block";
+ try{
+   if(currentRes==="std"){
+     currentRes="hr";
+     const altHR=await fetch("floreffe_altitudes_hr.json").then(r=>r.json());
+     createTerrain(altHR);
+   }else{
+     currentRes="std";
+     const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
+     createTerrain(altStd);
+   }
+ }catch(e){console.error(e);}finally{loader.style.display="none";}
 }
-
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function onResize(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);}
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
 </script>
 </body>
 </html>
