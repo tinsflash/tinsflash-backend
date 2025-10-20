@@ -26,8 +26,6 @@ p{color:#e0e8f9;line-height:1.5;text-align:justify;}
 .intro-text{flex:1;max-height:200px;overflow-y:auto;background:#131a2b;padding:12px;border-radius:10px;color:#e0e8f9;line-height:1.5;}
 .map-container{height:420px;margin:25px 0;border-radius:10px;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,.4);}
 #summary-box{background:#16233a;border-radius:10px;padding:12px;margin-top:15px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.3);}
-.forecast-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;justify-content:center;}
-.forecast-card{background:#131a2b;border-radius:10px;padding:10px;min-width:120px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,.3);}
 table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.9em;}
 th,td{border-bottom:1px solid #22304e;padding:6px;text-align:center;}
 th{background:#16233a;color:#7dd3fc;}
@@ -133,62 +131,60 @@ castBtn.addEventListener("click",async()=>{
 // === DONNÉES LOCALES ===
 async function initFloreffe(){
  try{
-  // 🔧 Lecture universelle compatible toutes phases
-let zones = [];
-if (Array.isArray(forecasts?.zones)) zones = forecasts.zones;
-else if (Array.isArray(forecasts?.data)) zones = forecasts.data;
-else if (Array.isArray(forecasts?.data?.zones)) zones = forecasts.data.zones;
-else if (Array.isArray(forecasts)) zones = forecasts;
-else console.warn("⚠️ Aucune zone détectée dans le JSON floreffe_forecasts.json", forecasts);
+  const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
+  const alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
 
-console.log(`📊 ${zones.length} zones chargées pour Floreffe`);
-else if (Array.isArray(forecasts?.data)) zones = forecasts.data;
-else if (Array.isArray(forecasts?.data?.zones)) zones = forecasts.data.zones;
-else if (Array.isArray(forecasts)) zones = forecasts;
-else console.warn("⚠️ Aucune zone détectée dans le JSON floreffe_forecasts.json", forecasts);
+  let zones=[];
+  if(Array.isArray(forecasts?.zones))zones=forecasts.zones;
+  else if(Array.isArray(forecasts?.data))zones=forecasts.data;
+  else if(Array.isArray(forecasts?.data?.zones))zones=forecasts.data.zones;
+  else if(Array.isArray(forecasts))zones=forecasts;
+  else console.warn("⚠️ Aucune zone détectée dans le JSON floreffe_forecasts.json",forecasts);
+
+  if(forecasts?.general){
+   const g=forecasts.general;
+   document.getElementById("summary-box").innerHTML=
+    `<b>${g.location}</b><br>🌡 ${g.temp_min}–${g.temp_max}°C | ${g.condition}<br>💦 Humidité ${g.icon||"—"} % | Fiabilité ${(forecasts.reliability*100).toFixed(0)} %`;
+  }
+
   const avg=(arr,k)=>arr.length?arr.reduce((a,b)=>a+(b[k]??0),0)/arr.length:0;
-  const t=avg(zones,"temperature").toFixed(1);
-  const p=avg(zones,"precipitation").toFixed(1);
-  const w=avg(zones,"wind").toFixed(1);
+  const t=avg(zones,"temp_max").toFixed(1);
+  const w=avg(zones,"wind")?avg(zones,"wind").toFixed(1):"—";
   const h=avg(zones,"humidity")?avg(zones,"humidity").toFixed(0):"—";
-  const r=(avg(zones,"reliability")*100).toFixed(0);
-  document.getElementById("summary-box").innerHTML=
-  `<b>🌍 Commune de Floreffe</b><br>🌡 ${t}°C | 💧 ${p} mm/h | 🌬 ${w} km/h | 💦 ${h}%<br>🔹 Fiabilité IA J.E.A.N. : ${r}% | Points actifs : ${zones.length}/60`;
-   // 🎯 Ajout du sélecteur de zones
-if (zones.length > 0) {
-  const selector = document.createElement("select");
-  selector.id = "zoneSelector";
-  selector.style.margin = "10px 0";
-  selector.style.background = "#11263f";
-  selector.style.color = "#7dd3fc";
-  selector.style.border = "1px solid #4fc3f7";
-  selector.style.borderRadius = "6px";
-  selector.style.padding = "4px 8px";
-  selector.innerHTML = zones.map(z => `<option>${z.name || "Zone"}</option>`).join("");
-  document.getElementById("summary-box").appendChild(selector);
+  const p=avg(zones,"precipitation")?avg(zones,"precipitation").toFixed(1):"—";
+  document.getElementById("summary-box").innerHTML+=
+   `<br><b>🌍 Commune de Floreffe</b><br>🌡 ${t}°C | 💧 ${p} mm/h | 🌬 ${w} km/h | 💦 ${h} %<br>Points actifs : ${zones.length}`;
 
-  selector.onchange = () => {
-    const selected = zones.find(z => z.name === selector.value);
-    if (selected) alert(`📍 Zone sélectionnée : ${selected.name}\n🌡 ${selected.temperature}°C – 💧 ${selected.precipitation} mm/h – 🌬 ${selected.wind} km/h`);
-  };
-}
   renderMap(zones,alerts);renderTable(zones);renderAlerts(alerts);
- }catch(e){console.error(e);}
+
+  // === Sélecteur de zone
+  if(zones.length>0){
+   const selector=document.createElement("select");
+   selector.id="zoneSelector";
+   Object.assign(selector.style,{margin:"10px 0",background:"#11263f",color:"#7dd3fc",border:"1px solid #4fc3f7",borderRadius:"6px",padding:"4px 8px"});
+   selector.innerHTML=zones.map(z=>`<option>${z.name||"Zone"}</option>`).join("");
+   document.getElementById("summary-box").appendChild(selector);
+   selector.onchange=()=>{const sel=zones.find(z=>z.name===selector.value);
+     if(sel)alert(`📍 ${sel.name}\n🌡 ${sel.temp_min||sel.temperature}–${sel.temp_max||sel.temperature}°C\n${sel.condition||""}`);};
+  }
+
+  console.log(`📊 ${zones.length} zones chargées pour Floreffe`);
+ }catch(e){console.error("Erreur chargement Floreffe :",e);}
 }
-console.log(`📊 ${zones.length} zones chargées pour Floreffe`);
+
 function renderMap(zones,alerts){
  const map=L.map("map").setView([50.44,4.76],12);
  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
  (zones||[]).forEach(z=>{
-  const marker=L.circleMarker([z.lat,z.lon],{radius:6,color:"#3b82f6"}).addTo(map);
-  const info=`<b>${z.name}</b><br>🌡 ${fmt(z.temperature,"°C")}<br>💧 ${fmt(z.precipitation," mm/h")}<br>🌬 ${fmt(z.wind," km/h")}<br>🔹 Fiabilité ${(z.reliability*100).toFixed(0)}%`;
+  const marker=L.circleMarker([z.lat||50.44,z.lon||4.76],{radius:6,color:"#3b82f6"}).addTo(map);
+  const info=`<b>${z.name}</b><br>🌡 ${fmt(z.temperature||z.temp_max,"°C")}<br>💧 ${fmt(z.precipitation," mm/h")}<br>🌬 ${fmt(z.wind," km/h")}`;
   marker.bindPopup(info);
  });
  (alerts||[]).forEach(a=>{
   const r=a.reliability??a.confidence??0.8;
   let color="#f87171";if(r>=0.9)color="#ef4444";else if(r>=0.7)color="#f59e0b";else color="#9ca3af";
   if(a.lat&&a.lon)L.circleMarker([a.lat,a.lon],{radius:8,color}).addTo(map)
-  .bindPopup(`<b>${a.type||"Alerte"}</b><br>${a.zone||""}<br><small>${a.description||""}</small><br>Confiance ${(r*100).toFixed(0)}%`);
+  .bindPopup(`<b>${a.type||"Alerte"}</b><br>${a.zone||""}<br><small>${a.description||""}</small><br>Confiance ${(r*100).toFixed(0)} %`);
  });
 }
 
@@ -196,7 +192,7 @@ function renderTable(zones){
  const tb=document.querySelector("#zonesTable tbody");tb.innerHTML="";
  zones.forEach(z=>{
   const tr=document.createElement("tr");
-  tr.innerHTML=`<td>${z.name||"?"}</td><td>${fmt(z.temperature,"°")}</td><td>${fmt(z.precipitation,"")}</td><td>${fmt(z.wind,"")}</td><td>${fmt(z.humidity,"")}</td><td>${z.alt??"?"}</td><td>${(z.reliability*100).toFixed(0)}</td>`;
+  tr.innerHTML=`<td>${z.name||"?"}</td><td>${fmt(z.temperature||z.temp_max,"°")}</td><td>${fmt(z.precipitation,"")}</td><td>${fmt(z.wind,"")}</td><td>${fmt(z.humidity,"")}</td><td>${z.alt??"?"}</td><td>${(z.reliability*100||0).toFixed(0)}</td>`;
   tb.appendChild(tr);
  });
 }
@@ -208,12 +204,13 @@ function renderAlerts(list){
  let html="";
  const cat=(f,cls,title)=>{const arr=items.filter(f);if(!arr.length)return"";let t=`<h3>${title}</h3>`;arr.forEach(a=>{
   const r=(a.reliability??a.confidence??0.8)*100;
-  t+=`<div class='alert-box ${cls}'><b>${a.type||"Alerte"}</b> – ${a.zone||""}<br>${a.description?`<small>${a.description}</small><br>`:""}Confiance ${r.toFixed(0)}%</div>`;});return t;};
- html+=cat(a=>(a.reliability??a.confidence)>=0.9,"alert-conf","Alertes confirmées (≥90%)");
- html+=cat(a=>{const r=a.reliability??a.confidence;return r>=0.7&&r<0.9;},"alert-val","À valider (70–89%)");
- html+=cat(a=>{const r=a.reliability??a.confidence;return r<0.7;},"alert-surv","En surveillance (<70%)");
+  t+=`<div class='alert-box ${cls}'><b>${a.type||"Alerte"}</b> – ${a.zone||""}<br>${a.description?`<small>${a.description}</small><br>`:""}Confiance ${r.toFixed(0)} %</div>`;});return t;};
+ html+=cat(a=>(a.reliability??a.confidence)>=0.9,"alert-conf","Alertes confirmées (≥90 %)");
+ html+=cat(a=>{const r=a.reliability??a.confidence;return r>=0.7&&r<0.9;},"alert-val","À valider (70–89 %)");
+ html+=cat(a=>{const r=a.reliability??a.confidence;return r<0.7;},"alert-surv","En surveillance (<70 %)");
  c.innerHTML=html;
 }
+
 function fmt(v,unit){return(v==null||isNaN(v))?"—":`${Number(v).toFixed(1)}${unit||""}`;}
 window.onload=initFloreffe;
 </script>
