@@ -609,32 +609,25 @@ const alerts = enriched
 await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées`, "success", "floreffe");
-
-// === Export public ===
+// === Export public complet ===
 const exportForecasts = {
   generated: new Date(),
   commune: "Floreffe",
-  version: "TINSFLASH-PRO+++ Phase 5",
-  zones: enriched
+  version: "TINSFLASH-PRO+++ Phase 5.2",
+  general: { week },
+  zones: enriched,
 };
+
 await fs.promises.writeFile(
   path.join(__dirname, "../public/floreffe_forecasts.json"),
   JSON.stringify(exportForecasts, null, 2)
 );
+
 await fs.promises.writeFile(
   path.join(__dirname, "../public/floreffe_alerts.json"),
   JSON.stringify({ generated: new Date(), alerts }, null, 2)
 );
 await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.json terminé", "success", "floreffe");
-
-
-
-
-
-
-
-
-    
     
 // --- Export JSON local
 const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
@@ -659,24 +652,18 @@ const week = Object.keys(grouped).map((d) => {
   };
 });
 
-// === Export public complet ===
 
-  generated: new Date(),
-  commune: "Floreffe",
-  version: "TINSFLASH-PRO+++ Phase 5.2",
-  general: { week },
-  zones: enriched,
-};
-
-await fs.promises.writeFile(
-  path.join(__dirname, "../public/floreffe_forecasts.json"),
-  JSON.stringify(exportForecasts, null, 2)
-);
 await fs.promises.writeFile(
   path.join(__dirname, "../public/floreffe_alerts.json"),
   JSON.stringify({ generated: new Date(), alerts }, null, 2)
 );
-await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.json (5 jours ajoutés)", "success", "floreffe");
+
+await addEngineLog(
+  "✅ Export public floreffe_forecasts.json + floreffe_alerts.json terminé",
+  "success",
+  "floreffe"
+);
+    await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.json (5 jours ajoutés)", "success", "floreffe");
 await fs.promises.writeFile(
   forecastsPath,
   JSON.stringify({ generated: new Date(), range: "J+0 → J+5", zones: enriched }, null, 2)
