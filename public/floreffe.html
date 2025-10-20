@@ -141,11 +141,24 @@ async function initFloreffe(){
   else if(Array.isArray(forecasts))zones=forecasts;
   else console.warn("⚠️ Aucune zone détectée dans le JSON floreffe_forecasts.json",forecasts);
 
-  if(forecasts?.general){
-   const g=forecasts.general;
-   document.getElementById("summary-box").innerHTML=
-    `<b>${g.location}</b><br>🌡 ${g.temp_min}–${g.temp_max}°C | ${g.condition}<br>💦 Humidité ${g.icon||"—"} % | Fiabilité ${(forecasts.reliability*100).toFixed(0)} %`;
-  }
+  // === 🗓 AFFICHAGE PRÉVISIONS 5 JOURS ===
+if (forecasts?.general?.week && Array.isArray(forecasts.general.week)) {
+  const weekBox = document.getElementById("weekForecasts");
+  weekBox.innerHTML = "";
+  forecasts.general.week.forEach(d => {
+    const card = document.createElement("div");
+    card.className = "forecast-card";
+    card.innerHTML = `
+      <b>${d.day}</b><br>
+      🌡 ${d.temp_min}°C / ${d.temp_max}°C<br>
+      🌦 ${d.condition || "—"}<br>
+      <small>${d.icon ? "🌀 " + d.icon : ""}</small>`;
+    weekBox.appendChild(card);
+  });
+} else {
+  document.getElementById("weekForecasts").innerHTML =
+    "<div class='forecast-card'>Données 5 jours indisponibles</div>";
+}
 
   const avg=(arr,k)=>arr.length?arr.reduce((a,b)=>a+(b[k]??0),0)/arr.length:0;
   const t=avg(zones,"temp_max").toFixed(1);
