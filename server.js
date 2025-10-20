@@ -512,7 +512,6 @@ app.post("/api/runWatchdog", async (req, res) => {
     res.status(500).send("❌ Erreur Watchdog : " + err.message);
   }
 });
-
 // === PLANIFICATION AUTOMATIQUE VisionIA (1x/jour) ===
 async function scheduleDailyVisionIA() {
   try {
@@ -524,11 +523,15 @@ async function scheduleDailyVisionIA() {
   }
 }
 
+// ==========================================================
+// ⚙️ PLANIFICATION VisionIA – DÉSACTIVÉE TEMPORAIREMENT
+// ==========================================================
 // Démarrage au boot + exécution chaque 24 h (86 400 000 ms)
-scheduleDailyVisionIA();
-setInterval(scheduleDailyVisionIA, 24 * 60 * 60 * 1000);
+// scheduleDailyVisionIA();
+// setInterval(scheduleDailyVisionIA, 24 * 60 * 60 * 1000);
 
-await addEngineLog("✅ Planification VisionIA active – 1x/jour + manuel console", "server");
+await addEngineLog("🕓 Planification VisionIA désactivée temporairement (manual only)", "server");
+
 // ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
 // ==========================================================
