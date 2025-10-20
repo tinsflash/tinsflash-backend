@@ -660,7 +660,7 @@ const week = Object.keys(grouped).map((d) => {
 });
 
 // === Export public complet ===
-const exportForecasts = {
+
   generated: new Date(),
   commune: "Floreffe",
   version: "TINSFLASH-PRO+++ Phase 5.2",
