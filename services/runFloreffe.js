@@ -196,7 +196,7 @@ results.push(final);
     await addEngineError(`❌ [${runType}] ${m.name} indisponible (${msg})`, "superForecast");
   }
   await sleep(2000);
-}
+}}
       const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
       const reliability = +(valid.length / (models.length || 1)).toFixed(2);
