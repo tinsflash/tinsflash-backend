@@ -395,25 +395,41 @@ for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
       phase1Results.push(...stamped);
 
       // Journal d’ouverture Mongo (non bloquant)
-      await addEngineLog("⏳ Vérification de la connexion Mongo (Mongoose)...", "info", "floreffe");
+await addEngineLog("⏳ Vérification de la connexion Mongo (Mongoose)...", "info", "floreffe");
+
 // ✅ On passe désormais par mongoose.connection
 // (on réutilise la connexion déjà ouverte, pas de re-déclaration)
-const floreffePhase1 = mongoose.connection.collection("floreffe_phase1");
-await floreffePhase1.insertMany(stamped);
-await addEngineLog(
-  `✅ [Floreffe] Données J+${dayOffset} (${stamped.length}) intégrées avec succès`,
-  "success",
-  "floreffe"
-        );
-      } else {
-        await addEngineError(
-          `[Floreffe] ⚠️ Connexion Mongo inactive lors de l’insertion J+${dayOffset}`,
-          "floreffe"
-        );
-      }
-    } else {
-      await addEngineError(`[Floreffe] Aucun résultat valide pour J+${dayOffset}`, "floreffe");
-    }
+if (mongoose.connection.readyState === 1) {
+  try {
+    const floreffePhase1 = mongoose.connection.collection("floreffe_phase1");
+
+    await floreffePhase1.insertMany(stamped);
+    await addEngineLog(
+      `✅ [Floreffe] Données J+${dayOffset} (${stamped.length}) intégrées avec succès`,
+      "success",
+      "floreffe"
+    );
+
+  } catch (err) {
+    await addEngineError(
+      `[Floreffe] ❌ Erreur lors de l’insertion Mongo J+${dayOffset} : ${err.message}`,
+      "floreffe"
+    );
+  }
+} else {
+  await addEngineError(
+    `[Floreffe] ⚠️ Connexion Mongo inactive lors de l’insertion J+${dayOffset}`,
+    "floreffe"
+  );
+}
+
+// 🧩 Validation finale des données du jour
+if (!stamped?.length) {
+  await addEngineError(
+    `[Floreffe] Aucun résultat valide pour J+${dayOffset}`,
+    "floreffe"
+  );
+}
 
     // Petite pause entre chaque jour (évite surcharge IA)
     await sleep(50000);
