@@ -870,7 +870,6 @@ try {
 }
 } // 👈 ferme correctement la fonction runFloreffe()
 // === PATCH BLOC 7 — Synchronisation multi-Render vers Mongo central ===
-import axios from "axios";
 
 async function syncResultsToCentral(forecastData, alertData) {
   try {
