@@ -787,7 +787,7 @@ await sleep(500);
 if (typeof process !== "undefined" && process.exit) {
   setTimeout(() => process.exit(0), 1000);
 }
-
+}
 // =======================================================
 // ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
 // =======================================================
