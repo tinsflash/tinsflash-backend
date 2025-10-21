@@ -308,6 +308,49 @@ async function runFloreffe() {
 
   try {
     await mongo.connect();
+    // === PATCH BLOC 6 — Sécurisation Mongo + préparation multi-Render ===
+try {
+  await addEngineLog("🔒 Initialisation sécurité Mongo & Multi-Render", "info", "floreffe");
+
+  // --- Vérification URI ---
+  if (!process.env.MONGO_URI || !process.env.MONGO_URI.startsWith("mongodb+srv")) {
+    throw new Error("URI MongoDB invalide ou non sécurisée");
+  }
+
+  // --- Restriction de domaine (anti-vol moteur) ---
+  const allowedRenderHosts = [
+    "tinsflash.onrender.com",
+    "tinsflash-floreffe.onrender.com",
+    "tinsflash-bouke.onrender.com",
+    "tinsflash-namur.onrender.com"
+  ];
+  const currentHost = process.env.RENDER_EXTERNAL_HOSTNAME || "local";
+
+  if (!allowedRenderHosts.includes(currentHost)) {
+    await addEngineError(`⛔ Accès refusé : hôte non autorisé (${currentHost})`, "security");
+    throw new Error(`Hôte non autorisé : ${currentHost}`);
+  }
+
+  // --- Journal d’identification ---
+  await addEngineLog(`🧭 Serveur authentifié : ${currentHost}`, "success", "floreffe");
+
+  // --- Signature de session (trace unique) ---
+  const sessionToken = `${currentHost}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  await db.collection("engine_sessions").insertOne({
+    zone: "Floreffe",
+    host: currentHost,
+    startedAt: new Date(),
+    sessionToken,
+    status: "RUNNING"
+  });
+
+  // Sauvegarde du token dans le contexte d’exécution
+  globalThis.__ENGINE_SESSION__ = sessionToken;
+} catch (err) {
+  await addEngineError(`[SECURITE] Échec initialisation : ${err.message}`, "security");
+  throw err;
+}
+// === FIN PATCH BLOC 6 ===
     const db = mongo.db("tinsflash");
 
     console.log("✅ [TINSFLASH] Démarrage Floreffe — Everest Protocol v6.5.1 (Fix DoubleLoop)");
@@ -609,7 +652,43 @@ const alerts = enriched
 await db.collection("alerts_floreffe").deleteMany({});
 if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
 await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées`, "success", "floreffe");
-// === Export public complet ===
+
+    // === PATCH BLOC 1 — Prévisions 5 jours (week) à partir de `enriched` ===
+const grouped = {};
+for (const z of enriched) {
+  const d = z.dayOffset ?? 0;
+  if (!grouped[d]) grouped[d] = [];
+  grouped[d].push(z);
+}
+
+const dayLabel = (idx) => (
+  idx === 0 ? "Aujourd’hui" :
+  idx === 1 ? "J+1" :
+  idx === 2 ? "J+2" :
+  idx === 3 ? "J+3" :
+  idx === 4 ? "J+4" :
+  idx === 5 ? "J+5" : `J+${idx}`
+);
+
+const week = Object.keys(grouped)
+  .map(Number)
+  .sort((a, b) => a - b)
+  .map((d) => {
+    const list = grouped[d];
+    const temps = list.map(z => Number(z.temperature ?? 0));
+    const min = Math.min(...temps);
+    const max = Math.max(...temps);
+    const rainy = list.some(z => Number(z.precipitation ?? 0) > 1);
+    return {
+      day: dayLabel(d),
+      temp_min: Number.isFinite(min) ? +min.toFixed(1) : null,
+      temp_max: Number.isFinite(max) ? +max.toFixed(1) : null,
+      condition: rainy ? "Pluie" : "Variable",
+    };
+  });
+// === FIN PATCH BLOC 1 ===
+    
+    // === Export public complet ===
 const exportForecasts = {
   generated: new Date(),
   commune: "Floreffe",
@@ -628,53 +707,110 @@ await fs.promises.writeFile(
   JSON.stringify({ generated: new Date(), alerts }, null, 2)
 );
 await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.json terminé", "success", "floreffe");
-    
-// --- Export JSON local
-const forecastsPath = path.join(__dirname, "../public/floreffe_forecasts.json");
-const alertsPath = path.join(__dirname, "../public/floreffe_alerts.json");
-// === Création du bloc 5 jours pour page Floreffe.html ===
-const grouped = {};
-for (const z of enriched) {
-  const d = z.dayOffset ?? 0;
-  if (!grouped[d]) grouped[d] = [];
-  grouped[d].push(z);
+    // === PATCH BLOC 2 — Sécurisation écriture JSON et nettoyage doublons ===
+try {
+  // Vérifie et crée le dossier public s’il n’existe pas
+  const publicDir = path.join(__dirname, "../public");
+  if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
+
+  // 🔒 Écriture sécurisée floreffe_forecasts.json
+  const forecastsFile = path.join(publicDir, "floreffe_forecasts.json");
+  await fs.promises.writeFile(
+    forecastsFile,
+    JSON.stringify(exportForecasts, null, 2),
+    "utf8"
+  );
+
+  // 🔒 Écriture sécurisée floreffe_alerts.json
+  const alertsFile = path.join(publicDir, "floreffe_alerts.json");
+  await fs.promises.writeFile(
+    alertsFile,
+    JSON.stringify({ generated: new Date(), alerts }, null, 2),
+    "utf8"
+  );
+
+  await addEngineLog("✅ [Floreffe] Export JSON sécurisé (prévision + alertes) effectué", "success", "floreffe");
+} catch (err) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur écriture fichiers JSON : ${err.message}`, "floreffe");
 }
-
-const week = Object.keys(grouped).map((d) => {
-  const list = grouped[d];
-  const avg = (a, k) => (a.length ? a.reduce((x, y) => x + (y[k] ?? 0), 0) / a.length : 0);
-  const dayIdx = Number(d);
-  return {
-    day: ["Aujourd’hui", "J+1", "J+2", "J+3", "J+4", "J+5"][dayIdx] ?? `J+${dayIdx}`,
-    temp_min: +(Math.min(...list.map((z) => z.temperature ?? 0))).toFixed(1),
-    temp_max: +(Math.max(...list.map((z) => z.temperature ?? 0))).toFixed(1),
-    condition: list.some((z) => z.precipitation > 1) ? "Pluie" : "Variable",
-  };
-});
-
-
-await fs.promises.writeFile(
-  path.join(__dirname, "../public/floreffe_alerts.json"),
-  JSON.stringify({ generated: new Date(), alerts }, null, 2)
-);
-
-await addEngineLog(
-  "✅ Export public floreffe_forecasts.json + floreffe_alerts.json terminé",
-  "success",
-  "floreffe"
-);
-    await addEngineLog("✅ Export public floreffe_forecasts.json + floreffe_alerts.json (5 jours ajoutés)", "success", "floreffe");
-await fs.promises.writeFile(
-  forecastsPath,
-  JSON.stringify({ generated: new Date(), range: "J+0 → J+5", zones: enriched }, null, 2)
-);
-await fs.promises.writeFile(alertsPath, JSON.stringify(alerts, null, 2));
-
-await addEngineLog(`🏁 [Floreffe] Export JSON terminé (${alerts.length} alertes)`, "success", "floreffe");
+// === FIN PATCH BLOC 2 ===
 
 // --- Synchronisation Mongo Cloud
-await addEngineLog("[Floreffe] Synchronisation Mongo Cloud en cours...", "info", "floreffe");
+    // === PATCH BLOC 4 — Vérification JSON publics + correctif 5 jours ===
+try {
+  const publicDir = path.join(__dirname, "../public");
+  const forecastsFile = path.join(publicDir, "floreffe_forecasts.json");
+  const alertsFile = path.join(publicDir, "floreffe_alerts.json");
 
+  const checkFile = (file) => fs.existsSync(file) && fs.statSync(file).size > 20;
+
+  if (!checkFile(forecastsFile)) {
+    await addEngineError("[Floreffe] ❌ floreffe_forecasts.json manquant ou vide", "floreffe");
+  } else {
+    await addEngineLog("[Floreffe] ✅ floreffe_forecasts.json validé pour affichage", "success", "floreffe");
+  }
+
+  if (!checkFile(alertsFile)) {
+    await addEngineLog("🚫 Aucune alerte active (fichier vide ou inexistant)", "info", "floreffe");
+    await fs.promises.writeFile(alertsFile, JSON.stringify({ generated: new Date(), alerts: [] }, null, 2));
+  }
+
+  // 🧮 Correction des valeurs nulles pour les prévisions 5 jours
+  const forecasts = JSON.parse(fs.readFileSync(forecastsFile, "utf8"));
+  if (forecasts?.zones?.length) {
+    forecasts.zones = forecasts.zones.map((z) => ({
+      ...z,
+      temperature: Number.isFinite(z.temperature) ? z.temperature : 0,
+      precipitation: Number.isFinite(z.precipitation) ? z.precipitation : 0,
+      wind: Number.isFinite(z.wind) ? z.wind : 0,
+      humidity: Number.isFinite(z.humidity) ? z.humidity : 0,
+    }));
+
+    await fs.promises.writeFile(forecastsFile, JSON.stringify(forecasts, null, 2));
+    await addEngineLog("[Floreffe] 🔄 Vérification + correction JSON publics OK", "success", "floreffe");
+  }
+} catch (err) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur vérification JSON publics : ${err.message}`, "floreffe");
+}
+// === FIN PATCH BLOC 4 ===
+    
+await addEngineLog("[Floreffe] Synchronisation Mongo Cloud en cours...", "info", "floreffe");
+// === PATCH BLOC 5 — Contrôle pré-synchronisation Mongo + journal compact ===
+try {
+  await addEngineLog("[Floreffe] 🔍 Vérification avant synchronisation Mongo", "info", "floreffe");
+
+  // Vérifie les données avant synchro
+  const validForecasts = Array.isArray(enriched) && enriched.length > 0;
+  const validAlerts = Array.isArray(alerts);
+
+  if (!validForecasts) {
+    await addEngineError("[Floreffe] ⚠️ Aucun forecast valide détecté avant synchro", "floreffe");
+  } else {
+    // Nettoyage des doublons
+    const uniqueZones = new Map();
+    for (const f of enriched) {
+      uniqueZones.set(f.name || f.id, f);
+    }
+    enriched.length = 0;
+    enriched.push(...uniqueZones.values());
+    await addEngineLog(`[Floreffe] ✅ ${enriched.length} prévisions uniques prêtes pour Mongo`, "success", "floreffe");
+  }
+
+  // Vérifie les alertes avant synchro
+  if (validAlerts && alerts.length) {
+    await addEngineLog(`[Floreffe] ⚠️ ${alerts.length} alertes à synchroniser`, "info", "floreffe");
+  } else {
+    await addEngineLog("[Floreffe] 🚫 Aucune alerte à synchroniser (OK)", "info", "floreffe");
+  }
+
+  // Journal compact récapitulatif
+  const now = new Date().toISOString();
+  await addEngineLog(`[Floreffe] 🧾 Récapitulatif ${now} → Forecasts:${enriched.length} | Alerts:${alerts.length}`, "success", "floreffe");
+} catch (err) {
+  await addEngineError(`[Floreffe] ❌ Erreur contrôle pré-synchro Mongo : ${err.message}`, "floreffe");
+}
+// === FIN PATCH BLOC 5 ===
+    
 await db.collection("forecasts").updateOne(
   { zone: "Floreffe" },
   { $set: { zone: "Floreffe", data: enriched, updatedAt: new Date() } },
@@ -688,13 +824,43 @@ await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.",
 // Génération relief NGI + fusion météo
 const { exec } = await import("child_process");
 exec("node ./services/generateFloreffeAltitudes.js && node ./services/fuseTopoMeteo.js");
-    
+    await syncResultsToCentral(results.forecasts, results.alerts);
 // --- Clôture propre
 await mongo.close();
 await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
 await sleep(250);
 return { success: true, alerts: alerts.length };
+// === PATCH BLOC 3 — Stabilisation fin Phase 5 et fermeture propre ===
+try {
+  await addEngineLog("[Floreffe] 🔄 Vérification finale avant fermeture Mongo", "info", "floreffe");
 
+  // Vérifie si les connexions sont encore ouvertes
+  const mongoState = mongo?.topology?.isConnected?.() ?? false;
+  if (mongoState) {
+    await addEngineLog("[Floreffe] ✅ Mongo encore actif, fermeture en cours...", "info", "floreffe");
+    await mongo.close();
+    await addEngineLog("[Floreffe] 🔒 Connexion Mongo fermée avec succès", "success", "floreffe");
+  } else {
+    await addEngineLog("[Floreffe] ⚙️ Mongo déjà fermé ou inactif", "info", "floreffe");
+  }
+
+  // 🧹 Forcer le flush des logs avant arrêt complet
+  await addEngineLog("[Floreffe] 🧹 Nettoyage des threads et flush final des logs", "info", "floreffe");
+  await sleep(500);
+
+  // 🔚 Fin de processus Render
+  await addEngineLog("[Floreffe] 🏁 Fin de run détectée, arrêt Render propre", "success", "floreffe");
+
+  // Sortie forcée propre si Render reste actif (évite les runs fantômes)
+  if (typeof process !== "undefined" && process.exit) {
+    setTimeout(() => {
+      process.exit(0);
+    }, 1000);
+  }
+} catch (err) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur lors de la fermeture finale : ${err.message}`, "floreffe");
+}
+// === FIN PATCH BLOC 3 ===
 } catch (err) {
   await addEngineError(`[Floreffe] ❌ Erreur critique dans runFloreffe : ${err.message}`, "floreffe");
   try {
@@ -703,7 +869,43 @@ return { success: true, alerts: alerts.length };
   return { success: false, error: err.message };
 }
 } // 👈 ferme correctement la fonction runFloreffe()
+// === PATCH BLOC 7 — Synchronisation multi-Render vers Mongo central ===
+import axios from "axios";
 
+async function syncResultsToCentral(forecastData, alertData) {
+  try {
+    const centralHost = "https://tinsflash.onrender.com";
+    const currentHost = process.env.RENDER_EXTERNAL_HOSTNAME || "local";
+    const token = globalThis.__ENGINE_SESSION__ || "unknown-session";
+
+    await addEngineLog("📤 Synchronisation des résultats vers le serveur central…", "info", currentHost);
+
+    const payload = {
+      source: currentHost,
+      session: token,
+      timestamp: new Date().toISOString(),
+      forecasts: forecastData,
+      alerts: alertData
+    };
+
+    const res = await axios.post(`${centralHost}/api/sync`, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SYNC_API_KEY || "none"}`
+      },
+      timeout: 20000
+    });
+
+    if (res.status === 200) {
+      await addEngineLog("✅ Résultats transférés avec succès vers le central", "success", currentHost);
+    } else {
+      throw new Error(`Réponse inattendue ${res.status}`);
+    }
+  } catch (err) {
+    await addEngineError(`❌ Erreur synchronisation vers central : ${err.message}`, "sync");
+  }
+}
+// === FIN PATCH BLOC 7 ===
 // ==========================================================
 // 🔚 Export universel compatible ESM + CommonJS
 // ==========================================================
