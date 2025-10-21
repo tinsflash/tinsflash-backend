@@ -69,7 +69,7 @@ import User from "./models/User.js";
 // ==========================================================
 // 🌐 INITIALISATION MONGO DB (version stable pour Render)
 // ==========================================================
-import { MongoClient } from "mongodb";
+
 let db;
 
 async function initMongo() {
@@ -81,6 +81,7 @@ async function initMongo() {
     await client.connect();
     db = client.db("tinsflash");
     console.log("✅ MongoDB connecté avec succès (server.js)");
+    await initEngineState();
   } catch (err) {
     console.error("❌ Erreur Mongo au démarrage :", err.message);
   }
