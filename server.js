@@ -66,19 +66,7 @@ import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
 
-// --- Initialisation Mongo globale ---
-const mongo = new MongoClient(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-// --- Connexion automatique au démarrage ---
-try {
-  await mongo.connect();
-  console.log("✅ MongoDB connecté avec succès (server.js)");
-  const db = mongo.db("tinsflash"); // ✅ Déclaration unique et globale
-} catch (err) {
-  console.error("❌ Erreur Mongo au démarrage :", err.message);
-}
+
 // ==========================================================
 // ⚙️ CONFIG ENV
 // ==========================================================
