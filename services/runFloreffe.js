@@ -737,64 +737,74 @@ try {
     await addEngineError(`[Floreffe] ❌ Erreur contrôle pré-synchro Mongo : ${err.message}`, "floreffe");
   }
 
+// === Sauvegarde Mongo Cloud (Mongoose stable) ===
+if (mongoose.connection.readyState === 1) {
+  const conn = mongoose.connection;
+  const forecastsCol = conn.collection("forecasts");
+  const alertsCol = conn.collection("alerts");
 
-  // === Sauvegarde Mongo Cloud (Mongoose stable) ===
-  if (mongoose.connection.readyState === 1) {
-    const conn = mongoose.connection;
-    const forecastsCol = conn.collection("forecasts");
-    const alertsCol = conn.collection("alerts");
-
-    try {
-      await forecastsCol.updateOne(
-        { zone: "Floreffe" },
-        { $set: { zone: "Floreffe", data: enriched, updatedAt: new Date() } },
-        { upsert: true }
-      );
-
-      await alertsCol.deleteMany({ zone: /Floreffe/i });
-      if (alerts.length) await alertsCol.insertMany(alerts);
-
-      await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
-    } catch (err) {
-      await addEngineError(`[Floreffe] ❌ Erreur export Cloud : ${err.message}`, "floreffe");
-    }
-  } else {
-    await addEngineError("[Floreffe] ❌ Connexion Mongo inactive lors de l’export Cloud", "floreffe");
-  }
-
-
-  // --- Génération relief NGI + fusion météo
   try {
-    const { exec } = await import("child_process");
-    exec("node ./services/generateFloreffeAltitudes.js && node ./services/fuseTopoMeteo.js");
-    await addEngineLog("🗺️ Fusion météo + relief NGI lancée", "info", "floreffe");
-  } catch (err) {
-    await addEngineError(`[Floreffe] ⚠️ Erreur génération relief NGI : ${err.message}`, "floreffe");
-  }
+    await forecastsCol.updateOne(
+      { zone: "Floreffe" },
+      { $set: { zone: "Floreffe", data: enriched, updatedAt: new Date() } },
+      { upsert: true }
+    );
 
-  // --- Synchronisation multi-Render
-  try {
-    await syncResultsToCentral(enriched, alerts);
-    await addEngineLog("📡 Synchronisation vers moteur central terminée", "success", "floreffe");
-  } catch (err) {
-    await addEngineError(`[Floreffe] ❌ Échec synchronisation multi-Render : ${err.message}`, "floreffe");
-  }
+    await alertsCol.deleteMany({ zone: /Floreffe/i });
+    if (alerts.length) await alertsCol.insertMany(alerts);
 
-} catch (err) {
-  await addEngineError(`[Floreffe] ❌ Erreur critique dans Phase 5 : ${err.message}`, "floreffe");
+    await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+  } catch (err) {
+    await addEngineError(`[Floreffe] ❌ Erreur export Cloud : ${err.message}`, "floreffe");
+  }
+} else {
+  await addEngineError("[Floreffe] ❌ Connexion Mongo inactive lors de l’export Cloud", "floreffe");
 }
 
-      
+// --- Génération relief NGI + fusion météo
+try {
+  const { exec } = await import("child_process");
+  exec("node ./services/generateFloreffeAltitudes.js && node ./services/fuseTopoMeteo.js");
+  await addEngineLog("🗺️ Génération relief NGI + fusion météo lancée", "info", "floreffe");
+} catch (err) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur génération relief/fusion : ${err.message}`, "floreffe");
+}
+
+// --- Synchronisation multi-Render
+try {
+  await syncResultsToCentral(enriched, alerts);
+  await addEngineLog("📡 Synchronisation vers moteur central terminée", "success", "floreffe");
+} catch (err) {
+  await addEngineError(`[Floreffe] ❌ Échec synchronisation multi-Render : ${err.message}`, "floreffe");
+}
+
+// --- Fermeture propre de Mongo ---
+try {
+  if (mongoose.connection.readyState === 1) {
+    await mongoose.connection.close();
+    await addEngineLog("[Floreffe] 🔒 Connexion Mongo fermée proprement", "success", "floreffe");
+  } else {
+    await addEngineLog("[Floreffe] ⚙️ Mongo déjà fermé ou inactif", "info", "floreffe");
+  }
+} catch (err) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur lors de la fermeture Mongo : ${err.message}`, "floreffe");
+}
+
+// --- Fin de run propre ---
+await addEngineLog("[Floreffe] 🏁 Fin de run détectée — arrêt Render propre", "success", "floreffe");
+await sleep(500);
+if (typeof process !== "undefined" && process.exit) {
+  setTimeout(() => process.exit(0), 1000);
+}
+
 // =====================
 // 🔚 Export universel compatible ESM + CommonJS
 // =====================
 
-// --- Export standard (ESM) ---
-// ⚠️ Doit être au niveau racine (jamais dans un try/catch ni dans un if)
+// --- Export standard (ESM)
 export { runFloreffe, superForecastLocal };
 
-// --- Compatibilité CommonJS ---
-// ✅ Permet le require() classique si le moteur n’est pas en mode ESM
+// --- Compatibilité CommonJS (fallback Render/Node)
 try {
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { runFloreffe, superForecastLocal };
@@ -802,3 +812,4 @@ try {
 } catch (err) {
   console.error("⚠️ Erreur lors de l'export CommonJS :", err.message);
 }
+  
