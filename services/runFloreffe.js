@@ -11,7 +11,7 @@ import fs from "fs";
 import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
-import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
 import OpenAI from "openai";
 import { addEngineLog, addEngineError, saveExtractionToMongo } from "./engineState.js";
 import { applyGeoFactors } from "./geoFactors.js";
@@ -36,10 +36,10 @@ function getDateYMD(date = new Date()) {
 // ==========================================================
 const ALERT_THRESHOLDS = {
   rain:     { prealert: 5,  alert: 15, extreme: 35, unit: "mm/h" },
-  snow:     { prealert: 0.8, alert: 2,  extreme: 6,  unit: "cm/h" },
+  snow:     { prealert: 0.3, alert: 2,  extreme: 6,  unit: "cm/h" },
   wind:     { prealert: 55, alert: 70, extreme: 95, unit: "km/h" },
-  heat:     { prealert: 29, alert: 34, extreme: 38, unit: "°C" },
-  cold:     { prealert: -1, alert: -7, extreme: -12, unit: "°C" },
+  heat:     { prealert: 27, alert: 34, extreme: 38, unit: "°C" },
+  cold:     { prealert: 1, alert: -7, extreme: -12, unit: "°C" },
   humidity: { prealert: 93, alert: 97, extreme: 100, unit: "%" },
   visionia: { prealert: 70, alert: 82, extreme: 90, unit: "%" },
 };
@@ -48,7 +48,8 @@ const ALERT_THRESHOLDS = {
 // 🧠 IA J.E.A.N. locale – Prompt contextuel Floreffe
 // ==========================================================
 const FLOREFFE_IA_PROMPT = `
-Tu es J.E.A.N., IA météo-hydrologique locale dédiée à la commune de Floreffe (Belgique).
+Tu es J.E.A.N., IA météo-hydrologique locale, expert météorologique, expert climatologue,  expert en étude de relief,
+et un expert mathématicien dédiée à la commune de Floreffe (Belgique).
 Mission : produire des prévisions hyper-locales fiables et des alertes précises pour voiries, habitants et infrastructures.
 
 Contexte géographique :
@@ -299,64 +300,77 @@ const FLOREFFE_POINTS = [
   { id:'FLO_60', name:'Rue du Parc – zone résidentielle',    lat:50.4330, lon:4.7662, alt:164, type:'urbain', risk:{flood:false, verglas:true, wind:true}, sensor:false, prio:'med' },
 ];
 
-   // ==========================================================
-// 🚀 Fonction principale – 100 % autonome
+// ==========================================================
+// 🌍 Fonction principale – 100 % autonome (version Mongoose stable)
 // ==========================================================
 async function runFloreffe() {
-  const mongo = new MongoClient(process.env.MONGO_URI);
+  // Connexion MongoDB avec Mongoose
+  import mongoose from "mongoose";
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
-    await mongo.connect();
-    // === PATCH BLOC 6 — Sécurisation Mongo + préparation multi-Render ===
-try {
-  await addEngineLog("🔒 Initialisation sécurité Mongo & Multi-Render", "info", "floreffe");
+    // === Connexion Mongoose (remplace MongoClient) ===
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGO_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        dbName: "tinsflash",
+        serverSelectionTimeoutMS: 20000,
+        socketTimeoutMS: 45000,
+      });
+      console.log("✅ MongoDB connecté (Mongoose – runFloreffe)");
+    }
 
-  // --- Vérification URI ---
-  if (!process.env.MONGO_URI || !process.env.MONGO_URI.startsWith("mongodb+srv")) {
-    throw new Error("URI MongoDB invalide ou non sécurisée");
+    // === PATCH BLOC 6 – Sécurisation Mongo + préparation multi-Render ===
+    await addEngineLog("🔐 Initialisation sécurité Mongo & Multi-Render", "info", "floreffe");
+
+    // --- Vérification URI ---
+    if (!process.env.MONGO_URI || !process.env.MONGO_URI.startsWith("mongodb+srv")) {
+      throw new Error("URI MongoDB invalide ou non sécurisée");
+    }
+
+    // --- Restriction de domaine (anti-vol moteur) ---
+    const allowedRenderHosts = [
+      "tinsflash.onrender.com",
+      "tinsflash-floreffe.onrender.com",
+      "tinsflash-bouke.onrender.com",
+      "tinsflash-backend.onrender.com",
+      "tinsflash-namur.onrender.com",
+    ];
+    const currentHost = process.env.RENDER_EXTERNAL_HOSTNAME || "local";
+
+    if (!allowedRenderHosts.includes(currentHost)) {
+      await addEngineError(`🚫 Accès refusé : hôte non autorisé (${currentHost})`, "security");
+      throw new Error(`Hôte non autorisé : ${currentHost}`);
+    }
+
+    // --- Journal d’identification ---
+    await addEngineLog(`✅ Serveur authentifié : ${currentHost}`, "success", "floreffe");
+
+    // --- Signature de session (trace unique) ---
+    const sessionToken = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const EngineSession = mongoose.connection.collection("engine_sessions");
+    await EngineSession.insertOne({
+      zone: "Floreffe",
+      host: currentHost,
+      startedAt: new Date(),
+      sessionToken,
+      status: "RUNNING",
+    });
+
+    // --- Sauvegarde du token dans le contexte global ---
+    globalThis.__ENGINE_SESSION__ = sessionToken;
+  } catch (err) {
+    await addEngineError(`🧱 [SECURITÉ] Échec initialisation : ${err.message}`, "security");
+    throw err;
   }
 
-  // --- Restriction de domaine (anti-vol moteur) ---
-  const allowedRenderHosts = [
-    "tinsflash.onrender.com",
-    "tinsflash-floreffe.onrender.com",
-    "tinsflash-bouke.onrender.com",
-    "tinsflash-backend.onrender.com",
-    "tinsflash-namur.onrender.com"
-  ];
-  const currentHost = process.env.RENDER_EXTERNAL_HOSTNAME || "local";
+  // === FIN PATCH BLOC 6 ===
+  const db = mongoose.connection;
 
-  if (!allowedRenderHosts.includes(currentHost)) {
-    await addEngineError(`⛔ Accès refusé : hôte non autorisé (${currentHost})`, "security");
-    throw new Error(`Hôte non autorisé : ${currentHost}`);
-  }
+  console.log("🌍 [TINSFLASH] Démarrage Floreffe — Everest Protocol v6.5.1 (Fix DoubleLoop)");
 
-  // --- Journal d’identification ---
-  await addEngineLog(`🧭 Serveur authentifié : ${currentHost}`, "success", "floreffe");
-
-  // --- Signature de session (trace unique) ---
-  const sessionToken = `${currentHost}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  await db.collection("engine_sessions").insertOne({
-    zone: "Floreffe",
-    host: currentHost,
-    startedAt: new Date(),
-    sessionToken,
-    status: "RUNNING"
-  });
-
-  // Sauvegarde du token dans le contexte d’exécution
-  globalThis.__ENGINE_SESSION__ = sessionToken;
-} catch (err) {
-  await addEngineError(`[SECURITE] Échec initialisation : ${err.message}`, "security");
-  throw err;
-}
-// === FIN PATCH BLOC 6 ===
-    const db = mongo.db("tinsflash");
-
-    console.log("✅ [TINSFLASH] Démarrage Floreffe — Everest Protocol v6.5.1 (Fix DoubleLoop)");
-
-    
+  
     // === PHASE 1 – Extraction multi-modèles locale sur 7 jours (intégration progressive) ===
 const phase1Results = [];
 const forecastDays = 5;
@@ -366,12 +380,12 @@ for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
     const res = await superForecastLocal({
       zones: FLOREFFE_POINTS,
       runType: "Floreffe",
-      dayOffset
+      dayOffset,
     });
 
     if (res?.success && res.phase1Results?.length) {
       const now = new Date();
-      const stamped = res.phase1Results.map(p => ({
+      const stamped = res.phase1Results.map((p) => ({
         ...p,
         timestamp: now,
         dayOffset,
@@ -379,68 +393,84 @@ for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
       }));
 
       phase1Results.push(...stamped);
-if (!db) {
-  await addEngineLog("🕓 Attente ouverture connexion Mongo...", "info", "floreffe");
-  await mongo.connect(); // ✅ force la connexion si pas encore active
-}
-      // 💾 intégration immédiate après chaque journée (évite 3 h de buffer)
-      await db.collection("floreffe_phase1").insertMany(stamped);
-      await addEngineLog(`✅ [Floreffe] Données J+${dayOffset} intégrées (${stamped.length})`, "success", "floreffe");
+
+      // Journal d’ouverture Mongo (non bloquant)
+      await addEngineLog("⏳ Vérification de la connexion Mongo (Mongoose)...", "info", "floreffe");
+
+      // ✅ On passe désormais par mongoose.connection
+      const db = mongoose.connection;
+
+      if (db.readyState === 1) {
+        const floreffePhase1 = db.collection("floreffe_phase1");
+        await floreffePhase1.insertMany(stamped);
+        await addEngineLog(
+          `✅ [Floreffe] Données J+${dayOffset} (${stamped.length}) intégrées avec succès`,
+          "success",
+          "floreffe"
+        );
+      } else {
+        await addEngineError(
+          `[Floreffe] ⚠️ Connexion Mongo inactive lors de l’insertion J+${dayOffset}`,
+          "floreffe"
+        );
+      }
     } else {
-      await addEngineError(`[Floreffe] ⚠️ Aucun résultat valide pour J+${dayOffset}`, "floreffe");
+      await addEngineError(`[Floreffe] Aucun résultat valide pour J+${dayOffset}`, "floreffe");
     }
 
-    // courte pause (2 min)
-    await sleep(120000);
+    // Petite pause entre chaque jour (évite surcharge IA)
+    await sleep(50000);
   } catch (e) {
     await addEngineError(`[Floreffe] ❌ Erreur extraction J+${dayOffset} : ${e.message}`, "floreffe");
   }
 }
 
-// --- Journal synthétique de la Phase 1 (affiche les “verts” et les “rouges”)
+// --- Journal synthétique de la Phase 1 ---
 await addEngineLog(
-  `📊 [Floreffe] Phase 1 terminée (${phase1Results.length} points cumulés sur ${forecastDays + 1} jours)`,
+  `[Floreffe] ✅ Phase 1 terminée (${phase1Results.length} points cumulés sur ${forecastDays + 1} jours)`,
   "success",
   "floreffe"
 );
-    // 🌄 PHASE 1bis — Corrélation topographique / hydrologique
-    await addEngineLog("🌄 [Floreffe] Corrélation topographique / hydrologique en cours", "info", "floreffe");
 
-    const datasetsPath = path.resolve("./services/datasets");
-    const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
-    const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
-    const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
-    const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
-    const liveHydro = await fetchLiveHydroData();
+// === PHASE 1bis — Corrélation topographique / hydrologique ===
+await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en cours...", "info", "floreffe");
 
-    const phase1bisResults = phase1Results.map(pt => ({
-      ...pt,
-      topo: correlateTopoHydro(pt, { geo, hydro, reseaux, routes, liveHydro })
-    }));
+// === PHASE 1bis – Corrélation topographique / hydrologique ===
+const datasetsPath = path.resolve("./services/datasets");
+const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoperalt.json`, "utf8"));
+const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
+const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
+const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
+const livelyHydro = await fetchLivelyHydroData();
 
-    await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
-    await addEngineLog("✅ Corrélation topographique / hydrologique appliquée", "success", "floreffe");
-// 🌫️ PHASE 1bis+ — Calcul humidité et indice VisionIA local
-await addEngineLog("🌫️ [Floreffe] Début calcul humidité et VisionIA (1bis+)", "info", "floreffe");
+const phase1bisResults = phase1Results.map((pt) => ({
+  ...pt,
+  hydro: correlateTopoHydro(pt, geo, hydro, reseaux, routes, livelyHydro)
+}));
+
+await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
+await addEngineLog("🌊 Corrélation topographique / hydrologique appliquée", "success", "floreffe");
+
+// === PHASE 1bis+ – Calcul humidité et indice VisionIA local ===
+await addEngineLog("💧 Début calcul humidité et VisionIA (1bis+)", "info", "floreffe");
 
 const phase1bisPlus = phase1bisResults.map((pt) => {
   const result = { ...pt };
 
   // === Calcul humidité relative approximée ===
-  // Basé sur température et précipitation (valeur proxy si pas de capteur)
-  const temp = Number(result.temperature ?? 0);
   const rain = Number(result.precipitation ?? 0);
+  const temp = Number(result.temperature ?? 20);
   let humidity = 60;
 
   if (rain > 0.5) humidity += 20;
   if (temp < 5) humidity += 10;
   if (temp < 0) humidity += 5;
   if (humidity > 100) humidity = 100;
+
   result.humidity = Math.round(humidity);
 
   // === Calcul indice VisionIA local (score de confiance IA terrain) ===
-  // Combine altitude, pente et cohérence topographique
-  const alt = Number(result.alt ?? 100);
+  const alt = Number(result.altitude ?? 100);
   const topoScore = result.topo?.score ?? 0.8;
   let visionia = topoScore;
 
@@ -453,10 +483,27 @@ const phase1bisPlus = phase1bisResults.map((pt) => {
   return result;
 });
 
-// 💾 Sauvegarde Mongo pour traçabilité VisionIA
-await db.collection("floreffe_phase1bis").deleteMany({});
-await db.collection("floreffe_phase1bis").insertMany(phase1bisPlus);
-await addEngineLog("✅ [Floreffe] Phase 1bis+ (humidité + VisionIA) sauvegardée", "success", "floreffe");
+// === Sauvegarde Mongo (VisionIA + humidité) ===
+const db = mongoose.connection;
+
+if (db.readyState === 1) {
+  const floreffePhase1bis = db.collection("floreffe_phase1bis");
+  const floreffePhase1bisPlus = db.collection("floreffe_phase1bisplus");
+
+  await floreffePhase1bis.deleteMany({});
+  await floreffePhase1bisPlus.insertMany(phase1bisPlus);
+
+  await addEngineLog(
+    `✅ [Floreffe] Phase 1bis sauvegardée (${phase1bisPlus.length} points humidité + VisionIA)`,
+    "success",
+    "floreffe"
+  );
+} else {
+  await addEngineError(
+    "❌ [Floreffe] Connexion Mongo inactive lors de la sauvegarde Phase 1bis",
+    "floreffe"
+  );
+}
     // ⏳ Temporisation avant Phase 2
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
 await sleep(200000); // 2 minutes ou plus
@@ -522,7 +569,8 @@ Ne commente rien hors JSON.
     const ai = await openai.responses.create({
       model: "gpt-5",
       input: [
-        { role: "system", content: "Tu es J.E.A.N., IA météo-hydrologique locale experte de Floreffe (Belgique)." },
+        { role: "system", content: "Tu es J.E.A.N., IA météo-hydrologique locale, meilleur météorologue,  meilleur climatologue et meilleur mathématicien au monde 
+          experte de Floreffe (Belgique)." },
         { role: "user", content: aiPrompt }
       ],
     });
@@ -543,53 +591,84 @@ Ne commente rien hors JSON.
   }
 }
 
-// 💾 Sauvegarde Mongo Phase 2
-await db.collection("floreffe_phase2").deleteMany({});
-if (phase2Results.length) await db.collection("floreffe_phase2").insertMany(phase2Results);
+// === Sauvegarde Mongo Phase 2 ===
+const db = mongoose.connection;
 
-const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
-await addEngineLog(`[Floreffe] 🤖 Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
-    
-    // ⏳ Temporisation avant Phase 5
-await addEngineLog("⏳ Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
+if (db.readyState === 1) {
+  const floreffePhase2 = db.collection("floreffe_phase2");
+  await floreffePhase2.deleteMany({});
+  if (phase2Results.length) {
+    await floreffePhase2.insertMany(phase2Results);
+  }
+
+  const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
+  await addEngineLog(
+    `[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`,
+    "success",
+    "floreffe"
+  );
+} else {
+  await addEngineError("❌ [Floreffe] Connexion Mongo inactive à la sauvegarde Phase 2", "floreffe");
+}
+
+// === Temporisation avant Phase 5 ===
+await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(200000); // 2 min ou plus
-    
-// === PHASE 5 — Fusion + Export (avec IA J.E.A.N. globale + injection publique) ===
-await addEngineLog("[Floreffe] Phase 5 — Fusion IA + Export global en cours...", "info", "floreffe");
+
+// === PHASE 5 – Fusion + Export (avec IA J.E.A.N. globale + injection publique) ===
+await addEngineLog("🧠 [Floreffe] Phase 5 – Fusion IA + Export global en cours...", "info", "floreffe");
 
 let phase2ResultsSafe = [];
 
-// 🔁 Vérifie d'abord les résultats IA disponibles
+// Vérifie d’abord les résultats IA disponibles
 if (Array.isArray(phase2Results) && phase2Results.length) {
   phase2ResultsSafe = phase2Results;
 } else {
-  const reload = await db.collection("floreffe_phase2").find({}).toArray();
-  if (reload?.length) {
-    phase2ResultsSafe = reload;
-    await addEngineLog(`[Floreffe] 🔁 Données Phase 2 rechargées depuis Mongo (${reload.length})`, "info", "floreffe");
+  const db = mongoose.connection;
+  if (db.readyState === 1) {
+    const floreffePhase2 = db.collection("floreffe_phase2");
+    const reload = await floreffePhase2.find({}).toArray();
+
+    if (reload.length) {
+      phase2ResultsSafe = reload;
+      await addEngineLog(
+        `[Floreffe] 📦 Données Phase 2 rechargées depuis Mongo (${reload.length})`,
+        "info",
+        "floreffe"
+      );
+    } else {
+      await addEngineError("[Floreffe] ⚠️ Aucune donnée Phase 2 détectée, fallback Phase 1", "floreffe");
+
+      const floreffePhase1 = db.collection("floreffe_phase1");
+      const fallback = await floreffePhase1.find({}).limit(200).toArray();
+
+      phase2ResultsSafe = fallback.map((f) => ({
+        ...f,
+        risk: f.precipitation ?? 0,
+        verglas: f.temperature ?? 0,
+        reliability: f.reliability ?? 0.5,
+      }));
+    }
   } else {
-    await addEngineError("[Floreffe] ⚠️ Aucune donnée Phase 2 détectée, fallback Phase 1", "floreffe");
-    const fallback = await db.collection("floreffe_phase1").find({}).limit(200).toArray();
-    phase2ResultsSafe = fallback.map(f => ({
-      ...f,
-      risk: { pluie: f.precipitation ?? 0, verglas: f.temperature ?? 0 },
-      reliability: f.reliability ?? 0.5
-    }));
+    await addEngineError("[Floreffe] ❌ Connexion Mongo inactive pendant le fallback Phase 2", "floreffe");
   }
 }
 
-// === Renforcement intelligent des commentaires Phase 2 avant fusion ===
+// === Renforcement intelligent des commentaires IA avant fusion ===
 function renforcerCommentaire(p) {
   let c = p.commentaire || "";
-  const t = Number(p.temperature ?? 0);
+  const t = Number(p.temperature ?? 7);
   const r = Number(p.precipitation ?? 0);
-  const w = Number(p.wind ?? 0);
+  const v = Number(p.vent ?? 0);
   const rel = Number(p.reliability ?? 0.8);
-  if (r > 5) c += " 🌧️ Pluie significative; sols probablement humides.";
-  if (t < 0) c += " ❄️ Risque de verglas localisé.";
-  if (w > 40) c += " 🌬️ Vent fort; prudence sur les hauteurs.";
-  if (rel < 0.7) c += " 🔎 Fiabilité moyenne, confirmation nécessaire.";
+
+  if (r > 0.5) c += " 🌧 Pluie significative : sols probablement humides.";
+  if (t < 1) c += " ❄️ Risque de verglas localisé.";
+  if (v > 8) c += " 💨 Vent fort : prudence sur les hauteurs.";
+  if (rel < 0.7) c += " ⚠️ Fiabilité moyenne, confirmation nécessaire.";
+
   return c.trim();
+}
 }
 
 phase2ResultsSafe = phase2ResultsSafe.map(p => ({
