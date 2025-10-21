@@ -139,27 +139,27 @@ const JWT_SECRET = process.env.SECRET_KEY || "tinsflash_secret_key";
 // ==========================================================
 // 👑 ADMIN AUTO
 // ==========================================================
-const ADMIN_EMAIL = "pynnaertpat@gmail.com";
-const ADMIN_PWD = "202679";
+// const ADMIN_EMAIL = "pynnaertpat@gmail.com";
+// const ADMIN_PWD = "202679";
 
-async function seedAdminUser() {
-  const exist = await User.findOne({ email: ADMIN_EMAIL });
-  if (exist) return;
-  const hash = await bcrypt.hash(ADMIN_PWD, 10);
-  const admin = new User({
-    email: ADMIN_EMAIL,
-    name: "Patrick Pynnaert",
-    passwordHash: hash,
-    plan: "pro",
-    credits: 1000,
-    fanClub: true,
-    zone: "covered",
-    createdAt: new Date(),
-  });
-  await admin.save();
-  console.log("✅ Admin créé :", ADMIN_EMAIL);
-}
-seedAdminUser();
+// async function seedAdminUser() {
+//   const exist = await User.findOne({ email: ADMIN_EMAIL });
+//   if (exist) return;
+//   const hash = await bcrypt.hash(ADMIN_PWD, 10);
+//   const admin = new User({
+//     email: ADMIN_EMAIL,
+//     name: "Patrick Pynnaert",
+//     passwordHash: hash,
+//     plan: "pro",
+//     credits: 1000,
+//     fanClub: true,
+//     zone: "covered",
+//     createdAt: new Date(),
+//   });
+//   await admin.save();
+//   console.log("✅ Admin créé :", ADMIN_EMAIL);
+// }
+// seedAdminUser();
 
 // ==========================================================
 // 🌍 RUNS PRINCIPAUX (avec enregistrement extraction)
