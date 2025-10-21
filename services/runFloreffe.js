@@ -619,14 +619,6 @@ await sleep(200000); // 2 min ou plus
 
 // === PHASE 5 — FUSION IA + EXPORT GLOBAL (MONGOOSE STABLE) ===
 
-try {
-  // === Création dossier public si besoin ===
-  const publicDir = path.join(__dirname, "../public");
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-    await addEngineLog("[Floreffe] 📁 Dossier public créé automatiquement", "info", "floreffe");
-  }
-}
 
   // === Écriture des fichiers publics initiaux ===
   await fs.promises.writeFile(
