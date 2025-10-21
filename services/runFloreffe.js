@@ -780,7 +780,6 @@ try {
 } catch (err) {
   await addEngineError(`[Floreffe] ⚠️ Erreur lors de la fermeture Mongo : ${err.message}`, "floreffe");
 }
-
 // --- Fin de run propre ---
 await addEngineLog("[Floreffe] 🏁 Fin de run détectée — arrêt Render propre", "success", "floreffe");
 await sleep(500);
@@ -788,15 +787,15 @@ if (typeof process !== "undefined" && process.exit) {
   setTimeout(() => process.exit(0), 1000);
 }
 }
-// =======================================================
-// ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
-// =======================================================
 
 // =======================================================
 // ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
 // =======================================================
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { runFloreffe, superForecastLocal };
+  module.exports = {
+    runFloreffe,         // ta fonction principale
+    superForecastLocal   // ta sous-fonction météo
+  };
 }
 
 console.log("✅ [TINSFLASH] Export universel initialisé (mode: CJS)");
