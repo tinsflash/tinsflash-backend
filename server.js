@@ -66,7 +66,28 @@ import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
 
+// ==========================================================
+// 🌐 INITIALISATION MONGO DB (version stable pour Render)
+// ==========================================================
+import { MongoClient } from "mongodb";
+let db;
 
+async function initMongo() {
+  try {
+    const client = new MongoClient(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    await client.connect();
+    db = client.db("tinsflash");
+    console.log("✅ MongoDB connecté avec succès (server.js)");
+  } catch (err) {
+    console.error("❌ Erreur Mongo au démarrage :", err.message);
+  }
+}
+
+// Lancer immédiatement l'initialisation Mongo
+await initMongo();
 // ==========================================================
 // ⚙️ CONFIG ENV
 // ==========================================================
@@ -112,25 +133,7 @@ app.get("/api/check-reliability", async (_, res) => {
 const stripe = new Stripe(process.env.STRIPE_KEY);
 const JWT_SECRET = process.env.SECRET_KEY || "tinsflash_secret_key";
 
-// ==========================================================
-// 🔌 MONGODB
-// ==========================================================
-async function connectMongo() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 20000,
-      socketTimeoutMS: 45000,
-    });
-    console.log("✅ MongoDB connecté");
-    await initEngineState();
-  } catch (err) {
-    console.error("❌ Erreur MongoDB:", err.message);
-    setTimeout(connectMongo, 8000);
-  }
-}
-if (process.env.MONGO_URI) connectMongo();
+
 
 // ==========================================================
 // 👑 ADMIN AUTO
@@ -389,7 +392,6 @@ app.get("/api/alerts-detected", async (req, res) => {
 // 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
 // ==========================================================
 
-await mongo.connect();
 
 // 🌍 TINSFLASH — Route de consultation des alertes (JSON pur)
 app.get("/api/alerts", async (req, res) => {
