@@ -787,18 +787,16 @@ if (typeof process !== "undefined" && process.exit) {
   setTimeout(() => process.exit(0), 1000);
 }
 }
-// =======================================================
-// ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
-// =======================================================
-if (typeof module !== "undefined" && module.exports) {
-  async function runFloreffeWrapper() {
-    return await runFloreffe();
-  }
 
-  module.exports = {
-    runFloreffe: runFloreffeWrapper,
-    superForecastLocal
-  };
+// =======================================================
+// ✅ EXPORT UNIVERSEL (compatible ESM + CommonJS + Render)
+// =======================================================
+
+export { runFloreffe, superForecastLocal };
+
+// --- compatibilité CommonJS ---
+if (typeof module !== "undefined") {
+  module.exports = { runFloreffe, superForecastLocal };
 }
 
-console.log("✅ [TINSFLASH] Export universel initialisé (mode: CJS)");
+console.log("✅ [TINSFLASH] Export universel prêt (ESM + CJS)");
