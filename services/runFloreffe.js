@@ -195,7 +195,7 @@ results.push(final);
       : e.message;
     await addEngineError(`❌ [${runType}] ${m.name} indisponible (${msg})`, "superForecast");
   }
-  await sleep(200);
+  await sleep(2000);
 }
       const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
@@ -305,7 +305,7 @@ const FLOREFFE_POINTS = [
 // ==========================================================
 async function runFloreffe() {
   // Connexion MongoDB avec Mongoose
-  import mongoose from "mongoose";
+  
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
@@ -587,7 +587,7 @@ Ne commente rien hors JSON.
     await sleep(2000);
   } catch (err) {
     await addEngineError(`[Floreffe] ⚠️ Erreur IA J.E.A.N. paquet ${index + 1} : ${err.message}`, "floreffe");
-    await sleep(1000);
+    await sleep(6000);
   }
 }
 
@@ -731,10 +731,15 @@ const alerts = enriched
     description: z.commentaire || "Phénomène à surveiller",
     timestamp: new Date()
   }));
+if (mongoose.connection.readyState === 1) {
+  const alertsFloreffe = mongoose.connection.collection("alerts_floreffe");
+  await alertsFloreffe.deleteMany({});
+  if (alerts.length) await alertsFloreffe.insertMany(alerts);
+  await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées (Mongoose stable)`, "success", "floreffe");
+} else {
+  await addEngineError("[Floreffe] ❌ Mongo inactif lors de la sauvegarde des alertes Floreffe", "floreffe");
+}
 
-await db.collection("alerts_floreffe").deleteMany({});
-if (alerts.length) await db.collection("alerts_floreffe").insertMany(alerts);
-await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées`, "success", "floreffe");
 
     // === PATCH BLOC 1 — Prévisions 5 jours (week) à partir de `enriched` ===
 const grouped = {};
@@ -1045,21 +1050,26 @@ try {
   await addEngineError(`[Floreffe] ❌ Erreur contrôle pré-synchro Mongo : ${err.message}`, "floreffe");
 }
 
-// === Sauvegarde Mongo Cloud ===
-if (db.readyState === 1) {
-  const forecastsCol = db.collection("forecasts");
-  const alertsCol = db.collection("alerts");
+// === Sauvegarde Mongo Cloud (Mongoose stable) ===
+if (mongoose.connection.readyState === 1) {
+  const conn = mongoose.connection;
+  const forecastsCol = conn.collection("forecasts");
+  const alertsCol = conn.collection("alerts");
 
-  await forecastsCol.updateOne(
-    { zone: "Floreffe" },
-    { $set: { zone: "Floreffe", data: enriched, updatedAt: new Date() } },
-    { upsert: true }
-  );
+  try {
+    await forecastsCol.updateOne(
+      { zone: "Floreffe" },
+      { $set: { zone: "Floreffe", data: enriched, updatedAt: new Date() } },
+      { upsert: true }
+    );
 
-  await alertsCol.deleteMany({ zone: /Floreffe/i });
-  if (alerts.length) await alertsCol.insertMany(alerts);
+    await alertsCol.deleteMany({ zone: /Floreffe/i });
+    if (alerts.length) await alertsCol.insertMany(alerts);
 
-  await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+    await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.", "success", "floreffe");
+  } catch (err) {
+    await addEngineError(`[Floreffe] ❌ Erreur export Cloud : ${err.message}`, "floreffe");
+  }
 } else {
   await addEngineError("[Floreffe] ❌ Connexion Mongo inactive lors de l’export Cloud", "floreffe");
 }
@@ -1071,7 +1081,6 @@ exec("node ./services/generateFloreffeAltitudes.js && node ./services/fuseTopoMe
 // --- Synchronisation multi-Render
 await syncResultsToCentral(enriched, alerts);
 await addEngineLog("📡 Synchronisation vers moteur central terminée", "success", "floreffe");
-    
     
 //=====================
 // 🔚 Export universel compatible ESM + CommonJS
