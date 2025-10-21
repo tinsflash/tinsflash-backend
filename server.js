@@ -300,7 +300,8 @@ app.post("/api/run-bouke", safeRun(runBouke, "Bouke"));
 // ==========================================================
 // 🏛️ RUN FLOREFFE – Dôme de protection local (100 % réel)
 // ==========================================================
-import { runFloreffe } from "./services/runFloreffe.js";
+import runModule from "./services/runFloreffe.js";
+const { runFloreffe } = runModule;
 
 app.post("/api/run-floreffe", async (req, res) => {
   try {
