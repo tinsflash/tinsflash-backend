@@ -824,7 +824,8 @@ await addEngineLog("💾 Données Floreffe exportées vers Mongo Cloud global.",
 // Génération relief NGI + fusion météo
 const { exec } = await import("child_process");
 exec("node ./services/generateFloreffeAltitudes.js && node ./services/fuseTopoMeteo.js");
-    await syncResultsToCentral(results.forecasts, results.alerts);
+    await syncResultsToCentral(enriched, alerts);
+    
 // --- Clôture propre
 await mongo.close();
 await addEngineLog("[Floreffe] Connexion Mongo fermée proprement", "info", "floreffe");
