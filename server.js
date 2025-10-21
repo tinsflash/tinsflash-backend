@@ -10,6 +10,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import { MongoClient } from "mongodb";
 import fetch from "node-fetch";
 import axios from "axios";
 import fs from "fs";
@@ -65,8 +66,18 @@ import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
 
-
-import { MongoClient } from "mongodb";
+// --- Initialisation Mongo globale ---
+const mongo = new MongoClient(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+// --- Connexion automatique au démarrage ---
+try {
+  await mongo.connect();
+  console.log("✅ MongoDB connecté avec succès (server.js)");
+} catch (err) {
+  console.error("❌ Erreur Mongo au démarrage :", err.message);
+}
 // ==========================================================
 // ⚙️ CONFIG ENV
 // ==========================================================
@@ -389,17 +400,16 @@ app.get("/api/alerts-detected", async (req, res) => {
 // 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
 // ==========================================================
 
+await mongo.connect();
 
+// 🌍 TINSFLASH — Route de consultation des alertes (JSON pur)
 app.get("/api/alerts", async (req, res) => {
   try {
-    const client = new MongoClient(process.env.MONGO_URI);
-    await client.connect();
-    const db = client.db();
+    const db = mongo.db("tinsflash"); // ✅ réutilise la connexion globale
     const alerts = await db.collection("alerts").find({}).toArray();
-    await client.close();
     res.json(alerts || []);
   } catch (err) {
-    console.error("Erreur /api/alerts:", err.message);
+    console.error("Erreur /api/alerts :", err.message);
     res.status(500).json({ error: err.message });
   }
 });
