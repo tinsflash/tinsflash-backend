@@ -64,6 +64,8 @@ import { generateForecast } from "./services/forecastService.js";
 import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
+import runFloreffeModule from "./services/runFloreffe.js";
+const { runFloreffe } = runFloreffeModule;
 
 
 // ==========================================================
