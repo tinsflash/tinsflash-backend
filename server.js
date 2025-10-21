@@ -9,7 +9,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
 import fetch from "node-fetch";
 import axios from "axios";
 import fs from "fs";
@@ -65,30 +65,31 @@ import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
 
-// ==========================================================
-// 🌐 INITIALISATION MONGO DB (version stable pour Render)
-// ==========================================================
 
-let db;
+// ==========================================================
+// 🔌 MONGODB — version stable Mongoose (connexion unique)
+// ==========================================================
+import mongoose from "mongoose";
 
-async function initMongo() {
+async function connectMongo() {
   try {
-    const client = new MongoClient(process.env.MONGO_URI, {
+    await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 20000,
+      socketTimeoutMS: 45000,
+      dbName: "tinsflash",
     });
-    await client.connect();
-    db = client.db("tinsflash");
-    console.log("✅ MongoDB connecté avec succès (server.js)");
-    await initEngineState();
+    console.log("✅ MongoDB connecté avec succès (mongoose)");
+    await initEngineState(); // conserve ton état moteur
   } catch (err) {
-    console.error("❌ Erreur Mongo au démarrage :", err.message);
+    console.error("❌ Erreur MongoDB :", err.message);
+    setTimeout(connectMongo, 8000);
   }
 }
+if (process.env.MONGO_URI) connectMongo();
 
-// Lancer immédiatement l'initialisation Mongo
-await initMongo();
-// ==========================================================
+/ ==========================================================
 // ⚙️ CONFIG ENV
 // ==========================================================
 dotenv.config();
@@ -396,8 +397,7 @@ app.get("/api/alerts-detected", async (req, res) => {
 // 🌍 TINSFLASH — Route de consultation des alertes (JSON pur)
 app.get("/api/alerts", async (req, res) => {
   try {
-    
-    const alerts = await db.collection("alerts").find({}).toArray();
+    const alerts = await Alert.find({});
     res.json(alerts || []);
   } catch (err) {
     console.error("Erreur /api/alerts :", err.message);
@@ -412,7 +412,7 @@ app.get("/api/alerts", async (req, res) => {
 app.get("/api/forecast/floreffe", async (req, res) => {
   try {
     
-    const data = await db.collection("forecasts").findOne({ zone: "Floreffe" });
+    const data = await Forecast.findOne({ zone: "Floreffe" });
 
     if (!data) return res.json({ error: "Aucune donnée disponible pour Floreffe" });
     res.json(data);
@@ -422,26 +422,24 @@ app.get("/api/forecast/floreffe", async (req, res) => {
   }
 });
 
+// 🌍 ROUTE – Alerts Floreffe (version Mongoose)
 app.get("/api/alerts/floreffe", async (req, res) => {
   try {
-    
-    const alerts = await db.collection("alerts").find({ zone: /Floreffe/i }).toArray();
+    const alerts = await Alert.find({ zone: /Floreffe/i });
     res.json(alerts || []);
   } catch (e) {
-    console.error("Erreur API alerts Floreffe:", e.message);
+    console.error("Erreur API alerts Floreffe :", e.message);
     res.status(500).json({ error: e.message });
   }
 });
-// ==========================================================
-// 🌫️ ROUTE VisionIA — Alertes détectées par analyse d’images
-// ==========================================================
+
+// 🤖 ROUTE – Alerts VisionIA (analyse d’images)
 app.get("/api/alerts-vision", async (req, res) => {
   try {
-    
-    const alerts = await db.collection("alerts_vision").find({}).toArray();
+    const alerts = await Alert.find({ type: "vision" });
     res.json(alerts || []);
   } catch (err) {
-    console.error("Erreur /api/alerts-vision:", err.message);
+    console.error("Erreur /api/alerts-vision :", err.message);
     res.status(500).json({ error: err.message });
   }
 });
