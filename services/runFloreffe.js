@@ -196,7 +196,7 @@ results.push(final);
     await addEngineError(`❌ [${runType}] ${m.name} indisponible (${msg})`, "superForecast");
   }
   await sleep(2000);
-}}
+}
       const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
       const reliability = +(valid.length / (models.length || 1)).toFixed(2);
@@ -626,6 +626,7 @@ try {
     fs.mkdirSync(publicDir, { recursive: true });
     await addEngineLog("[Floreffe] 📁 Dossier public créé automatiquement", "info", "floreffe");
   }
+}
 
   // === Écriture des fichiers publics initiaux ===
   await fs.promises.writeFile(
@@ -794,7 +795,7 @@ await sleep(500);
 if (typeof process !== "undefined" && process.exit) {
   setTimeout(() => process.exit(0), 1000);
 }
-}
+
 // =======================================================
 // 🔚 EXPORT UNIVERSEL — TINSFLASH PRO+++ (ESM + CJS SAFE)
 // =======================================================
