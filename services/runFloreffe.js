@@ -484,11 +484,9 @@ const phase1bisPlus = phase1bisResults.map((pt) => {
 });
 
 // === Sauvegarde Mongo (VisionIA + humidité) ===
-const db = mongoose.connection;
-
-if (db.readyState === 1) {
-  const floreffePhase1bis = db.collection("floreffe_phase1bis");
-  const floreffePhase1bisPlus = db.collection("floreffe_phase1bisplus");
+if (mongoose.connection.readyState === 1) {
+  const floreffePhase1bis = mongoose.connection.collection("floreffe_phase1bis");
+  const floreffePhase1bisPlus = mongoose.connection.collection("floreffe_phase1bisplus");
 
   await floreffePhase1bis.deleteMany({});
   await floreffePhase1bisPlus.insertMany(phase1bisPlus);
@@ -500,7 +498,7 @@ if (db.readyState === 1) {
   );
 } else {
   await addEngineError(
-    "❌ [Floreffe] Connexion Mongo inactive lors de la sauvegarde Phase 1bis",
+    "[Floreffe] ❌ Connexion Mongo inactive lors de la sauvegarde Phase 1bis",
     "floreffe"
   );
 }
@@ -591,26 +589,31 @@ Ne commente rien hors JSON.
   }
 }
 
-// === Sauvegarde Mongo Phase 2 ===
-const db = mongoose.connection;
 
-if (db.readyState === 1) {
-  const floreffePhase2 = db.collection("floreffe_phase2");
-  await floreffePhase2.deleteMany({});
-  if (phase2Results.length) {
-    await floreffePhase2.insertMany(phase2Results);
+
+
+// === Sauvegarde Mongo Phase 2 (version Mongoose stable) ===
+if (mongoose.connection.readyState === 1) {
+  const floreffePhase2 = mongoose.connection.collection("floreffe_phase2");
+
+  try {
+    await floreffePhase2.deleteMany({});
+    if (phase2Results.length) {
+      await floreffePhase2.insertMany(phase2Results);
+    }
+
+    const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
+    await addEngineLog(
+      `[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`,
+      "success",
+      "floreffe"
+    );
+  } catch (err) {
+    await addEngineError(`[Floreffe] ❌ Erreur sauvegarde Phase 2 : ${err.message}`, "floreffe");
   }
-
-  const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
-  await addEngineLog(
-    `[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`,
-    "success",
-    "floreffe"
-  );
 } else {
   await addEngineError("❌ [Floreffe] Connexion Mongo inactive à la sauvegarde Phase 2", "floreffe");
 }
-
 // === Temporisation avant Phase 5 ===
 await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(200000); // 2 min ou plus
@@ -836,21 +839,34 @@ try {
     await addEngineError("[Floreffe] ❌ floreffe_forecasts.json manquant ou vide", "floreffe");
   } else {
     await addEngineLog("[Floreffe] ✅ floreffe_forecasts.json validé pour affichage", "success", "floreffe");
-// === PHASE 5 — FUSION IA + EXPORT GLOBAL (MONGOOSE STABLE) ===
-const db = mongoose.connection;
 
-// Renforcement des données avant fusion
+    
+    
+    // === PHASE 5 — FUSION IA + EXPORT GLOBAL (MONGOOSE STABLE) ===
+
+// Renforcement des données avant fusion (pré-traitement IA local)
 phase2ResultsSafe = phase2ResultsSafe.map(p => ({
   ...p,
   commentaire_fusionné: renforcerCommentaire(p),
   reliability_finale: Math.min(1, (p.reliability ?? 0.8) * (p.confidence ?? 0.9))
 }));
 
+// Connexion Mongo existante (vérification Mongoose)
+if (mongoose.connection.readyState !== 1) {
+  await addEngineError("[Floreffe] ⚠️ Connexion Mongo inactive au démarrage Phase 5", "floreffe");
+} else {
+  await addEngineLog("[Floreffe] ✅ Connexion Mongo active pour la Phase 5 (Fusion IA + Export)", "info", "floreffe");
+}
+
+    
 // === Fusion IA globale (optionnelle) ===
 let fusionResults = [];
 try {
   const fusionPrompt = `
-Tu es J.E.A.N., intelligence météorologique globale de TINSFLASH.
+Tu es J.E.A.N., intelligence météorologique globale de TINSFLASH, 
+tu es le meilleur météorologue, le meilleur climatologue,  le meilleur mathématicien et un expert 
+mondial en étude du relief et de ton analyse tu sais trouver avant les autres organismes 
+si un problème météorologique va arriver. 
 Fusionne les résultats IA locaux de Floreffe pour produire des alertes fiables et explicites.
 ${JSON.stringify(phase2ResultsSafe.slice(0, 300), null, 2)}
 `;
@@ -902,16 +918,28 @@ const alerts = enriched
     timestamp: new Date()
   }));
 
-// === Sauvegarde Mongo (via Mongoose) ===
-if (db.readyState === 1) {
-  const alertsCol = db.collection("alerts_floreffe");
-  await alertsCol.deleteMany({});
-  if (alerts.length) await alertsCol.insertMany(alerts);
-  await addEngineLog(`[Floreffe] 💾 ${alerts.length} alertes sauvegardées`, "success", "floreffe");
-} else {
-  await addEngineError("[Floreffe] ❌ Mongo inactif lors de la sauvegarde des alertes", "floreffe");
-}
 
+// === Sauvegarde Mongo (via Mongoose) ===
+if (mongoose.connection.readyState === 1) {
+  const alertsCol = mongoose.connection.collection("alerts_floreffe");
+
+  await alertsCol.deleteMany({});
+  if (alerts.length) {
+    await alertsCol.insertMany(alerts);
+  }
+
+  await addEngineLog(
+    `[Floreffe] 💾 ${alerts.length} alertes sauvegardées`,
+    "success",
+    "floreffe"
+  );
+} else {
+  await addEngineError(
+    "[Floreffe] ❌ Mongo inactif lors de la sauvegarde des alertes",
+    "floreffe"
+  );
+}
+    
 // === PATCH BLOC 1 — Prévisions 5 jours (week) à partir de enriched ===
 const grouped = {};
 for (const z of enriched) {
