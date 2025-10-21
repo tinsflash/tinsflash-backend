@@ -567,8 +567,12 @@ Ne commente rien hors JSON.
     const ai = await openai.responses.create({
       model: "gpt-5",
       input: [
-        { role: "system", content: "Tu es J.E.A.N., IA météo-hydrologique locale, meilleur météorologue,  meilleur climatologue et meilleur mathématicien au monde 
-          experte de Floreffe (Belgique)." },
+       {
+  role: "system",
+  content: `Tu es J.E.A.N., IA météo-hydrologique locale,
+  meilleur météorologue, meilleur climatologue et meilleur mathématicien au monde,
+  experte de la commune de Floreffe (Belgique).`
+},
         { role: "user", content: aiPrompt }
       ],
     });
