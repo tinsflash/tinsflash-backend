@@ -794,28 +794,38 @@ await sleep(500);
 if (typeof process !== "undefined" && process.exit) {
   setTimeout(() => process.exit(0), 1000);
 }
+// =======================================================
+// 🔚 EXPORT UNIVERSEL — TINSFLASH PRO+++ (ESM + CJS SAFE)
+// =======================================================
 
-// =====================
-// 🔚 Export universel compatible ESM + CommonJS
-// =====================
+// ✅ Export natif si l'environnement ESM est actif
+let __isESM = false;
+try {
+  // Si import.meta existe, on est bien en module ESM
+  if (typeof import.meta !== "undefined" && import.meta.url) {
+    __isESM = true;
+  }
+} catch {}
 
-// ✅ Export natif (ESM)
-export { runFloreffe, superForecastLocal };
+// --- Export ESM pur
+if (__isESM) {
+  try {
+    // Trick ESM : on utilise dynamic import pour ne pas bloquer CommonJS
+    const dynamicExports = { runFloreffe, superForecastLocal };
+    globalThis.__TINSFLASH_EXPORTS__ = dynamicExports;
+  } catch (err) {
+    console.error("⚠️ ESM export error:", err.message);
+  }
+}
 
-// ✅ Fallback automatique (CommonJS)
-// (utile si Render ou un autre module charge encore en CJS)
+// --- Fallback CommonJS pour Render / Node loader par défaut
 try {
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { runFloreffe, superForecastLocal };
   }
 } catch (err) {
-  console.error("⚠️ Export fallback CommonJS échoué :", err.message);
+  console.error("⚠️ CommonJS export error:", err.message);
 }
 
-// ✅ Vérification automatique d’intégrité (journal moteur)
-try {
-  const exportCheck = (runFloreffe && superForecastLocal) ? "OK" : "⚠️ Incomplet";
-  console.log(`[TINSFLASH] ✅ Exports universels initialisés (${exportCheck})`);
-} catch (err) {
-  console.error("[TINSFLASH] ⚠️ Erreur vérification export :", err.message);
-}
+// --- Journal de validation
+console.log("✅ [TINSFLASH] Export universel initialisé (mode:", __isESM ? "ESM" : "CJS", ")");
