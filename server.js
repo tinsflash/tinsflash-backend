@@ -66,6 +66,7 @@ import { checkAIHealth } from "./services/aiHealth.js";
 import User from "./models/User.js";
 
 
+import { MongoClient } from "mongodb";
 // ==========================================================
 // ⚙️ CONFIG ENV
 // ==========================================================
@@ -387,7 +388,7 @@ app.get("/api/alerts-detected", async (req, res) => {
 // ==========================================================
 // 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
 // ==========================================================
-import { MongoClient } from "mongodb";
+
 
 app.get("/api/alerts", async (req, res) => {
   try {
