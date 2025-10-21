@@ -789,12 +789,12 @@ if (typeof process !== "undefined" && process.exit) {
 }
 
 // =======================================================
-// ✅ EXPORT DIRECT POUR RENDER (Node.js 22 ESM)
+// ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
 // =======================================================
 
-// =======================================================
-// ✅ EXPORT UNIVERSEL POUR RENDER (CJS compatible)
-// =======================================================
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { runFloreffe, superForecastLocal };
 }
+
+// --- Journal de validation ---
+console.log("✅ [TINSFLASH] Export universel initialisé pour Render (mode: CJS)");
