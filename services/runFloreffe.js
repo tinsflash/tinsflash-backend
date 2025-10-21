@@ -379,7 +379,10 @@ for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
       }));
 
       phase1Results.push(...stamped);
-
+if (!db) {
+  await addEngineLog("🕓 Attente ouverture connexion Mongo...", "info", "floreffe");
+  await mongo.connect(); // ✅ force la connexion si pas encore active
+}
       // 💾 intégration immédiate après chaque journée (évite 3 h de buffer)
       await db.collection("floreffe_phase1").insertMany(stamped);
       await addEngineLog(`✅ [Floreffe] Données J+${dayOffset} intégrées (${stamped.length})`, "success", "floreffe");
