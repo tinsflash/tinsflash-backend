@@ -794,8 +794,8 @@ if (typeof process !== "undefined" && process.exit) {
 
 export { runFloreffe, superForecastLocal };
 
-// --- compatibilité CommonJS ---
-if (typeof module !== "undefined") {
+// --- Compatibilité CommonJS ---
+if (typeof module !== "undefined" && module.exports) {
   module.exports = { runFloreffe, superForecastLocal };
 }
 
