@@ -75,6 +75,7 @@ const mongo = new MongoClient(process.env.MONGO_URI, {
 try {
   await mongo.connect();
   console.log("✅ MongoDB connecté avec succès (server.js)");
+  const db = mongo.db("tinsflash"); // ✅ Déclaration unique et globale
 } catch (err) {
   console.error("❌ Erreur Mongo au démarrage :", err.message);
 }
@@ -405,7 +406,7 @@ await mongo.connect();
 // 🌍 TINSFLASH — Route de consultation des alertes (JSON pur)
 app.get("/api/alerts", async (req, res) => {
   try {
-    const db = mongo.db("tinsflash"); // ✅ réutilise la connexion globale
+    
     const alerts = await db.collection("alerts").find({}).toArray();
     res.json(alerts || []);
   } catch (err) {
@@ -420,7 +421,7 @@ app.get("/api/alerts", async (req, res) => {
 
 app.get("/api/forecast/floreffe", async (req, res) => {
   try {
-    const db = mongo.db("tinsflash");
+    
     const data = await db.collection("forecasts").findOne({ zone: "Floreffe" });
 
     if (!data) return res.json({ error: "Aucune donnée disponible pour Floreffe" });
@@ -433,7 +434,7 @@ app.get("/api/forecast/floreffe", async (req, res) => {
 
 app.get("/api/alerts/floreffe", async (req, res) => {
   try {
-    const db = mongo.db("tinsflash");
+    
     const alerts = await db.collection("alerts").find({ zone: /Floreffe/i }).toArray();
     res.json(alerts || []);
   } catch (e) {
@@ -446,7 +447,7 @@ app.get("/api/alerts/floreffe", async (req, res) => {
 // ==========================================================
 app.get("/api/alerts-vision", async (req, res) => {
   try {
-    const db = mongo.db("tinsflash");
+    
     const alerts = await db.collection("alerts_vision").find({}).toArray();
     res.json(alerts || []);
   } catch (err) {
@@ -560,7 +561,7 @@ app.get("/api/vision/run", async (req, res) => {
 
 app.post("/api/sync", async (req, res) => {
   try {
-    const db = mongo.db("tinsflash");
+    
     const authHeader = req.headers.authorization || "";
     const token = authHeader.replace("Bearer ", "").trim();
     if (token !== process.env.SYNC_API_KEY) {
@@ -573,7 +574,7 @@ app.post("/api/sync", async (req, res) => {
     }
 
     await mongo.connect();
-    const db = mongo.db("tinsflash");
+    
     const syncCol = db.collection("sync_logs");
 
     await syncCol.insertOne({
