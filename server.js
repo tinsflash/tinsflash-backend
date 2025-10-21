@@ -561,7 +561,7 @@ app.get("/api/vision/run", async (req, res) => {
 // ==========================================================
 // 🌐 TINSFLASH — Endpoint central de synchronisation multi-Render
 // ==========================================================
-import { MongoClient } from "mongodb";
+
 
 app.post("/api/sync", async (req, res) => {
   const mongo = new MongoClient(process.env.MONGO_URI);
