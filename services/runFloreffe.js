@@ -799,15 +799,23 @@ if (typeof process !== "undefined" && process.exit) {
 // 🔚 Export universel compatible ESM + CommonJS
 // =====================
 
-// --- Export standard (ESM)
+// ✅ Export natif (ESM)
 export { runFloreffe, superForecastLocal };
 
-// --- Compatibilité CommonJS (fallback Render/Node)
+// ✅ Fallback automatique (CommonJS)
+// (utile si Render ou un autre module charge encore en CJS)
 try {
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { runFloreffe, superForecastLocal };
   }
 } catch (err) {
-  console.error("⚠️ Erreur lors de l'export CommonJS :", err.message);
+  console.error("⚠️ Export fallback CommonJS échoué :", err.message);
 }
-  
+
+// ✅ Vérification automatique d’intégrité (journal moteur)
+try {
+  const exportCheck = (runFloreffe && superForecastLocal) ? "OK" : "⚠️ Incomplet";
+  console.log(`[TINSFLASH] ✅ Exports universels initialisés (${exportCheck})`);
+} catch (err) {
+  console.error("[TINSFLASH] ⚠️ Erreur vérification export :", err.message);
+}
