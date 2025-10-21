@@ -823,3 +823,4 @@ try {
 
 // --- Journal de validation
 console.log("✅ [TINSFLASH] Export universel initialisé (mode:", __isESM ? "ESM" : "CJS", ")");
+}
