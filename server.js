@@ -604,9 +604,7 @@ app.post("/api/sync", async (req, res) => {
   } catch (err) {
     console.error("❌ Erreur /api/sync :", err.message);
     res.status(500).json({ error: err.message });
-  } finally {
-    await mongo.close().catch(() => {});
-  }
+  } 
 });
 // ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
