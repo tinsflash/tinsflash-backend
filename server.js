@@ -69,7 +69,6 @@ import User from "./models/User.js";
 // ==========================================================
 // 🔌 MONGODB — version stable Mongoose (connexion unique)
 // ==========================================================
-import mongoose from "mongoose";
 
 async function connectMongo() {
   try {
