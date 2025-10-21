@@ -322,6 +322,7 @@ try {
     "tinsflash.onrender.com",
     "tinsflash-floreffe.onrender.com",
     "tinsflash-bouke.onrender.com",
+    "tinsflash-backend.onrender.com",
     "tinsflash-namur.onrender.com"
   ];
   const currentHost = process.env.RENDER_EXTERNAL_HOSTNAME || "local";
