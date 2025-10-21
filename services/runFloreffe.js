@@ -1114,13 +1114,18 @@ exec("node ./services/generateFloreffeAltitudes.js && node ./services/fuseTopoMe
 await syncResultsToCentral(enriched, alerts);
 await addEngineLog("📡 Synchronisation vers moteur central terminée", "success", "floreffe");
     
-//=====================
+// =====================
 // 🔚 Export universel compatible ESM + CommonJS
-// ==========================================================
-export { runFloreffe, superForecastLocal };
+// =====================
+
 try {
-  // @ts-ignore
-  if (typeof module !== "undefined") {
+  // ESM
+  if (typeof export !== "undefined") {
+    export { runFloreffe, superForecastLocal };
+  }
+} catch {
+  // CommonJS fallback
+  if (typeof module !== "undefined" && module.exports) {
     module.exports = { runFloreffe, superForecastLocal };
   }
-} catch {}
+}
