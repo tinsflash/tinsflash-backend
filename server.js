@@ -5,7 +5,6 @@
 // ==========================================================
 
 import express from "express";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
@@ -564,8 +563,6 @@ app.post("/api/sync", async (req, res) => {
       return res.status(400).json({ error: "Aucune donnée fournie" });
     }
 
-    await mongo.connect();
-    
     const syncCol = db.collection("sync_logs");
 
     await syncCol.insertOne({
