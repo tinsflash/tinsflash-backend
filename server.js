@@ -558,7 +558,61 @@ app.get("/api/vision/run", async (req, res) => {
     res.status(500).send("❌ Erreur VisionIA : " + err.message);
   }
 });
+// ==========================================================
+// 🌐 TINSFLASH — Endpoint central de synchronisation multi-Render
+// ==========================================================
+import { MongoClient } from "mongodb";
 
+app.post("/api/sync", async (req, res) => {
+  const mongo = new MongoClient(process.env.MONGO_URI);
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (token !== process.env.SYNC_API_KEY) {
+      return res.status(401).json({ error: "Accès non autorisé (clé invalide)" });
+    }
+
+    const { source, session, forecasts = [], alerts = [], timestamp } = req.body || {};
+    if (!forecasts.length && !alerts.length) {
+      return res.status(400).json({ error: "Aucune donnée fournie" });
+    }
+
+    await mongo.connect();
+    const db = mongo.db("tinsflash");
+    const syncCol = db.collection("sync_logs");
+
+    await syncCol.insertOne({
+      source,
+      session,
+      timestamp: new Date(timestamp || Date.now()),
+      forecastsCount: forecasts.length,
+      alertsCount: alerts.length,
+      receivedAt: new Date(),
+    });
+
+    // 🔁 Fusion et sauvegarde centralisée
+    if (forecasts.length) {
+      await db.collection("forecasts").updateOne(
+        { zone: source },
+        { $set: { zone: source, data: forecasts, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+
+    if (alerts.length) {
+      await db.collection("alerts").deleteMany({ zone: source });
+      await db.collection("alerts").insertMany(alerts.map(a => ({ ...a, zone: source })));
+    }
+
+    console.log(`✅ Données reçues de ${source} (${forecasts.length} prévisions, ${alerts.length} alertes)`);
+    res.status(200).json({ success: true, source, forecasts: forecasts.length, alerts: alerts.length });
+  } catch (err) {
+    console.error("❌ Erreur /api/sync :", err.message);
+    res.status(500).json({ error: err.message });
+  } finally {
+    await mongo.close().catch(() => {});
+  }
+});
 // ==========================================================
 // 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
 // ==========================================================
