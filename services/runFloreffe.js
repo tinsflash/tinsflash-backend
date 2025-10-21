@@ -789,38 +789,7 @@ if (typeof process !== "undefined" && process.exit) {
 }
 
 // =======================================================
-// 🔚 EXPORT UNIVERSEL — TINSFLASH PRO+++ (ESM + CJS SAFE)
+// ✅ EXPORT DIRECT POUR RENDER (Node.js 22 ESM)
 // =======================================================
 
-// ✅ Export natif si l'environnement ESM est actif
-let __isESM = false;
-try {
-  // Si import.meta existe, on est bien en module ESM
-  if (typeof import.meta !== "undefined" && import.meta.url) {
-    __isESM = true;
-  }
-} catch {}
-
-// --- Export ESM pur
-if (__isESM) {
-  try {
-    // Trick ESM : on utilise dynamic import pour ne pas bloquer CommonJS
-    const dynamicExports = { runFloreffe, superForecastLocal };
-    globalThis.__TINSFLASH_EXPORTS__ = dynamicExports;
-  } catch (err) {
-    console.error("⚠️ ESM export error:", err.message);
-  }
-}
-
-// --- Fallback CommonJS pour Render / Node loader par défaut
-try {
-  if (typeof module !== "undefined" && module.exports) {
-    module.exports = { runFloreffe, superForecastLocal };
-  }
-} catch (err) {
-  console.error("⚠️ CommonJS export error:", err.message);
-}
-
-// --- Journal de validation
-console.log("✅ [TINSFLASH] Export universel initialisé (mode:", __isESM ? "ESM" : "CJS", ")");
-}
+export { runFloreffe, superForecastLocal };
