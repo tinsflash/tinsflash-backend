@@ -787,14 +787,17 @@ if (typeof process !== "undefined" && process.exit) {
   setTimeout(() => process.exit(0), 1000);
 }
 }
-
 // =======================================================
 // ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
 // =======================================================
 if (typeof module !== "undefined" && module.exports) {
+  async function runFloreffeWrapper() {
+    return await runFloreffe();
+  }
+
   module.exports = {
-    runFloreffe,         // ta fonction principale
-    superForecastLocal   // ta sous-fonction météo
+    runFloreffe: runFloreffeWrapper,
+    superForecastLocal
   };
 }
 
