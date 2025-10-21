@@ -792,9 +792,11 @@ if (typeof process !== "undefined" && process.exit) {
 // ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
 // =======================================================
 
+// =======================================================
+// ✅ EXPORT UNIVERSEL POUR RENDER (CommonJS compatible)
+// =======================================================
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { runFloreffe, superForecastLocal };
 }
 
-// --- Journal de validation ---
-console.log("✅ [TINSFLASH] Export universel initialisé pour Render (mode: CJS)");
+console.log("✅ [TINSFLASH] Export universel initialisé (mode: CJS)");
