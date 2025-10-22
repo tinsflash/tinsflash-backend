@@ -504,6 +504,10 @@ if (!skipPhase1) {
 // ==========================================================
 // 🌊 PHASE 1bis — Corrélation topographique / hydrologique
 // ==========================================================
+
+// ==========================================================
+// 🌊 PHASE 1bis — Corrélation topographique / hydrologique
+// ==========================================================
 await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en cours...", "info", "floreffe");
 
 let phase1Results = globalThis.__PHASE1_RESULTS__ || phase1Results || [];
@@ -588,18 +592,15 @@ try {
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
 await sleep(120000);
 
-
 // ==========================================================
-// 🧠 PHASE 2 — IA J.E.A.N. Locale (Autonome, Réelle, Démo Officielle)
+// 🧠 PHASE 2 — IA J.E.A.N. Locale
 // ==========================================================
 await addEngineLog("[Floreffe] 🚀 Phase 2 (IA J.E.A.N.) – Démarrage analyse locale", "info", "floreffe");
 
-// 🔑 Client IA — Réutilise l’instance globale si déjà importée
-const aiClient = (typeof openai !== "undefined" && openai)
-  ? openai
-  : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// ✅ Une seule instance OpenAI globale
+const aiClient = globalThis.__TINSFLASH_AI__ || new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+globalThis.__TINSFLASH_AI__ = aiClient;
 
-// Données en entrée = résultats Phase 1bis+
 const phase1Data = Array.isArray(phase1bisPlus) ? phase1bisPlus : [];
 const chunkSize = 150;
 const chunks = [];
@@ -611,9 +612,6 @@ let phase2Results = [];
 const startPhase2 = Date.now();
 await addEngineLog(`[Floreffe] ⚙️ IA J.E.A.N. initialisée – ${chunks.length} blocs × ${chunkSize} points`, "info", "floreffe");
 
-// ==========================================================
-// Boucle principale d’analyse IA bloc par bloc
-// ==========================================================
 for (const [index, chunk] of chunks.entries()) {
   const aiPrompt = `
 ${FLOREFFE_IA_PROMPT}
@@ -621,27 +619,18 @@ ${FLOREFFE_IA_PROMPT}
 Analyse locale J.E.A.N. — bloc ${index + 1}/${chunks.length} (${chunk.length} points) :
 
 ${JSON.stringify(chunk, null, 2)}
-
-Retourne STRICTEMENT un tableau JSON de ce format :
-[
-  {
-    "id":"FLO_01","name":"Maison communale",
-    "temperature":7.5,"precipitation":2.3,"wind":18.2,
-    "risk":{"pluie":0.7,"verglas":0.2,"vent":0.4,"brouillard":0.6,"inondation":0.5},
-    "reliability":0.92,"commentaire":"Risque bruine faible","confidence":0.9
-  }
-]
+Retourne STRICTEMENT un tableau JSON.
 `;
 
   try {
     const ai = await aiClient.responses.create({
       model: "gpt-5",
       input: [
-        { role: "system", content: "Tu es J.E.A.N., IA météorologique et hydrologique de Floreffe (Belgique), connectée au moteur TINSFLASH PRO+++." },
+        { role: "system", content: "IA météorologique et hydrologique TINSFLASH PRO+++" },
         { role: "user", content: aiPrompt }
       ],
       temperature: 0.3,
-      max_output_tokens: 1500,
+      max_output_tokens: 1500
     });
 
     const raw = ai.output?.[0]?.content?.[0]?.text?.trim() || "";
@@ -652,63 +641,16 @@ Retourne STRICTEMENT un tableau JSON de ce format :
     if (Array.isArray(parsed)) phase2Results.push(...parsed);
     else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
 
-    const msg = `[Floreffe] ✅ Bloc IA ${index + 1}/${chunks.length} traité (${parsed.length || 1} points)`;
-    console.log(msg);
-    await addEngineLog(msg, "success", "floreffe");
+    await addEngineLog(`[Floreffe] ✅ Bloc IA ${index + 1}/${chunks.length} traité`, "success", "floreffe");
     await sleep(2500);
-
   } catch (err) {
-    await addEngineError(`[Floreffe] ⚠️ Bloc ${index + 1} IA J.E.A.N. : ${err.message}`, "floreffe");
+    await addEngineError(`[Floreffe] ⚠️ Bloc ${index + 1} : ${err.message}`, "floreffe");
     await sleep(6000);
   }
 }
 
 // ==========================================================
-// 💾 Sauvegarde Mongo + validation
-// ==========================================================
-try {
-  if (mongoose.connection.readyState === 1) {
-    const floreffePhase2 = mongoose.connection.collection("floreffe_phase2");
-    await floreffePhase2.deleteMany({});
-    if (phase2Results.length > 0) await floreffePhase2.insertMany(phase2Results);
-
-    const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
-    await addEngineLog(`[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} points analysés, ${duration}s)`, "success", "floreffe");
-  } else {
-    await addEngineError("❌ Mongo inactif lors de la sauvegarde Phase 2", "floreffe");
-  }
-} catch (err) {
-  await addEngineError(`[Floreffe] ❌ Erreur sauvegarde Phase 2 : ${err.message}`, "floreffe");
-}
-
-// ==========================================================
-// 📈 Résumé technique & validation locale
-// ==========================================================
-const reliabilityAvg = phase2Results.length
-  ? (phase2Results.reduce((a, b) => a + (b.reliability || 0), 0) / phase2Results.length).toFixed(2)
-  : 0;
-
-await addEngineLog(
-  `[Floreffe] 🧠 IA J.E.A.N. OK – ${phase2Results.length} points traités | fiabilité moyenne ${reliabilityAvg}`,
-  "success",
-  "floreffe"
-);
-
-// --- Ajout visible en démo (console Render) ---
-console.log(`
-==========================================
-🌦️  TINSFLASH — IA J.E.A.N. (Phase 2 Démo)
-------------------------------------------
-Points traités : ${phase2Results.length}
-Fiabilité moyenne : ${reliabilityAvg}
-Durée : ${((Date.now() - startPhase2) / 1000).toFixed(1)} s
-Status : ✅ OK — Données locales Floreffe disponibles
-==========================================
-`);
-
-
-// ==========================================================
-// 🛰️ PHASE 5 — Fusion / Export (autonome & sécurisée)
+// 🛰️ PHASE 5 — Fusion / Export
 // ==========================================================
 await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(120000);
@@ -726,6 +668,7 @@ try {
   await addEngineError(`[Floreffe] ❌ Fusion interne : ${err.message}`, "floreffe");
 }
 
+// Écriture fichiers publics
 try {
   if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
   const exportForecasts = { generated: new Date(), zones: enriched };
@@ -737,67 +680,21 @@ try {
   await addEngineError(`[Floreffe] ❌ Échec écriture fichiers publics : ${err.message}`, "floreffe");
 }
 
+// Fermeture propre
 try {
-  if (mongoose.connection.readyState === 1) {
-    const conn = mongoose.connection;
-    const forecastsCol = conn.collection("forecasts");
-    const alertsCol = conn.collection("alerts");
-    await forecastsCol.createIndex({ zone: 1 }, { unique: true });
-    await forecastsCol.updateOne(
-      { zone: "Floreffe" },
-      { $set: { zone: "Floreffe", data: enriched, updatedAt: new Date() } },
-      { upsert: true }
-    );
-    await alertsCol.deleteMany({ zone: /Floreffe/i });
-    if (alerts.length) await alertsCol.insertMany(alerts);
-    await addEngineLog("💾 Données exportées vers Mongo Cloud", "success", "floreffe");
-  }
-} catch (err) {
-  await addEngineError(`[Floreffe] ❌ Export Cloud : ${err.message}`, "floreffe");
-}
-
-// --- Synchronisation optionnelle ---
-async function syncResultsToCentral(forecasts, alerts) {
-  try {
-    if (!process.env.SYNC_API_KEY) return;
-    const url = process.env.SYNC_ENDPOINT || "https://tinsflash.onrender.com/api/sync";
-    await axios.post(url, {
-      source: "Floreffe", forecasts, alerts, timestamp: new Date()
-    }, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SYNC_API_KEY}`
-      },
-      timeout: 25000
-    });
-    await addEngineLog(`📡 Synchronisation vers ${url} OK`, "success", "floreffe");
-  } catch (err) {
-    await addEngineError(`[Floreffe] ⚠️ Sync échouée : ${err.message}`, "floreffe");
-  }
-}
-await syncResultsToCentral(enriched, alerts);
-
-// --- Fermeture propre ---
-try {
-  const durationTotal = ((Date.now() - startPhase2) / 1000 / 60).toFixed(1);
-  await addEngineLog(`[Floreffe] 🕒 Durée totale du run : ${durationTotal} min`, "info", "floreffe");
   if (mongoose.connection.readyState === 1) {
     await mongoose.connection.close();
     await addEngineLog("🔒 Mongo fermée proprement", "success", "floreffe");
   }
-  const sigPath = path.join(publicDir, `run_signature_${Date.now()}.log`);
-  await fs.promises.writeFile(sigPath, `Run Floreffe ${new Date().toISOString()} – ${enriched.length} prévisions`);
-  await addEngineLog("🏁 Fin de run propre – Signature enregistrée", "success", "floreffe");
 } catch (err) {
   await addEngineError(`[Floreffe] ⚠️ Clôture : ${err.message}`, "floreffe");
 }
-await sleep(500);
-if (typeof process !== "undefined" && process.exit) setTimeout(() => process.exit(0), 2000);
 
-
-  
-
-  
+// =======================================================
+// ✅ EXPORT FINAL (ESM pur Render)
+// =======================================================
+export { runFloreffe, superForecastLocal };
+console.log("✅ [TINSFLASH] ESM MODELS — Export final prêt");
 
 // =======================================================
 // ✅ EXPORT UNIVERSEL (compatible ESM + CommonJS + Render)
