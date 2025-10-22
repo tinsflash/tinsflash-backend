@@ -383,79 +383,122 @@ async function runFloreffe() {
   const db = mongoose.connection;
 
   console.log("🌍 [TINSFLASH] Démarrage Floreffe — Everest Protocol v6.5.1 (Fix DoubleLoop)");
-
-  
-    // === PHASE 1 – Extraction multi-modèles locale sur 7 jours (intégration progressive) ===
-const phase1Results = [];
-const forecastDays = 5;
-
-for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
+// === Vérification de la fraîcheur des données (Phase 1 déjà existante) ===
+let skipPhase1 = false;
+if (mongoose.connection.readyState === 1) {
   try {
-    const res = await superForecastLocal({
-      zones: FLOREFFE_POINTS,
-      runType: "Floreffe",
-      dayOffset,
-    });
+    const floreffePhase1 = mongoose.connection.collection("floreffe_phase1");
+    const lastDoc = await floreffePhase1
+      .find({}, { projection: { timestamp: 1 } })
+      .sort({ timestamp: -1 })
+      .limit(1)
+      .toArray();
 
-    if (res?.success && res.phase1Results?.length) {
-      const now = new Date();
-      const stamped = res.phase1Results.map((p) => ({
-        ...p,
-        timestamp: now,
-        dayOffset,
-        hour: now.toISOString().split("T")[1].slice(0, 5),
-      }));
-
-      phase1Results.push(...stamped);
-
- // Journal d’ouverture Mongo (non bloquant)
-      await addEngineLog("⏳ Vérification de la connexion Mongo (Mongoose)...", "info", "floreffe");
-
-      // ✅ On passe désormais par mongoose.connection
-      // (on réutilise la connexion déjà ouverte, pas de re-déclaration)
-      if (mongoose.connection.readyState === 1) {
-        const floreffePhase1 = mongoose.connection.collection("floreffe_phase1");
-        await floreffePhase1.insertMany(stamped);
+    if (lastDoc.length) {
+      const lastTime = new Date(lastDoc[0].timestamp).getTime();
+      const ageHours = (Date.now() - lastTime) / (1000 * 60 * 60);
+      if (ageHours < 2) {
+        skipPhase1 = true;
         await addEngineLog(
-          `✅ [Floreffe] Données J+${dayOffset} (${stamped.length}) intégrées avec succès`,
-          "success",
+          `⚡ Données Phase 1 récentes (${ageHours.toFixed(2)} h) → saut extraction.`,
+          "info",
           "floreffe"
         );
       } else {
-        await addEngineError(
-          `[Floreffe] ⚠️ Connexion Mongo inactive lors de l’insertion J+${dayOffset}`,
-          "floreffe"
-        );
-      }
-
-      // 🧩 Validation finale des données du jour
-      if (!stamped?.length) {
-        await addEngineError(
-          `[Floreffe] Aucun résultat valide pour J+${dayOffset}`,
+        await addEngineLog(
+          `⏳ Données Phase 1 trop anciennes (${ageHours.toFixed(2)} h) → nouvelle extraction.`,
+          "info",
           "floreffe"
         );
       }
     } else {
-      await addEngineError(
-        `[Floreffe] ⚠️ Aucun jeu de données retourné pour J+${dayOffset}`,
-        "floreffe"
-      );
+      await addEngineLog("🔄 Aucune donnée Phase 1 trouvée → extraction requise.", "info", "floreffe");
     }
-
-    // Petite pause entre chaque jour (évite surcharge IA)
-    await sleep(50000);
-
-  } catch (e) {
-    await addEngineError(`[Floreffe] ❌ Erreur extraction J+${dayOffset} : ${e.message}`, "floreffe");
+  } catch (err) {
+    await addEngineError(`[Floreffe] Erreur vérification fraîcheur : ${err.message}`, "floreffe");
   }
-} // ← fin correcte de la boucle for
+}
 
-// --- Journal synthétique de la Phase 1 ---
-await addEngineLog(
-  `[Floreffe] ✅ Phase 1 terminée (${phase1Results.length} points cumulés sur ${forecastDays + 1} jours)`,
-  "success",
-  "floreffe"
-);
+// === PHASE 1 – Extraction multi-modèles locale (si nécessaire) ===
+await addEngineLog("🔎 Vérification fraîcheur données avant Phase 1", "info", "floreffe");
+
+if (!skipPhase1) {
+  globalThis.__PHASE1_RESULTS__ = [];
+  
+  // === PHASE 1 – Extraction multi-modèles locale sur 7 jours (intégration progressive) ===
+  const phase1Results = [];
+  const forecastDays = 5;
+
+  for (let dayOffset = 0; dayOffset <= forecastDays; dayOffset++) {
+    try {
+      const res = await superForecastLocal({
+        zones: FLOREFFE_POINTS,
+        runType: "Floreffe",
+        dayOffset,
+      });
+
+      if (res?.success && res.phase1Results?.length) {
+        const now = new Date();
+        const stamped = res.phase1Results.map((p) => ({
+          ...p,
+          timestamp: now,
+          dayOffset,
+          hour: now.toISOString().split("T")[1].slice(0, 5),
+        }));
+
+        phase1Results.push(...stamped);
+        globalThis.__PHASE1_RESULTS__ = phase1Results;
+
+        // Journal d’ouverture Mongo (non bloquant)
+        await addEngineLog("⏳ Vérification de la connexion Mongo (Mongoose)...", "info", "floreffe");
+
+        // ✅ On passe désormais par mongoose.connection
+        if (mongoose.connection.readyState === 1) {
+          const floreffePhase1 = mongoose.connection.collection("floreffe_phase1");
+          await floreffePhase1.insertMany(stamped);
+          await addEngineLog(
+            `✅ [Floreffe] Données J+${dayOffset} (${stamped.length}) intégrées avec succès`,
+            "success",
+            "floreffe"
+          );
+        } else {
+          await addEngineError(
+            `[Floreffe] ⚠️ Connexion Mongo inactive lors de l’insertion J+${dayOffset}`,
+            "floreffe"
+          );
+        }
+
+        // 🧩 Validation finale des données du jour
+        if (!stamped?.length) {
+          await addEngineError(
+            `[Floreffe] Aucun résultat valide pour J+${dayOffset}`,
+            "floreffe"
+          );
+        }
+      } else {
+        await addEngineError(
+          `[Floreffe] ⚠️ Aucun jeu de données retourné pour J+${dayOffset}`,
+          "floreffe"
+        );
+      }
+
+      // Petite pause entre chaque jour (évite surcharge IA)
+      await sleep(50000);
+
+    } catch (e) {
+      await addEngineError(`[Floreffe] ❌ Erreur extraction J+${dayOffset} : ${e.message}`, "floreffe");
+    }
+  } // ← fin correcte de la boucle for
+
+  // --- Journal synthétique de la Phase 1 ---
+  await addEngineLog(
+    `[Floreffe] ✅ Phase 1 terminée (${phase1Results.length} points cumulés sur ${forecastDays + 1} jours)`,
+    "success",
+    "floreffe"
+  );
+} else {
+  await addEngineLog("✅ Phase 1 sautée, on passe directement à la Phase 2.", "success", "floreffe");
+}
 
 // === PHASE 1bis — Corrélation topographique / hydrologique ===
 await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en cours...", "info", "floreffe");
@@ -463,6 +506,7 @@ await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en
 // === PHASE 1bis – Corrélation topographique / hydrologique ===
 const datasetsPath = path.resolve("./services/datasets");
 let geoData = null;
+
 try {
   const geoPath = "./services/datasets/floreffe_geoportail.json";
   geoData = JSON.parse(fs.readFileSync(geoPath, "utf8"));
