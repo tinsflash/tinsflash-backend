@@ -471,7 +471,7 @@ try {
   await addEngineError(`[Floreffe] Fichier topographique manquant ou illisible : ${e.message}`, "floreffe");
   geoData = { features: [] }; // fallback neutre pour ne pas bloquer
 }
-const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoperalt.json`, "utf8"));
+const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
 const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
 const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
 const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
