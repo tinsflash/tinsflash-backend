@@ -650,10 +650,27 @@ Retourne STRICTEMENT un tableau JSON.
 }
 
 // ==========================================================
-// 🛰️ PHASE 5 — Fusion / Export
-// ==========================================================
-  // ==========================================================
 // ⚡ PHASE 5 — GÉNÉRATION D’ALERTES RÉELLES (pondérées Floreffe)
+// ==========================================================
+await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
+await sleep(120000);
+
+// --- initialisation fusion/export ---
+let enriched = phase2Results || [];
+let alerts = [];
+const publicDir = path.resolve("./public");
+
+try {
+  const unique = new Map();
+  for (const i of enriched) unique.set(i.id || i.name, i);
+  enriched = Array.from(unique.values());
+  await addEngineLog(`[Floreffe] 🔗 Fusion interne : ${enriched.length} entrées consolidées`, "info", "floreffe");
+} catch (err) {
+  await addEngineError(`[Floreffe] ❌ Fusion interne : ${err.message}`, "floreffe");
+}
+
+// ==========================================================
+// ⚡ GÉNÉRATION D’ALERTES (pondération locale Floreffe)
 // ==========================================================
 await addEngineLog("[Floreffe] ⚡ Début génération d'alertes (pondération locale)", "info", "floreffe");
 
@@ -710,24 +727,10 @@ alerts = alerts.map(a => {
 });
 
 await addEngineLog(`[Floreffe] ⚡ ${alerts.length} alertes générées et pondérées`, "success", "floreffe");
-  
-await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
-await sleep(120000);
 
-let enriched = phase2Results || [];
-let alerts = [];
-const publicDir = path.resolve("./public");
-
-try {
-  const unique = new Map();
-  for (const i of enriched) unique.set(i.id || i.name, i);
-  enriched = Array.from(unique.values());
-  await addEngineLog(`[Floreffe] 🔗 Fusion interne : ${enriched.length} entrées consolidées`, "info", "floreffe");
-} catch (err) {
-  await addEngineError(`[Floreffe] ❌ Fusion interne : ${err.message}`, "floreffe");
-}
-
-// Écriture fichiers publics
+// ==========================================================
+// 🗂️ ÉCRITURE FICHIERS PUBLICS
+// ==========================================================
 try {
   if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
   const exportForecasts = { generated: new Date(), zones: enriched };
@@ -739,7 +742,9 @@ try {
   await addEngineError(`[Floreffe] ❌ Échec écriture fichiers publics : ${err.message}`, "floreffe");
 }
 
-// Fermeture propre
+// ==========================================================
+// 🔒 FERMETURE PROPRE
+// ==========================================================
 try {
   if (mongoose.connection.readyState === 1) {
     await mongoose.connection.close();
@@ -748,9 +753,6 @@ try {
 } catch (err) {
   await addEngineError(`[Floreffe] ⚠️ Clôture : ${err.message}`, "floreffe");
 }
-}
-
-
 // =======================================================
 // ✅ EXPORT UNIVERSEL (compatible ESM + CommonJS + Render)
 // =======================================================
