@@ -501,65 +501,54 @@ if (!skipPhase1) {
 }
 
 // === PHASE 1bis — Corrélation topographique / hydrologique ===
-await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en cours...", "info", "floreffe");
 
-// === PHASE 1bis – Corrélation topographique / hydrologique ===
-const datasetsPath = path.resolve("./services/datasets");
-let geoData = null;
-
-try {
-  const geoPath = "./services/datasets/floreffe_geoportail.json";
-  geoData = JSON.parse(fs.readFileSync(geoPath, "utf8"));
-  await addEngineLog(`📡 [Floreffe] Données topographiques chargées (${geoPath})`, "info", "floreffe");
-} catch (e) {
-  await addEngineError(`[Floreffe] Fichier topographique manquant ou illisible : ${e.message}`, "floreffe");
-  geoData = { features: [] }; // fallback neutre pour ne pas bloquer
-}
-const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
-const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
-const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
-const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
-const livelyHydro = await fetchLiveHydroData();
-
-const phase1bisResults = phase1Results.map((pt) => ({
-  ...pt,
-  hydro: correlateTopoHydro(pt, geo, hydro, reseaux, routes, livelyHydro)
-}));
-
-await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
-await addEngineLog("🌊 Corrélation topographique / hydrologique appliquée", "success", "floreffe");
 
 // === PHASE 1bis — Corrélation topographique / hydrologique ===
 await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en cours...", "info", "floreffe");
 
-// === PHASE 1bis – Corrélation topographique / hydrologique ===
 const datasetsPath = path.resolve("./services/datasets");
 let geoData = null;
 
+// --- Chargement des données topographiques ---
 try {
-  
+  const geoPath = path.join(datasetsPath, "floreffe_geoportail.json");
   geoData = JSON.parse(fs.readFileSync(geoPath, "utf8"));
   await addEngineLog(`📡 [Floreffe] Données topographiques chargées (${geoPath})`, "info", "floreffe");
 } catch (e) {
-  await addEngineError(`[Floreffe] Fichier topographique manquant ou illisible : ${e.message}`, "floreffe");
-  geoData = { features: [] }; // fallback neutre pour ne pas bloquer
+  await addEngineError(`[Floreffe] ⚠️ Fichier topographique manquant ou illisible : ${e.message}`, "floreffe");
+  geoData = { features: [] }; // Fallback neutre pour ne pas bloquer le run
 }
 
-const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
-const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
-const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
-const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
-const livelyHydro = await fetchLiveHydroData();
+// --- Chargement des couches complémentaires ---
+const geo = geoData;
+let hydro = {}, reseaux = {}, routes = {}, livelyHydro = {};
 
-const phase1bisResults = phase1Results.map((pt) => ({
-  ...pt,
-  hydro: correlateTopoHydro(pt, geo, hydro, reseaux, routes, livelyHydro)
-}));
+try {
+  hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
+  reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
+  routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
+  livelyHydro = await fetchLiveHydroData();
 
-await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
-await addEngineLog("🌊 Corrélation topographique / hydrologique appliquée", "success", "floreffe");
+  await addEngineLog("💾 Couches hydrologiques et infrastructures chargées avec succès", "info", "floreffe");
+} catch (e) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur chargement des datasets secondaires : ${e.message}`, "floreffe");
+}
 
-// === PHASE 1bis+ – Calcul humidité et indice VisionIA local ===
+// --- Application de la corrélation topographique et hydrologique ---
+let phase1bisResults = [];
+try {
+  phase1bisResults = phase1Results.map((pt) => ({
+    ...pt,
+    hydro: correlateTopoHydro(pt, geo, hydro, reseaux, routes, livelyHydro)
+  }));
+
+  await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
+  await addEngineLog("🌊 Corrélation topographique / hydrologique appliquée", "success", "floreffe");
+} catch (e) {
+  await addEngineError(`[Floreffe] ❌ Erreur lors de la corrélation topo/hydro : ${e.message}`, "floreffe");
+}
+
+// === PHASE 1bis+ — Calcul humidité et indice VisionIA local ===
 await addEngineLog("💧 Début calcul humidité et VisionIA (1bis+)", "info", "floreffe");
 
 const phase1bisPlus = phase1bisResults.map((pt) => {
@@ -579,7 +568,6 @@ const phase1bisPlus = phase1bisResults.map((pt) => {
 
   // === Calcul indice VisionIA local (score de confiance IA terrain) ===
   const alt = Number(result.alt ?? 100);
-
   const topoScore = result.topo?.score ?? 0.8;
   let visionia = topoScore;
 
@@ -592,29 +580,35 @@ const phase1bisPlus = phase1bisResults.map((pt) => {
   return result;
 });
 
-// === Sauvegarde Mongo (VisionIA + humidité) ===
-if (mongoose.connection.readyState === 1) {
-  const floreffePhase1bis = mongoose.connection.collection("floreffe_phase1bis");
-  const floreffePhase1bisPlus = mongoose.connection.collection("floreffe_phase1bisplus");
+// --- Sauvegarde Mongo (VisionIA + humidité) ---
+try {
+  if (mongoose.connection.readyState === 1) {
+    const floreffePhase1bis = mongoose.connection.collection("floreffe_phase1bis");
+    const floreffePhase1bisPlus = mongoose.connection.collection("floreffe_phase1bisplus");
 
-  await floreffePhase1bis.deleteMany({});
-  await floreffePhase1bisPlus.insertMany(phase1bisPlus);
+    await floreffePhase1bis.deleteMany({});
+    await floreffePhase1bisPlus.insertMany(phase1bisPlus);
 
-  await addEngineLog(
-    `✅ [Floreffe] Phase 1bis sauvegardée (${phase1bisPlus.length} points humidité + VisionIA)`,
-    "success",
-    "floreffe"
-  );
-} else {
-  await addEngineError(
-    "[Floreffe] ❌ Connexion Mongo inactive lors de la sauvegarde Phase 1bis",
-    "floreffe"
-  );
+    await addEngineLog(
+      `✅ [Floreffe] Phase 1bis sauvegardée (${phase1bisPlus.length} points humidité + VisionIA)`,
+      "success",
+      "floreffe"
+    );
+  } else {
+    await addEngineError(
+      "[Floreffe] ❌ Connexion Mongo inactive lors de la sauvegarde Phase 1bis",
+      "floreffe"
+    );
+  }
+} catch (err) {
+  await addEngineError(`[Floreffe] ⚠️ Erreur Mongo sauvegarde Phase 1bis : ${err.message}`, "floreffe");
 }
 
-// ⏳ Temporisation avant Phase 2
+// --- Temporisation avant la Phase 2 ---
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
 await sleep(200000); // 2 minutes ou plus
+
+
 
 // === PHASE 2 — IA J.E.A.N. locale (multi-jours, compatible GPT-5) ===
 try {
