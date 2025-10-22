@@ -529,6 +529,36 @@ const phase1bisResults = phase1Results.map((pt) => ({
 await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
 await addEngineLog("🌊 Corrélation topographique / hydrologique appliquée", "success", "floreffe");
 
+// === PHASE 1bis — Corrélation topographique / hydrologique ===
+await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en cours...", "info", "floreffe");
+
+// === PHASE 1bis – Corrélation topographique / hydrologique ===
+const datasetsPath = path.resolve("./services/datasets");
+let geoData = null;
+
+try {
+  const geoPath = "./services/datasets/floreffe_geoportail.json";
+  geoData = JSON.parse(fs.readFileSync(geoPath, "utf8"));
+  await addEngineLog(`📡 [Floreffe] Données topographiques chargées (${geoPath})`, "info", "floreffe");
+} catch (e) {
+  await addEngineError(`[Floreffe] Fichier topographique manquant ou illisible : ${e.message}`, "floreffe");
+  geoData = { features: [] }; // fallback neutre pour ne pas bloquer
+}
+
+const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json`, "utf8"));
+const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
+const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
+const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
+const livelyHydro = await fetchLiveHydroData();
+
+const phase1bisResults = phase1Results.map((pt) => ({
+  ...pt,
+  hydro: correlateTopoHydro(pt, geo, hydro, reseaux, routes, livelyHydro)
+}));
+
+await saveExtractionToMongo("Floreffe", "BE", phase1bisResults);
+await addEngineLog("🌊 Corrélation topographique / hydrologique appliquée", "success", "floreffe");
+
 // === PHASE 1bis+ – Calcul humidité et indice VisionIA local ===
 await addEngineLog("💧 Début calcul humidité et VisionIA (1bis+)", "info", "floreffe");
 
@@ -581,12 +611,23 @@ if (mongoose.connection.readyState === 1) {
     "floreffe"
   );
 }
-    // ⏳ Temporisation avant Phase 2
+
+// ⏳ Temporisation avant Phase 2
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
 await sleep(200000); // 2 minutes ou plus
 
-    // === PHASE 2 — IA J.E.A.N. locale (multi-jours, compatible GPT-5) ===
-await addEngineLog("[Floreffe] Phase 2 — IA J.E.A.N. (analyse multi-jours)", "info", "floreffe");
+// === PHASE 2 — IA J.E.A.N. locale (multi-jours, compatible GPT-5) ===
+try {
+  await addEngineLog("[Floreffe] 🚀 Lancement automatique de la Phase 2 (IA J.E.A.N.)", "info", "floreffe");
+  if (typeof runPhase2 === "function") {
+    await runPhase2("floreffe");
+    await addEngineLog("🤖 [Floreffe] ✅ Phase 2 exécutée avec succès (IA J.E.A.N. locale)", "success", "floreffe");
+  } else {
+    await addEngineError("[Floreffe] ⚠️ Fonction runPhase2 non définie — vérifie l'import du module IA.", "floreffe");
+  }
+} catch (err) {
+  await addEngineError(`[Floreffe] ❌ Erreur Phase 2 : ${err.message}`, "floreffe");
+}
 
 let phase1Data = phase1Results;
 
@@ -598,7 +639,18 @@ for (let i = 0; i < phase1Data.length; i += chunkSize)
 let phase2Results = [];
 const startPhase2 = Date.now();
 
+await addEngineLog(`[Floreffe] 🧠 Phase 2 initialisée – ${chunks.length} blocs de ${chunkSize} points à traiter`, "info", "floreffe");
+
 for (const [index, chunk] of chunks.entries()) {
+  // 🧠 Vérification du contenu du chunk avant de lancer l'IA
+  if (!chunk || !Array.isArray(chunk) || chunk.length === 0) {
+    await addEngineError(
+      `[Floreffe] ⚠️ Chunk vide ou non défini avant IA J.E.A.N. (paquet ${index + 1})`,
+      "floreffe"
+    );
+    continue;
+  }
+
   // 🧠 Construction du prompt détaillé
   const aiPrompt = `
 ${FLOREFFE_IA_PROMPT}
@@ -634,12 +686,12 @@ Ne commente rien hors JSON.
     const ai = await openai.responses.create({
       model: "gpt-5",
       input: [
-       {
-  role: "system",
-  content: `Tu es J.E.A.N., IA météo-hydrologique locale,
+        {
+          role: "system",
+          content: `Tu es J.E.A.N., IA météo-hydrologique locale,
   meilleur météorologue, meilleur climatologue et meilleur mathématicien au monde,
   experte de la commune de Floreffe (Belgique).`
-},
+        },
         { role: "user", content: aiPrompt }
       ],
     });
@@ -670,7 +722,7 @@ if (mongoose.connection.readyState === 1) {
       await floreffePhase2.insertMany(phase2Results);
     }
     const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
- const publicDir = path.resolve("./public");
+    const publicDir = path.resolve("./public");
 
     await addEngineLog(
       `[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`,
@@ -683,7 +735,8 @@ if (mongoose.connection.readyState === 1) {
 } else {
   await addEngineError("❌ [Floreffe] Connexion Mongo inactive à la sauvegarde Phase 2", "floreffe");
 }
-  let enriched = phase2Results || [];
+
+let enriched = phase2Results || [];
 let alerts = [];
 let exportForecasts = { zones: enriched };
 
@@ -691,8 +744,7 @@ let exportForecasts = { zones: enriched };
 await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(200000); // 2 min ou plus
 
-
-// === PHASE 5 — FUSION IA + EXPORT GLOBAL (MONGOOSE STABLE) ===
+// === PHASE 5 — FUSION IA (MONGOOSE STABLE) ===
 const publicDir = path.resolve("./public");
 
 
@@ -743,13 +795,7 @@ const publicDir = path.resolve("./public");
     const checkFile = (file) => fs.existsSync(file) && fs.statSync(file).size > 20;
 
     // Validation prévisions
-    if (!checkFile(forecastsFile)) {
-      await addEngineError("[Floreffe] ❌ floreffe_forecasts.json manquant ou vide", "floreffe");
-    } else {
-      await addEngineLog("[Floreffe] ✅ floreffe_forecasts.json validé pour affichage", "success", "floreffe");
-    }
-
-    // Validation alertes
+// Validation alertes
     if (!checkFile(alertsFile)) {
       await addEngineLog("🚫 Aucune alerte active (fichier vide ou inexistant)", "info", "floreffe");
       await fs.promises.writeFile(alertsFile, JSON.stringify({ generated: new Date(), alerts: [] }, null, 2), "utf8");
