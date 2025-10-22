@@ -196,6 +196,38 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
   }
 };
 
+
+// ==========================================================
+// 🌐 TINSFLASH HoloDôme – WebSocket Sync+
+// ==========================================================
+import { WebSocketServer } from "ws";
+
+const wss = new WebSocketServer({ noServer: true });
+let clients = [];
+
+wss.on("connection", (ws) => {
+  clients.push(ws);
+  ws.on("message", (msg) => {
+    try {
+      const data = JSON.parse(msg.toString());
+      // broadcast à tous les écrans sauf l’émetteur
+      clients.forEach(c => { if (c !== ws && c.readyState === 1) c.send(JSON.stringify(data)); });
+    } catch (err) {
+      console.error("⚠️ WebSocket parse error:", err.message);
+    }
+  });
+  ws.on("close", () => { clients = clients.filter(c => c !== ws); });
+});
+
+server.on("upgrade", (req, socket, head) => {
+  if (req.url === "/ws/hologram") {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
+    });
+  } else socket.destroy();
+});
+
+
 // ==========================================================
 // 🌦️ ROUTE API FORECAST – IA J.E.A.N.
 // ==========================================================
