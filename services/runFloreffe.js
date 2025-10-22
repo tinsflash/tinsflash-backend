@@ -624,6 +624,8 @@ if (mongoose.connection.readyState === 1) {
       await floreffePhase2.insertMany(phase2Results);
     }
     const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
+ const publicDir = path.resolve("./public");
+
     await addEngineLog(
       `[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`,
       "success",
@@ -635,6 +637,7 @@ if (mongoose.connection.readyState === 1) {
 } else {
   await addEngineError("❌ [Floreffe] Connexion Mongo inactive à la sauvegarde Phase 2", "floreffe");
 }
+  
 // === Temporisation avant Phase 5 ===
 await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(200000); // 2 min ou plus
