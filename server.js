@@ -645,7 +645,8 @@ app.get("/admin-alerts.html", (_, res) => res.sendFile(path.join(publicPath, "ad
 // ==========================================================
 const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
-
+const app = express();
+app.use(express.static("public"));  // ← obligatoire pour servir tes fichiers
 server.listen(PORT, "0.0.0.0", () => {
   console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
