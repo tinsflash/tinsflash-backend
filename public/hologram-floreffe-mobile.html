@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<title>TINSFLASH – HoloDôme PRO+++ Mobile Sync Live</title>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial;}
+#hud{position:fixed;top:8px;left:10px;background:rgba(0,0,0,.5);padding:8px 14px;border-radius:8px;font-size:14px;}
+#controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:10;}
+button{background:rgba(10,30,40,.8);color:#7de0ff;border:1px solid #00c8ff;padding:8px 12px;border-radius:6px;cursor:pointer;transition:.3s;}
+button:active{transform:scale(0.92);background:#00c8ff;color:#000;}
+#timeline{width:80vw;height:6px;background:rgba(255,255,255,.15);border-radius:3px;margin:auto;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);cursor:pointer;}
+#timeline::after{content:"";position:absolute;top:0;left:0;width:0;height:100%;background:#00c8ff;border-radius:3px;transition:width .3s;}
+#loader{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#00cfff;font-size:1.2rem;text-shadow:0 0 10px #00cfff;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+.castHint{position:fixed;top:8px;right:10px;font-size:12px;color:#99e7ff;opacity:.7;}
+</style>
+</head>
+<body>
+<div id="hud">🌍 Dôme Floreffe IA J.E.A.N.</div>
+<div class="castHint">📺 Active “Smart View” ou Chromecast pour caster ce dôme</div>
+<div id="loader">Chargement du dôme holographique...</div>
+<canvas id="scene"></canvas>
+<div id="controls">
+  <button id="zoomIn">🔍+</button>
+  <button id="zoomOut">🔍−</button>
+  <button id="angle">↗️ Vue</button>
+  <button id="sat">🛰 Sat</button>
+  <button id="ia">🤖 IA</button>
+  <button id="play">▶️</button>
+  <button id="pause">⏸️</button>
+</div>
+<div id="timeline"></div>
+
+<script>
+let scene,camera,renderer,controls,terrainMesh,satGroup;
+let satVisible=true,angle45=false,isRemote=false;
+let forecasts=[],currentHour=0,autoPlay=false,autoTimer=null;
+const socket = new WebSocket(`wss://${window.location.host}/ws/hologram`);
+
+init();animate();
+
+// === Initialisation ===
+async function init(){
+  const canvas=document.getElementById("scene");
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,1,2000);
+  camera.position.set(0,180,280);
+  controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=0.05;
+  scene.add(new THREE.AmbientLight(0x5588aa,0.6));
+  const light=new THREE.PointLight(0x66ccff,1.2,800);light.position.set(0,200,0);scene.add(light);
+  satGroup=new THREE.Group();scene.add(satGroup);
+
+  try{const altHR=await fetch("/public/floreffe_altitudes_hr.json").then(r=>r.json());createTerrain(altHR);}catch(e){}
+  await loadSatLayers();
+  try{forecasts=await fetch("/public/floreffe_forecasts.json").then(r=>r.json());}catch(e){}
+  document.getElementById("loader").remove();
+  setupControls();setupTimeline();
+}
+
+// === Relief ===
+function createTerrain(points){
+  if(terrainMesh)scene.remove(terrainMesh);
+  const geometry=new THREE.PlaneGeometry(240,240,60,60);geometry.rotateX(-Math.PI/2);
+  const pos=geometry.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const vx=pos.getX(i)/2+50.4,vz=pos.getZ(i)/2+4.76;
+    const closest=points.reduce((a,b)=>{
+      const da=(vx-b.lat)**2+(vz-b.lon)**2,db=(vx-a.lat)**2+(vz-a.lon)**2;
+      return da<db?b:a;
+    });
+    pos.setY(i,(closest.alt-80)/2);
+  }
+  pos.needsUpdate=true;
+  const mat=new THREE.MeshBasicMaterial({color:0x00ff88,wireframe:true,opacity:0.4,transparent:true});
+  terrainMesh=new THREE.Mesh(geometry,mat);
+  scene.add(terrainMesh);
+}
+
+// === Satellites ===
+async function loadSatLayers(){
+  const texClouds=new THREE.TextureLoader().load("/public/sat_clouds_real.jpg");
+  const texRain=new THREE.TextureLoader().load("/public/sat_rain_real.png");
+  [ {t:texClouds,y:65,o:0.45},{t:texRain,y:70,o:0.4} ].forEach(d=>{
+    const geo=new THREE.PlaneGeometry(240,240);
+    const mat=new THREE.MeshBasicMaterial({map:d.t,transparent:true,opacity:d.o});
+    const m=new THREE.Mesh(geo,mat);m.rotation.x=-Math.PI/2;m.position.y=d.y;satGroup.add(m);
+  });
+}
+
+// === Contrôles ===
+function setupControls(){
+  isRemote = confirm("Ce périphérique est-il la télécommande ?\nOK = Télécommande / Annuler = Écran TV");
+  document.getElementById("zoomIn").onclick=()=>emit("zoomIn");
+  document.getElementById("zoomOut").onclick=()=>emit("zoomOut");
+  document.getElementById("angle").onclick=()=>emit("toggleAngle");
+  document.getElementById("sat").onclick=()=>emit("toggleSat");
+  document.getElementById("ia").onclick=()=>alert("IA J.E.A.N. analyse le risque local actuel...");
+  document.getElementById("play").onclick=()=>{autoPlay=true;emit("startAuto");};
+  document.getElementById("pause").onclick=()=>{autoPlay=false;emit("stopAuto");};
+}
+
+function emit(action,payload={}){
+  applyAction({action,...payload});
+  socket.send(JSON.stringify({action,...payload}));
+}
+
+// === Timeline ===
+function setupTimeline(){
+  const tl=document.getElementById("timeline");
+  const totalHours=24*6;
+  tl.addEventListener("click",e=>{
+    const pct=e.offsetX/tl.offsetWidth;
+    currentHour=Math.floor(pct*totalHours);
+    emit("setTime",{hour:currentHour});
+    updateTimelineVisual(pct);
+  });
+}
+function updateTimelineVisual(pct){document.getElementById("timeline").style.setProperty("--pct",pct);}
+
+// === Mise à jour météo ===
+function updateWeatherOverlay(hour){
+  const intensity=(Math.sin(hour/3)+1)/2;
+  satGroup.children.forEach((m,i)=>m.material.opacity=0.2+0.6*intensity);
+  document.getElementById("hud").innerText=`🌍 Floreffe – ${(hour%24)}h | J+${Math.floor(hour/24)} | IA J.E.A.N.`;
+}
+
+// === Application des actions ===
+function applyAction(data){
+  switch(data.action){
+    case "zoomIn":camera.position.multiplyScalar(0.9);break;
+    case "zoomOut":camera.position.multiplyScalar(1.1);break;
+    case "toggleSat":satVisible=!satVisible;satGroup.visible=satVisible;break;
+    case "toggleAngle":angle45=!angle45;camera.position.set(angle45?200:0,angle45?200:180,angle45?200:280);break;
+    case "setTime":currentHour=data.hour;updateWeatherOverlay(currentHour);break;
+    case "startAuto":startAutoPlay();break;
+    case "stopAuto":stopAutoPlay();break;
+  }
+}
+
+// === Lecture automatique Buienalarm ===
+function startAutoPlay(){
+  if(autoTimer)clearInterval(autoTimer);
+  autoTimer=setInterval(()=>{
+    currentHour++;
+    if(currentHour>24*6)currentHour=0;
+    emit("setTime",{hour:currentHour});
+  },2000); // 2 s par heure ≈ Buienalarm speed
+}
+function stopAutoPlay(){if(autoTimer)clearInterval(autoTimer);autoTimer=null;}
+
+// === WebSocket ===
+socket.onopen=()=>console.log("✅ WS connecté");
+socket.onmessage=(e)=>{if(isRemote)return;applyAction(JSON.parse(e.data));};
+
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+</script>
+</body>
+</html>
