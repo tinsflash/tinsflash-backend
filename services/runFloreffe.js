@@ -88,63 +88,77 @@ async function superForecastLocal({ zones = [], runType = "Floreffe", dayOffset 
       const base = new Date();
       base.setUTCDate(base.getUTCDate() + dayOffset);
       const ymd = toISODate(base);
-
+// --- Fenêtre temporelle dynamique pour corriger les 422 NASA/ECMWF ---
+let startDate = getDateYMD();
+let endDate = getDateYMD();
+if (dayOffset === 0) {
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  startDate = getDateYMD(yesterday); // J-1 → J
+}
       const models = [
-        {
-          name: "GFS NOAA",
-          url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-        },
-        {
-          name: "ECMWF ERA5",
-          url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
-        },
-        {
-          name: "ECMWF Open-Meteo",
-          url: `https://api.open-meteo.com/v1/ecmwf?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
-        },
-        {
-          name: "AROME Météo-France",
-          url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-        },
-        {
-          name: "ICON DWD",
-          url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-        },
-        {
-          name: "NASA POWER",
-          url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${getDateYMD()}&end=${getDateYMD()}&format=JSON`
-        },
-        {
-          name: "Copernicus ERA5-Land",
-          url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m`
-        },
-        {
-          name: "Open-Meteo Forecast",
-          url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m`
-        },
-        {
-          name: "MET Norway LocationForecast",
-          url: `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,
-          headers: { "User-Agent": "TINSFLASH-MeteoEngine/1.0 (contact: skysnapia@gmail.com)" }
-        }
+  {
+    name: "Open-Meteo Forecast (daily+hourly)",
+    url: `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days=5`
+  },
+  {
+    name: "ECMWF ERA5-Land",
+    url: `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days=5`
+  },
+  {
+    name: "GFS NOAA",
+    url: `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days=5`
+  },
+  {
+    name: "ICON DWD",
+    url: `https://api.open-meteo.com/v1/dwd-icon?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days=5`
+  },
+  {
+    name: "AROME Météo-France",
+    url: `https://api.open-meteo.com/v1/meteofrance?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days=5`
+  },
+  {
+    name: "NASA POWER",
+    url: `https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=T2M,PRECTOTCORR,WS10M&community=RE&longitude=${lon}&latitude=${lat}&start=${startDate}&end=${endDate}&format=JSON`
+  }
       ];
 
    for (const m of models) {
   try {
     const options = { timeout: 15000 };
     if (m.headers) options.headers = m.headers;
-    const r = await axios.get(m.url, options);
+    const r = await axios.get(m.url, { timeout: 15000, headers: m.headers || {} });
 
-    // --- Extraction simplifiée ---
-    let T = null, P = 0, W = null;
-    if (r.data?.hourly?.time) {
-      const times = r.data.hourly.time;
-      const idx = times.findIndex((t) => t.includes("12:00"));
-      T = r.data.hourly.temperature_2m?.[idx] ?? null;
-      P = r.data.hourly.precipitation?.[idx] ?? 0;
-      W = r.data.hourly.wind_speed_10m?.[idx] ?? null;
-    }
-// --- Fusion moyenne & fiabilité ---
+// --- Extraction complète (horaire + daily) ---
+let T = null, P = 0, W = null;
+
+// horaire
+if (r.data?.hourly?.time?.length) {
+  const temps = r.data.hourly.time.map((t, i) => ({
+    t,
+    temp: r.data.hourly.temperature_2m?.[i],
+    rain: r.data.hourly.precipitation?.[i],
+    wind: r.data.hourly.wind_speed_10m?.[i]
+  }));
+  const subset = temps.slice(0, 24 * (dayOffset + 1)).slice(-24); // moyenne sur 24 h du jour cible
+  if (subset.length) {
+    T = subset.reduce((s, e) => s + (e.temp ?? 0), 0) / subset.length;
+    P = subset.reduce((s, e) => s + (e.rain ?? 0), 0);
+    W = subset.reduce((s, e) => s + (e.wind ?? 0), 0) / subset.length;
+  }
+}
+
+// daily
+if (r.data?.daily?.temperature_2m_max) {
+  const i = Math.min(dayOffset, r.data.daily.temperature_2m_max.length - 1);
+  const tmax = r.data.daily.temperature_2m_max[i];
+  const tmin = r.data.daily.temperature_2m_min[i];
+  const pday = r.data.daily.precipitation_sum[i];
+  if (tmax != null && tmin != null) T = (tmax + tmin) / 2;
+  if (pday != null) P = Math.max(P, pday);
+}
+
+push({ source: m.name, temperature: T, precipitation: P, wind: W });// --- Fusion moyenne & fiabilité ---
 const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 const valid = sources.filter((s) => s.temperature !== null);
 const reliability = +(valid.length / (models.length || 1)).toFixed(2);
@@ -448,6 +462,15 @@ await addEngineLog("[Floreffe] 🌊 Corrélation topographique / hydrologique en
 
 // === PHASE 1bis – Corrélation topographique / hydrologique ===
 const datasetsPath = path.resolve("./services/datasets");
+let geoData = null;
+try {
+  const geoPath = "./services/datasets/floreffe_geoportail.json";
+  geoData = JSON.parse(fs.readFileSync(geoPath, "utf8"));
+  await addEngineLog(`📡 [Floreffe] Données topographiques chargées (${geoPath})`, "info", "floreffe");
+} catch (e) {
+  await addEngineError(`[Floreffe] Fichier topographique manquant ou illisible : ${e.message}`, "floreffe");
+  geoData = { features: [] }; // fallback neutre pour ne pas bloquer
+}
 const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoperalt.json`, "utf8"));
 const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
 const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
