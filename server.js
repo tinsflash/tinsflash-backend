@@ -5,6 +5,7 @@
 // ==========================================================
 
 import express from "express";
+import http from "http";
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
@@ -200,6 +201,7 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
 // ==========================================================
 // 🌐 TINSFLASH HoloDôme – WebSocket Sync+
 // ==========================================================
+const server = http.createServer(app);
 import { WebSocketServer } from "ws";
 
 const wss = new WebSocketServer({ noServer: true });
@@ -644,7 +646,7 @@ app.get("/admin-alerts.html", (_, res) => res.sendFile(path.join(publicPath, "ad
 const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
 
-app.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
   console.log(`🔌 Ports : logique ${ENGINE_PORT} | réseau ${PORT}`);
