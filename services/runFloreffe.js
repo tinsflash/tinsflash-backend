@@ -689,22 +689,12 @@ try {
 } catch (err) {
   await addEngineError(`[Floreffe] ⚠️ Clôture : ${err.message}`, "floreffe");
 }
+}
 
-// =======================================================
-// ✅ EXPORT FINAL (ESM pur Render)
-// =======================================================
-export { runFloreffe, superForecastLocal };
-console.log("✅ [TINSFLASH] ESM MODELS — Export final prêt");
 
 // =======================================================
 // ✅ EXPORT UNIVERSEL (compatible ESM + CommonJS + Render)
 // =======================================================
 
 export { runFloreffe, superForecastLocal };
-
-// --- Compatibilité CommonJS ---
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = { runFloreffe, superForecastLocal };
-}
-
-console.log("✅ [TINSFLASH] Export universel prêt (ESM + CJS)");
+console.log("✅ [TINSFLASH] ESM MODELS — Export final prêt");
