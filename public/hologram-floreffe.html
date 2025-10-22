@@ -22,20 +22,14 @@ button:hover{background:#00c8ff;color:#000;}
 #timeline::after{content:"";position:absolute;top:0;left:0;width:0;height:100%;background:#00c8ff;border-radius:6px;transition:width .3s;}
 #loader{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border:4px solid rgba(0,183,255,0.3);border-top:4px solid #00c8ff;border-radius:50%;animation:spin 1s linear infinite;display:none;z-index:10;}
 @keyframes spin{0%{transform:translate(-50%,-50%) rotate(0deg)}100%{transform:translate(-50%,-50%) rotate(360deg)}}
-/* Effet scanline vert type Hunger Games */
-@keyframes scanPulse {
-  0%,100%{opacity:.3;}
-  50%{opacity:1;}
-}
-.scanline {
-  position:fixed;left:0;top:0;width:100%;height:100%;
-  background:repeating-linear-gradient(to bottom,rgba(0,255,100,0.05) 0,rgba(0,255,100,0.1) 2px,transparent 4px);
-  mix-blend-mode:overlay;pointer-events:none;animation:scanPulse 3s infinite;
-}
+@keyframes scanPulse {0%,100%{opacity:.3;}50%{opacity:1;}}
+.scanline{position:fixed;left:0;top:0;width:100%;height:100%;
+background:repeating-linear-gradient(to bottom,rgba(0,255,100,0.05)0,rgba(0,255,100,0.1)2px,transparent4px);
+mix-blend-mode:overlay;pointer-events:none;animation:scanPulse 3s infinite;}
 </style>
 </head>
 <body>
-<div id="hud">🌍 Dôme Floreffe – Relief holographique + satellites 4D</div>
+<div id="hud">🌍 Dôme Floreffe – Relief holographique + satellites 4D + overlay météo</div>
 <button id="resBtn">Relief HR</button>
 <button id="angleBtn">Vue 45°</button>
 <button id="satBtn">🛰 Sat ON</button>
@@ -48,9 +42,10 @@ button:hover{background:#00c8ff;color:#000;}
 <div id="jeanPanel">J.E.A.N. en attente…</div>
 
 <script>
-let scene,camera,renderer,controls,terrainMesh,alertGroup,angleMode=false,satVisible=true;
-let currentRes="std";let loader=document.getElementById("loader");let jeanPanel=document.getElementById("jeanPanel");
-let satGroup=new THREE.Group();
+let scene,camera,renderer,controls,terrainMesh,satGroup=new THREE.Group();
+let angleMode=false,satVisible=true,currentRes="std";
+const loader=document.getElementById("loader"),jeanPanel=document.getElementById("jeanPanel");
+
 init();animate();
 
 // === INITIALISATION ===
@@ -64,20 +59,18 @@ async function init(){
  camera.position.set(0,150,250);
  controls=new THREE.OrbitControls(camera,renderer.domElement);
  controls.autoRotate=true;controls.autoRotateSpeed=0.3;controls.enableDamping=true;
+
  scene.add(new THREE.AmbientLight(0x447799,0.5));
  const light=new THREE.PointLight(0x66ccff,1.2,800);light.position.set(0,200,0);scene.add(light);
 
- // Halo tournant
  const haloGeom=new THREE.RingGeometry(120,130,64);
  const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.25});
- const halo=new THREE.Mesh(haloGeom,haloMat);
- halo.rotation.x=Math.PI/2;
- halo.rotation.z=Math.PI/6;
- scene.add(halo);
+ const halo=new THREE.Mesh(haloGeom,haloMat);halo.rotation.x=Math.PI/2;halo.rotation.z=Math.PI/6;scene.add(halo);
 
  // Relief STD
- const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
+ const altStd=await fetch("/floreffe_altitudes.json").then(r=>r.json());
  createTerrain(altStd);
+ await applyWeatherOverlay(); // 🌦 superposition météo
 
  // Couches satellites
  await loadSatLayers();
@@ -96,6 +89,9 @@ async function init(){
  document.getElementById("satBtn").onclick=()=>toggleSat();
  document.getElementById("jeanBtn").onclick=()=>toggleJean();
  window.addEventListener("resize",onResize);
+
+ // mise à jour météo automatique
+ setInterval(applyWeatherOverlay,300000);
 }
 
 // === RELIEF ===
@@ -105,13 +101,13 @@ function createTerrain(points){
  geometry.rotateX(-Math.PI/2);
  const pos=geometry.attributes.position;
  for(let i=0;i<pos.count;i++){
-   const vx=pos.getX(i)/2+50.44;const vz=pos.getZ(i)/2+4.76;
+   const vx=pos.getX(i)/2+50.44, vz=pos.getZ(i)/2+4.76;
    const closest=points.reduce((a,b)=>{
      const da=(vx-b.lat)**2+(vz-b.lon)**2;
      const db=(vx-a.lat)**2+(vz-a.lon)**2;
      return da<db?b:a;
    });
-   const h=(closest.alt-80)/2;
+   const h=closest?.alt ? (closest.alt-80)/2 : 0;
    pos.setY(i,h);
  }
  pos.needsUpdate=true;
@@ -122,11 +118,46 @@ function createTerrain(points){
  scene.add(terrainMesh);
 }
 
+// === OVERLAY MÉTÉO ===
+async function applyWeatherOverlay(){
+ try{
+   const data=await fetch("/floreffe_forecasts.json").then(r=>r.json()).catch(()=>null);
+   if(!data?.zones)return;
+   const zones=data.zones;
+   const colors={pluie:new THREE.Color(0x0077ff),vent:new THREE.Color(0xcccccc),
+                 chaleur:new THREE.Color(0xff6600),froid:new THREE.Color(0x00ffff)};
+   const geom=terrainMesh.geometry;
+   const pos=geom.attributes.position;
+   const col=new Float32Array(pos.count*3);
+
+   for(let i=0;i<pos.count;i++){
+     const vx=pos.getX(i)/2+50.44, vz=pos.getZ(i)/2+4.76;
+     const closest=zones.reduce((a,b)=>{
+       const da=(vx-b.lat)**2+(vz-b.lon)**2;
+       const db=(vx-a.lat)**2+(vz-a.lon)**2;
+       return da<db?b:a;
+     });
+
+     let c=new THREE.Color(0x00ff77);
+     if(closest.precipitation>1) c=colors.pluie;
+     else if(closest.wind>40) c=colors.vent;
+     else if(closest.temperature>27) c=colors.chaleur;
+     else if(closest.temperature<2) c=colors.froid;
+
+     col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
+   }
+   geom.setAttribute("color",new THREE.BufferAttribute(col,3));
+   terrainMesh.material.vertexColors=true;
+   terrainMesh.material.needsUpdate=true;
+   console.log("🌦 Overlay météo appliqué");
+ }catch(e){console.warn("Overlay météo échoué",e);}
+}
+
 // === SATELLITES ===
 async function loadSatLayers(){
- const texClouds=new THREE.TextureLoader().load("sat_clouds_real.jpg");
- const texRain=new THREE.TextureLoader().load("sat_rain_real.png");
- const texWind=new THREE.TextureLoader().load("sat_wind.png");
+ const texClouds=new THREE.TextureLoader().load("/sat_clouds_real.jpg");
+ const texRain=new THREE.TextureLoader().load("/sat_rain_real.png");
+ const texWind=new THREE.TextureLoader().load("/sat_wind.png");
  [ {t:texClouds,y:65,o:0.45}, {t:texRain,y:70,o:0.4}, {t:texWind,y:75,o:0.3} ].forEach(d=>{
    const geo=new THREE.PlaneGeometry(240,240);
    const mat=new THREE.MeshBasicMaterial({map:d.t,transparent:true,opacity:d.o});
@@ -185,12 +216,14 @@ async function switchResolution(){
  try{
    if(currentRes==="std"){
      currentRes="hr";
-     const altHR=await fetch("floreffe_altitudes_hr.json").then(r=>r.json());
+     const altHR=await fetch("/floreffe_altitudes_hr.json").then(r=>r.json());
      createTerrain(altHR);
+     await applyWeatherOverlay();
    }else{
      currentRes="std";
-     const altStd=await fetch("floreffe_altitudes.json").then(r=>r.json());
+     const altStd=await fetch("/floreffe_altitudes.json").then(r=>r.json());
      createTerrain(altStd);
+     await applyWeatherOverlay();
    }
  }catch(e){console.error(e);}finally{loader.style.display="none";}
 }
