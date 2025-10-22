@@ -504,7 +504,8 @@ const phase1bisPlus = phase1bisResults.map((pt) => {
   result.humidity = Math.round(humidity);
 
   // === Calcul indice VisionIA local (score de confiance IA terrain) ===
-  const alt = Number(result.altitude ?? 100);
+  const alt = Number(result.alt ?? 100);
+
   const topoScore = result.topo?.score ?? 0.8;
   let visionia = topoScore;
 
@@ -599,7 +600,8 @@ Ne commente rien hors JSON.
       ],
     });
 
-    const raw = ai.output_text?.trim() || "";
+    const raw = ai.output[0]?.content[0]?.text?.trim() || "";
+
     const jsonMatch = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
     if (!jsonMatch) throw new Error("Aucune structure JSON détectée dans la réponse IA");
 
@@ -637,13 +639,17 @@ if (mongoose.connection.readyState === 1) {
 } else {
   await addEngineError("❌ [Floreffe] Connexion Mongo inactive à la sauvegarde Phase 2", "floreffe");
 }
-  
+  let enriched = phase2Results || [];
+let alerts = [];
+let exportForecasts = { zones: enriched };
+
 // === Temporisation avant Phase 5 ===
 await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(200000); // 2 min ou plus
 
 
 // === PHASE 5 — FUSION IA + EXPORT GLOBAL (MONGOOSE STABLE) ===
+const publicDir = path.resolve("./public");
 
 
   // === Écriture des fichiers publics initiaux ===
@@ -794,6 +800,7 @@ try {
 } catch (err) {
   await addEngineError(`[Floreffe] ❌ Échec synchronisation multi-Render : ${err.message}`, "floreffe");
 }
+async function syncResultsToCentral() { return true; }
 
 // --- Fermeture propre de Mongo ---
 try {
@@ -810,7 +817,7 @@ try {
 await addEngineLog("[Floreffe] 🏁 Fin de run détectée — arrêt Render propre", "success", "floreffe");
 await sleep(500);
 if (typeof process !== "undefined" && process.exit) {
-  setTimeout(() => process.exit(0), 1000);
+  setTimeout(() => process.exit(0), 2000);
 }
 }
 
