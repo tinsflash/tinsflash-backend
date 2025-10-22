@@ -475,7 +475,7 @@ const geo = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_geoportail.json
 const hydro = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_hydro.json`, "utf8"));
 const reseaux = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_reseaux.json`, "utf8"));
 const routes = JSON.parse(fs.readFileSync(`${datasetsPath}/floreffe_routes.json`, "utf8"));
-const livelyHydro = await fetchLivelyHydroData();
+const livelyHydro = await fetchLiveHydroData();
 
 const phase1bisResults = phase1Results.map((pt) => ({
   ...pt,
