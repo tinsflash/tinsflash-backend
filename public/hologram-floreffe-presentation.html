@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌍 TINSFLASH – Dôme Floreffe (Présentation Officielle)</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 60%, #001000 0%, #000 90%);
+      font-family: 'Segoe UI', sans-serif;
+      color: #8fe1ff;
+    }
+    #hud {
+      position: absolute;
+      top: 10px; left: 10px;
+      font-size: 15px; color: #8fe1ff;
+      text-shadow: 0 0 10px #00ffff;
+      z-index: 10;
+    }
+    #btnDemo {
+      position: absolute;
+      bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid #00c3ff;
+      border-radius: 8px;
+      color: #8fe1ff;
+      padding: 10px 25px;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 10;
+      transition: 0.3s;
+    }
+    #btnDemo:hover { background: #00c3ff; color: #000; font-weight: bold; }
+    #intro {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 50%, #001010 0%, #000 90%);
+      flex-direction: column; color: #0ff;
+      font-family: 'Segoe UI Light', sans-serif;
+      z-index: 100;
+      animation: fadeOut 4s ease 6s forwards;
+    }
+    @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+  </style>
+</head>
+<body>
+  <div id="intro">
+    <h1 style="font-size:2.5em; text-shadow:0 0 15px #00ffff;">🌍 TINSFLASH PRO+++</h1>
+    <p>IA J.E.A.N. — Dôme météorologique Floreffe</p>
+    <p style="opacity:0.7;">Analyse topographique et hydrologique en temps réel</p>
+  </div>
+
+  <div id="hud">🔹 Chargement du dôme holographique...</div>
+  <button id="btnDemo">▶ DÉMONSTRATION AUTOMATIQUE</button>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161/build/three.module.js";
+    import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.161/examples/jsm/controls/OrbitControls.js";
+
+    const baseURL = "https://tinsflash-backend.onrender.com";
+    const forecastsURL = `${baseURL}/floreffe_forecasts.json`;
+    const altitudesURL = `${baseURL}/floreffe_altitudes.json`;
+
+    const hud = document.getElementById("hud");
+    const btnDemo = document.getElementById("btnDemo");
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 8000);
+    camera.position.set(0, 180, 500);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.rotateSpeed = 0.5;
+
+    // Lumières
+    const light = new THREE.DirectionalLight(0x99ffcc, 1.3);
+    light.position.set(1, 1, 1);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x102020));
+
+    // Sol et groupes
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(3000, 3000),
+      new THREE.MeshPhongMaterial({ color: 0x001a00, opacity: 0.6, transparent: true })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    const reliefGroup = new THREE.Group();
+    const overlayGroup = new THREE.Group();
+    const radarGroup = new THREE.Group();
+    scene.add(reliefGroup, overlayGroup, radarGroup);
+
+    async function loadData() {
+      try {
+        hud.textContent = "⏳ Chargement des données Floreffe...";
+        const [altitudes, forecasts] = await Promise.all([
+          fetch(altitudesURL).then(r => r.json()),
+          fetch(forecastsURL).then(r => r.json())
+        ]);
+        hud.textContent = "✅ Données chargées. Construction du dôme...";
+        buildScene(altitudes, forecasts);
+      } catch (e) {
+        hud.textContent = "❌ Erreur : " + e.message;
+      }
+    }
+
+    function buildScene(altitudes, forecasts) {
+      // Relief
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const colors = [];
+      const colorLow = new THREE.Color(0x0033aa);
+      const colorHigh = new THREE.Color(0xffffff);
+
+      altitudes.forEach((p) => {
+        const x = (p.lon - 4.7) * 1000;
+        const y = p.alt * 1.5;
+        const z = (50.4 - p.lat) * 1000;
+        vertices.push(x, y, z);
+        const color = colorLow.clone().lerp(colorHigh, Math.min(1, p.alt / 300));
+        colors.push(color.r, color.g, color.b);
+      });
+
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+      const points = new THREE.Points(
+        geometry,
+        new THREE.PointsMaterial({ size: 2.5, vertexColors: true })
+      );
+      reliefGroup.add(points);
+
+      // Points météo
+      if (forecasts?.zones?.length) {
+        forecasts.zones.forEach((z) => {
+          const color = z.precipitation > 10 ? 0x00ffff : 0x00aaff;
+          const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(3.5, 8, 8),
+            new THREE.MeshBasicMaterial({ color })
+          );
+          const x = (z.lon - 4.7) * 1000;
+          const y = (z.alt ?? 100) + 60;
+          const zPos = (50.4 - z.lat) * 1000;
+          sphere.position.set(x, y, zPos);
+          overlayGroup.add(sphere);
+        });
+      }
+
+      // Radar
+      const radarGeom = new THREE.CircleGeometry(800, 64);
+      const radarMat = new THREE.MeshBasicMaterial({
+        color: 0x00ff66, transparent: true, opacity: 0.08, side: THREE.DoubleSide,
+      });
+      const radar = new THREE.Mesh(radarGeom, radarMat);
+      radar.rotation.x = -Math.PI / 2;
+      radarGroup.add(radar);
+
+      function radarAnim() {
+        radar.rotation.z += 0.002;
+        radar.material.opacity = 0.05 + 0.03 * Math.sin(Date.now() * 0.002);
+        requestAnimationFrame(radarAnim);
+      }
+      radarAnim();
+
+      hud.textContent = "🌍 Dôme prêt — IA J.E.A.N. active.";
+      animate();
+    }
+
+    // Animation principale
+    function animate() {
+      requestAnimationFrame(animate);
+      reliefGroup.rotation.y += 0.0008;
+      overlayGroup.rotation.y += 0.0008;
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Démonstration automatique
+    let demoActive = false;
+    let angle = 0;
+    btnDemo.onclick = async () => {
+      demoActive = !demoActive;
+      btnDemo.textContent = demoActive ? "⏸ STOP DÉMO" : "▶ DÉMONSTRATION AUTOMATIQUE";
+
+      if (demoActive) {
+        // Musique IA légère
+        const audio = new Audio("https://cdn.pixabay.com/audio/2024/04/11/audio_6a47b01e4a.mp3");
+        audio.volume = 0.4;
+        audio.play().catch(() => {});
+
+        const synth = new SpeechSynthesisUtterance("Bienvenue sur le dôme météo de Floreffe. Analyse IA J.E.A.N. activée.");
+        synth.lang = "fr-FR"; speechSynthesis.speak(synth);
+
+        const loop = () => {
+          if (!demoActive) return;
+          angle += 0.003;
+          camera.position.x = 400 * Math.sin(angle);
+          camera.position.z = 400 * Math.cos(angle);
+          camera.lookAt(0, 100, 0);
+          requestAnimationFrame(loop);
+        };
+        loop();
+      } else {
+        speechSynthesis.cancel();
+      }
+    };
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    scene.fog = new THREE.Fog(0x001a00, 200, 1200);
+
+    loadData();
+  </script>
+</body>
+</html>
