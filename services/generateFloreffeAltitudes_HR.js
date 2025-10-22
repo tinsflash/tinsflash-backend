@@ -1,10 +1,10 @@
 // ==========================================================
-// 🌍 generateFloreffeAltitudes_HR.js — Relief réel Floreffe (haute résolution ~50 m)
+// 🌍 TINSFLASH – generateFloreffeAltitudes_HR.js (Render-ready)
 // ==========================================================
-// 🔸 Couverture : totalité de la commune (Franière → Floriffoux → Bois de Floreffe)
-// 🔸 Source : Open-Elevation (réel, gratuit)
-// 🔸 Sortie finale : /public/floreffe_altitudes_hr.json
-// 🔸 Fonctionne en reprise automatique depuis floreffe_altitudes_hr_temp.json
+// 🔸 Couverture : commune complète (Franière → Floriffoux → Bois de Floreffe)
+// 🔸 Résolution : ≈ 50 m
+// 🔸 Source : Open-Elevation (API publique, gratuite)
+// 🔸 Sortie : /public/floreffe_altitudes_hr.json + /public/floreffe_altitudes_log.txt
 // ==========================================================
 
 import fs from "fs";
@@ -16,34 +16,43 @@ const startLon = 4.73;    // ouest
 const endLon   = 4.78;    // est
 const step     = 0.0005;  // ≈ 50 m
 
-const TEMP_PATH = "./public/floreffe_altitudes_hr_temp.json";
+const TEMP_PATH  = "./public/floreffe_altitudes_hr_temp.json";
 const FINAL_PATH = "./public/floreffe_altitudes_hr.json";
+const LOG_PATH   = "./public/floreffe_altitudes_log.txt";
 
 let points = [];
 
-// === UTILITAIRE ===
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+// === Utilitaires ===
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// === CHARGEMENT DES POINTS EXISTANTS ===
+function logLine(line) {
+  console.log(line);
+  fs.appendFileSync(LOG_PATH, line + "\n");
+}
+
+// === Chargement existant ===
 function loadExisting() {
   if (fs.existsSync(TEMP_PATH)) {
     try {
       points = JSON.parse(fs.readFileSync(TEMP_PATH, "utf8"));
-      console.log(`🔁 Reprise depuis ${TEMP_PATH} (${points.length} points existants)`);
+      logLine(`🔁 Reprise depuis ${TEMP_PATH} (${points.length} points existants)`);
     } catch (err) {
-      console.warn("⚠️ Erreur lecture fichier temporaire :", err.message);
+      logLine(`⚠️ Erreur lecture fichier temporaire : ${err.message}`);
     }
   }
 }
 
-// === SAUVEGARDE TEMPORAIRE PROGRESSIVE ===
+// === Sauvegarde progressive ===
 function saveProgress() {
   fs.writeFileSync(TEMP_PATH, JSON.stringify(points, null, 2));
+  logLine(`💾 Sauvegarde intermédiaire : ${points.length} points`);
 }
 
 // === MAIN ===
 async function main() {
-  console.log("📡 Reprise ou démarrage du relief HR de Floreffe...");
+  fs.writeFileSync(LOG_PATH, "📡 Génération relief HR Floreffe – début du processus\n");
+  logLine("-------------------------------------------------------------");
+  logLine(`Zone : lat ${startLat}-${endLat} | lon ${startLon}-${endLon}`);
   loadExisting();
 
   let lastLat = points.length ? points[points.length - 1].lat : startLat;
@@ -62,16 +71,19 @@ async function main() {
 
         if (alt !== null) {
           points.push({ lat, lon, alt });
-          console.log(`✅ ${lat.toFixed(4)} , ${lon.toFixed(4)} → ${alt.toFixed(1)} m`);
+          logLine(`✅ ${lat.toFixed(5)}, ${lon.toFixed(5)} → ${alt.toFixed(1)} m`);
         } else {
-          console.warn(`⚠️ Aucune donnée ${lat.toFixed(4)} , ${lon.toFixed(4)}`);
+          logLine(`⚠️ Aucune donnée ${lat.toFixed(5)}, ${lon.toFixed(5)}`);
         }
 
         if (points.length % 100 === 0) saveProgress();
-        await sleep(200); // temporisation pour éviter HTTP 429
+        await sleep(1200); // tempo 1,2s pour éviter 429
       } catch (err) {
-        console.error(`❌ Erreur ${lat.toFixed(4)}, ${lon.toFixed(4)} → ${err.message}`);
-        if (err.message.includes("429")) await sleep(15000); // pause longue si surcharge API
+        logLine(`❌ Erreur ${lat.toFixed(5)}, ${lon.toFixed(5)} → ${err.message}`);
+        if (err.message.includes("429")) {
+          logLine("⏳ Pause longue (API saturée)...");
+          await sleep(15000);
+        }
       }
     }
   }
@@ -79,8 +91,10 @@ async function main() {
   // Sauvegarde finale
   fs.writeFileSync(FINAL_PATH, JSON.stringify(points, null, 2));
   fs.rmSync(TEMP_PATH, { force: true });
-  console.log(`\n✅ Relief HR complet généré (${points.length} points)`);
-  console.log(`📁 Fichier final : ${FINAL_PATH}`);
+  logLine(`\n✅ Relief HR complet généré (${points.length} points)`);
+  logLine(`📁 Fichier final : ${FINAL_PATH}`);
+  logLine(`🌐 Accessible via : /floreffe_altitudes_hr.json et /floreffe_altitudes_log.txt`);
+  logLine("-------------------------------------------------------------\n");
 }
 
 main();
