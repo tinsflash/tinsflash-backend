@@ -211,7 +211,9 @@ wss.on("connection", (ws) => {
     try {
       const data = JSON.parse(msg.toString());
       // broadcast à tous les écrans sauf l’émetteur
-      clients.forEach(c => { if (c !== ws && c.readyState === 1) c.send(JSON.stringify(data)); });
+      clients.forEach(c => { 
+        if (c !== ws && c.readyState === 1) c.send(JSON.stringify(data)); 
+      });
     } catch (err) {
       console.error("⚠️ WebSocket parse error:", err.message);
     }
@@ -219,6 +221,7 @@ wss.on("connection", (ws) => {
   ws.on("close", () => { clients = clients.filter(c => c !== ws); });
 });
 
+// Intégration Render + Express standard
 server.on("upgrade", (req, socket, head) => {
   if (req.url === "/ws/hologram") {
     wss.handleUpgrade(req, socket, head, (ws) => {
