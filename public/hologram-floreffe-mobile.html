@@ -3,24 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>TINSFLASH – Hologram Floreffe (mobile)</title>
+  <title>🌍 TINSFLASH – Dôme Floreffe Mobile</title>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: black; height: 100%; }
-    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    html, body { margin:0; padding:0; overflow:hidden; background:black; height:100%; }
+    canvas { display:block; width:100%; height:100%; touch-action:none; }
     #hud {
-      position: absolute; top: 8px; left: 8px;
-      background: rgba(0,0,0,0.6); color: #0ff;
-      padding: 6px 10px; border-radius: 8px;
-      font-family: monospace; font-size: 13px;
-      z-index: 10;
+      position:absolute; top:8px; left:8px;
+      background:rgba(0,0,0,0.6); color:#0ff;
+      padding:6px 10px; border-radius:8px;
+      font-family:monospace; font-size:13px;
+      z-index:10;
     }
     #castBtn {
-      position: absolute; bottom: 15px; right: 15px;
-      background: rgba(0,255,255,0.15); border: 1px solid #0ff;
-      border-radius: 50%; color: #0ff; font-size: 22px;
-      width: 50px; height: 50px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 10;
+      position:absolute; bottom:15px; right:15px;
+      background:rgba(0,255,255,0.15);
+      border:1px solid #0ff; border-radius:50%;
+      color:#0ff; font-size:22px;
+      width:50px; height:50px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      z-index:10;
     }
   </style>
 </head>
@@ -33,19 +34,9 @@
     import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.161/examples/jsm/controls/OrbitControls.js";
 
     const hud = document.getElementById("hud");
-    const forecastsURL = "https://tinsflash-backend.onrender.com/floreffe_forecasts.json";
-    const alertsURL = "https://tinsflash-backend.onrender.com/floreffe_alerts.json";
+    const forecastsURL = "./floreffe_forecasts.json";
+    const alertsURL = "./floreffe_alerts.json";
 
-    // === WebSocket Render-safe ===
-    let socket = { send:()=>{} };
-    try {
-      const s = new WebSocket(`wss://${window.location.host}/ws/hologram`);
-      s.onopen = ()=>console.log("WS connecté");
-      s.onerror = ()=>console.warn("WS désactivé (Render non configuré)");
-      socket = s;
-    } catch(e){ console.warn("WS inactif"); }
-
-    // === Three.js Scene ===
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
     camera.position.set(0, 60, 220);
@@ -59,17 +50,13 @@
     controls.enableZoom = true;
     controls.enablePan = false;
 
-    // Lumières et base visuelle
     const amb = new THREE.AmbientLight(0x88ffff, 1.0);
     const dir = new THREE.DirectionalLight(0xffffff, 0.6);
     dir.position.set(0, 100, 100);
     scene.add(amb, dir);
 
     const globeGeo = new THREE.SphereGeometry(80, 64, 64);
-    const globeMat = new THREE.MeshPhongMaterial({
-      color: 0x004466, emissive: 0x002233, shininess: 20,
-      wireframe: false
-    });
+    const globeMat = new THREE.MeshPhongMaterial({ color:0x004466, emissive:0x002233, shininess:20 });
     const globe = new THREE.Mesh(globeGeo, globeMat);
     scene.add(globe);
 
@@ -82,45 +69,40 @@
         const forecasts = await (await fetch(forecastsURL)).json();
         const alerts = await (await fetch(alertsURL)).json();
 
-        hud.textContent = `Prévisions: ${forecasts?.zones?.length ?? 0} points · Alertes: ${alerts?.alerts?.length ?? 0}`;
+        hud.textContent = `Prévisions: ${forecasts?.zones?.length ?? 0} pts · Alertes: ${alerts?.alerts?.length ?? 0}`;
 
-        // Ajout points météo
         for (const z of forecasts?.zones ?? []) {
-          const phi = (90 - (z.lat || 50.4)) * Math.PI/180;
-          const theta = (z.lon || 4.7) * Math.PI/180;
+          const phi = (90 - (z.lat || 50.4)) * Math.PI / 180;
+          const theta = (z.lon || 4.7) * Math.PI / 180;
           const r = 80;
           const x = r * Math.sin(phi) * Math.cos(theta);
           const y = r * Math.cos(phi);
           const zz = r * Math.sin(phi) * Math.sin(theta);
-
-          const color = (z.temperature > 25) ? 0xff6600 :
-                        (z.temperature < 0) ? 0x00aaff : 0x00ff88;
-          const point = new THREE.Mesh(
-            new THREE.SphereGeometry(1.2, 8, 8),
+          const color = (z.precipitation > 20) ? 0x00ffff : 0x00ff88;
+          const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(1.5, 8, 8),
             new THREE.MeshBasicMaterial({ color })
           );
-          point.position.set(x, y, zz);
-          scene.add(point);
+          sphere.position.set(x, y, zz);
+          scene.add(sphere);
         }
 
-        // Ajout alertes visuelles
         for (const a of alerts?.alerts ?? []) {
-          const mesh = new THREE.Mesh(
+          const torus = new THREE.Mesh(
             new THREE.TorusGeometry(2.5, 0.4, 8, 16),
-            new THREE.MeshBasicMaterial({ color: 0xff0000 })
+            new THREE.MeshBasicMaterial({ color:0xff0000 })
           );
-          mesh.position.set(Math.random()*100-50, Math.random()*100-50, Math.random()*100-50);
-          alertGroup.add(mesh);
+          torus.position.set(Math.random()*100-50, Math.random()*80-40, Math.random()*100-50);
+          alertGroup.add(torus);
         }
 
       } catch (e) {
-        hud.textContent = "Erreur chargement données : " + e.message;
+        hud.textContent = "❌ Erreur : " + e.message;
       }
     }
 
     loadData();
 
-    // === Animation loop ===
     function animate() {
       requestAnimationFrame(animate);
       globe.rotation.y += 0.001;
@@ -130,7 +112,6 @@
     }
     animate();
 
-    // === Cast TV simulation ===
     const castBtn = document.getElementById("castBtn");
     castBtn.onclick = () => {
       if (document.pictureInPictureEnabled && !document.pictureInPictureElement) {
