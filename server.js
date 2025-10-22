@@ -1,12 +1,12 @@
 // ==========================================================
-// 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT – ZONES REGROUPÉES)
+// 🌍 TINSFLASH – server.js (Everest Protocol v4.0 PRO+++ REAL FULL CONNECT)
 // ==========================================================
-// 100 % réel – IA J.E.A.N. – moteur complet + IA externes + analyse globale + vidéo IA Namur + alertDetectedLogger Mongo
-// ==========================================================
+
+import dotenv from "dotenv";
+dotenv.config(); // ✅ CHARGER .env AVANT TOUT
 
 import express from "express";
 import http from "http";
-import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -18,7 +18,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import { EventEmitter } from "events";
-import { checkReliability } from "./services/checkReliability.js"; // ✅ ajouté précédemment
+
+import { checkReliability } from "./services/checkReliability.js";
 
 // ==========================================================
 // 🚀 INITIALISATION DES ZONES COUVERTES
@@ -40,12 +41,13 @@ import { runGlobalCaribbean } from "./services/runGlobalCaribbean.js";
 import { runBouke } from "./services/runBouke.js";
 import { runBelgique } from "./services/runBelgique.js";
 
-import { runAIAnalysis } from "./services/aiAnalysis.js";        // 🧠 Phase 2
-import { runAIExternal } from "./services/runAIExternal.js";    // 🧠 Phase 3
-import { runAICompare } from "./services/runAICompare.js";      // 🧠 Phase 4
-import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬 Automatisation Namur
+import { runAIAnalysis } from "./services/aiAnalysis.js";        // Phase 2
+import { runAIExternal } from "./services/runAIExternal.js";    // Phase 3
+import { runAICompare } from "./services/runAICompare.js";      // Phase 4
+import { generateVideoNamur } from "./services/generateVideoNamur.js"; // 🎬
 import { runWorldAlerts } from "./services/runWorldAlerts.js";
 import { runPhase5 } from "./services/aiphase5.js";
+
 import {
   initEngineState,
   getEngineState,
@@ -59,20 +61,26 @@ import {
 
 import { checkSourcesFreshness } from "./services/sourcesFreshness.js";
 import { getDetectedAlerts } from "./services/alertDetectedLogger.js";
+
 import Alert from "./models/Alert.js";
 import * as chatService from "./services/chatService.js";
 import { generateForecast } from "./services/forecastService.js";
 import { getNews } from "./services/newsService.js";
 import { checkAIHealth } from "./services/aiHealth.js";
-import User from "./models/User.js";
+
 import * as runFloreffeModule from "./services/runFloreffe.js";
 const { runFloreffe } = runFloreffeModule;
 
+import visionRoutes from "./routes/visionRoutes.js";
+import { runVisionAlerts } from "./services/visionAlerts.js";
+import { fetchVisionCaptures } from "./services/visionFetchers.js";
+import { runVisionIA } from "./services/runVisionIA.js";
+import { runWatchdog } from "./services/watchdogService.js";
+import { askJean } from "./services/chatService.js";
 
 // ==========================================================
 // 🔌 MONGODB — version stable Mongoose (connexion unique)
 // ==========================================================
-
 async function connectMongo() {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
@@ -83,7 +91,7 @@ async function connectMongo() {
       dbName: "tinsflash",
     });
     console.log("✅ MongoDB connecté avec succès (mongoose)");
-    await initEngineState(); // conserve ton état moteur
+    await initEngineState();
   } catch (err) {
     console.error("❌ Erreur MongoDB :", err.message);
     setTimeout(connectMongo, 8000);
@@ -91,14 +99,16 @@ async function connectMongo() {
 }
 if (process.env.MONGO_URI) connectMongo();
 
+// Accès pratique aux collections mongoose
+const col = (name) => mongoose.connection.collection(name);
+
 // ==========================================================
-// ⚙️ CONFIG ENV
+// ⚙️ APP / HTTP / STATIC
 // ==========================================================
-dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const app = express();
 
+const app = express();
 app.use(express.json());
 app.use(
   cors({
@@ -107,21 +117,25 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-// ==========================================================
-// 🛰️ ROUTES VISIONIA NOAA/GOES (Phase 1B) – ajoutées après création app
-// ==========================================================
-import visionRoutes from "./routes/visionRoutes.js";
-app.use("/api", visionRoutes);
-import { runVisionAlerts } from "./services/visionAlerts.js";
 
-app.get("/api/runVisionAlerts", async (req, res) => {
+// Routes Vision d’abord (elles répondent sous /api)
+app.use("/api", visionRoutes);
+
+const publicPath = path.join(__dirname, "public");
+app.use(express.static(publicPath));
+app.get("/", (_, res) => res.sendFile(path.join(publicPath, "index.html")));
+app.get("/admin-pp.html", (_, res) => res.sendFile(path.join(publicPath, "admin-pp.html")));
+app.get("/admin-alerts.html", (_, res) => res.sendFile(path.join(publicPath, "admin-alerts.html")));
+
+// ==========================================================
+// ✅ Routes utilitaires
+// ==========================================================
+app.get("/api/runVisionAlerts", async (_req, res) => {
   const result = await runVisionAlerts();
   res.json(result);
 });
-// ==========================================================
-// ✅ Nouvelle route : Vérifier la fiabilité IA J.E.A.N.
-// ==========================================================
-app.get("/api/check-reliability", async (_, res) => {
+
+app.get("/api/check-reliability", async (_req, res) => {
   try {
     const data = await checkReliability();
     res.json(data);
@@ -131,37 +145,10 @@ app.get("/api/check-reliability", async (_, res) => {
 });
 
 // ==========================================================
-// 🔐 STRIPE / JWT
+// 🔐 STRIPE / JWT (conservés)
 // ==========================================================
 const stripe = new Stripe(process.env.STRIPE_KEY);
 const JWT_SECRET = process.env.SECRET_KEY || "tinsflash_secret_key";
-
-
-
-// ==========================================================
-// 👑 ADMIN AUTO
-// ==========================================================
-// const ADMIN_EMAIL = "pynnaertpat@gmail.com";
-// const ADMIN_PWD = "202679";
-
-// async function seedAdminUser() {
-//   const exist = await User.findOne({ email: ADMIN_EMAIL });
-//   if (exist) return;
-//   const hash = await bcrypt.hash(ADMIN_PWD, 10);
-//   const admin = new User({
-//     email: ADMIN_EMAIL,
-//     name: "Patrick Pynnaert",
-//     passwordHash: hash,
-//     plan: "pro",
-//     credits: 1000,
-//     fanClub: true,
-//     zone: "covered",
-//     createdAt: new Date(),
-//   });
-//   await admin.save();
-//   console.log("✅ Admin créé :", ADMIN_EMAIL);
-// }
-// seedAdminUser();
 
 // ==========================================================
 // 🌍 RUNS PRINCIPAUX (avec enregistrement extraction)
@@ -197,12 +184,11 @@ const safeRun = (fn, label, meta = {}) => async (req, res) => {
   }
 };
 
-
 // ==========================================================
-// 🌐 TINSFLASH HoloDôme – WebSocket Sync+
+// 🌐 HoloDôme – WebSocket Sync+
 // ==========================================================
-const server = http.createServer(app);
 import { WebSocketServer } from "ws";
+const server = http.createServer(app);
 
 const wss = new WebSocketServer({ noServer: true });
 let clients = [];
@@ -212,26 +198,25 @@ wss.on("connection", (ws) => {
   ws.on("message", (msg) => {
     try {
       const data = JSON.parse(msg.toString());
-      // broadcast à tous les écrans sauf l’émetteur
-      clients.forEach(c => { 
-        if (c !== ws && c.readyState === 1) c.send(JSON.stringify(data)); 
-      });
+      clients.forEach((c) => { if (c !== ws && c.readyState === 1) c.send(JSON.stringify(data)); });
     } catch (err) {
       console.error("⚠️ WebSocket parse error:", err.message);
     }
   });
-  ws.on("close", () => { clients = clients.filter(c => c !== ws); });
+  ws.on("close", () => { clients = clients.filter((c) => c !== ws); });
 });
 
-// Intégration Render + Express standard
 server.on("upgrade", (req, socket, head) => {
-  if (req.url === "/ws/hologram") {
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      wss.emit("connection", ws, req);
-    });
-  } else socket.destroy();
+  try {
+    if (req.url === "/ws/hologram") {
+      wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
+    } else {
+      socket.destroy();
+    }
+  } catch {
+    try { socket.destroy(); } catch {}
+  }
 });
-
 
 // ==========================================================
 // 🌦️ ROUTE API FORECAST – IA J.E.A.N.
@@ -244,61 +229,36 @@ app.get("/api/forecast", async (req, res) => {
     const region = req.query.region || "GENERIC";
 
     if (isNaN(lat) || isNaN(lon)) {
-      return res.status(400).json({
-        error: "Latitude et longitude obligatoires"
-      });
+      return res.status(400).json({ error: "Latitude et longitude obligatoires" });
     }
 
-    // --- Appel du moteur IA ---
     const result = await generateForecast(lat, lon, country, region);
 
-    // --- Fonction distance locale ---
-    const R = 6371e3;
-    const toRad = (v) => (v * Math.PI) / 180;
+    // distance util
+    const R = 6371e3, toRad = (v) => (v * Math.PI) / 180;
     const dist = (aLat, aLon, bLat, bLon) => {
-      const φ1 = toRad(aLat),
-        φ2 = toRad(bLat);
-      const Δφ = toRad(bLat - aLat);
-      const Δλ = toRad(bLon - aLon);
-      const s =
-        Math.sin(Δφ / 2) ** 2 +
-        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      const φ1 = toRad(aLat), φ2 = toRad(bLat);
+      const Δφ = toRad(bLat - aLat), Δλ = toRad(bLon - aLon);
+      const s = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
       return 2 * R * Math.asin(Math.sqrt(s));
     };
 
-    // --- Recherche du point le plus proche (si les données existent) ---
-    let best = null;
-    let bestD = Infinity;
-    if (result && result.forecast && Array.isArray(result.forecast)) {
-      const latest = result.forecast;
-      best = latest[0];
-      bestD = dist(lat, lon, best.lat, best.lon);
-      for (let i = 1; i < latest.length; i++) {
-        const d = dist(lat, lon, latest[i].lat, latest[i].lon);
-        if (d < bestD) {
-          best = latest[i];
-          bestD = d;
-        }
+    let best = null, bestD = Infinity;
+    if (result?.forecast && Array.isArray(result.forecast)) {
+      for (const p of result.forecast) {
+        const d = dist(lat, lon, p.lat, p.lon);
+        if (d < bestD) { best = p; bestD = d; }
       }
     }
 
-    // --- Calcul fiabilité ---
     const r = typeof best?.reliability === "number" ? best.reliability : 0;
     const reliability_pct = r <= 1 ? Math.round(r * 100) : Math.round(r);
 
-    // --- Réponse JSON ---
     res.json({
-      lat,
-      lon,
-      nearestPoint: best
-        ? {
-            zone: best.zone,
-            country: best.country,
-            lat: best.lat,
-            lon: best.lon,
-            distance_m: Math.round(bestD),
-          }
-        : null,
+      lat, lon,
+      nearestPoint: best ? {
+        zone: best.zone, country: best.country, lat: best.lat, lon: best.lon, distance_m: Math.round(bestD)
+      } : null,
       temperature: best?.temperature ?? null,
       temperature_min: best?.temperature_min ?? null,
       temperature_max: best?.temperature_max ?? null,
@@ -322,7 +282,7 @@ app.get("/api/forecast", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-// ==========================================================
+
 // ==========================================================
 // 🛰️ ROUTES API DE RUN – PHASE 1 (ZONES REGROUPÉES)
 // ==========================================================
@@ -336,12 +296,11 @@ app.post("/api/run-global-canada", safeRun(runGlobalCanada, "Canada"));
 app.post("/api/run-global-caribbean", safeRun(runGlobalCaribbean, "Caraïbes"));
 app.post("/api/run-belgique", safeRun(runBelgique, "Belgique"));
 app.post("/api/run-bouke", safeRun(runBouke, "Bouke"));
-// ==========================================================
-// 🏛️ RUN FLOREFFE – Dôme de protection local (100 % réel)
-// ==========================================================
 
-
-app.post("/api/run-floreffe", async (req, res) => {
+// ==========================================================
+// 🏛️ RUN FLOREFFE – Dôme local
+// ==========================================================
+app.post("/api/run-floreffe", async (_req, res) => {
   try {
     await addEngineLog("🏛️ Dôme Floreffe – Lancement du run complet (Phase 1→5)", "info", "Floreffe");
     const result = await runFloreffe("manual");
@@ -353,10 +312,11 @@ app.post("/api/run-floreffe", async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+
 // ==========================================================
 // 🧠 PHASES 2 à 5 (IA J.E.A.N.)
 // ==========================================================
-app.post("/api/runAIAnalysis", async (req, res) => {
+app.post("/api/runAIAnalysis", async (_req, res) => {
   try {
     await addEngineLog("🧠 Phase 2 – Démarrage IA J.E.A.N.", "info", "IA");
     const result = await runAIAnalysis();
@@ -368,7 +328,7 @@ app.post("/api/runAIAnalysis", async (req, res) => {
   }
 });
 
-app.post("/api/runAIExternal", async (req, res) => {
+app.post("/api/runAIExternal", async (_req, res) => {
   try {
     await addEngineLog("🧩 Phase 3 – Démarrage IA externes", "info", "IA.EXT");
     const result = await runAIExternal();
@@ -380,7 +340,7 @@ app.post("/api/runAIExternal", async (req, res) => {
   }
 });
 
-app.post("/api/runAICompare", async (req, res) => {
+app.post("/api/runAICompare", async (_req, res) => {
   try {
     await addEngineLog("🔍 Phase 4 – Analyse globale IA", "info", "IA.COMP");
     const result = await runAICompare();
@@ -392,7 +352,7 @@ app.post("/api/runAICompare", async (req, res) => {
   }
 });
 
-app.post("/api/runWorldAlerts", async (req, res) => {
+app.post("/api/runWorldAlerts", async (_req, res) => {
   try {
     await addEngineLog("🚨 Phase 5 – Fusion des alertes", "info", "alerts");
     const result = await runWorldAlerts();
@@ -416,7 +376,7 @@ app.post("/api/runPhase5", async (_req, res) => {
   }
 });
 
-app.get("/api/alerts-detected", async (req, res) => {
+app.get("/api/alerts-detected", async (_req, res) => {
   try {
     const data = await getDetectedAlerts(100);
     res.json(data);
@@ -425,15 +385,10 @@ app.get("/api/alerts-detected", async (req, res) => {
   }
 });
 
-
-
 // ==========================================================
-// 🌍 TINSFLASH – Route de consultation des alertes (JSON pur)
+// 🌍 Alertes (JSON pur)
 // ==========================================================
-
-
-// 🌍 TINSFLASH — Route de consultation des alertes (JSON pur)
-app.get("/api/alerts", async (req, res) => {
+app.get("/api/alerts", async (_req, res) => {
   try {
     const alerts = await Alert.find({});
     res.json(alerts || []);
@@ -444,24 +399,21 @@ app.get("/api/alerts", async (req, res) => {
 });
 
 // ==========================================================
-// 🌦️ ROUTES API - Dôme de protection Floreffe (réel et connecté)
+// 🌦️ Dôme Floreffe — lecture prévisions/alertes
 // ==========================================================
-
-app.get("/api/forecast/floreffe", async (req, res) => {
+app.get("/api/forecast/floreffe", async (_req, res) => {
   try {
-    
-    const data = await Forecast.findOne({ zone: "Floreffe" });
-
-    if (!data) return res.json({ error: "Aucune donnée disponible pour Floreffe" });
-    res.json(data);
+    // lecture générique si modèle Forecast absent
+    const doc = await col("forecasts").findOne({ zone: /Floreffe/i });
+    if (!doc) return res.json({ error: "Aucune donnée disponible pour Floreffe" });
+    res.json(doc);
   } catch (e) {
     console.error("Erreur API forecast Floreffe:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// 🌍 ROUTE – Alerts Floreffe (version Mongoose)
-app.get("/api/alerts/floreffe", async (req, res) => {
+app.get("/api/alerts/floreffe", async (_req, res) => {
   try {
     const alerts = await Alert.find({ zone: /Floreffe/i });
     res.json(alerts || []);
@@ -471,8 +423,7 @@ app.get("/api/alerts/floreffe", async (req, res) => {
   }
 });
 
-// 🤖 ROUTE – Alerts VisionIA (analyse d’images)
-app.get("/api/alerts-vision", async (req, res) => {
+app.get("/api/alerts-vision", async (_req, res) => {
   try {
     const alerts = await Alert.find({ type: "vision" });
     res.json(alerts || []);
@@ -481,60 +432,17 @@ app.get("/api/alerts-vision", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// 🛰️ Log de confirmation au démarrage
-console.log("✅ Routes TINSFLASH Floreffe actives : /api/forecast/floreffe & /api/alerts/floreffe");
+
+console.log("✅ Routes Floreffe actives : /api/forecast/floreffe & /api/alerts/floreffe");
 
 // ==========================================================
-// 🔭 TINSFLASH – Vision automatique (Phase 1B autonome)
+// 🔭 Vision automatique (Phase 1B autonome) – désactivée planif
 // ==========================================================
-// Télécharge les images satellites toutes les 30 minutes,
-// sans déclencher l’analyse IA. L’IA les exploitera
-// automatiquement lors des runs (Phase 2).
-// ==========================================================
-
-import { fetchVisionCaptures } from "./services/visionFetchers.js";
-
 async function scheduleVisionFetch() {
-  try {
-    await fetchVisionCaptures();
-  } catch (err) {
-    await addEngineError("Erreur Vision auto: " + err.message, "server");
-  }
+  try { await fetchVisionCaptures(); }
+  catch (err) { await addEngineError("Erreur Vision auto: " + err.message, "server"); }
 }
 
-// ==========================================================
-// ⚙️ PLANIFICATION VisionIA – 1x/jour + déclenchements manuels
-// ==========================================================
-import { runVisionIA } from "./services/runVisionIA.js";
-import { runWatchdog } from "./services/watchdogService.js";
-
-// === LANCEMENTS MANUELS depuis console admin ===
-app.post("/api/runVisionIA", async (req, res) => {
-  try {
-    const code = req.headers["x-admin-code"] || req.query.code;
-    if (code !== "202679") return res.status(403).send("🔒 Accès refusé");
-    const result = await runVisionIA();
-    await addEngineLog("🚀 VisionIA lancée manuellement depuis console admin", "info", "VISIONIA");
-    res.send(`✅ VisionIA exécutée (${JSON.stringify(result)})`);
-  } catch (err) {
-    await addEngineError("Erreur VisionIA : " + err.message, "VISIONIA");
-    res.status(500).send("❌ Erreur VisionIA : " + err.message);
-  }
-});
-
-app.post("/api/runWatchdog", async (req, res) => {
-  try {
-    const code = req.headers["x-admin-code"] || req.query.code;
-    if (code !== "202679") return res.status(403).send("🔒 Accès refusé");
-    const result = await runWatchdog();
-    await addEngineLog(`⚡ Watchdog lancé manuellement – ${result.count ?? 0} pré-alertes`, "info", "TOCSIN");
-    res.send(`✅ Watchdog exécuté (${result.count ?? 0} pré-alertes générées)`);
-  } catch (err) {
-    await addEngineError("Erreur Watchdog : " + err.message, "TOCSIN");
-    res.status(500).send("❌ Erreur Watchdog : " + err.message);
-  }
-});
-// === PLANIFICATION AUTOMATIQUE VisionIA (1x/jour) ===
 async function scheduleDailyVisionIA() {
   try {
     await addEngineLog("🕓 Lancement quotidien automatique VisionIA", "info", "VISIONIA.AUTO");
@@ -545,20 +453,12 @@ async function scheduleDailyVisionIA() {
   }
 }
 
-// ==========================================================
-// ⚙️ PLANIFICATION VisionIA – DÉSACTIVÉE TEMPORAIREMENT
-// ==========================================================
-// Démarrage au boot + exécution chaque 24 h (86 400 000 ms)
-// scheduleDailyVisionIA();
-// setInterval(scheduleDailyVisionIA, 24 * 60 * 60 * 1000);
-
+// Planif désactivée volontairement
 await addEngineLog("🕓 Planification VisionIA désactivée temporairement (manual only)", "server");
 
 // ==========================================================
-// 🤖 API J.E.A.N. — Dialogue direct pour le Dôme holographique
+// 🤖 API J.E.A.N. — Dialogue pour le Dôme
 // ==========================================================
-import { askJean } from "./services/chatService.js"; // déjà présent dans tes imports plus haut
-
 app.get("/api/jean/analyse", async (req, res) => {
   const q = req.query.prompt || "";
   try {
@@ -570,9 +470,9 @@ app.get("/api/jean/analyse", async (req, res) => {
 });
 
 // ==========================================================
-// 🛰 Alias /api/vision/run — compatibilité avec le Dôme 4D
+// 🛰 Alias /api/vision/run — compatibilité Dôme 4D
 // ==========================================================
-app.get("/api/vision/run", async (req, res) => {
+app.get("/api/vision/run", async (_req, res) => {
   try {
     const result = await runVisionIA();
     res.send(`✅ VisionIA exécutée : ${JSON.stringify(result)}`);
@@ -580,14 +480,12 @@ app.get("/api/vision/run", async (req, res) => {
     res.status(500).send("❌ Erreur VisionIA : " + err.message);
   }
 });
-// ==========================================================
-// 🌐 TINSFLASH — Endpoint central de synchronisation multi-Render
-// ==========================================================
 
-
+// ==========================================================
+// 🌐 Endpoint de synchronisation multi-Render
+// ==========================================================
 app.post("/api/sync", async (req, res) => {
   try {
-    
     const authHeader = req.headers.authorization || "";
     const token = authHeader.replace("Bearer ", "").trim();
     if (token !== process.env.SYNC_API_KEY) {
@@ -599,8 +497,7 @@ app.post("/api/sync", async (req, res) => {
       return res.status(400).json({ error: "Aucune donnée fournie" });
     }
 
-    const syncCol = db.collection("sync_logs");
-
+    const syncCol = col("sync_logs");
     await syncCol.insertOne({
       source,
       session,
@@ -610,9 +507,8 @@ app.post("/api/sync", async (req, res) => {
       receivedAt: new Date(),
     });
 
-    // 🔁 Fusion et sauvegarde centralisée
     if (forecasts.length) {
-      await db.collection("forecasts").updateOne(
+      await col("forecasts").updateOne(
         { zone: source },
         { $set: { zone: source, data: forecasts, updatedAt: new Date() } },
         { upsert: true }
@@ -620,8 +516,8 @@ app.post("/api/sync", async (req, res) => {
     }
 
     if (alerts.length) {
-      await db.collection("alerts").deleteMany({ zone: source });
-      await db.collection("alerts").insertMany(alerts.map(a => ({ ...a, zone: source })));
+      await col("alerts").deleteMany({ zone: source });
+      await col("alerts").insertMany(alerts.map((a) => ({ ...a, zone: source })));
     }
 
     console.log(`✅ Données reçues de ${source} (${forecasts.length} prévisions, ${alerts.length} alertes)`);
@@ -629,26 +525,17 @@ app.post("/api/sync", async (req, res) => {
   } catch (err) {
     console.error("❌ Erreur /api/sync :", err.message);
     res.status(500).json({ error: err.message });
-  } 
+  }
 });
-// ==========================================================
-// 🌐 SERVEURS DE FICHIERS STATIQUES (pages publiques & admin)
-// ==========================================================
-const publicPath = path.join(__dirname, "public");
-app.use(express.static(publicPath));
-app.get("/", (_, res) => res.sendFile(path.join(publicPath, "index.html")));
-app.get("/admin-pp.html", (_, res) => res.sendFile(path.join(publicPath, "admin-pp.html")));
-app.get("/admin-alerts.html", (_, res) => res.sendFile(path.join(publicPath, "admin-alerts.html")));
 
 // ==========================================================
 // 🚀 LANCEMENT RENDER
 // ==========================================================
 const ENGINE_PORT = 10000;
 const PORT = process.env.PORT || ENGINE_PORT;
-const app = express();
-app.use(express.static("public"));  // ← obligatoire pour servir tes fichiers
+
 server.listen(PORT, "0.0.0.0", () => {
   console.log("⚡ TINSFLASH PRO+++ moteur IA J.E.A.N. en ligne");
   console.log(`🌍 Zones couvertes : ${enumerateCoveredPoints().length}`);
-  console.log(`🔌 Ports : logique ${ENGINE_PORT} | réseau ${PORT}`);
+  console.log(`🔌 Port réseau : ${PORT}`);
 });
