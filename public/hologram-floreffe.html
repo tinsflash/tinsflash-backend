@@ -1,234 +1,247 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>TINSFLASH – Dôme holographique Floreffe</title>
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-<style>
-html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#7de0ff;font-family:Segoe UI,Arial;}
-#hud{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.5);padding:8px 12px;border-radius:6px;font-size:14px;}
-button{position:fixed;top:10px;background:rgba(10,30,40,.8);color:#7de0ff;border:1px solid #00c8ff;
-padding:6px 10px;border-radius:5px;cursor:pointer;transition:.3s;z-index:5;text-shadow:0 0 4px #00c8ff;}
-button:hover{background:#00c8ff;color:#000;}
-#resBtn{right:280px;}
-#angleBtn{right:180px;}
-#satBtn{right:80px;}
-#refreshBtn{right:10px;}
-#jeanBtn{position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:#00c8ff;color:#000;font-size:22px;font-weight:bold;box-shadow:0 0 20px rgba(0,200,255,.8);}
-#jeanPanel{display:none;position:fixed;bottom:100px;right:20px;width:320px;height:260px;background:rgba(10,20,40,.9);border:1px solid #00c8ff;border-radius:10px;padding:10px;overflow:auto;color:#9eefff;font-size:14px;}
-#timeline{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:60%;height:8px;background:rgba(255,255,255,.1);border-radius:6px;cursor:pointer;}
-#timeline::after{content:"";position:absolute;top:0;left:0;width:0;height:100%;background:#00c8ff;border-radius:6px;transition:width .3s;}
-#loader{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border:4px solid rgba(0,183,255,0.3);border-top:4px solid #00c8ff;border-radius:50%;animation:spin 1s linear infinite;display:none;z-index:10;}
-@keyframes spin{0%{transform:translate(-50%,-50%) rotate(0deg)}100%{transform:translate(-50%,-50%) rotate(360deg)}}
-@keyframes scanPulse {0%,100%{opacity:.3;}50%{opacity:1;}}
-.scanline{position:fixed;left:0;top:0;width:100%;height:100%;
-background:repeating-linear-gradient(to bottom,rgba(0,255,100,0.05)0,rgba(0,255,100,0.1)2px,transparent4px);
-mix-blend-mode:overlay;pointer-events:none;animation:scanPulse 3s infinite;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌍 Dôme Floreffe — Carte holographique 4D IA J.E.A.N.</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 60%, #000a00 0%, #000 80%);
+      font-family: 'Segoe UI', sans-serif;
+      color: #8fe1ff;
+    }
+    #menu {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+    }
+    button {
+      background: rgba(0, 255, 255, 0.1);
+      color: #8fe1ff;
+      border: 1px solid #00c3ff;
+      border-radius: 6px;
+      padding: 5px 10px;
+      margin-right: 6px;
+      cursor: pointer;
+    }
+    button.active {
+      background: #00c3ff;
+      color: black;
+      font-weight: bold;
+    }
+    #loader {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #00c3ff;
+      font-size: 1.2em;
+      text-shadow: 0 0 10px #00c3ff;
+    }
+  </style>
 </head>
 <body>
-<div id="hud">🌍 Dôme Floreffe – Relief holographique + satellites 4D + overlay météo</div>
-<button id="resBtn">Relief HR</button>
-<button id="angleBtn">Vue 45°</button>
-<button id="satBtn">🛰 Sat ON</button>
-<button id="refreshBtn">🔄 VisionIA</button>
-<div id="loader"></div>
-<div class="scanline"></div>
-<canvas id="scene"></canvas>
-<div id="timeline"></div>
-<button id="jeanBtn">🤖</button>
-<div id="jeanPanel">J.E.A.N. en attente…</div>
+  <div id="menu">
+    🌍 <b>Dôme Floreffe — Carte holographique + radar IA J.E.A.N.</b><br />
+    <button id="btnRelief" class="active">Relief HR</button>
+    <button id="btn45">Vue 45°</button>
+    <button id="btnSat">Sat On/Off</button>
+    <button id="btnIA">IA J.E.A.N.</button>
+  </div>
+  <div id="loader">Chargement du dôme holographique...</div>
 
-<script>
-let scene,camera,renderer,controls,terrainMesh,satGroup=new THREE.Group();
-let angleMode=false,satVisible=true,currentRes="std";
-const loader=document.getElementById("loader"),jeanPanel=document.getElementById("jeanPanel");
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+    import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
 
-init();animate();
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
+    camera.position.set(0, 150, 400);
 
-// === INITIALISATION ===
-async function init(){
- const canvas=document.getElementById("scene");
- renderer=new THREE.WebGLRenderer({canvas,antialias:true});
- renderer.setSize(window.innerWidth,window.innerHeight);
- scene=new THREE.Scene();
- scene.fog=new THREE.FogExp2(0x000010,0.0012);
- camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,1,2000);
- camera.position.set(0,150,250);
- controls=new THREE.OrbitControls(camera,renderer.domElement);
- controls.autoRotate=true;controls.autoRotateSpeed=0.3;controls.enableDamping=true;
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
- scene.add(new THREE.AmbientLight(0x447799,0.5));
- const light=new THREE.PointLight(0x66ccff,1.2,800);light.position.set(0,200,0);scene.add(light);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.rotateSpeed = 0.6;
 
- const haloGeom=new THREE.RingGeometry(120,130,64);
- const haloMat=new THREE.MeshBasicMaterial({color:0x33ccff,side:THREE.DoubleSide,transparent:true,opacity:0.25});
- const halo=new THREE.Mesh(haloGeom,haloMat);halo.rotation.x=Math.PI/2;halo.rotation.z=Math.PI/6;scene.add(halo);
+    // === Lumières ===
+    const light = new THREE.DirectionalLight(0x99ffcc, 1.2);
+    light.position.set(1, 1, 1);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x102020));
 
- // Relief STD
- const altStd=await fetch("/floreffe_altitudes.json").then(r=>r.json());
- createTerrain(altStd);
- await applyWeatherOverlay(); // 🌦 superposition météo
+    // === Sol lumineux ===
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(2000, 2000),
+      new THREE.MeshPhongMaterial({ color: 0x001a00, opacity: 0.5, transparent: true })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
 
- // Couches satellites
- await loadSatLayers();
+    // === Groupes principaux ===
+    const reliefGroup = new THREE.Group();
+    const overlayGroup = new THREE.Group();
+    const radarGroup = new THREE.Group();
+    scene.add(reliefGroup);
+    scene.add(overlayGroup);
+    scene.add(radarGroup);
 
- // Timeline
- const timeline=document.getElementById("timeline");
- timeline.addEventListener("click",e=>{
-   const pct=e.offsetX/timeline.offsetWidth;
-   timeline.style.setProperty("width",`${pct*100}%`);
-   updateSatOpacity(pct);
- });
+    const loaderText = document.getElementById("loader");
+    const btnRelief = document.getElementById("btnRelief");
+    const btn45 = document.getElementById("btn45");
+    const btnSat = document.getElementById("btnSat");
+    const btnIA = document.getElementById("btnIA");
 
- document.getElementById("angleBtn").onclick=()=>switchAngle();
- document.getElementById("resBtn").onclick=()=>switchResolution();
- document.getElementById("refreshBtn").onclick=()=>refreshVision();
- document.getElementById("satBtn").onclick=()=>toggleSat();
- document.getElementById("jeanBtn").onclick=()=>toggleJean();
- window.addEventListener("resize",onResize);
+    // === Chargement JSON ===
+    async function loadData() {
+      try {
+        const altitudes = await (await fetch("./floreffe_altitudes.json")).json();
+        const forecasts = await (await fetch("./floreffe_forecasts.json")).json();
+        loaderText.innerText = "Relief & météo chargés...";
+        buildRelief(altitudes, forecasts);
+      } catch (err) {
+        loaderText.innerText = "❌ Erreur de chargement : " + err.message;
+        console.error(err);
+      }
+    }
 
- // mise à jour météo automatique
- setInterval(applyWeatherOverlay,300000);
-}
+    function buildRelief(altitudes, forecasts) {
+      loaderText.remove();
 
-// === RELIEF ===
-function createTerrain(points){
- if(terrainMesh)scene.remove(terrainMesh);
- const geometry=new THREE.PlaneGeometry(240,240,60,60);
- geometry.rotateX(-Math.PI/2);
- const pos=geometry.attributes.position;
- for(let i=0;i<pos.count;i++){
-   const vx=pos.getX(i)/2+50.44, vz=pos.getZ(i)/2+4.76;
-   const closest=points.reduce((a,b)=>{
-     const da=(vx-b.lat)**2+(vz-b.lon)**2;
-     const db=(vx-a.lat)**2+(vz-a.lon)**2;
-     return da<db?b:a;
-   });
-   const h=closest?.alt ? (closest.alt-80)/2 : 0;
-   pos.setY(i,h);
- }
- pos.needsUpdate=true;
- const mat=new THREE.MeshBasicMaterial({
-   color:0x00ff77,wireframe:true,transparent:true,opacity:0.35
- });
- terrainMesh=new THREE.Mesh(geometry,mat);
- scene.add(terrainMesh);
-}
+      // === Relief par points ===
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const colors = [];
 
-// === OVERLAY MÉTÉO ===
-async function applyWeatherOverlay(){
- try{
-   const data=await fetch("/floreffe_forecasts.json").then(r=>r.json()).catch(()=>null);
-   if(!data?.zones)return;
-   const zones=data.zones;
-   const colors={pluie:new THREE.Color(0x0077ff),vent:new THREE.Color(0xcccccc),
-                 chaleur:new THREE.Color(0xff6600),froid:new THREE.Color(0x00ffff)};
-   const geom=terrainMesh.geometry;
-   const pos=geom.attributes.position;
-   const col=new Float32Array(pos.count*3);
+      const colorLow = new THREE.Color(0x0020aa);
+      const colorHigh = new THREE.Color(0xffffff);
 
-   for(let i=0;i<pos.count;i++){
-     const vx=pos.getX(i)/2+50.44, vz=pos.getZ(i)/2+4.76;
-     const closest=zones.reduce((a,b)=>{
-       const da=(vx-b.lat)**2+(vz-b.lon)**2;
-       const db=(vx-a.lat)**2+(vz-a.lon)**2;
-       return da<db?b:a;
-     });
+      altitudes.forEach((p) => {
+        const x = p.lon * 600 - 2800;
+        const y = p.alt * 1.5;
+        const z = -p.lat * 600 + 30500;
+        vertices.push(x, y, z);
+        const color = colorLow.clone().lerp(colorHigh, Math.min(1, p.alt / 250));
+        colors.push(color.r, color.g, color.b);
+      });
 
-     let c=new THREE.Color(0x00ff77);
-     if(closest.precipitation>1) c=colors.pluie;
-     else if(closest.wind>40) c=colors.vent;
-     else if(closest.temperature>27) c=colors.chaleur;
-     else if(closest.temperature<2) c=colors.froid;
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
 
-     col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
-   }
-   geom.setAttribute("color",new THREE.BufferAttribute(col,3));
-   terrainMesh.material.vertexColors=true;
-   terrainMesh.material.needsUpdate=true;
-   console.log("🌦 Overlay météo appliqué");
- }catch(e){console.warn("Overlay météo échoué",e);}
-}
+      const pointsMat = new THREE.PointsMaterial({ size: 2.2, vertexColors: true });
+      const points = new THREE.Points(geometry, pointsMat);
+      reliefGroup.add(points);
 
-// === SATELLITES ===
-async function loadSatLayers(){
- const texClouds=new THREE.TextureLoader().load("/sat_clouds_real.jpg");
- const texRain=new THREE.TextureLoader().load("/sat_rain_real.png");
- const texWind=new THREE.TextureLoader().load("/sat_wind.png");
- [ {t:texClouds,y:65,o:0.45}, {t:texRain,y:70,o:0.4}, {t:texWind,y:75,o:0.3} ].forEach(d=>{
-   const geo=new THREE.PlaneGeometry(240,240);
-   const mat=new THREE.MeshBasicMaterial({map:d.t,transparent:true,opacity:d.o});
-   const m=new THREE.Mesh(geo,mat);
-   m.rotation.x=-Math.PI/2;m.position.y=d.y;
-   satGroup.add(m);
- });
- scene.add(satGroup);
-}
+      // === Grille holographique "Hunger Games" ===
+      const lineMaterial = new THREE.LineBasicMaterial({
+        color: 0x00ff66,
+        transparent: true,
+        opacity: 0.4,
+      });
 
-function toggleSat(){
- satVisible=!satVisible;
- satGroup.visible=satVisible;
- document.getElementById("satBtn").innerText=satVisible?"🛰 Sat ON":"🛰 Sat OFF";
-}
+      const lineGeometry = new THREE.BufferGeometry();
+      const lineVertices = [];
 
-function updateSatOpacity(pct){
- satGroup.children.forEach((m,i)=>{
-   m.material.opacity=0.2+0.4*Math.abs(Math.sin(pct*Math.PI*(i+1)));
- });
-}
+      for (let i = 0; i < vertices.length; i += 9) {
+        const x1 = vertices[i], y1 = vertices[i + 1], z1 = vertices[i + 2];
+        const x2 = vertices[i + 3], y2 = vertices[i + 4], z2 = vertices[i + 5];
+        const x3 = vertices[i + 6], y3 = vertices[i + 7], z3 = vertices[i + 8];
+        lineVertices.push(x1, y1, z1, x2, y2, z2);
+        lineVertices.push(x2, y2, z2, x3, y3, z3);
+      }
 
-// === RAFRAÎCHIR ===
-async function refreshVision(){
- loader.style.display="block";
- try{
-   const res=await fetch("/api/vision/run");
-   const txt=await res.text();
-   alert("✅ VisionIA rafraîchie : "+txt.slice(0,80)+"...");
- }catch(e){alert("⚠️ Erreur VisionIA : "+e.message);}
- loader.style.display="none";
-}
+      lineGeometry.setAttribute("position", new THREE.Float32BufferAttribute(lineVertices, 3));
+      const gridLines = new THREE.LineSegments(lineGeometry, lineMaterial);
+      reliefGroup.add(gridLines);
 
-// === IA J.E.A.N. ===
-async function toggleJean(){
- if(jeanPanel.style.display==="none"){jeanPanel.style.display="block";jeanPanel.innerHTML="Analyse en cours...";await askJean();}
- else jeanPanel.style.display="none";
-}
-async function askJean(){
- try{
-   const q=prompt("Pose ta question à J.E.A.N. :", "Quel est le risque actuel ?");
-   if(!q)return;
-   const res=await fetch(`/api/jean/analyse?prompt=${encodeURIComponent(q)}`);
-   const data=await res.text();
-   jeanPanel.innerHTML=`<b>🧠 Réponse J.E.A.N. :</b><br>${data}`;
- }catch(e){jeanPanel.innerHTML="⚠️ Erreur connexion IA : "+e.message;}
-}
+      // === Pulsation néon verte ===
+      function pulseLines() {
+        const t = Date.now() * 0.002;
+        lineMaterial.opacity = 0.25 + 0.15 * Math.sin(t);
+        requestAnimationFrame(pulseLines);
+      }
+      pulseLines();
 
-// === VUES ===
-function switchAngle(){
- angleMode=!angleMode;
- if(angleMode){camera.position.set(200,200,200);}else{camera.position.set(0,150,250);}
-}
-async function switchResolution(){
- loader.style.display="block";
- try{
-   if(currentRes==="std"){
-     currentRes="hr";
-     const altHR=await fetch("/floreffe_altitudes_hr.json").then(r=>r.json());
-     createTerrain(altHR);
-     await applyWeatherOverlay();
-   }else{
-     currentRes="std";
-     const altStd=await fetch("/floreffe_altitudes.json").then(r=>r.json());
-     createTerrain(altStd);
-     await applyWeatherOverlay();
-   }
- }catch(e){console.error(e);}finally{loader.style.display="none";}
-}
-function onResize(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);}
-function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
-</script>
+      // === Overlay météo (sphères) ===
+      if (forecasts?.zones?.length) {
+        forecasts.zones.forEach((z) => {
+          const color = z.precipitation > 10 ? 0x00ffff : 0x0099ff;
+          const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(2, 8, 8),
+            new THREE.MeshBasicMaterial({ color })
+          );
+          sphere.position.set(z.lon * 600 - 2800, z.alt ?? 120, -z.lat * 600 + 30500);
+          overlayGroup.add(sphere);
+        });
+      }
+
+      // === Halo radar tournant ===
+      const radarGeom = new THREE.CircleGeometry(450, 64);
+      const radarMat = new THREE.MeshBasicMaterial({
+        color: 0x00ff66,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.DoubleSide,
+      });
+      const radar = new THREE.Mesh(radarGeom, radarMat);
+      radar.rotation.x = -Math.PI / 2;
+      radarGroup.add(radar);
+
+      function animateRadar() {
+        radar.rotation.z += 0.002;
+        radar.material.opacity = 0.05 + 0.03 * Math.sin(Date.now() * 0.002);
+        requestAnimationFrame(animateRadar);
+      }
+      animateRadar();
+
+      animate();
+    }
+
+    // === Animation globale ===
+    function animate() {
+      requestAnimationFrame(animate);
+      reliefGroup.rotation.y += 0.0008;
+      overlayGroup.rotation.y += 0.0008;
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // === Boutons ===
+    btnRelief.onclick = () => {
+      reliefGroup.visible = !reliefGroup.visible;
+      btnRelief.classList.toggle("active");
+    };
+
+    btn45.onclick = () => {
+      camera.position.set(200, 200, 200);
+      camera.lookAt(0, 0, 0);
+    };
+
+    btnSat.onclick = () => {
+      scene.background = scene.background ? null : new THREE.Color(0x000000);
+      btnSat.classList.toggle("active");
+    };
+
+    btnIA.onclick = () => {
+      alert("🧠 IA J.E.A.N. : Analyse du relief tactique Floreffe en cours...");
+    };
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // === Brouillard doux (profondeur holographique) ===
+    scene.fog = new THREE.Fog(0x001a00, 200, 900);
+
+    loadData();
+  </script>
 </body>
 </html>
