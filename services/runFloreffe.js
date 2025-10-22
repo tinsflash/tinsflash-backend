@@ -648,93 +648,104 @@ Retourne STRICTEMENT un tableau JSON.
     await sleep(6000);
   }
 }
-
 // ==========================================================
-// ⚡ PHASE 5 — GÉNÉRATION D’ALERTES RÉELLES (pondérées Floreffe)
+// ⚡ PHASE 5 — FUSION + ALERTES RÉELLES (pondérées Floreffe)
 // ==========================================================
 await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(120000);
 
-// --- initialisation fusion/export ---
-let enriched = phase2Results || [];
-let alerts = [];
+// --- 5.1 Fusion interne unique des résultats Phase 2 ---
+let enriched = Array.isArray(phase2Results) ? [...phase2Results] : [];
 const publicDir = path.resolve("./public");
 
 try {
   const unique = new Map();
-  for (const i of enriched) unique.set(i.id || i.name, i);
+  for (const item of enriched) unique.set(item.id || item.name, item);
   enriched = Array.from(unique.values());
+
+  // ✅ Injecte la priorité (prio) si manquante, depuis la table points
+  const byIdOrName = new Map(FLOREFFE_POINTS.map(p => [p.id || p.name, p]));
+  enriched = enriched.map(e => {
+    const key = e.id || e.name;
+    const src = byIdOrName.get(key);
+    return src && !e.prio ? { ...e, prio: src.prio } : e;
+  });
+
   await addEngineLog(`[Floreffe] 🔗 Fusion interne : ${enriched.length} entrées consolidées`, "info", "floreffe");
 } catch (err) {
   await addEngineError(`[Floreffe] ❌ Fusion interne : ${err.message}`, "floreffe");
 }
 
-// ==========================================================
-// ⚡ GÉNÉRATION D’ALERTES (pondération locale Floreffe)
-// ==========================================================
+// --- 5.2 Génération des alertes pondérées ---
 await addEngineLog("[Floreffe] ⚡ Début génération d'alertes (pondération locale)", "info", "floreffe");
 
-alerts = enriched.flatMap(pt => {
+let alerts = enriched.flatMap(pt => {
   const list = [];
+  const rain = Number(pt.precipitation ?? 0);
+  const wind = Number(pt.wind ?? 0);
+  const temp = Number(pt.temperature ?? 0);
+  const hum  = Number(pt.humidity ?? 0);
+  const vis  = Number((pt.visionia ?? 0) * 100); // visionia en %
 
-  // 🔹 Pluie
-  if (pt.precipitation >= ALERT_THRESHOLDS.rain.extreme)
-    list.push({ type: "Pluie", level: "Extrême", value: pt.precipitation, zone: pt.name });
-  else if (pt.precipitation >= ALERT_THRESHOLDS.rain.alert)
-    list.push({ type: "Pluie", level: "Alerte", value: pt.precipitation, zone: pt.name });
-  else if (pt.precipitation >= ALERT_THRESHOLDS.rain.prealert)
-    list.push({ type: "Pluie", level: "Pré-alerte", value: pt.precipitation, zone: pt.name });
+  // Pluie
+  if (rain >= ALERT_THRESHOLDS.rain.extreme) list.push({ type: "Pluie", level: "Extrême", value: rain, zone: pt.name });
+  else if (rain >= ALERT_THRESHOLDS.rain.alert) list.push({ type: "Pluie", level: "Alerte", value: rain, zone: pt.name });
+  else if (rain >= ALERT_THRESHOLDS.rain.prealert) list.push({ type: "Pluie", level: "Pré-alerte", value: rain, zone: pt.name });
 
-  // 🔹 Vent
-  if (pt.wind >= ALERT_THRESHOLDS.wind.extreme)
-    list.push({ type: "Vent", level: "Extrême", value: pt.wind, zone: pt.name });
-  else if (pt.wind >= ALERT_THRESHOLDS.wind.alert)
-    list.push({ type: "Vent", level: "Alerte", value: pt.wind, zone: pt.name });
-  else if (pt.wind >= ALERT_THRESHOLDS.wind.prealert)
-    list.push({ type: "Vent", level: "Pré-alerte", value: pt.wind, zone: pt.name });
+  // Vent
+  if (wind >= ALERT_THRESHOLDS.wind.extreme) list.push({ type: "Vent", level: "Extrême", value: wind, zone: pt.name });
+  else if (wind >= ALERT_THRESHOLDS.wind.alert) list.push({ type: "Vent", level: "Alerte", value: wind, zone: pt.name });
+  else if (wind >= ALERT_THRESHOLDS.wind.prealert) list.push({ type: "Vent", level: "Pré-alerte", value: wind, zone: pt.name });
 
-  // 🔹 Température (froid / chaleur)
-  if (pt.temperature <= ALERT_THRESHOLDS.cold.extreme)
-    list.push({ type: "Froid", level: "Extrême", value: pt.temperature, zone: pt.name });
-  else if (pt.temperature <= ALERT_THRESHOLDS.cold.alert)
-    list.push({ type: "Froid", level: "Alerte", value: pt.temperature, zone: pt.name });
-  else if (pt.temperature <= ALERT_THRESHOLDS.cold.prealert)
-    list.push({ type: "Froid", level: "Pré-alerte", value: pt.temperature, zone: pt.name });
+  // Froid
+  if (temp <= ALERT_THRESHOLDS.cold.extreme) list.push({ type: "Froid", level: "Extrême", value: temp, zone: pt.name });
+  else if (temp <= ALERT_THRESHOLDS.cold.alert) list.push({ type: "Froid", level: "Alerte", value: temp, zone: pt.name });
+  else if (temp <= ALERT_THRESHOLDS.cold.prealert) list.push({ type: "Froid", level: "Pré-alerte", value: temp, zone: pt.name });
 
-  if (pt.temperature >= ALERT_THRESHOLDS.heat.extreme)
-    list.push({ type: "Chaleur", level: "Extrême", value: pt.temperature, zone: pt.name });
-  else if (pt.temperature >= ALERT_THRESHOLDS.heat.alert)
-    list.push({ type: "Chaleur", level: "Alerte", value: pt.temperature, zone: pt.name });
-  else if (pt.temperature >= ALERT_THRESHOLDS.heat.prealert)
-    list.push({ type: "Chaleur", level: "Pré-alerte", value: pt.temperature, zone: pt.name });
+  // Chaleur
+  if (temp >= ALERT_THRESHOLDS.heat.extreme) list.push({ type: "Chaleur", level: "Extrême", value: temp, zone: pt.name });
+  else if (temp >= ALERT_THRESHOLDS.heat.alert) list.push({ type: "Chaleur", level: "Alerte", value: temp, zone: pt.name });
+  else if (temp >= ALERT_THRESHOLDS.heat.prealert) list.push({ type: "Chaleur", level: "Pré-alerte", value: temp, zone: pt.name });
 
-  // 🔹 Humidité / VisionIA (brouillard ou saturation)
-  if (pt.humidity >= ALERT_THRESHOLDS.humidity.alert)
-    list.push({ type: "Humidité", level: "Alerte", value: pt.humidity, zone: pt.name });
-  if (pt.visionia * 100 >= ALERT_THRESHOLDS.visionia.alert)
-    list.push({ type: "VisionIA", level: "Alerte", value: pt.visionia * 100, zone: pt.name });
+  // Humidité (brouillard/saturation)
+  if (hum >= ALERT_THRESHOLDS.humidity.alert)
+    list.push({ type: "Humidité", level: "Alerte", value: hum, zone: pt.name });
+
+  // VisionIA (indice topo/hydro local converti en %)
+  if (vis >= ALERT_THRESHOLDS.visionia.alert)
+    list.push({ type: "VisionIA", level: "Alerte", value: vis, zone: pt.name });
 
   return list;
 });
 
-// 🔹 Pondération globale du score de risque par priorité et fiabilité
+// 5.3 Pondération (fiabilité × priorité)
 alerts = alerts.map(a => {
   const zoneData = enriched.find(z => z.name === a.zone);
-  const reliability = zoneData?.reliability ?? 1;
+  const reliability = Number(zoneData?.reliability ?? 1);
   const prio = zoneData?.prio === "high" ? 1.15 : zoneData?.prio === "med" ? 1.05 : 1;
-  const weighted = +(a.value * reliability * prio).toFixed(2);
-  return { ...a, weighted };
+  const weighted = +(Number(a.value) * reliability * prio).toFixed(2);
+  return { ...a, reliability, prio, weighted };
 });
+
+// 5.4 Déduplication (zone+type+level) en gardant le score max
+const dedup = new Map();
+for (const a of alerts) {
+  const key = `${a.zone}::${a.type}::${a.level}`;
+  const prev = dedup.get(key);
+  if (!prev || a.weighted > prev.weighted) dedup.set(key, a);
+}
+alerts = Array.from(dedup.values());
+
+// 5.5 Tri par sévérité pondérée (desc)
+alerts.sort((x, y) => y.weighted - x.weighted);
 
 await addEngineLog(`[Floreffe] ⚡ ${alerts.length} alertes générées et pondérées`, "success", "floreffe");
 
-// ==========================================================
-// 🗂️ ÉCRITURE FICHIERS PUBLICS
-// ==========================================================
+// --- 5.6 Écriture des fichiers publics ---
 try {
   if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
-  const exportForecasts = { generated: new Date(), zones: enriched };
-  const exportAlerts = { generated: new Date(), alerts };
+  const exportForecasts = { generated: new Date().toISOString(), zones: enriched };
+  const exportAlerts   = { generated: new Date().toISOString(), alerts };
   await fs.promises.writeFile(path.join(publicDir, "floreffe_forecasts.json"), JSON.stringify(exportForecasts, null, 2));
   await fs.promises.writeFile(path.join(publicDir, "floreffe_alerts.json"), JSON.stringify(exportAlerts, null, 2));
   await addEngineLog("✅ JSON publics générés", "success", "floreffe");
@@ -742,9 +753,7 @@ try {
   await addEngineError(`[Floreffe] ❌ Échec écriture fichiers publics : ${err.message}`, "floreffe");
 }
 
-// ==========================================================
-// 🔒 FERMETURE PROPRE
-// ==========================================================
+// --- 5.7 Fermeture propre Mongo ---
 try {
   if (mongoose.connection.readyState === 1) {
     await mongoose.connection.close();
@@ -753,6 +762,8 @@ try {
 } catch (err) {
   await addEngineError(`[Floreffe] ⚠️ Clôture : ${err.message}`, "floreffe");
 }
+}
+
 // =======================================================
 // ✅ EXPORT UNIVERSEL (compatible ESM + CommonJS + Render)
 // =======================================================
