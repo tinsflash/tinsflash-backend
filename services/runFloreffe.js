@@ -537,7 +537,7 @@ const datasetsPath = path.resolve("./services/datasets");
 let geoData = null;
 
 try {
-  const geoPath = "./services/datasets/floreffe_geoportail.json";
+  
   geoData = JSON.parse(fs.readFileSync(geoPath, "utf8"));
   await addEngineLog(`📡 [Floreffe] Données topographiques chargées (${geoPath})`, "info", "floreffe");
 } catch (e) {
