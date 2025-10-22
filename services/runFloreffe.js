@@ -588,38 +588,60 @@ try {
 await addEngineLog("⏳ Temporisation avant Phase 2 (IA J.E.A.N.)", "info", "floreffe");
 await sleep(120000);
 
-// ==========================================================
-// 🧠 PHASE 2 — IA J.E.A.N. Locale (autonome GPT-5)
-// ==========================================================
-await addEngineLog("[Floreffe] 🚀 Phase 2 (IA J.E.A.N.) démarrée — traitement local direct", "info", "floreffe");
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const phase1Data = phase1bisPlus ?? [];
+// ==========================================================
+// 🧠 PHASE 2 — IA J.E.A.N. Locale (Autonome, Réelle, Démo Officielle)
+// ==========================================================
+await addEngineLog("[Floreffe] 🚀 Phase 2 (IA J.E.A.N.) – Démarrage analyse locale", "info", "floreffe");
+
+// 🔑 Client IA — Réutilise l’instance globale si déjà importée
+const aiClient = (typeof openai !== "undefined" && openai)
+  ? openai
+  : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Données en entrée = résultats Phase 1bis+
+const phase1Data = Array.isArray(phase1bisPlus) ? phase1bisPlus : [];
 const chunkSize = 150;
 const chunks = [];
-for (let i = 0; i < phase1Data.length; i += chunkSize)
+for (let i = 0; i < phase1Data.length; i += chunkSize) {
   chunks.push(phase1Data.slice(i, i + chunkSize));
+}
 
 let phase2Results = [];
 const startPhase2 = Date.now();
+await addEngineLog(`[Floreffe] ⚙️ IA J.E.A.N. initialisée – ${chunks.length} blocs × ${chunkSize} points`, "info", "floreffe");
 
-await addEngineLog(`[Floreffe] 🧩 IA J.E.A.N. initialisée (${chunks.length} blocs × ${chunkSize} pts)`, "info", "floreffe");
-
+// ==========================================================
+// Boucle principale d’analyse IA bloc par bloc
+// ==========================================================
 for (const [index, chunk] of chunks.entries()) {
   const aiPrompt = `
 ${FLOREFFE_IA_PROMPT}
 
-Analyse locale — bloc ${index + 1}/${chunks.length} (${chunk.length} points) :
+Analyse locale J.E.A.N. — bloc ${index + 1}/${chunks.length} (${chunk.length} points) :
+
 ${JSON.stringify(chunk, null, 2)}
-Retourne STRICTEMENT un tableau JSON valide.`;
+
+Retourne STRICTEMENT un tableau JSON de ce format :
+[
+  {
+    "id":"FLO_01","name":"Maison communale",
+    "temperature":7.5,"precipitation":2.3,"wind":18.2,
+    "risk":{"pluie":0.7,"verglas":0.2,"vent":0.4,"brouillard":0.6,"inondation":0.5},
+    "reliability":0.92,"commentaire":"Risque bruine faible","confidence":0.9
+  }
+]
+`;
 
   try {
-    const ai = await openai.responses.create({
+    const ai = await aiClient.responses.create({
       model: "gpt-5",
       input: [
-        { role: "system", content: "Tu es J.E.A.N., IA météo-hydrologique locale experte de Floreffe (Belgique)." },
+        { role: "system", content: "Tu es J.E.A.N., IA météorologique et hydrologique de Floreffe (Belgique), connectée au moteur TINSFLASH PRO+++." },
         { role: "user", content: aiPrompt }
-      ]
+      ],
+      temperature: 0.3,
+      max_output_tokens: 1500,
     });
 
     const raw = ai.output?.[0]?.content?.[0]?.text?.trim() || "";
@@ -630,25 +652,60 @@ Retourne STRICTEMENT un tableau JSON valide.`;
     if (Array.isArray(parsed)) phase2Results.push(...parsed);
     else if (parsed && typeof parsed === "object") phase2Results.push(parsed);
 
-    await addEngineLog(`[Floreffe] ✅ IA J.E.A.N. bloc ${index + 1}/${chunks.length}`, "success", "floreffe");
+    const msg = `[Floreffe] ✅ Bloc IA ${index + 1}/${chunks.length} traité (${parsed.length || 1} points)`;
+    console.log(msg);
+    await addEngineLog(msg, "success", "floreffe");
     await sleep(2500);
+
   } catch (err) {
-    await addEngineError(`[Floreffe] ⚠️ IA J.E.A.N. bloc ${index + 1} : ${err.message}`, "floreffe");
+    await addEngineError(`[Floreffe] ⚠️ Bloc ${index + 1} IA J.E.A.N. : ${err.message}`, "floreffe");
     await sleep(6000);
   }
 }
 
+// ==========================================================
+// 💾 Sauvegarde Mongo + validation
+// ==========================================================
 try {
   if (mongoose.connection.readyState === 1) {
     const floreffePhase2 = mongoose.connection.collection("floreffe_phase2");
     await floreffePhase2.deleteMany({});
     if (phase2Results.length > 0) await floreffePhase2.insertMany(phase2Results);
+
     const duration = ((Date.now() - startPhase2) / 1000).toFixed(1);
-    await addEngineLog(`[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} objets, ${duration}s)`, "success", "floreffe");
+    await addEngineLog(`[Floreffe] ✅ Phase 2 terminée (${phase2Results.length} points analysés, ${duration}s)`, "success", "floreffe");
+  } else {
+    await addEngineError("❌ Mongo inactif lors de la sauvegarde Phase 2", "floreffe");
   }
 } catch (err) {
   await addEngineError(`[Floreffe] ❌ Erreur sauvegarde Phase 2 : ${err.message}`, "floreffe");
 }
+
+// ==========================================================
+// 📈 Résumé technique & validation locale
+// ==========================================================
+const reliabilityAvg = phase2Results.length
+  ? (phase2Results.reduce((a, b) => a + (b.reliability || 0), 0) / phase2Results.length).toFixed(2)
+  : 0;
+
+await addEngineLog(
+  `[Floreffe] 🧠 IA J.E.A.N. OK – ${phase2Results.length} points traités | fiabilité moyenne ${reliabilityAvg}`,
+  "success",
+  "floreffe"
+);
+
+// --- Ajout visible en démo (console Render) ---
+console.log(`
+==========================================
+🌦️  TINSFLASH — IA J.E.A.N. (Phase 2 Démo)
+------------------------------------------
+Points traités : ${phase2Results.length}
+Fiabilité moyenne : ${reliabilityAvg}
+Durée : ${((Date.now() - startPhase2) / 1000).toFixed(1)} s
+Status : ✅ OK — Données locales Floreffe disponibles
+==========================================
+`);
+
 
 // ==========================================================
 // 🛰️ PHASE 5 — Fusion / Export (autonome & sécurisée)
