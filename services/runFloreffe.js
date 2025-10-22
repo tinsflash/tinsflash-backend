@@ -652,6 +652,65 @@ Retourne STRICTEMENT un tableau JSON.
 // ==========================================================
 // 🛰️ PHASE 5 — Fusion / Export
 // ==========================================================
+  // ==========================================================
+// ⚡ PHASE 5 — GÉNÉRATION D’ALERTES RÉELLES (pondérées Floreffe)
+// ==========================================================
+await addEngineLog("[Floreffe] ⚡ Début génération d'alertes (pondération locale)", "info", "floreffe");
+
+alerts = enriched.flatMap(pt => {
+  const list = [];
+
+  // 🔹 Pluie
+  if (pt.precipitation >= ALERT_THRESHOLDS.rain.extreme)
+    list.push({ type: "Pluie", level: "Extrême", value: pt.precipitation, zone: pt.name });
+  else if (pt.precipitation >= ALERT_THRESHOLDS.rain.alert)
+    list.push({ type: "Pluie", level: "Alerte", value: pt.precipitation, zone: pt.name });
+  else if (pt.precipitation >= ALERT_THRESHOLDS.rain.prealert)
+    list.push({ type: "Pluie", level: "Pré-alerte", value: pt.precipitation, zone: pt.name });
+
+  // 🔹 Vent
+  if (pt.wind >= ALERT_THRESHOLDS.wind.extreme)
+    list.push({ type: "Vent", level: "Extrême", value: pt.wind, zone: pt.name });
+  else if (pt.wind >= ALERT_THRESHOLDS.wind.alert)
+    list.push({ type: "Vent", level: "Alerte", value: pt.wind, zone: pt.name });
+  else if (pt.wind >= ALERT_THRESHOLDS.wind.prealert)
+    list.push({ type: "Vent", level: "Pré-alerte", value: pt.wind, zone: pt.name });
+
+  // 🔹 Température (froid / chaleur)
+  if (pt.temperature <= ALERT_THRESHOLDS.cold.extreme)
+    list.push({ type: "Froid", level: "Extrême", value: pt.temperature, zone: pt.name });
+  else if (pt.temperature <= ALERT_THRESHOLDS.cold.alert)
+    list.push({ type: "Froid", level: "Alerte", value: pt.temperature, zone: pt.name });
+  else if (pt.temperature <= ALERT_THRESHOLDS.cold.prealert)
+    list.push({ type: "Froid", level: "Pré-alerte", value: pt.temperature, zone: pt.name });
+
+  if (pt.temperature >= ALERT_THRESHOLDS.heat.extreme)
+    list.push({ type: "Chaleur", level: "Extrême", value: pt.temperature, zone: pt.name });
+  else if (pt.temperature >= ALERT_THRESHOLDS.heat.alert)
+    list.push({ type: "Chaleur", level: "Alerte", value: pt.temperature, zone: pt.name });
+  else if (pt.temperature >= ALERT_THRESHOLDS.heat.prealert)
+    list.push({ type: "Chaleur", level: "Pré-alerte", value: pt.temperature, zone: pt.name });
+
+  // 🔹 Humidité / VisionIA (brouillard ou saturation)
+  if (pt.humidity >= ALERT_THRESHOLDS.humidity.alert)
+    list.push({ type: "Humidité", level: "Alerte", value: pt.humidity, zone: pt.name });
+  if (pt.visionia * 100 >= ALERT_THRESHOLDS.visionia.alert)
+    list.push({ type: "VisionIA", level: "Alerte", value: pt.visionia * 100, zone: pt.name });
+
+  return list;
+});
+
+// 🔹 Pondération globale du score de risque par priorité et fiabilité
+alerts = alerts.map(a => {
+  const zoneData = enriched.find(z => z.name === a.zone);
+  const reliability = zoneData?.reliability ?? 1;
+  const prio = zoneData?.prio === "high" ? 1.15 : zoneData?.prio === "med" ? 1.05 : 1;
+  const weighted = +(a.value * reliability * prio).toFixed(2);
+  return { ...a, weighted };
+});
+
+await addEngineLog(`[Floreffe] ⚡ ${alerts.length} alertes générées et pondérées`, "success", "floreffe");
+  
 await addEngineLog("🕓 Temporisation avant Phase 5 (Fusion/Export)", "info", "floreffe");
 await sleep(120000);
 
