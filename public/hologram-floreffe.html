@@ -43,6 +43,49 @@
       pointer-events:none;
       opacity:0.25;
     }
+    // ==========================================================
+// 🧠 Réception IA J.E.A.N. – pré-alerte locale
+// ==========================================================
+let banner;
+function showJeanMessage(text){
+  if(!banner){
+    banner=document.createElement("div");
+    banner.style.position="absolute";
+    banner.style.top="10px";
+    banner.style.right="10px";
+    banner.style.padding="10px 15px";
+    banner.style.background="rgba(0,255,180,0.1)";
+    banner.style.border="1px solid #00ff99";
+    banner.style.borderRadius="8px";
+    banner.style.color="#8fe1ff";
+    banner.style.fontSize="1em";
+    banner.style.fontFamily="Segoe UI";
+    banner.style.zIndex="50";
+    document.body.appendChild(banner);
+  }
+  banner.textContent="🧠 IA J.E.A.N. : "+text;
+  banner.style.opacity="1";
+  if(window.speechSynthesis){
+    const utter=new SpeechSynthesisUtterance(text);
+    utter.lang="fr-FR";
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+  }
+  setTimeout(()=>{banner.style.transition="opacity 2s";banner.style.opacity="0";},12000);
+}
+
+// Branche sur le WebSocket existant
+if(ws){
+  const oldHandler=ws.onmessage;
+  ws.onmessage=(msg)=>{
+    try{
+      const obj=JSON.parse(msg.data);
+      if(obj.type==="jean_message") showJeanMessage(obj.text);
+      else if(oldHandler) oldHandler(msg);
+    }catch(e){console.warn(e.message);}
+  };
+}
+  
   </style>
 </head>
 <body>
