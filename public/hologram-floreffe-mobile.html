@@ -1,131 +1,62 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>🌍 TINSFLASH – Dôme Floreffe Mobile</title>
-  <style>
-    html, body { margin:0; padding:0; overflow:hidden; background:black; height:100%; }
-    canvas { display:block; width:100%; height:100%; touch-action:none; }
-    #hud {
-      position:absolute; top:8px; left:8px;
-      background:rgba(0,0,0,0.6); color:#0ff;
-      padding:6px 10px; border-radius:8px;
-      font-family:monospace; font-size:13px;
-      z-index:10;
-    }
-    #castBtn {
-      position:absolute; bottom:15px; right:15px;
-      background:rgba(0,255,255,0.15);
-      border:1px solid #0ff; border-radius:50%;
-      color:#0ff; font-size:22px;
-      width:50px; height:50px; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      z-index:10;
-    }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>📱 Dôme Floreffe Mobile</title>
+<style>
+body{margin:0;background:black;color:#8fe1ff;font-family:Segoe UI;text-align:center}
+#scene{width:100%;height:65vh}
+#info{padding:10px;font-size:0.9em;color:#8fe1ff}
+canvas.radarCanvas{position:absolute;top:0;left:0;width:100%;height:100%;opacity:.25;z-index:0}
+button{background:#003;padding:8px 16px;margin:6px;border:1px solid #0ff;color:#8fe1ff;border-radius:8px}
+</style>
 </head>
 <body>
-  <div id="hud">Initialisation du dôme holographique…</div>
-  <div id="castBtn">📺</div>
-
-  <script type="module">
-    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161/build/three.module.js";
-    import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.161/examples/jsm/controls/OrbitControls.js";
-
-    const hud = document.getElementById("hud");
-    const forecastsURL = "./floreffe_forecasts.json";
-    const alertsURL = "./floreffe_alerts.json";
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
-    camera.position.set(0, 60, 220);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(innerWidth, innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.enableZoom = true;
-    controls.enablePan = false;
-
-    const amb = new THREE.AmbientLight(0x88ffff, 1.0);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-    dir.position.set(0, 100, 100);
-    scene.add(amb, dir);
-
-    const globeGeo = new THREE.SphereGeometry(80, 64, 64);
-    const globeMat = new THREE.MeshPhongMaterial({ color:0x004466, emissive:0x002233, shininess:20 });
-    const globe = new THREE.Mesh(globeGeo, globeMat);
-    scene.add(globe);
-
-    const alertGroup = new THREE.Group();
-    scene.add(alertGroup);
-
-    async function loadData() {
-      try {
-        hud.textContent = "Chargement des prévisions Floreffe…";
-        const forecasts = await (await fetch(forecastsURL)).json();
-        const alerts = await (await fetch(alertsURL)).json();
-
-        hud.textContent = `Prévisions: ${forecasts?.zones?.length ?? 0} pts · Alertes: ${alerts?.alerts?.length ?? 0}`;
-
-        for (const z of forecasts?.zones ?? []) {
-          const phi = (90 - (z.lat || 50.4)) * Math.PI / 180;
-          const theta = (z.lon || 4.7) * Math.PI / 180;
-          const r = 80;
-          const x = r * Math.sin(phi) * Math.cos(theta);
-          const y = r * Math.cos(phi);
-          const zz = r * Math.sin(phi) * Math.sin(theta);
-          const color = (z.precipitation > 20) ? 0x00ffff : 0x00ff88;
-          const sphere = new THREE.Mesh(
-            new THREE.SphereGeometry(1.5, 8, 8),
-            new THREE.MeshBasicMaterial({ color })
-          );
-          sphere.position.set(x, y, zz);
-          scene.add(sphere);
-        }
-
-        for (const a of alerts?.alerts ?? []) {
-          const torus = new THREE.Mesh(
-            new THREE.TorusGeometry(2.5, 0.4, 8, 16),
-            new THREE.MeshBasicMaterial({ color:0xff0000 })
-          );
-          torus.position.set(Math.random()*100-50, Math.random()*80-40, Math.random()*100-50);
-          alertGroup.add(torus);
-        }
-
-      } catch (e) {
-        hud.textContent = "❌ Erreur : " + e.message;
-      }
-    }
-
-    loadData();
-
-    function animate() {
-      requestAnimationFrame(animate);
-      globe.rotation.y += 0.001;
-      alertGroup.rotation.y -= 0.002;
-      controls.update();
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    const castBtn = document.getElementById("castBtn");
-    castBtn.onclick = () => {
-      if (document.pictureInPictureEnabled && !document.pictureInPictureElement) {
-        renderer.domElement.requestPictureInPicture().catch(()=>{});
-      } else if (document.pictureInPictureElement) {
-        document.exitPictureInPicture().catch(()=>{});
-      }
-    };
-
-    window.addEventListener("resize", () => {
-      camera.aspect = innerWidth/innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth, innerHeight);
-    });
-  </script>
-</body>
-</html>
+<h3>🌍 Dôme Floreffe Mobile</h3>
+<div id="scene"></div>
+<canvas id="radarCanvas" class="radarCanvas"></canvas>
+<div id="info">Chargement du radar continental...</div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+const scene=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(45,innerWidth/(innerHeight*0.65),0.1,5000);
+cam.position.set(0,100,300);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight*0.65);
+document.getElementById("scene").appendChild(renderer.domElement);
+const g=new THREE.Group();scene.add(g);
+(async()=>{
+ const a=await (await fetch("./floreffe_altitudes_hr.json")).json();
+ const geom=new THREE.BufferGeometry();
+ const verts=[],cols=[];
+ const cLow=new THREE.Color(0x0020aa),cHigh=new THREE.Color(0xffffff);
+ a.forEach(p=>{
+  const x=p.lon*600-2800,y=p.alt*1.5,z=-p.lat*600+30500;
+  verts.push(x,y,z);
+  const c=cLow.clone().lerp(cHigh,Math.min(1,p.alt/250));
+  cols.push(c.r,c.g,c.b);
+ });
+ geom.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
+ geom.setAttribute("color",new THREE.Float32BufferAttribute(cols,3));
+ const ptsMat=new THREE.PointsMaterial({size:2,vertexColors:true});
+ g.add(new THREE.Points(geom,ptsMat));
+ renderer.render(scene,cam);
+})();
+const radarCanvas=document.getElementById("radarCanvas"),ctx=radarCanvas.getContext("2d");
+radarCanvas.width=innerWidth;radarCanvas.height=innerHeight;
+async function drawRadar(){
+ try{
+  const r=await (await fetch("./floreffe_radar.json?"+Date.now())).json();
+  ctx.clearRect(0,0,radarCanvas.width,radarCanvas.height);
+  for(const f of r.fronts){
+    const x=(f.lon+5)*80,y=(52-f.lat)*80;
+    ctx.fillStyle=`rgba(0,255,255,${0.25+Math.random()*0.25})`;
+    ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();
+  }
+  document.getElementById("info").innerText="Radar mis à jour : "+new Date().toLocaleTimeString();
+ }catch(e){console.warn(e.message);}
+ setTimeout(drawRadar,600000);
+}
+drawRadar();
+</script>
+</body></html>
