@@ -9,13 +9,25 @@ export function correlateTopoHydro(point, { geo, hydro, reseaux, routes, liveHyd
   try {
     const { lat, lon, precipitation, temperature } = point;
 
+    // 🛡 Sécurisation des entrées
+    if (!lat || !lon) throw new Error("Coordonnées invalides");
+    if (!geo || !Array.isArray(geo.features)) {
+      console.warn("⚠️ correlateTopoHydro: GeoJSON vide ou invalide, utilisation valeurs par défaut");
+      geo = { features: [] };
+    }
+    if (!hydro) hydro = { rivieres: [] };
+    if (!reseaux) reseaux = { collecteurs: [] };
+    if (!routes) routes = { routes: [] };
+
     // --- Relief & pente ---
     const slope = getSlopeAtLocation(lat, lon, geo);
     const permeability = getPermeabilityAtLocation(lat, lon, geo);
     const urbanDensity = getUrbanDensityAtLocation(lat, lon, geo);
 
     // --- Risques hydrologiques (Sambre + Wéry + autres) ---
-    const { riverLevel, riverFlow, hydroRisk } = getHydroRiskAtLocation(lat, lon, precipitation, hydro, liveHydro);
+    const { riverLevel, riverFlow, hydroRisk } = getHydroRiskAtLocation(
+      lat, lon, precipitation, hydro, liveHydro
+    );
 
     // --- Réseaux pluviaux (SPGE / bassins d’orage) ---
     const networkRisk = getNetworkRisk(precipitation, reseaux);
@@ -43,10 +55,17 @@ export function correlateTopoHydro(point, { geo, hydro, reseaux, routes, liveHyd
     };
 
   } catch (err) {
-    console.error("Erreur correlateTopoHydro:", err.message);
+    console.error("❌ Erreur correlateTopoHydro:", err.message);
     return {
-      slope: 0, hydroRisk: 0, roadRisk: 0, networkRisk: 0,
-      riverLevel: 0, riverFlow: 0, permeability: 0, urbanDensity: 0, scoreGlobal: 0
+      slope: 0,
+      hydroRisk: 0,
+      roadRisk: 0,
+      networkRisk: 0,
+      riverLevel: 0,
+      riverFlow: 0,
+      permeability: 0,
+      urbanDensity: 0,
+      scoreGlobal: 0
     };
   }
 }
@@ -57,16 +76,19 @@ export function correlateTopoHydro(point, { geo, hydro, reseaux, routes, liveHyd
 function getSlopeAtLocation(lat, lon, geo) {
   let slope = 3;
   if (geo?.features?.length) {
-    const f = geo.features.find(f => f.geometry?.coordinates &&
+    const f = geo.features.find(f =>
+      f.geometry?.coordinates &&
       Math.abs(f.geometry.coordinates[1] - lat) < 0.001 &&
-      Math.abs(f.geometry.coordinates[0] - lon) < 0.001);
+      Math.abs(f.geometry.coordinates[0] - lon) < 0.001
+    );
     slope = f?.properties?.slope_avg ?? 3;
   }
   return slope;
 }
 
 function getPermeabilityAtLocation(lat, lon, geo) {
-  const f = geo.features?.find(f => f.properties?.soil_type);
+  if (!geo?.features?.length) return 0.4;
+  const f = geo.features.find(f => f.properties?.soil_type);
   const type = f?.properties?.soil_type ?? "unknown";
   if (type === "argileux") return 0.2;
   if (type === "limoneux") return 0.5;
@@ -75,20 +97,22 @@ function getPermeabilityAtLocation(lat, lon, geo) {
 }
 
 function getUrbanDensityAtLocation(lat, lon, geo) {
-  const f = geo.features?.find(f => f.properties?.urban_density);
+  if (!geo?.features?.length) return 0.4;
+  const f = geo.features.find(f => f.properties?.urban_density);
   return +(f?.properties?.urban_density ?? 0.4);
 }
 
 function getHydroRiskAtLocation(lat, lon, precip, hydro, liveHydro) {
-  const allHydro = liveHydro?.stations?.length ? liveHydro.stations : hydro.rivieres;
+  const allHydro = liveHydro?.stations?.length ? liveHydro.stations : hydro?.rivieres ?? [];
   let riverLevel = 0, riverFlow = 0, risk = 0;
   for (const r of allHydro) {
+    if (!r?.lat || !r?.lon) continue;
     const dist = Math.hypot(r.lat - lat, r.lon - lon);
     if (dist < 0.02) {
       riverLevel = r.niveau_m ?? 0;
       riverFlow = r.debit_m3s ?? 0;
       if (r.nom?.toLowerCase().includes("sambre")) risk += 2;
-      if (r.nom?.toLowerCase().includes("wéry")) risk += 3; // ⚠️ ruisseau du Wéry : ruissellement rapide
+      if (r.nom?.toLowerCase().includes("wéry")) risk += 3; // ⚠️ Ruisseau du Wéry : ruissellement rapide
       if (precip > 8) risk += 2;
       if (riverLevel > (r.alert_threshold ?? 0.5)) risk += 2;
     }
@@ -98,7 +122,7 @@ function getHydroRiskAtLocation(lat, lon, precip, hydro, liveHydro) {
 
 function getNetworkRisk(precip, reseaux) {
   let risk = 0;
-  for (const c of reseaux.collecteurs) {
+  for (const c of reseaux?.collecteurs ?? []) {
     if (c.status === "bassin_orage" && precip > 12) risk += 2;
     if (c.type === "unitaire" && precip > 10) risk += 1;
   }
@@ -107,7 +131,7 @@ function getNetworkRisk(precip, reseaux) {
 
 function getRoadRisk(lat, lon, temp, precip, routes) {
   let risk = 0;
-  for (const r of routes.routes) {
+  for (const r of routes?.routes ?? []) {
     if (r.risk === "verglas" && temp < 0) risk += 2;
     if (r.risk === "inondation" && precip > 8) risk += 2;
     if (r.risk === "ruissellement" && precip > 10) risk += 1;
