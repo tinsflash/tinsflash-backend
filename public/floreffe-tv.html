@@ -1,91 +1,286 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="robots" content="noindex,nofollow" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>TINSFLASH • Floreffe TV</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌍 TINSFLASH PRO+++ — Dôme Floreffe IA J.E.A.N. (TV)</title>
 <style>
-body{margin:0;background:#0a1224;color:#cde8ff;font-family:"Segoe UI",sans-serif;overflow:hidden;}
-header{text-align:center;background:linear-gradient(90deg,#051021,#15335c);color:#4fc3f7;font-size:2em;font-weight:bold;padding:10px;text-shadow:0 0 20px #4fc3f7;}
-#container{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto;gap:10px;padding:10px;height:calc(100vh - 60px);}
-.box{background:#101a33;border-radius:10px;padding:10px;box-shadow:0 0 20px rgba(0,0,0,.4);}
-#summary{grid-column:span 2;text-align:center;font-size:1.4em;background:#14294e;}
-#map{height:100%;border-radius:10px;}
-#alerts{overflow-y:auto;font-size:1em;}
-.alert{margin-bottom:6px;padding:8px;border-radius:6px;}
-.alert.red{background:#3a1111;color:#ffbaba;}
-.alert.orange{background:#3a2a11;color:#ffe9a0;}
-.alert.grey{background:#2a2a2a;color:#ccc;}
-iframe{width:100%;height:100%;border:none;border-radius:10px;}
-footer{text-align:center;font-size:.9em;color:#7dd3fc;background:#081021;padding:6px;}
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 60%, #000a00 0%, #000 80%);
+    color: #8fe1ff;
+    font-family: 'Segoe UI', sans-serif;
+    height: 100%;
+  }
+  #overlayUI {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 15;
+    color: #8fe1ff;
+  }
+  #overlayUI h2 {
+    margin: 0;
+    font-size: 1.2em;
+    color: #00c3ff;
+    text-shadow: 0 0 8px #00c3ff;
+  }
+  .btn {
+    background: rgba(0,255,255,0.08);
+    border: 1px solid #00c3ff;
+    color: #8fe1ff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-right: 6px;
+    cursor: pointer;
+  }
+  .btn.active {
+    background: #00c3ff;
+    color: black;
+    font-weight: bold;
+  }
+  #radarContainer {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 420px;
+    height: 420px;
+    border: 2px solid #00ff99;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,255,128,0.3);
+    z-index: 10;
+  }
+  #statusBar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0,30,0,0.8);
+    color: #8fe1ff;
+    font-size: 0.9em;
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0,255,128,0.2);
+  }
+  #statusIA {
+    font-weight: bold;
+    color: #00ff99;
+  }
+  #voiceLog {
+    position: absolute;
+    bottom: 60px;
+    left: 10px;
+    width: 450px;
+    background: rgba(0,0,0,0.4);
+    border-left: 4px solid #00ff99;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.9em;
+  }
 </style>
 </head>
 <body>
-<header>🌍 TINSFLASH – Dôme Floreffe (Mode TV)</header>
 
-<div id="container">
-  <div id="summary" class="box">Chargement des données...</div>
-  <div id="map" class="box"></div>
-  <div id="alerts" class="box">Chargement des alertes...</div>
-  <iframe src="hologram-floreffe.html" class="box"></iframe>
+<div id="overlayUI">
+  <h2>🌍 Dôme Floreffe — Météo & Alertes IA J.E.A.N.</h2>
+  <button id="btnPause" class="btn">Pause rotation</button>
+  <button id="btnReset" class="btn">Reset</button>
+  <button id="btnZoom" class="btn">Zoom +</button>
+  <button id="btnUnzoom" class="btn">Zoom −</button>
+  <span id="statusIA">🟢 Statut IA : actif</span>
 </div>
 
-<footer>🛰 IA J.E.A.N. – Données réelles Floreffe • Actualisation automatique toutes les 15 min</footer>
+<div id="radarContainer">
+  <iframe
+    src="https://www.rainviewer.com/map.html?loc=50.44,4.74,7&oFa=0&oC=1&oU=1&oCS=1&oF=1&oAP=1&c=1&o=0&lm=1&layer=radar&sm=1"
+    width="100%"
+    height="100%"
+    frameborder="0"
+    style="border:0;">
+  </iframe>
+</div>
 
-<script>
+<div id="voiceLog">🧠 J.E.A.N. prêt. Surveillance météo active sur Floreffe.</div>
+<div id="statusBar">
+  <span>🌦 Température : <span id="tempNow">-- °C</span> | 💨 Vent : <span id="windNow">-- km/h</span> | 💧 Humidité : <span id="humNow">-- %</span></span>
+  <span id="timeNow"></span>
+</div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x001a00, 200, 1200);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 5000);
+camera.position.set(0, 150, 500);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+controls.rotateSpeed = 0.6;
+
+const light = new THREE.DirectionalLight(0x99ffcc,1.2);
+light.position.set(1,1,1);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x102020));
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(2000,2000),
+  new THREE.MeshPhongMaterial({color:0x001a00,opacity:0.5,transparent:true})
+);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+const reliefGroup = new THREE.Group();
+const overlayGroup = new THREE.Group();
+scene.add(reliefGroup);
+scene.add(overlayGroup);
+
+// === Boussole et noms villages ===
+const compass = new THREE.Group();
+const loader = new THREE.FontLoader();
+loader.load("https://threejs.org/examples/fonts/helvetiker_regular.typeface.json", (font) => {
+  const dirs = [["N",0,0,-400],["S",0,0,400],["E",400,0,0],["O",-400,0,0]];
+  dirs.forEach(([txt,x,y,z])=>{
+    const geo = new THREE.TextGeometry(txt,{font,size:20,height:1});
+    const mat = new THREE.MeshBasicMaterial({color:0x00ff99});
+    const mesh = new THREE.Mesh(geo,mat);
+    mesh.position.set(x,y,z);
+    compass.add(mesh);
+  });
+  const villages=[["Floreffe",0,0,0],["Floriffoux",-150,0,80],["Soye",100,0,120],["Franière",0,0,180]];
+  villages.forEach(([txt,x,y,z])=>{
+    const geo = new THREE.TextGeometry(txt,{font,size:12,height:0.5});
+    const mat = new THREE.MeshBasicMaterial({color:0x8fe1ff});
+    const mesh = new THREE.Mesh(geo,mat);
+    mesh.position.set(x,y,z);
+    compass.add(mesh);
+  });
+});
+scene.add(compass);
+
+// === Chargement relief & prévisions ===
 async function loadData(){
- try{
-  const forecasts=await fetch("floreffe_forecasts.json?"+Date.now()).then(r=>r.json());
-  const alerts=await fetch("floreffe_alerts.json?"+Date.now()).then(r=>r.json());
-  renderSummary(forecasts.zones||[]);
-  renderMap(forecasts.zones||[],alerts||[]);
-  renderAlerts(alerts||[]);
- }catch(e){console.error(e);}
+  try{
+    const altitudes = await (await fetch("./floreffe_altitudes_hr.json")).json();
+    const forecasts = await (await fetch("./floreffe_forecasts.json")).json();
+    buildRelief(altitudes,forecasts);
+  }catch(err){ console.error(err); }
 }
 
-function renderSummary(zones){
- const avg=(arr,k)=>arr.length?arr.reduce((a,b)=>a+(b[k]??0),0)/arr.length:0;
- const t=avg(zones,"temperature").toFixed(1);
- const p=avg(zones,"precipitation").toFixed(1);
- const w=avg(zones,"wind").toFixed(1);
- const r=(avg(zones,"reliability")*100).toFixed(0);
- document.getElementById("summary").innerHTML=
- `<b>Commune de Floreffe</b> – 🌡 ${t}°C • 💧 ${p} mm/h • 🌬 ${w} km/h<br>Fiabilité IA : ${r}% – Points actifs : ${zones.length}/60`;
+function buildRelief(altitudes,forecasts){
+  const geom=new THREE.BufferGeometry();
+  const vertices=[],colors=[];
+  const cLow=new THREE.Color(0x0020aa), cHigh=new THREE.Color(0xffffff);
+  altitudes.forEach(p=>{
+    const x=p.lon*600-2800,y=p.alt*1.5,z=-p.lat*600+30500;
+    vertices.push(x,y,z);
+    const c=cLow.clone().lerp(cHigh,Math.min(1,p.alt/250));
+    colors.push(c.r,c.g,c.b);
+  });
+  geom.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));
+  geom.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
+  const mat=new THREE.PointsMaterial({size:2.1,vertexColors:true});
+  reliefGroup.add(new THREE.Points(geom,mat));
+
+  if(forecasts?.zones?.length){
+    forecasts.zones.forEach(z=>{
+      const col=z.precipitation>10?0x00ffff:0x0099ff;
+      const s=new THREE.Mesh(
+        new THREE.SphereGeometry(2,8,8),
+        new THREE.MeshBasicMaterial({color:col})
+      );
+      s.position.set(z.lon*600-2800,z.alt??120,-z.lat*600+30500);
+      overlayGroup.add(s);
+    });
+  }
 }
 
-function renderMap(zones,alerts){
- const map=L.map("map",{zoomControl:false,attributionControl:false}).setView([50.44,4.76],12);
- L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(map);
- (zones||[]).forEach(z=>{
-  const m=L.circleMarker([z.lat,z.lon],{radius:5,color:"#3b82f6"}).addTo(map);
-  m.bindPopup(`<b>${z.name}</b><br>🌡 ${z.temperature?.toFixed(1)}°C<br>💧 ${z.precipitation?.toFixed(1)} mm/h<br>Fiabilité ${(z.reliability*100).toFixed(0)}%`);
- });
- (alerts||[]).forEach(a=>{
-  const r=a.reliability??a.confidence??0.8;
-  let color="#9ca3af";if(r>=0.9)color="#ef4444";else if(r>=0.7)color="#f59e0b";
-  L.circleMarker([a.lat,a.lon],{radius:7,color}).addTo(map);
- });
+// === Animation radar et rotation ===
+let rotating=true;
+function animate(){
+  requestAnimationFrame(animate);
+  if(rotating){
+    reliefGroup.rotation.y+=0.0006;
+    overlayGroup.rotation.y+=0.0006;
+    compass.rotation.y+=0.0006;
+  }
+  controls.update();
+  renderer.render(scene,camera);
+}
+animate();
+
+// === Contrôles ===
+document.getElementById("btnPause").onclick=()=>{rotating=!rotating};
+document.getElementById("btnReset").onclick=()=>{camera.position.set(0,150,500)};
+document.getElementById("btnZoom").onclick=()=>{camera.position.z-=50};
+document.getElementById("btnUnzoom").onclick=()=>{camera.position.z+=50};
+
+// === Données météo et voix ===
+async function updateMeteo(){
+  try{
+    const res=await fetch("/api/forecast/floreffe");
+    const js=await res.json();
+    if(js?.data?.data?.length){
+      const p=js.data.data[0];
+      document.getElementById("tempNow").innerText=`${p.temperature??"--"} °C`;
+      document.getElementById("windNow").innerText=`${p.wind??"--"} km/h`;
+      document.getElementById("humNow").innerText=`${p.humidity??"--"} %`;
+    }
+  }catch{}
+}
+setInterval(updateMeteo,600000);
+updateMeteo();
+
+// === Voix masculine française IA ===
+function speak(txt){
+  try{
+    const s=new SpeechSynthesisUtterance(txt);
+    s.lang="fr-FR";
+    s.voice=speechSynthesis.getVoices().find(v=>v.lang==="fr-FR"&&v.name.includes("Thomas"))||null;
+    speechSynthesis.speak(s);
+  }catch{}
+}
+function logVoice(txt){
+  const v=document.getElementById("voiceLog");
+  const lines=v.innerHTML.split("<br>").slice(-4);
+  lines.push("🧠 "+txt);
+  v.innerHTML=lines.join("<br>");
+  speak(txt);
 }
 
-function renderAlerts(list){
- const c=document.getElementById("alerts");c.innerHTML="";
- if(!list.length){c.innerHTML="<div>Aucune alerte active</div>";return;}
- list.forEach(a=>{
-  const r=a.reliability??a.confidence??0.8;
-  let cls="grey";if(r>=0.9)cls="red";else if(r>=0.7)cls="orange";
-  const d=document.createElement("div");
-  d.className=`alert ${cls}`;
-  d.innerHTML=`<b>${a.type}</b> – ${a.zone||""}<br>${a.description||""}<br>Confiance ${(r*100).toFixed(0)}%`;
-  c.appendChild(d);
- });
-}
+// === IA monitoring via WebSocket ===
+const ws=new WebSocket(`wss://${location.host}/ws/hologram`);
+ws.onmessage=(m)=>{
+  try{
+    const data=JSON.parse(m.data);
+    if(data.type==="alert"&&data.message){
+      logVoice(data.message);
+      document.getElementById("statusIA").innerText="🟠 Alerte IA détectée";
+    }
+  }catch{}
+};
 
-// refresh automatique
+// === Horloge ===
+function updateClock(){
+  const d=new Date();
+  document.getElementById("timeNow").innerText=d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+}
+setInterval(updateClock,1000);
+updateClock();
+
 loadData();
-setInterval(loadData,15*60*1000);
 </script>
 </body>
 </html>
