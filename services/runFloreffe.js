@@ -765,14 +765,25 @@ try {
 
   await fs.promises.writeFile(
     path.join(publicDir, "floreffe_alerts_readable.json"),
-    JSON.stringify({ generated: new Date().toISOString(), alerts: exportAlertsReadable }, null, 2)
+    JSON.stringify(
+      { generated: new Date().toISOString(), alerts: exportAlertsReadable },
+      null,
+      2
+    )
   );
-  await addEngineLog("✅ Version readable exportée (floreffe_alerts_readable.json)", "success", "floreffe");
-}
-} catch (err) {
-  await addEngineError(`[Floreffe] ❌ Échec écriture fichiers publics : ${err.message}`, "floreffe");
-}
 
+  await addEngineLog(
+    "✅ Version readable exportée (floreffe_alerts_readable.json)",
+    "success",
+    "floreffe"
+  );
+
+} catch (err) {
+  await addEngineError(
+    `[Floreffe] ❌ Échec écriture fichiers publics : ${err.message}`,
+    "floreffe"
+  );
+}
 // --- 5.7 Fermeture propre Mongo ---
 try {
   if (mongoose.connection.readyState === 1) {
