@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🌍 Dôme Floreffe — Carte holographique 4D IA J.E.A.N.</title>
+  <title>🌍 Dôme Floreffe — Radar IA J.E.A.N.</title>
   <style>
     body {
       margin: 0;
@@ -14,12 +14,11 @@
     }
     #menu {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 10px; left: 10px;
       z-index: 10;
     }
     button {
-      background: rgba(0, 255, 255, 0.1);
+      background: rgba(0,255,255,0.1);
       color: #8fe1ff;
       border: 1px solid #00c3ff;
       border-radius: 6px;
@@ -27,188 +26,143 @@
       margin-right: 6px;
       cursor: pointer;
     }
-    button.active {
-      background: #00c3ff;
-      color: black;
-      font-weight: bold;
-    }
+    button.active { background:#00c3ff; color:black; font-weight:bold; }
     #loader {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
       color: #00c3ff;
       font-size: 1.2em;
       text-shadow: 0 0 10px #00c3ff;
+    }
+    canvas.radarCanvas {
+      position: fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      z-index:0;
+      pointer-events:none;
+      opacity:0.25;
     }
   </style>
 </head>
 <body>
   <div id="menu">
-    🌍 <b>Dôme Floreffe — Carte holographique + radar IA J.E.A.N.</b><br />
+    🌍 <b>Dôme Floreffe — Radar + Hologramme IA J.E.A.N.</b><br />
     <button id="btnRelief" class="active">Relief HR</button>
-    <button id="btnContours" class="active">Courbes</button>
-    <button id="btn45">Vue 45°</button>
-    <button id="btnSat">Sat On/Off</button>
+    <button id="btnRadar" class="active">Radar</button>
     <button id="btnIA">IA J.E.A.N.</button>
   </div>
   <div id="loader">Chargement du dôme holographique...</div>
+  <canvas id="radarCanvas" class="radarCanvas"></canvas>
 
   <script type="module">
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
     import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
-    import { addContourLines } from "./js/addContourLines.js";
 
+    // === Initialisation Three.js ===
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
-    camera.position.set(0, 150, 400);
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 5000);
+    camera.position.set(0,150,400);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.1;
-    controls.rotateSpeed = 0.6;
+    const controls = new OrbitControls(camera,renderer.domElement);
+    controls.enableDamping=true; controls.dampingFactor=0.1;
 
-    // === Lumières ===
-    const light = new THREE.DirectionalLight(0x99ffcc, 1.2);
-    light.position.set(1, 1, 1);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0x102020));
+    // Lumières
+    const light=new THREE.DirectionalLight(0x99ffcc,1.2); light.position.set(1,1,1);
+    scene.add(light); scene.add(new THREE.AmbientLight(0x102020));
 
-    // === Sol lumineux ===
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(2000, 2000),
-      new THREE.MeshPhongMaterial({ color: 0x001a00, opacity: 0.5, transparent: true })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    scene.add(ground);
+    // Groupes
+    const reliefGroup=new THREE.Group();
+    const overlayGroup=new THREE.Group();
+    scene.add(reliefGroup, overlayGroup);
 
-    // === Groupes principaux ===
-    const reliefGroup = new THREE.Group();
-    const overlayGroup = new THREE.Group();
-    const radarGroup = new THREE.Group();
-    scene.add(reliefGroup);
-    scene.add(overlayGroup);
-    scene.add(radarGroup);
+    // Loader UI
+    const loaderText=document.getElementById("loader");
 
-    const loaderText = document.getElementById("loader");
-    const btnRelief = document.getElementById("btnRelief");
-    const btnContours = document.getElementById("btnContours");
-    const btn45 = document.getElementById("btn45");
-    const btnSat = document.getElementById("btnSat");
-    const btnIA = document.getElementById("btnIA");
-
-    // === Chargement JSON ===
-    async function loadData() {
-      try {
-        const altitudes = await (await fetch("./floreffe_altitudes_hr.json")).json();
-        const forecasts = await (await fetch("./floreffe_forecasts.json")).json();
-        loaderText.innerText = "Relief & météo chargés...";
-        buildRelief(altitudes, forecasts);
-      } catch (err) {
-        loaderText.innerText = "❌ Erreur de chargement : " + err.message;
+    // === Chargement des données ===
+    async function loadData(){
+      try{
+        const alt=await (await fetch("./floreffe_altitudes_hr.json")).json();
+        const forecasts=await (await fetch("./floreffe_forecasts.json")).json();
+        const radar=await (await fetch("./floreffe_radar.json")).json();
+        loaderText.innerText="Relief + radar + prévisions chargés...";
+        buildRelief(alt,forecasts,radar);
+      }catch(err){
+        loaderText.innerText="❌ Erreur : "+err.message;
         console.error(err);
       }
     }
 
-    function buildRelief(altitudes, forecasts) {
+    // === Construction relief + radar ===
+    function buildRelief(altitudes, forecasts, radar){
       loaderText.remove();
-
-      const geometry = new THREE.BufferGeometry();
-      const vertices = [];
-      const colors = [];
-      const colorLow = new THREE.Color(0x0020aa);
-      const colorHigh = new THREE.Color(0xffffff);
-
-      altitudes.forEach((p) => {
-        const x = p.lon * 600 - 2800;
-        const y = p.alt * 1.5;
-        const z = -p.lat * 600 + 30500;
-        vertices.push(x, y, z);
-        const color = colorLow.clone().lerp(colorHigh, Math.min(1, p.alt / 250));
-        colors.push(color.r, color.g, color.b);
+      // Relief
+      const geom=new THREE.BufferGeometry();
+      const verts=[], cols=[];
+      const cLow=new THREE.Color(0x0020aa), cHigh=new THREE.Color(0xffffff);
+      altitudes.forEach(p=>{
+        const x=p.lon*600-2800, y=p.alt*1.5, z=-p.lat*600+30500;
+        verts.push(x,y,z);
+        const c=cLow.clone().lerp(cHigh,Math.min(1,p.alt/250));
+        cols.push(c.r,c.g,c.b);
       });
+      geom.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
+      geom.setAttribute("color",new THREE.Float32BufferAttribute(cols,3));
+      const ptsMat=new THREE.PointsMaterial({size:2.2,vertexColors:true});
+      reliefGroup.add(new THREE.Points(geom,ptsMat));
 
-      geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-      geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-
-      const pointsMat = new THREE.PointsMaterial({ size: 2.0, vertexColors: true });
-      const points = new THREE.Points(geometry, pointsMat);
-      reliefGroup.add(points);
-
-      // === Grille Hunger Games ===
-      const lineMat = new THREE.LineBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.4 });
-      const lineGeom = new THREE.BufferGeometry();
-      const lineVerts = [];
-      for (let i = 0; i < vertices.length; i += 9) {
-        const x1 = vertices[i], y1 = vertices[i + 1], z1 = vertices[i + 2];
-        const x2 = vertices[i + 3], y2 = vertices[i + 4], z2 = vertices[i + 5];
-        const x3 = vertices[i + 6], y3 = vertices[i + 7], z3 = vertices[i + 8];
-        lineVerts.push(x1, y1, z1, x2, y2, z2, x2, y2, z2, x3, y3, z3);
+      // Overlay radar = halos d’impact
+      if(radar?.fronts){
+        radar.fronts.forEach(f=>{
+          const c=f.speed>35?0xff3333:0x00ff99;
+          const s=new THREE.Mesh(new THREE.SphereGeometry(4,12,12),
+            new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.4}));
+          s.position.set(f.lon*600-2800,120,-f.lat*600+30500);
+          overlayGroup.add(s);
+        });
       }
-      lineGeom.setAttribute("position", new THREE.Float32BufferAttribute(lineVerts, 3));
-      const gridLines = new THREE.LineSegments(lineGeom, lineMat);
-      reliefGroup.add(gridLines);
-
-      function pulseLines() {
-        const t = Date.now() * 0.002;
-        lineMat.opacity = 0.25 + 0.15 * Math.sin(t);
-        requestAnimationFrame(pulseLines);
-      }
-      pulseLines();
-
-      // === Halo radar ===
-      const radarGeom = new THREE.CircleGeometry(450, 64);
-      const radarMat = new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
-      const radar = new THREE.Mesh(radarGeom, radarMat);
-      radar.rotation.x = -Math.PI / 2;
-      radarGroup.add(radar);
-
-      function animateRadar() {
-        radar.rotation.z += 0.002;
-        radar.material.opacity = 0.05 + 0.03 * Math.sin(Date.now() * 0.002);
-        requestAnimationFrame(animateRadar);
-      }
-      animateRadar();
-
-      // === Ajout des courbes de niveau ===
-      addContourLines(scene, reliefGroup);
 
       animate();
     }
 
-    // === Animation principale ===
-    function animate() {
+    function animate(){
       requestAnimationFrame(animate);
-      reliefGroup.rotation.y += 0.0008;
-      overlayGroup.rotation.y += 0.0008;
+      reliefGroup.rotation.y+=0.0008;
+      overlayGroup.rotation.y+=0.0008;
       controls.update();
-      renderer.render(scene, camera);
+      renderer.render(scene,camera);
     }
 
-    // === Boutons ===
-    btnRelief.onclick = () => {
-      reliefGroup.visible = !reliefGroup.visible;
-      btnRelief.classList.toggle("active");
-    };
-    btnContours.onclick = () => {
-      scene.children.forEach(o => { if (o.type === "Group") o.visible = !o.visible; });
-      btnContours.classList.toggle("active");
-    };
-    btn45.onclick = () => { camera.position.set(200, 200, 200); camera.lookAt(0, 0, 0); };
-    btnSat.onclick = () => { scene.background = scene.background ? null : new THREE.Color(0x000000); btnSat.classList.toggle("active"); };
-    btnIA.onclick = () => { alert("🧠 IA J.E.A.N. : Analyse du relief tactique Floreffe en cours..."); };
+    // Radar 2D en fond
+    const radarCanvas=document.getElementById("radarCanvas");
+    const ctx=radarCanvas.getContext("2d");
+    radarCanvas.width=innerWidth; radarCanvas.height=innerHeight;
 
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+    async function drawRadar(){
+      try{
+        const data=await (await fetch("./floreffe_radar.json?"+Date.now())).json();
+        ctx.clearRect(0,0,radarCanvas.width,radarCanvas.height);
+        for(const f of data.fronts){
+          const x=(f.lon+5)*80, y=(52-f.lat)*80;
+          ctx.fillStyle=`rgba(0,255,180,${0.3+Math.random()*0.3})`;
+          ctx.beginPath(); ctx.arc(x,y,15,0,Math.PI*2); ctx.fill();
+        }
+      }catch(e){console.warn("Radar update fail",e.message);}
+      setTimeout(drawRadar,600000); // 10 min
+    }
+    drawRadar();
+
+    window.addEventListener("resize",()=>{
+      camera.aspect=innerWidth/innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(innerWidth,innerHeight);
+      radarCanvas.width=innerWidth; radarCanvas.height=innerHeight;
     });
 
-    scene.fog = new THREE.Fog(0x001a00, 200, 900);
     loadData();
   </script>
 </body>
