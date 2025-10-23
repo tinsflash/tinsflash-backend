@@ -133,13 +133,45 @@ if (dayOffset === 0) {
 let T = null, P = 0, W = null;
 
 // horaire
+// --- Horaire (normalisation multi-modèles) ---
 if (r.data?.hourly?.time?.length) {
+  const H = r.data.hourly;
+  
+// --- Vérification et correction Kelvin → °C ---
+if (T && T > 100) T = T - 273.15; // convertit si Kelvin
+if (W && W > 200) W = W / 3.6;    // sécurité si vent en m/s → km/h
+  
+  // 🔧 Normalisation des clés selon le modèle
+  const T_key =
+    H.temperature_2m ||
+    H.temperature ||
+    H["T2M"] ||
+    H["t_2m:C"] ||
+    [];
+  const P_key =
+    H.precipitation ||
+    H["PRECTOTCORR"] ||
+    H["precip"] ||
+    [];
+  const W_key =
+    H.wind_speed_10m ||
+    H["WS10M"] ||
+    [];
+
   const temps = r.data.hourly.time.map((t, i) => ({
     t,
-    temp: r.data.hourly.temperature_2m?.[i],
-    rain: r.data.hourly.precipitation?.[i],
-    wind: r.data.hourly.wind_speed_10m?.[i]
+    temp: Array.isArray(T_key) ? T_key[i] : null,
+    rain: Array.isArray(P_key) ? P_key[i] : null,
+    wind: Array.isArray(W_key) ? W_key[i] : null
   }));
+
+  const subset = temps.slice(0, 24 * (dayOffset + 1)).slice(-24); // moyenne sur 24h
+  if (subset.length) {
+    T = subset.reduce((s, e) => s + (e.temp ?? 0), 0) / subset.length;
+    P = subset.reduce((s, e) => s + (e.rain ?? 0), 0);
+    W = subset.reduce((s, e) => s + (e.wind ?? 0), 0) / subset.length;
+  }
+}
   const subset = temps.slice(0, 24 * (dayOffset + 1)).slice(-24); // moyenne sur 24 h du jour cible
   if (subset.length) {
     T = subset.reduce((s, e) => s + (e.temp ?? 0), 0) / subset.length;
