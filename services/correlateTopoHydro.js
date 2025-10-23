@@ -1,20 +1,18 @@
 // ==========================================================
 // 🌄 correlateTopoHydro.js — Analyse topographique et hydrologique locale
 // ==========================================================
-// ⚙️ Version Floreffe PRO+++
-// Lit les fichiers geo, hydro, reseaux, routes et calcule les risques
+// ⚙️ Version Floreffe PRO+++ (avec Alerte IA intégrée)
 // ==========================================================
 
-export function correlateTopoHydro(point, { geo, hydro, reseaux, routes, liveHydro }) {
+import { addEngineLog } from "./engineState.js"; // pour journal IA J.E.A.N.
+
+export async function correlateTopoHydro(point, { geo, hydro, reseaux, routes, liveHydro }) {
   try {
     const { lat, lon, precipitation, temperature } = point;
 
     // 🛡 Sécurisation des entrées
     if (!lat || !lon) throw new Error("Coordonnées invalides");
-    if (!geo || !Array.isArray(geo.features)) {
-      console.warn("⚠️ correlateTopoHydro: GeoJSON vide ou invalide, utilisation valeurs par défaut");
-      geo = { features: [] };
-    }
+    if (!geo || !Array.isArray(geo.features)) geo = { features: [] };
     if (!hydro) hydro = { rivieres: [] };
     if (!reseaux) reseaux = { collecteurs: [] };
     if (!routes) routes = { routes: [] };
@@ -41,6 +39,14 @@ export function correlateTopoHydro(point, { geo, hydro, reseaux, routes, liveHyd
       ((1 - permeability) * 2) + (urbanDensity * 2),
       20
     );
+
+    // 🚨 Alerte IA J.E.A.N.
+    if (scoreGlobal >= 15) {
+      await addEngineLog(
+        `🚨 [Alerte IA] Risque élevé détecté (${scoreGlobal.toFixed(1)}/20) — lat:${lat.toFixed(4)} lon:${lon.toFixed(4)}`,
+        "floreffe"
+      );
+    }
 
     return {
       slope,
@@ -112,7 +118,7 @@ function getHydroRiskAtLocation(lat, lon, precip, hydro, liveHydro) {
       riverLevel = r.niveau_m ?? 0;
       riverFlow = r.debit_m3s ?? 0;
       if (r.nom?.toLowerCase().includes("sambre")) risk += 2;
-      if (r.nom?.toLowerCase().includes("wéry")) risk += 3; // ⚠️ Ruisseau du Wéry : ruissellement rapide
+      if (r.nom?.toLowerCase().includes("wéry")) risk += 3;
       if (precip > 8) risk += 2;
       if (riverLevel > (r.alert_threshold ?? 0.5)) risk += 2;
     }
