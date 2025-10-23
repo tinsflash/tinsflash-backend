@@ -749,6 +749,51 @@ try {
   await fs.promises.writeFile(path.join(publicDir, "floreffe_forecasts.json"), JSON.stringify(exportForecasts, null, 2));
   await fs.promises.writeFile(path.join(publicDir, "floreffe_alerts.json"), JSON.stringify(exportAlerts, null, 2));
   await addEngineLog("✅ JSON publics générés", "success", "floreffe");
+  // ==========================================================
+// 🗂️ Export additionnel : version "readable" publique (alertes lisibles)
+// ==========================================================
+try {
+  const exportAlertsReadable = alerts.map(a => {
+    const zone = enriched.find(z => z.name === a.zone);
+    const { lat, lon } = zone || {};
+
+    let description = "";
+    switch (a.type) {
+      case "Pluie":
+        description = `Pluie ${a.level.toLowerCase()} (${a.value} mm/h)`; break;
+      case "Vent":
+        description = `Vent ${a.level.toLowerCase()} (${a.value} km/h)`; break;
+      case "Froid":
+        description = `Température basse (${a.value}°C)`; break;
+      case "Chaleur":
+        description = `Température élevée (${a.value}°C)`; break;
+      case "Humidité":
+        description = `Humidité ${a.value}%`; break;
+      case "VisionIA":
+        description = `Risque topographique/hydrologique élevé (${a.value}%)`; break;
+      default:
+        description = `${a.type} ${a.level}`;
+    }
+
+    return {
+      type: a.type,
+      level: a.level,
+      zone: a.zone,
+      description,
+      lat,
+      lon,
+      reliability: a.reliability,
+      prio: a.prio,
+      weighted: a.weighted
+    };
+  });
+
+  await fs.promises.writeFile(
+    path.join(publicDir, "floreffe_alerts_readable.json"),
+    JSON.stringify({ generated: new Date().toISOString(), alerts: exportAlertsReadable }, null, 2)
+  );
+  await addEngineLog("✅ Version readable exportée (floreffe_alerts_readable.json)", "success", "floreffe");
+}
 } catch (err) {
   await addEngineError(`[Floreffe] ❌ Échec écriture fichiers publics : ${err.message}`, "floreffe");
 }
