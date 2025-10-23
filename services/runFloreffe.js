@@ -178,7 +178,7 @@ if (W && W > 200) W = W / 3.6;    // sécurité si vent en m/s → km/h
     P = subset.reduce((s, e) => s + (e.rain ?? 0), 0);
     W = subset.reduce((s, e) => s + (e.wind ?? 0), 0) / subset.length;
   }
-}
+}}
 
 // daily
 if (r.data?.daily?.temperature_2m_max) {
