@@ -656,15 +656,18 @@ Retourne STRICTEMENT un tableau JSON.
 
   try {
     const ai = await aiClient.responses.create({
-      model: "gpt-5",
-      input: [
-        { role: "system", content: "IA météorologique et hydrologique TINSFLASH PRO+++" },
-        { role: "user", content: aiPrompt }
-      ],
-      temperature: 0.3,
-      max_output_tokens: 1500
-    });
-
+  model: "gpt-5",
+  input: [
+    { role: "system", content: "IA météorologique et hydrologique TINSFLASH PRO+++" },
+    { role: "user", content: aiPrompt }
+  ],
+  inference_params: {
+    temperature: 0.3,
+    max_output_tokens: 1500
+  }
+});
+await addEngineLog(`[Floreffe] 🔍 IA J.E.A.N. bloc ${index + 1}/${chunks.length} exécuté via responses.create()`, "info", "floreffe");
+ 
     const raw = ai.output?.[0]?.content?.[0]?.text?.trim() || "";
     const match = raw.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
     if (!match) throw new Error("Aucune structure JSON détectée");
