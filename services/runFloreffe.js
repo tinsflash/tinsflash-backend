@@ -129,114 +129,60 @@ if (dayOffset === 0) {
     if (m.headers) options.headers = m.headers;
     const r = await axios.get(m.url, { timeout: 15000, headers: m.headers || {} });
 
-// --- Extraction complète (horaire + daily) ---
-let T = null, P = 0, W = null;
+    // --- Extraction complète (horaire + daily) ---
+    let T = null, P = 0, W = null;
 
-// horaire
-// --- Horaire (normalisation multi-modèles) ---
-if (r.data?.hourly?.time?.length) {
-  const H = r.data.hourly;
-  
-// --- Vérification et correction Kelvin → °C ---
-if (T && T > 100) T = T - 273.15; // convertit si Kelvin
-if (W && W > 200) W = W / 3.6;    // sécurité si vent en m/s → km/h
-  
-  // 🔧 Normalisation des clés selon le modèle
-  const T_key =
-    H.temperature_2m ||
-    H.temperature ||
-    H["T2M"] ||
-    H["t_2m:C"] ||
-    [];
-  const P_key =
-    H.precipitation ||
-    H["PRECTOTCORR"] ||
-    H["precip"] ||
-    [];
-  const W_key =
-    H.wind_speed_10m ||
-    H["WS10M"] ||
-    [];
+    if (r.data?.hourly?.time?.length) {
+      const H = r.data.hourly;
 
-  const temps = r.data.hourly.time.map((t, i) => ({
-    t,
-    temp: Array.isArray(T_key) ? T_key[i] : null,
-    rain: Array.isArray(P_key) ? P_key[i] : null,
-    wind: Array.isArray(W_key) ? W_key[i] : null
-  }));
+      // --- Vérification et correction Kelvin → °C ---
+      if (T && T > 100) T = T - 273.15; // convertit si Kelvin
+      if (W && W > 200) W = W / 3.6;    // sécurité si vent en m/s → km/h
 
-  
+      const T_key = H.temperature_2m || H.temperature || H["T2M"] || H["t_2m:C"] || [];
+      const P_key = H.precipitation || H["PRECTOTCORR"] || H["precip"] || [];
+      const W_key = H.wind_speed_10m || H["WS10M"] || [];
 
-  const subset = temps.slice(0, 24 * (dayOffset + 1)).slice(-24); // moyenne sur 24 h du jour cible
-  if (subset.length) {
-    T = subset.reduce((s, e) => s + (e.temp ?? 0), 0) / subset.length;
-    P = subset.reduce((s, e) => s + (e.rain ?? 0), 0);
-    W = subset.reduce((s, e) => s + (e.wind ?? 0), 0) / subset.length;
-  }
+      const temps = r.data.hourly.time.map((t, i) => ({
+        t,
+        temp: Array.isArray(T_key) ? T_key[i] : null,
+        rain: Array.isArray(P_key) ? P_key[i] : null,
+        wind: Array.isArray(W_key) ? W_key[i] : null
+      }));
 
-// daily
-if (r.data?.daily?.temperature_2m_max) {
-  const i = Math.min(dayOffset, r.data.daily.temperature_2m_max.length - 1);
-  const tmax = r.data.daily.temperature_2m_max[i];
-  const tmin = r.data.daily.temperature_2m_min[i];
-  const pday = r.data.daily.precipitation_sum[i];
-  if (tmax != null && tmin != null) T = (tmax + tmin) / 2;
-  if (pday != null) P = Math.max(P, pday);
-}
+      const subset = temps.slice(0, 24 * (dayOffset + 1)).slice(-24);
+      if (subset.length) {
+        T = subset.reduce((s, e) => s + (e.temp ?? 0), 0) / subset.length;
+        P = subset.reduce((s, e) => s + (e.rain ?? 0), 0);
+        W = subset.reduce((s, e) => s + (e.wind ?? 0), 0) / subset.length;
+      }
+    }
 
-push({ source: m.name, temperature: T, precipitation: P, wind: W });// --- Fusion moyenne & fiabilité ---
-const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
-const valid = sources.filter((s) => s.temperature !== null);
-const reliability = +(valid.length / (models.length || 1)).toFixed(2);
+    if (r.data?.daily?.temperature_2m_max) {
+      const i = Math.min(dayOffset, r.data.daily.temperature_2m_max.length - 1);
+      const tmax = r.data.daily.temperature_2m_max[i];
+      const tmin = r.data.daily.temperature_2m_min[i];
+      const pday = r.data.daily.precipitation_sum[i];
+      if (tmax != null && tmin != null) T = (tmax + tmin) / 2;
+      if (pday != null) P = Math.max(P, pday);
+    }
 
-const merged = {
-  id: z.id,
-  name: z.name,
-  lat,
-  lon,
-  alt: z.alt ?? 100,
-  dayOffset,
-  temperature: avg(valid.map((s) => s.temperature)),
-  precipitation: avg(valid.map((s) => s.precipitation)),
-  wind: avg(valid.map((s) => s.wind)),
-  reliability,
-  sources: valid.map((s) => s.source),
-};
-
-// === Ajustements locaux ===
-let final = await applyLocalFactors(await applyGeoFactors(merged, lat, lon, country), lat, lon, country);
-
-// 🌬️ Modulation vent selon altitude
-if (final.alt && final.wind != null) {
-  if (final.alt > 150) final.wind = +(final.wind * 1.15).toFixed(1);
-  else if (final.alt < 90) final.wind = +(final.wind * 0.85).toFixed(1);
-}
-
-// 🌧️ Pluie réaliste
-if (final.precipitation != null) {
-  if (final.precipitation < 0.05) final.precipitation = 0;
-  final.precipitation = +final.precipitation.toFixed(2);
-}
-
-results.push(final);
-    // --- Log clair selon résultat ---
+    // Log succès / échec
     if (T !== null || P > 0 || W !== null) {
-      await addEngineLog(`✅ [${runType}] ${m.name} OK (T:${T ?? "?"}° P:${P ?? 0} mm W:${W ?? "?"} km/h)`,
-        "success",
-        "superForecast");
+      await addEngineLog(`✅ [${runType}] ${m.name} OK (T:${T ?? "?"}° P:${P ?? 0} mm W:${W ?? "?"} km/h)`, "success", "superForecast");
       push({ source: m.name, temperature: T, precipitation: P, wind: W });
     } else {
       await addEngineError(`⚠️ [${runType}] ${m.name} réponse vide ou incomplète`, "superForecast");
-        }
-    }}}}}}} catch (e) {
-    // 422 ou autres → échec clair
-    const msg = e.response?.status
-      ? `status ${e.response.status}`
-      : e.message;
+    }
+
+  } catch (e) {
+    const msg = e.response?.status ? `status ${e.response.status}` : e.message;
     await addEngineError(`❌ [${runType}] ${m.name} indisponible (${msg})`, "superForecast");
   }
+
   await sleep(2000);
 }
+
       const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const valid = sources.filter((s) => s.temperature !== null);
       const reliability = +(valid.length / (models.length || 1)).toFixed(2);
