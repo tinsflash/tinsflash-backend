@@ -793,7 +793,6 @@ try {
 } catch (err) {
   await addEngineError(`[Floreffe] ⚠️ Clôture : ${err.message}`, "floreffe");
 }
-}
 
 // =======================================================
 // ✅ EXPORT UNIVERSEL (compatible ESM + CommonJS + Render)
