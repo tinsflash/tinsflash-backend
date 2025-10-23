@@ -258,6 +258,64 @@ export function sendJeanMessage(text) {
 }
 
 // ==========================================================
+// 🧠 IA J.E.A.N. – Détection d’impact / pré-alerte locale
+// ==========================================================
+const ALERTS_PATH = path.join(process.cwd(), "public", "floreffe_alerts.json");
+const DOME_LAT = 50.44;
+const DOME_LON = 4.75;
+const IMPACT_RADIUS_KM = 20;
+
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function checkImpact() {
+  try {
+    const radar = JSON.parse(fs.readFileSync(RADAR_PATH, "utf8"));
+    const alerts = JSON.parse(fs.readFileSync(ALERTS_PATH, "utf8"));
+    let riskFront = false;
+
+    // vérifie distance radar
+    for (const f of radar.fronts || []) {
+      const d = distanceKm(DOME_LAT, DOME_LON, f.lat, f.lon);
+      if (d < IMPACT_RADIUS_KM) { riskFront = true; break; }
+    }
+
+    // vérifie alertes Phase 5
+    const localAlerts = (alerts.alerts || []).filter(a =>
+      /Floreffe/i.test(a.zone) &&
+      (a.level === "Pré-alerte" || a.level === "Alerte")
+    );
+
+    if (riskFront || localAlerts.length) {
+      const msg = riskFront
+        ? "Front pluvieux détecté à proximité du dôme"
+        : "Pré-alerte IA J.E.A.N. active sur Floreffe";
+      const payload = JSON.stringify({
+        type: "jean_message",
+        text: msg,
+        time: new Date().toISOString(),
+      });
+      clients.forEach(c => { if (c.readyState === 1) c.send(payload); });
+      console.log("🧠 IA J.E.A.N. broadcast:", msg);
+    }
+  } catch (e) {
+    console.warn("⚠️ IA J.E.A.N. checkImpact :", e.message);
+  }
+}
+
+// Vérifie toutes les 2 minutes
+setInterval(checkImpact, 120000);
+
+// ==========================================================
 // 🌦️ ROUTE API FORECAST – IA J.E.A.N.
 // ==========================================================
 app.get("/api/forecast", async (req, res) => {
