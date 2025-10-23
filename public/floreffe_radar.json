@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-10-23T19:30:12.000Z",
+  "fronts": [
+    {"lat":50.2,"lon":3.4,"dir":78,"speed":31},
+    {"lat":49.7,"lon":2.0,"dir":86,"speed":27}
+  ],
+  "source": "RainViewer + IA J.E.A.N."
+}
