@@ -220,6 +220,44 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 // ==========================================================
+// 🔁 EXTENSION — Radar & IA J.E.A.N. (broadcast automatique)
+// ==========================================================
+import fs from "fs";
+import path from "path";
+
+const RADAR_PATH = path.join(process.cwd(), "public", "floreffe_radar.json");
+let lastRadarMTime = 0;
+
+// 🔄 Vérifie toute les 60 s si le radar a changé et notifie les clients connectés
+setInterval(() => {
+  try {
+    const stats = fs.statSync(RADAR_PATH);
+    if (stats.mtimeMs > lastRadarMTime) {
+      lastRadarMTime = stats.mtimeMs;
+      const data = JSON.parse(fs.readFileSync(RADAR_PATH, "utf8"));
+      const payload = JSON.stringify({
+        type: "radar_update",
+        data,
+        timestamp: new Date().toISOString(),
+      });
+      console.log(`📡 Diffusion radar IA J.E.A.N. (${data?.fronts?.length ?? 0} fronts)`);
+      clients.forEach((c) => {
+        if (c.readyState === 1) c.send(payload);
+      });
+    }
+  } catch (e) {
+    console.warn("⚠️ Radar broadcast error:", e.message);
+  }
+}, 60000); // vérifie toutes les 60 secondes
+
+// 🔔 Fonction optionnelle : envoi manuel d'un message IA
+export function sendJeanMessage(text) {
+  const msg = JSON.stringify({ type: "jean_message", text, time: new Date().toISOString() });
+  clients.forEach((c) => { if (c.readyState === 1) c.send(msg); });
+  console.log("🧠 IA J.E.A.N. message broadcast :", text);
+}
+
+// ==========================================================
 // 🌦️ ROUTE API FORECAST – IA J.E.A.N.
 // ==========================================================
 app.get("/api/forecast", async (req, res) => {
