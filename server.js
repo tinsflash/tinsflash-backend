@@ -77,6 +77,7 @@ import { fetchVisionCaptures } from "./services/visionFetchers.js";
 import { runVisionIA } from "./services/runVisionIA.js";
 import { runWatchdog } from "./services/watchdogService.js";
 import { askJean } from "./services/chatService.js";
+import { runRadarFloreffe } from "./services/radarFloreffe.js";
 
 // ==========================================================
 // 🔌 MONGODB — version stable Mongoose (connexion unique)
@@ -312,6 +313,10 @@ app.post("/api/run-floreffe", async (_req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+// ==========================================================
+// 🌧️ RADAR CONTINENTAL FLOREFFE – réel
+// ==========================================================
+app.get("/api/radar/floreffe", runRadarFloreffe);
 
 // ==========================================================
 // 🧠 PHASES 2 à 5 (IA J.E.A.N.)
